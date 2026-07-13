@@ -1,0 +1,89 @@
+# 19 — Architecture Decisions
+
+Answers to the open questions raised in [review-notes.md](review-notes.md). Each records the decision, the reasoning, what it commits us to, and the signal that would justify revisiting it.
+
+**Operating assumptions** (implied by the plan's examples — orders, technicians, Fortnox/Business Central): a multi-tenant B2B SaaS with many small-to-mid tenants, back-office web/admin users plus mobile field users, and accounting/ERP integrations. Several decisions below lean on this profile; if it's wrong, revisit them first.
+
+---
+
+## D1 — Authorization: compiled permission catalogue + tenant-defined roles + scoped grants
+
+**Decision.** Three layers, matching the framework's static/dynamic split:
+
+1. **Permissions are compiled facts.** Every operation, view, and binding declares the permission it requires (`[Authorize("orders.create")]`). The compiler emits the full permission catalogue into the manifest and fails the build on an operation without one or a reference to a nonexistent permission.
+2. **Roles are tenant runtime data.** A role is a named set of permission grants, managed through normal framework operations (like the field registry — dogfooded, audited, revisioned). The framework ships default roles; tenant admins customize them. Assignment of roles to users is likewise tenant data.
+3. **Record scope is a grant qualifier, not a rule language.** A grant optionally carries a scope from a small closed set — `All` / `Team` / `Own` — and an entity declares *in code* what "own" and "team" mean via a scope provider (e.g. `Order.AssignedTechnicianId`, `Order.DepartmentId`). Views enforce scope by injected query filter; operations enforce it as a precondition before the handler runs. A grid and the operation behind its row action therefore agree by construction.
+
+Field-level read/write permissions (already designed for extension fields in [15-extensibility.md](15-extensibility.md)) apply to compiled fields through the same overlay mechanism, enforced server-side.
+
+**Why.** Full ReBAC/ABAC (policy engines, relationship graphs) is unwarranted for this product profile and would poison the manifest's static analyzability — you can't compile-time-verify arbitrary policy. Pure static roles are too rigid for tenant variety. This split keeps *what can be protected* compiled and verifiable, and *who gets it* runtime and self-service — the same two-channel philosophy as extensibility.
+
+**Consequences.** Scope providers must be declared per entity in Phase 1–2 (grids need them for row actions). MCP agents inherit the actor's grants automatically — no separate agent permission model. Diagnostic: a binding exposing an operation whose permission no role in the default set grants ("unreachable operation") is a warning.
+
+**Revisit when.** A tenant needs delegation chains, record sharing, or cross-tenant collaboration — that's the ReBAC threshold, and it should arrive as a new scope kind, not a policy engine.
+
+---
+
+## D2 — Multi-tenancy: single database, shared schema, TenantId discriminator, RLS as backstop
+
+**Decision.** One PostgreSQL database, one schema. Every tenant-owned aggregate carries `TenantId`; EF Core global query filters bind it from the execution envelope; writes stamp it in the pipeline, never in handlers. Tables are either tenant-scoped or explicitly marked `[GlobalData]` — anything unmarked and missing `TenantId` is a compiler error (`DB0xx`).
+
+As defense-in-depth, enable **PostgreSQL row-level security**: the pipeline sets `app.tenant_id` on the connection per unit of work and RLS policies filter every tenant-scoped table. Application filters remain the primary mechanism; RLS exists so a single forgotten filter or raw-SQL escape hatch cannot become a cross-tenant leak.
+
+Do **not** build database-per-tenant routing in v1 — but don't preclude it: all tenant data access already flows through the envelope's `TenantId`, connection acquisition goes through one factory, no cross-tenant queries outside `[GlobalData]`, no business meaning in global sequence values. Moving one oversized tenant to a dedicated database later is then an infrastructure exercise, not an application rewrite.
+
+**Why.** The plan commits to one modular monolith and one PostgreSQL database; the JSONB extensibility design assumes shared schema; and for many small/mid tenants, per-tenant databases multiply migrations, connection pools, backup policies, and the field-registry story for no benefit at that scale. RLS costs little and converts the worst bug class (tenant data leak) from "possible" to "requires two independent failures."
+
+**Consequences.** Migrations run once per deploy. The effective-manifest cache keys on `(tenant, registry revision)`. Backup/restore of a *single* tenant needs tooling (logical export by TenantId) — accept as an operational task, not a schema driver.
+
+**Revisit when.** A contract requires physical data isolation or data residency, or one tenant's volume degrades neighbors. The escape valve above is the plan for that day.
+
+---
+
+## D3 — Audit: append-only tables in the same database, written in the operation transaction
+
+**Decision.** Two tables: `audit_entries` (one row per executed operation: operation id, actor, tenant, invocation source, correlation id, idempotency key, field-registry revision, result status, timestamp) and `audit_changes` (field-level old/new values in canonical wire form — compiled and extension fields uniformly, keyed the same way the manifest keys them). Written by the pipeline **inside the operation's transaction**; `OperationResult.AuditReference` points at the entry.
+
+Immutability is enforced by the database, not by convention: the application role has no `UPDATE`/`DELETE` grant on audit tables, plus a guard trigger. Partition by month; retention is a per-tenant policy applied by dropping partitions after logical export.
+
+If a future compliance requirement demands tamper-*evidence* (not just tamper-resistance), add hash-chaining per tenant or ship entries to external WORM storage **via the existing outbox** — as an export, never as the source of truth.
+
+**Why.** Transactional atomicity is the property that matters most: an audit entry that can exist without its change (or vice versa) is worse than useless in a dispute. Same-DB append-only delivers that for free and keeps "show history for this order" a plain indexed query — which the UI will want anyway. An event store adds operational surface and pushes toward event sourcing, an explicit non-goal. Effects describe what happened; they feed audit, they are not the audit.
+
+**Consequences.** Audit rows are read-model-queryable (entity history views become ordinary views). Old/new capture rides the change-tracking + change-set machinery from Phase 4, so audit lands with it, not after it.
+
+**Revisit when.** Regulated-industry certification demands independent storage — the WORM export path is the answer, additive not disruptive.
+
+---
+
+## D4 — Operation evolution: additive-only, enforced by a manifest baseline check in CI; new intent instead of versioned endpoints
+
+**Decision.** No version numbers on operations in v1. Instead:
+
+- **Wire names are permanent.** Renaming a C# member requires `[WireName("...")]` preserving the original; the manifest records wire names, so refactors never break callers silently.
+- **Additive changes are free**: new optional inputs, new outputs, new operations, widened option sets.
+- **Adding a required input** compiles only if a server-side default exists **or** every registered integration mapping and binding has been updated — the existing `INT001`-class diagnostics plus the impact report make this a build break, not a production incident.
+- **Removal/repurposing is prohibited** on published operations. A genuinely incompatible change means a **new operation with a new intent name** (`orders.create-with-contract`, not `orders.create-v2`), with the old one marked `[Deprecated(sunset: ...)]` — deprecation flows into OpenAPI, TS clients, MCP schemas, and integration diagnostics automatically.
+- **Enforcement is mechanical**: CI diffs the emitted manifest against the last released baseline (same pattern as .NET API-baseline checks). Any non-additive delta fails the build unless the baseline is explicitly re-approved in review.
+
+**Why.** Versioned endpoints double every derived artifact (schemas, clients, MCP tools, forms) and rot into "v1 forever." Operations are cheap by design — a new intent name is the framework-native escape hatch, and it reads better than v2: it says *why* it's different. The manifest already exists; making it the compatibility contract costs one CI step and gives integrations the guarantee they actually need: what worked yesterday works tomorrow.
+
+**Consequences.** The manifest baseline file lives in the repo and is updated deliberately (reviewed like a public API change). External partners can be pointed at the manifest/OpenAPI diff as a changelog.
+
+**Revisit when.** A paid external API with contractual SLAs needs long-lived parallel majors — then introduce explicit versioning *at the HTTP binding layer only*, never in the operation model.
+
+---
+
+## D5 — Real-time collaboration: out of scope; ship change-notification + stale-form signaling instead
+
+**Decision.** Presence, live co-editing, field locking, and CRDT-style sync are **non-goals** (added to [01-overview.md](01-overview.md)). What v1 ships instead, cheaply, on machinery that already exists:
+
+1. **Entity-change notifications**: the effects pipeline ([09-envelope-and-effects.md](09-envelope-and-effects.md)) already knows what changed; publish per-entity change events over one SSE/SignalR channel, tenant- and permission-filtered.
+2. **Stale-form signaling**: an open form subscribed to its record shows "this order was changed by Anna (orders.edit-details) — review changes" with a refresh affordance that rebases untouched fields automatically (the three-way merge logic, run client-side against the fresh snapshot).
+3. **Grid/cache invalidation** from the same channel — no polling.
+
+**Why.** The conflict model already makes concurrent editing *safe*; the collision rate in back-office field-service work makes live cursors a luxury. Real-time co-editing is a product in itself (operational transforms/CRDTs, presence infrastructure) and would violate the minimalism the non-goals defend. Notification-plus-merge delivers ~90% of the perceived value — "I'm not editing blind" — at ~5% of the cost, and every piece of it (effects, findings, merge) is already on the roadmap.
+
+**Consequences.** One realtime transport enters the stack (SSE preferred over WebSockets for simplicity; SignalR acceptable if mobile needs it). Effects gain a `Notify` fan-out consumer in Phase 4–5. Nothing in the form runtime assumes liveness — offline/mobile still works.
+
+**Revisit when.** A concrete workflow shows sustained same-record contention (e.g. dispatcher teams hammering one planning board). Even then, the answer is likely per-feature (a purpose-built board view) rather than generic co-editing.

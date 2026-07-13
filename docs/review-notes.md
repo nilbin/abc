@@ -59,6 +59,8 @@ Runtime-defined fields fail in practice when admins create junk (duplicate "Seri
 
 ## Open questions (need product decisions, not research)
 
+> **Status: all five answered in [19-decisions.md](19-decisions.md)** — D1 authorization, D2 tenancy topology, D3 audit storage, D4 operation evolution, D5 real-time scope. Kept below for the record of why each needed deciding.
+
 1. **Authorization model:** roles? permission catalogue with grants? relationship-based (owner-of-record)? The permission catalogue in the manifest implies grants; per-row authorization (visible in grids, enforced in operations) needs a decision before Phase 2.
 2. **Multi-tenancy topology:** single database with `TenantId` discriminator is assumed here (and required by the JSONB extensibility design as written). Database-per-tenant would change the registry, overlay caching, and migration story materially — confirm the assumption.
 3. **Audit storage:** same database (simple, transactional) vs. append-only store? Effects + audit references suggest same-DB first; fine, but decide retention/immutability requirements.

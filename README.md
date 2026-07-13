@@ -42,6 +42,7 @@ A sixth cross-cutting concern, **tenant extensibility** (runtime custom fields d
 | [16 Packages & layout](docs/16-packages-and-layout.md) | NuGet package structure, application repository layout |
 | [17 Implementation phases](docs/17-implementation-phases.md) | Build order with validation targets per phase |
 | [18 Success criteria](docs/18-success-criteria.md) | What developers write vs never maintain by hand |
+| [19 Decisions](docs/19-decisions.md) | Decided: authorization, tenancy topology, audit, operation evolution, real-time scope |
 | [Review notes](docs/review-notes.md) | Design risks, refinements, and open questions |
 
 ## Reading order

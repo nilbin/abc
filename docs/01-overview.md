@@ -120,6 +120,7 @@ The project is **not**:
 - A replacement for EF Core
 - A replacement for normal domain code
 - A JSON programming language
+- A real-time collaborative editor (presence, live co-editing, field locking — see decision D5 in [19-decisions.md](19-decisions.md))
 
 Its responsibility is:
 
