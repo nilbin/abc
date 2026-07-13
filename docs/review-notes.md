@@ -30,7 +30,7 @@ Mitigations:
 
 ### 2. `IQueryable`-composed views will fail at runtime on untranslatable sort/filter
 
-The compiler can only partially verify EF translatability of dynamic sort/filter composition over computed projection members. `VIEW001` helps, but the honest fix is capability declarations: views explicitly declare sortable/filterable/searchable fields, the manifest records them, bindings can only reference declared capabilities, and `ProductModel.Testing` provides a harness that executes every declared capability against a real database provider in CI. Runtime surprises become test failures.
+The compiler can only partially verify EF translatability of dynamic sort/filter composition over computed projection members. `VIEW001` helps, but the honest fix is capability declarations: views explicitly declare sortable/filterable/searchable fields, the manifest records them, bindings can only reference declared capabilities, and `Tam.Testing` provides a harness that executes every declared capability against a real database provider in CI. Runtime surprises become test failures.
 
 ### 3. Three-way merge correctness details
 
@@ -55,7 +55,7 @@ Runtime-defined fields fail in practice when admins create junk (duplicate "Seri
 - **Deletes are unmentioned.** Decide the stance (likely: deletion is just another intent operation, e.g. `orders.cancel` vs. rare hard `*.delete` operations with cascade policy declared) — grids need it for row actions, audit needs it for trails.
 - **Offline mobile is quietly hard.** `Change<T>` + three-way merge is actually a strong foundation for offline queues, but token/permission caching and stale-manifest handling deserve an explicit later design doc; don't let mobile silently assume connectivity.
 - **Localization strategy:** labels/findings/descriptions all carry text. Decide early whether messages are code-resolved client-side (codes + client catalogs) or server-rendered strings; the `Finding` shape (code **and** message) suggests both — specify precedence.
-- **Naming:** `ProductModel.*` is a placeholder ("product" collides with the domain word). Candidates worth a pass: `Tam.*` (Typed Application Model). Also "Derivation" is used for both field-state resolution and validation feedback — the docs lean on context, but a glossary would help onboarding.
+- **Naming:** decided — `Tam.*` (Typed Application Model) replaces the original `ProductModel.*` placeholder, which collided with the domain word "product"; frontend packages are `@tam/*`. Also "Derivation" is used for both field-state resolution and validation feedback — the docs lean on context, but a glossary would help onboarding.
 
 ## Open questions (need product decisions, not research)
 

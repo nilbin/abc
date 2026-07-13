@@ -5,16 +5,16 @@ Generate a portable TypeScript manifest and clients.
 Initial frontend packages:
 
 ```
-@library/core
-@library/react
+@tam/core
+@tam/react
 ```
 
 Later:
 
 ```
-@library/react-native
-@library/vue
-@library/web-components
+@tam/react-native
+@tam/vue
+@tam/web-components
 ```
 
 ## React usage

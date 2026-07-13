@@ -1,23 +1,23 @@
 # 16 — Package Structure and Repository Layout
 
-> Package names below use the `ProductModel.*` placeholder from the original plan. Final naming is an open question ([review-notes.md](review-notes.md)).
+> Naming decided: `Tam.*` (**T**yped **A**pplication **M**odel) for NuGet packages and `@tam/*` for frontend packages, replacing the original `ProductModel.*` placeholder — "product" collided with the domain word. The `Product.*` names in the application layout below are the *example application's* namespace, not the framework's.
 
 ## Suggested NuGet packages
 
 ```
-ProductModel.Core
-ProductModel.Compiler
-ProductModel.AspNetCore
-ProductModel.EntityFrameworkCore
-ProductModel.Forms
-ProductModel.TypeScript
-ProductModel.Mcp
-ProductModel.Integrations
-ProductModel.Extensions        ← tenant field registry + extension runtime (see 15)
-ProductModel.Testing
+Tam.Core
+Tam.Compiler
+Tam.AspNetCore
+Tam.EntityFrameworkCore
+Tam.Forms
+Tam.TypeScript
+Tam.Mcp
+Tam.Integrations
+Tam.Extensions        ← tenant field registry + extension runtime (see 15)
+Tam.Testing
 ```
 
-### ProductModel.Core
+### Tam.Core
 
 Contains only framework-neutral abstractions:
 
@@ -36,7 +36,7 @@ ExtensionData / ExtensionFieldDefinition (contracts only)
 
 No ASP.NET Core, EF Core, React, or MCP dependencies.
 
-### ProductModel.Compiler
+### Tam.Compiler
 
 - Incremental source generator
 - Analyzers
@@ -45,7 +45,7 @@ No ASP.NET Core, EF Core, React, or MCP dependencies.
 - Impact analysis
 - Diagnostics
 
-### ProductModel.AspNetCore
+### Tam.AspNetCore
 
 - Endpoint mapping
 - OpenAPI
@@ -55,7 +55,7 @@ No ASP.NET Core, EF Core, React, or MCP dependencies.
 - Execution pipeline
 - Correlation
 
-### ProductModel.EntityFrameworkCore
+### Tam.EntityFrameworkCore
 
 - Transaction integration
 - EF model inspection
@@ -65,7 +65,7 @@ No ASP.NET Core, EF Core, React, or MCP dependencies.
 - Effect extraction
 - Persistence diagnostics
 
-### ProductModel.Forms
+### Tam.Forms
 
 - Binding model
 - Derivation execution
@@ -76,21 +76,21 @@ No ASP.NET Core, EF Core, React, or MCP dependencies.
 - Findings
 - Conflict metadata
 
-### ProductModel.TypeScript
+### Tam.TypeScript
 
 - Type generation
 - Client generation
 - Manifest generation
 - Frontend contracts
 
-### ProductModel.Mcp
+### Tam.Mcp
 
 - Operation-to-tool adapter
 - View-to-resource adapter
 - Derivation preflight tools
 - Elicitation support
 
-### ProductModel.Integrations
+### Tam.Integrations
 
 - Mapping compiler
 - Inbox and outbox abstractions
@@ -99,7 +99,7 @@ No ASP.NET Core, EF Core, React, or MCP dependencies.
 - Checkpoints
 - Reconciliation contracts
 
-### ProductModel.Extensions
+### Tam.Extensions
 
 - Tenant field registry (definitions, lifecycle, revisioning)
 - Registry-time diagnostics (`EXT###`) sharing rule implementations with the compiler
@@ -107,7 +107,7 @@ No ASP.NET Core, EF Core, React, or MCP dependencies.
 - Extension change-set validation and application
 - JSONB storage integration and index promotion
 
-### ProductModel.Testing
+### Tam.Testing
 
 - Operation test host
 - Derivation test helpers
