@@ -43,8 +43,9 @@ A sixth cross-cutting concern, **tenant extensibility** (runtime custom fields d
 | [17 Implementation phases](docs/17-implementation-phases.md) | Build order with validation targets per phase |
 | [18 Success criteria](docs/18-success-criteria.md) | What developers write vs never maintain by hand |
 | [19 Decisions](docs/19-decisions.md) | Decided: authorization, tenancy topology, audit, operation evolution, real-time scope |
+| [20 Tutorial](docs/20-tutorial.md) | **A complete feature end to end** — every line written, everything derived |
 | [Review notes](docs/review-notes.md) | Design risks, refinements, and open questions |
 
 ## Reading order
 
-Read 01–09 for the core model, 15 for tenant extensibility, and [review-notes](docs/review-notes.md) for the critical assessment of where the risk is.
+Start with the [tutorial](docs/20-tutorial.md) to feel the developer experience, then 01–09 for the core model, 15 for tenant extensibility, and [review-notes](docs/review-notes.md) for the critical assessment of where the risk is. The tutorial doubles as the acceptance test for the implementation: when it can run top to bottom, the framework is real.
