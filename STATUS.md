@@ -110,6 +110,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 - **Grid totals**: the record count is rendered from the localized `grid.total` catalog entry
   ("{count} träffar" / "{count} records") — `translate()` now resolves args like finding
   messages do.
+- **Plugin packaging (docs/22 P1)**: `[TamPlugin("inspect")]` + `AddPlugin<T>()` registers a
+  compiled, namespaced module (PLG001 enforces the id prefix on every contributed operation/
+  view/form/grid and permission at model build); the samples/inspect plugin ships its own
+  entity (host opts storage in with one `AddInspect(modelBuilder)` line), operations, view,
+  bindings and embedded sv/en locales, discovered by its own (now-internal) generated
+  `AddDiscovered()`. **Activation is tenant data**: `plugins.activate`/`deactivate` framework
+  operations + `plugins.list` admin view; the effective manifest, MCP tool list and OpenAPI
+  omit inactive plugins entirely, and their operations/views/forms answer 404 pre-authorization.
+  Verified on the wire: 404 → activate → create/pass checklists (audited, D7-filterable,
+  SSE-refreshed) → MCP tools appear → deactivate → 404 again → reactivate → data intact. In
+  the web app the "Besiktning" nav entry and plugin page render purely from `manifest.plugins`
+  + grid plugin tags — no app code names the plugin.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -147,11 +159,12 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     promotion remain.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
-12. **Plugin system is designed, not built** ([docs/22-plugins.md](docs/22-plugins.md), decision
-    D8, tutorial step 13): compiled namespaced plugins with per-tenant activation, packaged
-    fields on host entities, operation gates, tenant packages, custom objects, Px-bounded
-    automation rules. Phases P1–P5 defined; P4 (custom objects) additionally waits on typed
-    JSON predicates + index promotion + RLS.
+12. **Plugin system: P1 (packaging + per-tenant activation) is built and verified**; P2–P5
+    remain designed-only ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial
+    step 13): packaged fields on host entities, operation gates, effect subscribers, tenant
+    packages, custom objects, Px-bounded automation rules. P4 (custom objects) additionally
+    waits on typed JSON predicates + index promotion + RLS. PLG001 is a model-build error
+    today, not yet a Roslyn analyzer diagnostic.
 
 ## The one-night verdict
 

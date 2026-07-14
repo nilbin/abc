@@ -19,6 +19,10 @@ public sealed record ManifestDto(
 {
     /// <summary>The requesting actor's effective permissions — the user overlay of docs/12.</summary>
     public IReadOnlyList<string> ActorPermissions { get; init; } = [];
+
+    /// <summary>Plugins ACTIVE for this tenant (docs/22). Inactive plugins' contributions are
+    /// omitted from every collection above — for that tenant they do not exist.</summary>
+    public IReadOnlyList<string> Plugins { get; init; } = [];
 }
 
 public sealed record ManifestField(
@@ -43,6 +47,8 @@ public sealed record ManifestOperation(
     string? ExtensibleEntity)
 {
     public IReadOnlyList<ManifestField> OutputFields { get; init; } = [];
+
+    public string? Plugin { get; init; }
 }
 
 public sealed record ManifestView(
@@ -53,29 +59,47 @@ public sealed record ManifestView(
     IReadOnlyList<string> Filterable,
     string? DefaultSort,
     bool DefaultSortDescending,
-    string? ExtensibleEntity);
+    string? ExtensibleEntity)
+{
+    public string? Plugin { get; init; }
+}
 
 public sealed record ManifestForm(
     string Operation,
     IReadOnlyList<ManifestField> Fields,
     bool IncludeExtensions,
-    IReadOnlyList<string> ServerDependencies);
+    IReadOnlyList<string> ServerDependencies)
+{
+    public string? Plugin { get; init; }
+}
 
 public sealed record ManifestGrid(
     string View,
     IReadOnlyList<string> Columns,
     IReadOnlyList<string> RowActions,
     IReadOnlyList<string> ToolbarActions,
-    bool IncludeExtensions);
+    bool IncludeExtensions)
+{
+    public string? Plugin { get; init; }
+}
 
 public static class ManifestBuilder
 {
+    /// <param name="activePlugins">Plugins active for the requesting tenant; null means include
+    /// everything (model export, baseline check). Inactive plugins' contributions are omitted —
+    /// for that tenant they do not exist (docs/22).</param>
     public static ManifestDto Build(
         TamModel model,
         IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>> extensionOverlay,
-        long revision)
+        long revision,
+        IReadOnlySet<string>? activePlugins = null)
     {
-        var operations = model.Operations.ToDictionary(
+        bool Included(string? plugin) =>
+            plugin is null || activePlugins is null || activePlugins.Contains(plugin);
+
+        var operations = model.Operations
+            .Where(kv => Included(kv.Value.Plugin))
+            .ToDictionary(
             kv => kv.Key,
             kv => new ManifestOperation(
                 kv.Value.Permission,
@@ -86,9 +110,12 @@ public static class ManifestBuilder
                 OutputFields = kv.Value.OutputType is { } output
                     ? FieldModel.FromRecord(output).Select(ToField).ToList()
                     : [],
+                Plugin = kv.Value.Plugin,
             });
 
-        var views = model.Views.ToDictionary(
+        var views = model.Views
+            .Where(kv => Included(kv.Value.Plugin))
+            .ToDictionary(
             kv => kv.Key,
             kv => new ManifestView(
                 kv.Value.Permission,
@@ -98,9 +125,14 @@ public static class ManifestBuilder
                 kv.Value.Capabilities.Filterable,
                 kv.Value.Capabilities.DefaultSort,
                 kv.Value.Capabilities.DefaultSortDescending,
-                kv.Value.ExtensibleEntity is { } e ? TamModel.EntityKey(e) : null));
+                kv.Value.ExtensibleEntity is { } e ? TamModel.EntityKey(e) : null)
+            {
+                Plugin = kv.Value.Plugin,
+            });
 
-        var forms = model.Forms.ToDictionary(
+        var forms = model.Forms
+            .Where(kv => Included(kv.Value.Plugin))
+            .ToDictionary(
             kv => kv.Key,
             kv =>
             {
@@ -120,14 +152,22 @@ public static class ManifestBuilder
                 var serverDeps = model.DerivationsFor(operation.InputType)
                     .SelectMany(d => d.DependsOn).Distinct().ToList();
 
-                return new ManifestForm(kv.Value.OperationId, fields, kv.Value.IncludeExtensions, serverDeps);
+                return new ManifestForm(kv.Value.OperationId, fields, kv.Value.IncludeExtensions, serverDeps)
+                {
+                    Plugin = kv.Value.Plugin,
+                };
             });
 
-        var grids = model.Grids.ToDictionary(
+        var grids = model.Grids
+            .Where(kv => Included(kv.Value.Plugin))
+            .ToDictionary(
             kv => kv.Key,
             kv => new ManifestGrid(
                 kv.Value.ViewId, kv.Value.Columns, kv.Value.RowActions,
-                kv.Value.ToolbarActions, kv.Value.IncludeExtensions));
+                kv.Value.ToolbarActions, kv.Value.IncludeExtensions)
+            {
+                Plugin = kv.Value.Plugin,
+            });
 
         var extensions = extensionOverlay.ToDictionary(
             kv => kv.Key,
@@ -141,7 +181,12 @@ public static class ManifestBuilder
 
         return new ManifestDto(
             "1", model.DefaultCulture, catalogs, operations, views, forms, grids,
-            extensions, model.Permissions, revision);
+            extensions, model.Permissions, revision)
+        {
+            Plugins = model.Plugins.Keys
+                .Where(id => activePlugins is null || activePlugins.Contains(id))
+                .Order().ToList(),
+        };
     }
 
     public static ManifestField ToField(FieldModel f) => new(

@@ -61,6 +61,19 @@
       "common.yes": "Ja",
       "common.no": "Nej",
       "common.no-matches": "Inga tr\u00E4ffar",
+      "operations.plugins.activate.title": "Aktivera till\u00E4gg",
+      "operations.plugins.deactivate.title": "Inaktivera till\u00E4gg",
+      "labels.plugin": "Till\u00E4gg",
+      "labels.plugin-id": "Till\u00E4gg",
+      "labels.active": "Aktivt",
+      "plugins.unknown": "Ok\u00E4nt till\u00E4gg: {plugin}.",
+      "plugins.inspect.title": "Besiktning",
+      "operations.inspect.checklists.create.title": "Ny checklista",
+      "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
+      "inspect.labels.title": "Checklista",
+      "inspect.labels.passed": "Godk\u00E4nd",
+      "inspect.labels.order": "Order",
+      "inspect.labels.checklist-id": "Checklista",
       "app.title": "Norrservice ERP",
       "nav.orders": "Ordrar",
       "nav.customers": "Kunder",
@@ -102,7 +115,8 @@
       "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
       "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
       "customers.duplicate-name": "Det finns redan en kund med det namnet.",
-      "nav.audit": "Historik"
+      "nav.audit": "Historik",
+      "nav.plugins": "Till\u00E4gg"
     },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
@@ -163,6 +177,19 @@
       "common.yes": "Yes",
       "common.no": "No",
       "common.no-matches": "No matches",
+      "operations.plugins.activate.title": "Activate plugin",
+      "operations.plugins.deactivate.title": "Deactivate plugin",
+      "labels.plugin": "Plugin",
+      "labels.plugin-id": "Plugin",
+      "labels.active": "Active",
+      "plugins.unknown": "Unknown plugin: {plugin}.",
+      "plugins.inspect.title": "Inspections",
+      "operations.inspect.checklists.create.title": "New checklist",
+      "operations.inspect.checklists.pass.title": "Pass",
+      "inspect.labels.title": "Checklist",
+      "inspect.labels.passed": "Passed",
+      "inspect.labels.order": "Order",
+      "inspect.labels.checklist-id": "Checklist",
       "app.title": "Norrservice ERP",
       "nav.orders": "Orders",
       "nav.customers": "Customers",
@@ -204,7 +231,8 @@
       "customers.inactive": "The selected customer is inactive.",
       "customers.credit-blocked": "The customer is credit blocked.",
       "customers.duplicate-name": "A customer with that name already exists.",
-      "nav.audit": "History"
+      "nav.audit": "History",
+      "nav.plugins": "Plugins"
     }
   },
   "operations": {
@@ -599,6 +627,139 @@
           "extension": false
         }
       ]
+    },
+    "plugins.activate": {
+      "permission": "plugins.manage",
+      "titleKey": "operations.plugins.activate.title",
+      "fields": [
+        {
+          "name": "pluginId",
+          "labelKey": "labels.plugin-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "pluginId",
+          "labelKey": "labels.plugin-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "active",
+          "labelKey": "labels.active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
+    },
+    "plugins.deactivate": {
+      "permission": "plugins.manage",
+      "titleKey": "operations.plugins.deactivate.title",
+      "fields": [
+        {
+          "name": "pluginId",
+          "labelKey": "labels.plugin-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "pluginId",
+          "labelKey": "labels.plugin-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "active",
+          "labelKey": "labels.active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
+    },
+    "inspect.checklists.create": {
+      "permission": "inspect.checklists.manage",
+      "titleKey": "operations.inspect.checklists.create.title",
+      "fields": [
+        {
+          "name": "title",
+          "labelKey": "inspect.labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "orderId",
+          "labelKey": "inspect.labels.order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "checklistId",
+          "labelKey": "labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "inspect"
+    },
+    "inspect.checklists.pass": {
+      "permission": "inspect.checklists.manage",
+      "titleKey": "operations.inspect.checklists.pass.title",
+      "fields": [
+        {
+          "name": "checklistId",
+          "labelKey": "inspect.labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "checklistId",
+          "labelKey": "labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "inspect"
     }
   },
   "views": {
@@ -1226,9 +1387,119 @@
       "filterable": [],
       "defaultSort": "timestamp",
       "defaultSortDescending": true
+    },
+    "plugins.list": {
+      "permission": "plugins.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "pluginId",
+          "labelKey": "labels.plugin",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "active",
+          "labelKey": "labels.active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "pluginId"
+      ],
+      "filterable": [],
+      "defaultSort": "pluginId",
+      "defaultSortDescending": false
+    },
+    "inspect.checklists.list": {
+      "permission": "inspect.checklists.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "title",
+          "labelKey": "inspect.labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "passed",
+          "labelKey": "inspect.labels.passed",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "title"
+      ],
+      "filterable": [
+        "passed",
+        "title"
+      ],
+      "defaultSort": "title",
+      "defaultSortDescending": false,
+      "plugin": "inspect"
     }
   },
   "forms": {
+    "inspect.web.create": {
+      "operation": "inspect.checklists.create",
+      "fields": [
+        {
+          "name": "title",
+          "labelKey": "inspect.labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "inspect"
+    },
     "web.orders.create": {
       "operation": "orders.create",
       "fields": [
@@ -1499,6 +1770,21 @@
     }
   },
   "grids": {
+    "inspect.web.checklists": {
+      "view": "inspect.checklists.list",
+      "columns": [
+        "title",
+        "passed"
+      ],
+      "rowActions": [
+        "inspect.checklists.pass"
+      ],
+      "toolbarActions": [
+        "inspect.checklists.create"
+      ],
+      "includeExtensions": false,
+      "plugin": "inspect"
+    },
     "web.orders.list": {
       "view": "orders.list",
       "columns": [
@@ -1561,6 +1847,19 @@
         "extensions.define-field"
       ],
       "includeExtensions": false
+    },
+    "web.plugins": {
+      "view": "plugins.list",
+      "columns": [
+        "pluginId",
+        "active"
+      ],
+      "rowActions": [
+        "plugins.activate",
+        "plugins.deactivate"
+      ],
+      "toolbarActions": [],
+      "includeExtensions": false
     }
   },
   "extensions": {},
@@ -1569,12 +1868,18 @@
     "customers.create",
     "customers.read",
     "extensions.manage",
+    "inspect.checklists.manage",
+    "inspect.checklists.read",
     "orders.complete",
     "orders.create",
     "orders.edit",
     "orders.read",
+    "plugins.manage",
     "roles.manage"
   ],
   "revision": 0,
-  "actorPermissions": []
+  "actorPermissions": [],
+  "plugins": [
+    "inspect"
+  ]
 }

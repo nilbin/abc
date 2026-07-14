@@ -4,6 +4,7 @@
     <ProjectReference Include="..\..\src\Tam.Core\Tam.Core.csproj" />
     <ProjectReference Include="..\..\src\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Tam.AspNetCore\Tam.AspNetCore.csproj" />
+    <ProjectReference Include="..\inspect\Inspect.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -25,6 +25,10 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options) : DbCon
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
         });
 
+        // Plugin storage opts in here: the plugin's tables live in the host database and
+        // migrate with it (docs/22). One line per installed plugin.
+        Inspect.InspectionPlugin.AddInspect(modelBuilder);
+
         modelBuilder.UseTam(Database.ProviderName);
     }
 }

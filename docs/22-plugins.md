@@ -1,6 +1,6 @@
 # 22 — Plugins: Packaged Extensibility
 
-**Status: design.** Nothing in this document is implemented yet; it is the agreed target for the next milestone, written before code the same way [20-tutorial.md](20-tutorial.md) was. Decision summary: D8 in [19-decisions.md](19-decisions.md).
+**Status: P1 implemented and verified** (packaging, PLG001, per-tenant activation, manifest/MCP/OpenAPI omission, 404 gating, the samples/inspect plugin, manifest-driven nav — see STATUS.md); **P2–P5 are design**. Decision summary: D8 in [19-decisions.md](19-decisions.md).
 
 ## The problem this solves
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
@@ -9,15 +10,22 @@ namespace Tam.AspNetCore;
 /// </summary>
 public static class OpenApiEndpoint
 {
-    public static IResult Handle(HttpContext http, TamModel model)
+    public static async Task<IResult> Handle(HttpContext http, TamModel model)
     {
         var context = TamAspNetCore.BuildContext(http, model);
         string Label(string key) => model.Locales.Lookup(key, context.Culture) ?? key;
+
+        // Per-tenant document (docs/22): inactive plugins' paths are omitted.
+        var active = http.RequestServices.GetService(typeof(ITamDb)) is ITamDb tam
+            ? await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, http.RequestAborted)
+            : new HashSet<string>();
+        bool Included(string? plugin) => plugin is null || active.Contains(plugin);
 
         var paths = new Dictionary<string, object>();
 
         foreach (var (id, operation) in model.Operations)
         {
+            if (!Included(operation.Plugin)) continue;
             paths[$"/api/operations/{id}"] = new
             {
                 post = new
@@ -42,6 +50,7 @@ public static class OpenApiEndpoint
 
         foreach (var (id, view) in model.Views)
         {
+            if (!Included(view.Plugin)) continue;
             var parameters = CommonParameters(includeIdempotency: false)
                 .Concat(view.QueryFields.Select(field => (object)new
                 {

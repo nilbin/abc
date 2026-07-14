@@ -40,7 +40,7 @@ public class RoleActorProvider(
     {
         var name = roleName(http);
         var tenant = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http);
-        var db = http.RequestServices.GetRequiredService<SystemOps.ITamDb>().Db;
+        var db = http.RequestServices.GetRequiredService<ITamDb>().Db;
 
         var role = db.Set<RoleEntity>().FirstOrDefault(
             x => x.TenantId == tenant.Value && x.Name == name);
@@ -60,9 +60,9 @@ public static class TamAspNetCore
         services.AddSingleton(model);
         services.AddScoped(sp => new OperationExecutor(model, sp, s => s.GetRequiredService<TDbContext>()));
         services.AddScoped(sp => new ViewExecutor(model, sp));
-        services.AddScoped(sp => new ResolveExecutor(model, sp.GetRequiredService<OperationExecutor>()));
+        services.AddScoped(sp => new ResolveExecutor(model, sp.GetRequiredService<OperationExecutor>(), sp));
         services.AddScoped<IExtensionRegistry>(sp => new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()));
-        services.AddScoped<SystemOps.ITamDb>(sp => new SystemOps.TamDb(sp.GetRequiredService<TDbContext>()));
+        services.AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<TDbContext>()));
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
         services.AddSingleton<EffectBroadcaster>();
@@ -114,11 +114,13 @@ public static class TamAspNetCore
         });
 
         app.MapGet("/api/manifest", async (
-            HttpContext http, IExtensionRegistry registry, CancellationToken ct) =>
+            HttpContext http, IExtensionRegistry registry, ITamDb tam, CancellationToken ct) =>
         {
             var context = BuildContext(http, model);
             var overlay = await registry.All(context.TenantId, ct);
-            var manifest = ManifestBuilder.Build(model, overlay, revision: OverlayRevision(overlay));
+            var activePlugins = await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct);
+            var manifest = ManifestBuilder.Build(
+                model, overlay, revision: OverlayRevision(overlay, activePlugins), activePlugins);
             manifest = manifest with
             {
                 Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model),
@@ -179,13 +181,16 @@ public static class TamAspNetCore
         : error.Code == PipelineFindings.UnknownView.Code ? StatusCodes.Status404NotFound
         : StatusCodes.Status422UnprocessableEntity;
 
-    /// <summary>Content-derived revision: any overlay change (add, retire, relabel) moves it.</summary>
+    /// <summary>Content-derived revision: any overlay change (add, retire, relabel) or plugin
+    /// activation flip moves it, so clients know their manifest is stale.</summary>
     private static long OverlayRevision(
-        IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>> overlay)
+        IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>> overlay,
+        IReadOnlySet<string>? activePlugins = null)
     {
         var fingerprint = string.Join("|", overlay
             .OrderBy(kv => kv.Key)
-            .SelectMany(kv => kv.Value.Select(s => $"{kv.Key}/{s.Key}/{s.Type}/{s.State}/{s.Required}/{s.MaxLength}")));
+            .SelectMany(kv => kv.Value.Select(s => $"{kv.Key}/{s.Key}/{s.Type}/{s.State}/{s.Required}/{s.MaxLength}")))
+            + "||" + string.Join(",", (activePlugins ?? new HashSet<string>()).Order());
         return BitConverter.ToInt64(
             System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fingerprint)), 0) & long.MaxValue;
     }

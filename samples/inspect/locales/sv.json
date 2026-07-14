@@ -1,0 +1,10 @@
+{
+  "plugins.inspect.title": "Besiktning",
+  "operations.inspect.checklists.create.title": "Ny checklista",
+  "operations.inspect.checklists.pass.title": "Godkänn",
+  "inspect.labels.title": "Checklista",
+  "inspect.labels.passed": "Godkänd",
+  "inspect.labels.order": "Order",
+  "inspect.labels.checklist-id": "Checklista",
+  "labels.id": "Id"
+}

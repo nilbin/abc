@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
@@ -7,7 +8,7 @@ namespace Tam.AspNetCore;
 /// whose dependencies intersect the changed fields, and returns complete field state.
 /// The same endpoint serves reactive web forms and MCP preflight (docs/11).
 /// </summary>
-public sealed class ResolveExecutor(TamModel model, OperationExecutor operations)
+public sealed class ResolveExecutor(TamModel model, OperationExecutor operations, IServiceProvider services)
 {
     public sealed record ResolveRequest(JsonElement Input, string[]? Changed, long Revision);
 
@@ -16,6 +17,16 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
     {
         if (!model.Forms.TryGetValue(formId, out var form))
             return (null, PipelineFindings.UnknownForm.With(("form", formId)));
+
+        // Inactive plugin → the form does not exist for this tenant (docs/22).
+        if (form.Plugin is { } plugin
+            && services.GetService(typeof(ITamDb)) is ITamDb tam)
+        {
+            var active = await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct);
+            if (!active.Contains(plugin))
+                return (null, PipelineFindings.UnknownForm.With(("form", formId)));
+        }
+
         var operation = model.Operations[form.OperationId];
         if (!context.Actor.Can(operation.Permission))
             return (null, PipelineFindings.NotAuthorized.With(("permission", operation.Permission)));

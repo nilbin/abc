@@ -96,6 +96,9 @@ public sealed record OperationDefinition(
 {
     public string TitleKey => $"operations.{Id}.title";
 
+    /// <summary>Owning plugin id, or null for host-compiled operations (docs/22).</summary>
+    public string? Plugin { get; init; }
+
     public static OperationDefinition From(Type type)
     {
         var op = type.GetCustomAttribute<OperationAttribute>()
@@ -134,6 +137,9 @@ public sealed record ViewDefinition(
     ViewCapability Capabilities,
     Type? ExtensibleEntity)
 {
+    /// <summary>Owning plugin id, or null for host-compiled views (docs/22).</summary>
+    public string? Plugin { get; init; }
+
     public static ViewDefinition From(Type type)
     {
         var view = type.GetCustomAttribute<ViewAttribute>()

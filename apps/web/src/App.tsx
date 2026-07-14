@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   AppShell, Group, Modal, NavLink, SegmentedControl, Select, Stack, Text, TextInput, Title,
 } from '@mantine/core';
@@ -104,16 +104,45 @@ function ExtensionsPage() {
   return <ViewGrid grid="web.extensions.fields" onAction={() => void refreshManifest()} />;
 }
 
+function PluginsPage() {
+  const { refreshManifest } = useTam();
+  // Activation flips the effective manifest (nav, grids, MCP tools) — refresh after actions.
+  return <ViewGrid grid="web.plugins" onAction={() => void refreshManifest()} />;
+}
+
+/** Generic page for an ACTIVE plugin: renders every grid the plugin contributed.
+ *  Nothing here knows what "inspect" is — the manifest is the only source. */
+function PluginPage(props: { plugin: string }) {
+  const { manifest } = useTam();
+  const grids = Object.entries(manifest.grids)
+    .filter(([, g]) => g.plugin === props.plugin)
+    .map(([id]) => id);
+  return (
+    <Stack gap="lg">
+      {grids.map(id => <ViewGrid key={id} grid={id} />)}
+    </Stack>
+  );
+}
+
 function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
-  const { t, culture, setCulture, can } = useTam();
-  const [page, setPage] = useState<'orders' | 'customers' | 'extensions' | 'audit'>('orders');
+  const { t, culture, setCulture, can, manifest } = useTam();
+  const [page, setPage] = useState<string>('orders');
+
+  // Active plugins contribute nav entries straight from the manifest (docs/22): activation
+  // per tenant is the whole install experience — no app code names any plugin.
+  const activePlugins = manifest.plugins ?? [];
 
   const pages = useMemo(() => ({
     orders: <OrdersPage />,
     customers: <CustomersPage />,
     extensions: <ExtensionsPage />,
     audit: <AuditPage />,
-  }), []);
+    plugins: <PluginsPage />,
+    ...Object.fromEntries(activePlugins.map(id =>
+      [`plugin:${id}`, <PluginPage key={id} plugin={id} />])),
+  }) as Record<string, ReactNode>, [activePlugins.join(',')]);
+
+  const current = pages[page] ?? pages.orders;
 
   return (
     <AppShell header={{ height: 56 }} navbar={{ width: 220, breakpoint: 'sm' }} padding="lg">
@@ -148,14 +177,24 @@ function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
       <AppShell.Navbar p="xs">
         <NavLink label={t('nav.orders')} active={page === 'orders'} onClick={() => setPage('orders')} />
         <NavLink label={t('nav.customers')} active={page === 'customers'} onClick={() => setPage('customers')} />
+        {activePlugins.filter(id =>
+          Object.values(manifest.grids).some(g =>
+            g.plugin === id && can(manifest.views[g.view]?.permission ?? ''))
+        ).map(id => (
+          <NavLink key={id} label={t(`plugins.${id}.title`)}
+            active={page === `plugin:${id}`} onClick={() => setPage(`plugin:${id}`)} />
+        ))}
         {can('extensions.manage') && (
           <NavLink label={t('nav.extensions')} active={page === 'extensions'} onClick={() => setPage('extensions')} />
+        )}
+        {can('plugins.manage') && (
+          <NavLink label={t('nav.plugins')} active={page === 'plugins'} onClick={() => setPage('plugins')} />
         )}
         {can('audit.read') && (
           <NavLink label={t('nav.audit')} active={page === 'audit'} onClick={() => setPage('audit')} />
         )}
       </AppShell.Navbar>
-      <AppShell.Main>{pages[page]}</AppShell.Main>
+      <AppShell.Main>{current}</AppShell.Main>
     </AppShell>
   );
 }

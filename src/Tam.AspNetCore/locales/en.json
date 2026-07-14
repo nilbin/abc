@@ -56,5 +56,11 @@
   "filters.to": "to",
   "common.yes": "Yes",
   "common.no": "No",
-  "common.no-matches": "No matches"
+  "common.no-matches": "No matches",
+  "operations.plugins.activate.title": "Activate plugin",
+  "operations.plugins.deactivate.title": "Deactivate plugin",
+  "labels.plugin": "Plugin",
+  "labels.plugin-id": "Plugin",
+  "labels.active": "Active",
+  "plugins.unknown": "Unknown plugin: {plugin}."
 }

@@ -56,5 +56,11 @@
   "filters.to": "till",
   "common.yes": "Ja",
   "common.no": "Nej",
-  "common.no-matches": "Inga träffar"
+  "common.no-matches": "Inga träffar",
+  "operations.plugins.activate.title": "Aktivera tillägg",
+  "operations.plugins.deactivate.title": "Inaktivera tillägg",
+  "labels.plugin": "Tillägg",
+  "labels.plugin-id": "Tillägg",
+  "labels.active": "Aktivt",
+  "plugins.unknown": "Okänt tillägg: {plugin}."
 }

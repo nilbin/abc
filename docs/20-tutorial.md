@@ -678,7 +678,7 @@ Two red lines, both at compile/CI time: the Fortnox mapping must be extended, an
 
 ---
 
-## Step 13 — A partner ships a plugin *(design stage — [22-plugins.md](22-plugins.md), decision D8)*
+## Step 13 — A partner ships a plugin *(P1 — packaging, namespacing, per-tenant activation — is implemented; packaged fields and gates below are P2 design. [22-plugins.md](22-plugins.md), decision D8)*
 
 Norrservice's certification partner sells an inspection-checklist capability. It arrives as a NuGet package, and the host application adds one line:
 

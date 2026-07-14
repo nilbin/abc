@@ -2,6 +2,7 @@
   <Folder Name="/samples/" />
   <Folder Name="/samples/erp/">
     <Project Path="samples/erp/Erp.csproj" />
+    <Project Path="samples/inspect/Inspect.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Tam.AspNetCore/Tam.AspNetCore.csproj" />

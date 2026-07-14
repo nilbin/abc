@@ -43,5 +43,6 @@
   "nav.audit": "Historik",
   "labels.id": "Id",
   "labels.name": "Namn",
-  "labels.type": "Typ"
+  "labels.type": "Typ",
+  "nav.plugins": "Tillägg"
 }

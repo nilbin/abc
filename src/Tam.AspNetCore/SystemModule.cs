@@ -4,17 +4,6 @@ using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore.SystemOps;
 
-/// <summary>Framework database access for system operations, independent of the app's context type.</summary>
-public interface ITamDb
-{
-    DbContext Db { get; }
-}
-
-public sealed class TamDb(DbContext db) : ITamDb
-{
-    public DbContext Db { get; } = db;
-}
-
 public static class SystemModule
 {
     /// <summary>
@@ -38,9 +27,12 @@ public static class SystemModule
             .AddOperationType(typeof(DefineExtensionField))
             .AddOperationType(typeof(RetireExtensionField))
             .AddOperationType(typeof(DefineRole))
+            .AddOperationType(typeof(ActivatePlugin))
+            .AddOperationType(typeof(DeactivatePlugin))
             .AddViewType(typeof(ExtensionFieldList))
             .AddViewType(typeof(RoleList))
-            .AddViewType(typeof(AuditLog));
+            .AddViewType(typeof(AuditLog))
+            .AddViewType(typeof(PluginList));
     }
 }
 

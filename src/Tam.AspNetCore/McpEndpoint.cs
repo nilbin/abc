@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
@@ -52,10 +53,18 @@ public static class McpEndpoint
             ? new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>()
             : await registry.All(context.TenantId, ct);
 
+        // Inactive plugins' tools are not advertised (docs/22); calls to them are gated by
+        // the executors either way, so this is discovery hygiene, not the security boundary.
+        var active = http.RequestServices.GetService(typeof(ITamDb)) is ITamDb tam
+            ? await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct)
+            : new HashSet<string>();
+        bool Included(string? plugin) => plugin is null || active.Contains(plugin);
+
         var tools = new List<object>();
 
         foreach (var (opId, op) in model.Operations)
         {
+            if (!Included(op.Plugin)) continue;
             var extensible = op.ExtensibleEntity is { } entity
                 ? overlay.GetValueOrDefault(TamModel.EntityKey(entity))
                 : null;
@@ -69,6 +78,7 @@ public static class McpEndpoint
 
         foreach (var (formId, form) in model.Forms)
         {
+            if (!Included(form.Plugin)) continue;
             tools.Add(new
             {
                 name = ToolName(formId) + "_resolve",
@@ -79,6 +89,7 @@ public static class McpEndpoint
 
         foreach (var (viewId, view) in model.Views)
         {
+            if (!Included(view.Plugin)) continue;
             tools.Add(new
             {
                 name = ToolName("views." + viewId),

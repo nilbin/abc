@@ -10,7 +10,8 @@ var model = new TamModelBuilder()
     .DefaultCulture("sv")
     .Locales(Path.Combine(AppContext.BaseDirectory, "locales"))
     .AddDiscovered()   // compile-time discovery from Tam.Compiler — no runtime assembly scan
-    .AddTamSystem()    // framework operations/views: custom fields, roles, audit
+    .AddTamSystem()    // framework operations/views: custom fields, roles, audit, plugins
+    .AddPlugin<Inspect.InspectionPlugin>()   // compiled in; each tenant activates at runtime (docs/22)
 
     .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
     {
@@ -97,6 +98,14 @@ var model = new TamModelBuilder()
         grid.Column(x => x.Required);
         grid.Column(x => x.State);
         grid.ToolbarAction("extensions.define-field");
+    })
+
+    .Grid<PluginList.Result>("web.plugins", "plugins.list", grid =>
+    {
+        grid.Column(x => x.PluginId);
+        grid.Column(x => x.Active);
+        grid.RowAction("plugins.activate");
+        grid.RowAction("plugins.deactivate");
     })
 
     .Build();

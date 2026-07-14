@@ -43,5 +43,6 @@
   "nav.audit": "History",
   "labels.id": "Id",
   "labels.name": "Name",
-  "labels.type": "Type"
+  "labels.type": "Type",
+  "nav.plugins": "Plugins"
 }

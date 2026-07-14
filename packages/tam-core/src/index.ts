@@ -104,6 +104,7 @@ export interface Manifest {
     titleKey: string;
     fields: ManifestField[];
     extensibleEntity?: string;
+    plugin?: string;
   }>;
   views: Record<string, {
     permission: string;
@@ -114,12 +115,14 @@ export interface Manifest {
     defaultSort?: string;
     defaultSortDescending: boolean;
     extensibleEntity?: string;
+    plugin?: string;
   }>;
   forms: Record<string, {
     operation: string;
     fields: ManifestField[];
     includeExtensions: boolean;
     serverDependencies: string[];
+    plugin?: string;
   }>;
   grids: Record<string, {
     view: string;
@@ -127,10 +130,13 @@ export interface Manifest {
     rowActions: string[];
     toolbarActions: string[];
     includeExtensions: boolean;
+    plugin?: string;
   }>;
   extensions: Record<string, ManifestField[]>;
   permissions: string[];
   actorPermissions?: string[];
+  /** Plugins ACTIVE for this tenant — inactive plugins are absent from every collection. */
+  plugins?: string[];
   revision: number;
 }
 

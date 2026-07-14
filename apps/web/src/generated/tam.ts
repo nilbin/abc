@@ -88,6 +88,41 @@ export interface RolesDefineOutput {
   roleId: string;
 }
 
+export interface PluginsActivateInput {
+  pluginId: string;
+}
+
+export interface PluginsActivateOutput {
+  pluginId: string;
+  active: boolean;
+}
+
+export interface PluginsDeactivateInput {
+  pluginId: string;
+}
+
+export interface PluginsDeactivateOutput {
+  pluginId: string;
+  active: boolean;
+}
+
+export interface InspectChecklistsCreateInput {
+  title: string;
+  orderId?: string;
+}
+
+export interface InspectChecklistsCreateOutput {
+  checklistId: string;
+}
+
+export interface InspectChecklistsPassInput {
+  checklistId: string;
+}
+
+export interface InspectChecklistsPassOutput {
+  checklistId: string;
+}
+
 export interface CustomersListRow {
   id: string;
   name: string;
@@ -185,6 +220,25 @@ export interface AuditEntriesQuery {
   entityId?: string;
 }
 
+export interface PluginsListRow {
+  pluginId: string;
+  active: boolean;
+}
+
+export interface PluginsListQuery {
+  search?: string;
+}
+
+export interface InspectChecklistsListRow {
+  id: string;
+  title: string;
+  passed: boolean;
+}
+
+export interface InspectChecklistsListQuery {
+  search?: string;
+}
+
 export class TypedTamClient {
   constructor(readonly client: TamClient) {}
 
@@ -223,6 +277,26 @@ export class TypedTamClient {
     return this.client.operation("roles.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RolesDefineOutput>>;
   }
 
+  /** plugins.activate (requires plugins.manage) */
+  pluginsActivate(input: PluginsActivateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<PluginsActivateOutput>> {
+    return this.client.operation("plugins.activate", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<PluginsActivateOutput>>;
+  }
+
+  /** plugins.deactivate (requires plugins.manage) */
+  pluginsDeactivate(input: PluginsDeactivateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<PluginsDeactivateOutput>> {
+    return this.client.operation("plugins.deactivate", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<PluginsDeactivateOutput>>;
+  }
+
+  /** inspect.checklists.create (requires inspect.checklists.manage) */
+  inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
+    return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
+  }
+
+  /** inspect.checklists.pass (requires inspect.checklists.manage) */
+  inspectChecklistsPass(input: InspectChecklistsPassInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsPassOutput>> {
+    return this.client.operation("inspect.checklists.pass", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsPassOutput>>;
+  }
+
   /** view customers.list (requires customers.read) */
   customersList(query?: CustomersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersListRow[] }> {
     return this.client.view("customers.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersListRow[] }>;
@@ -256,5 +330,15 @@ export class TypedTamClient {
   /** view audit.entries (requires audit.read) */
   auditEntries(query?: AuditEntriesQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: AuditEntriesRow[] }> {
     return this.client.view("audit.entries", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: AuditEntriesRow[] }>;
+  }
+
+  /** view plugins.list (requires plugins.manage) */
+  pluginsList(query?: PluginsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }> {
+    return this.client.view("plugins.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }>;
+  }
+
+  /** view inspect.checklists.list (requires inspect.checklists.read) */
+  inspectChecklistsList(query?: InspectChecklistsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InspectChecklistsListRow[] }> {
+    return this.client.view("inspect.checklists.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InspectChecklistsListRow[] }>;
   }
 }

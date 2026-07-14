@@ -23,7 +23,11 @@ public sealed record FormDefinition(
     string OperationId,
     IReadOnlyList<FormFieldConfig> Fields,
     bool IncludeExtensions,
-    string? BasedOn);
+    string? BasedOn)
+{
+    /// <summary>Owning plugin id, or null for host-defined forms (docs/22).</summary>
+    public string? Plugin { get; init; }
+}
 
 public sealed class FormBuilder<TInput>
 {
@@ -92,7 +96,11 @@ public sealed record GridDefinition(
     IReadOnlyList<string> Columns,
     IReadOnlyList<string> RowActions,
     IReadOnlyList<string> ToolbarActions,
-    bool IncludeExtensions);
+    bool IncludeExtensions)
+{
+    /// <summary>Owning plugin id, or null for host-defined grids (docs/22).</summary>
+    public string? Plugin { get; init; }
+}
 
 public sealed class GridBuilder<TResult>
 {

@@ -56,6 +56,12 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => x.DispatchedAtIso);
         });
+        modelBuilder.Entity<PluginActivationEntity>(b =>
+        {
+            b.ToTable("plugin_activations");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.PluginId }).IsUnique();
+        });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes().ToList())
         {
@@ -147,6 +153,16 @@ public sealed class RoleEntity
 
     public IReadOnlySet<string> Permissions() =>
         System.Text.Json.JsonSerializer.Deserialize<HashSet<string>>(PermissionsJson) ?? [];
+}
+
+/// <summary>Per-tenant plugin activation (docs/22): the row's existence IS the activation.
+/// The plugin's code is compiled into the deployment either way; for tenants without the row,
+/// its contributions are omitted from the manifest and its endpoints answer 404.</summary>
+public sealed class PluginActivationEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string PluginId { get; set; } = "";
 }
 
 /// <summary>Registry storage for tenant-defined fields (docs/15). Managed only through operations.</summary>
