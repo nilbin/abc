@@ -27,8 +27,9 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              17 tests: merge, extension applier, Change<T> JSON, portable AST,
-                             localization
+tests/Tam.Tests              64 tests: merge, extension applier, Change<T> JSON, portable AST,
+                             localization, auth/entitlements, plugin build validation, schedule
+                             specs, reserved permissions, SSRF egress policy
 ```
 
 ### Run it
@@ -206,6 +207,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   invalid-spec rejection, and that an event integration can't be scheduled), and MANUAL
   (`integrations.run`). The Fortnox plugin is now a two-way connector (inbound import + outbound
   push + scheduled poll), none of it host code.
+- **"Does rolling our own bite?" — review-round-2 hardening (docs/25)**: review agents on
+  code/scalability/novelty found the bites in the hand-built vault/scheduler/runner; each is closed
+  and verified on the wire. **SSRF egress guard** — the outbound client resolves the host itself and
+  connects only to a validated public IP (blocks loopback/link-local/private/CGNAT v4+v6, closes the
+  rebinding window) and never follows redirects; secure by default, `AllowPrivateNetwork` opts in
+  (the demo's localhost mock). **Reserved permissions** — `"*"` no longer confers
+  `subscriptions.manage`, so a tenant admin (or a plugin as the system actor) can't self-entitle;
+  verified a `"*"` admin now gets 403 on `subscriptions.set-plan` while `subscriptions.read` still
+  200s. **Multi-node scheduler lease** — `NextRunIso` is an optimistic-concurrency token, claimed
+  before the run, so instances don't double-fire; `(Enabled, NextRunIso)` index replaces the
+  full-scan; per-run timeout stops a hung handler wedging the tick. **Fail-closed** — malformed
+  inbound JSON is 422 (verified), incomplete rows become validation findings (verified, no 500),
+  overflowing schedule specs return invalid instead of throwing. **Per-tenant secret binding** and a
+  request-scoped **`ActivationCache`** (one query for the 3–4 per-request activation reads). 17 new
+  tests (64 total); manifest baseline still additive-only.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 

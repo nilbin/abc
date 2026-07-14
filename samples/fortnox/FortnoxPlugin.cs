@@ -30,7 +30,7 @@ public sealed class FortnoxPlugin : ITamPlugin
         // wire input, re-run on every retry so a late-created customer recovers the row.
         plugin.Integration(
             "orders.import", "orders.create",
-            key: row => row.GetProperty("documentNumber").GetString() ?? "",
+            key: row => Str(row, "documentNumber"),
             map: MapOrderAsync);
 
         // OUTBOUND on event (docs/25): when an order completes, push it to Fortnox's accounting
@@ -81,10 +81,19 @@ public sealed class FortnoxPlugin : ITamPlugin
         return OutboundResult.Success($"polled {count} orders");
     }
 
+    /// <summary>A missing or non-string field reads as empty — a partner's incomplete row must map
+    /// to a validation finding downstream, never throw a 500 out of the integration endpoint.</summary>
+    private static string Str(JsonElement row, string name) =>
+        row.ValueKind == JsonValueKind.Object
+            && row.TryGetProperty(name, out var v)
+            && v.ValueKind == JsonValueKind.String
+                ? v.GetString() ?? ""
+                : "";
+
     private static async Task<IReadOnlyDictionary<string, object?>> MapOrderAsync(
         JsonElement row, IServiceProvider services, OperationContext context, CancellationToken ct)
     {
-        var customerName = row.GetProperty("customerName").GetString() ?? "";
+        var customerName = Str(row, "customerName");
 
         // Resolve the external customer name to our id through the host lookup VIEW — as the
         // request's actor, so the plugin sees only what that actor may see (never a host table).
@@ -105,8 +114,8 @@ public sealed class FortnoxPlugin : ITamPlugin
         {
             ["customerId"] = customerId,
             ["orderType"] = "service",
-            ["workAddress"] = row.GetProperty("deliveryAddress").GetString() ?? "",
-            ["description"] = row.GetProperty("description").GetString() ?? "",
+            ["workAddress"] = Str(row, "deliveryAddress"),
+            ["description"] = Str(row, "description"),
         };
     }
 }

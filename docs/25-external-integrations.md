@@ -73,16 +73,27 @@ Every run — event, schedule, or manual — writes an `integration_runs` row (i
 
 That one plugin is now a complete two-way vendor connector — installable, per-tenant-priced, credential-isolated — and none of it is host code.
 
+## Does rolling our own bite? — review-round-2 hardening
+
+The vault, scheduler and outbound runner are hand-built rather than a `Quartz`/`Hangfire`/cloud-KMS dependency. A round of review agents on code, scalability and novelty found where that *would* bite, and each is now closed in code (with tests):
+
+- **SSRF on the tenant-supplied base URL.** An integration's destination is tenant data, and it runs under a privileged background actor — an un-guarded client is a straight shot at the cloud metadata endpoint (`169.254.169.254`) and internal services. The `tam-integrations` client now resolves the host itself and connects **only to a validated public address** (`IntegrationEgress`, blocking loopback/link-local/private/CGNAT, IPv4 and IPv6, closing the DNS-rebinding window), and **never follows redirects** (a 302 could bounce a secret-bearing request to an attacker host). Secure by default; a deployment whose real targets are internal opts in with `AllowPrivateNetwork`.
+- **Wildcard was too wide.** A `"*"` grant — a tenant admin, or a plugin running as the system actor — could call `subscriptions.set-plan` and entitle itself to any plugin. `Actor.Reserved` now names permissions that `"*"` deliberately does **not** confer (`subscriptions.manage`); they must be granted explicitly, so a plugin can never re-plan the tenant that installed it.
+- **Multi-node scheduler double-fire.** `NextRunIso` is now an optimistic-concurrency token: the tick **claims** a due schedule (rolls the next-run forward under the token) *before* running it, so two instances racing the same minute collide and only one wins — at-most-once per tick across the fleet, no lock table. A covering index on `(Enabled, NextRunIso)` turns the every-minute due-scan from a full table scan into an index range.
+- **A hung handler must not wedge the tick.** Each scheduled run gets a per-run deadline (`CancellationTokenSource`), so one slow external call fails that run instead of stalling the once-a-minute loop.
+- **Fail closed, not 500.** A malformed inbound payload is a `422`, not an unhandled 500; a well-formed-but-incomplete row maps to a validation finding; an absurd schedule spec (`every:2000000000d`) returns invalid instead of throwing `OverflowException` into the tick.
+- **Per-tenant secret binding.** The vault protector chains the tenant id into the Data-Protection purpose, so a ciphertext copied into another tenant's row cannot be unprotected there.
+- **Activation reads collapsed.** The plugin-activation set is read 3–4× per request (existence, gate, overlay, manifest); a request-scoped `ActivationCache` memoizes it to one query and removes the incoherency window between reads.
+
 ## Ceilings (v1, honest)
 
 - **At-least-once, handler-idempotent.** Event and schedule runs can repeat (a scheduler restart, an outbox redelivery); handlers must tolerate it, as the docs/10 inbound side already requires. A per-run idempotency token is a natural extension.
 - **No retry/backoff on outbound failures yet** — a failed run is recorded but not automatically retried; the schedule's next tick or a manual run re-drives it. (The inbound inbox has retry + dead-letter; unifying the two is future work.)
-- **Scheduler is single-node.** Two app instances would both tick; a `SELECT … FOR UPDATE SKIP LOCKED` lease on the schedule row is the multi-node story.
-- **Secrets rotation** relies on the Data-Protection key ring; a rotated-away key makes a secret undecryptable (treated as "not configured") rather than silently wrong — re-set the secret. Production persists and backs up the key ring.
+- **Secrets rotation** relies on the Data-Protection key ring; a rotated-away key makes a secret undecryptable (treated as "not configured") rather than silently wrong — re-set the secret. Production persists and backs up the key ring (the ring is DB-persisted so it survives restarts and is shared across instances).
 - **No secret versioning / audit of secret *access*** — only of integration runs. A "who read which secret when" trail is a later addition.
 
 ## Phasing
 
-- **S1 (implemented)**: vault (Data Protection) + settings/secrets operations, outbound integrations with event/schedule/manual triggers, scheduler, run history, the Fortnox two-way demo.
-- **S2**: outbound retry/backoff unified with the inbox; per-run idempotency tokens; multi-node scheduler lease.
+- **S1 (implemented)**: vault (Data Protection, DB-persisted key ring, per-tenant purpose) + settings/secrets operations, outbound integrations with event/schedule/manual triggers, SSRF-guarded egress, scheduler with a claim-first multi-node lease + per-run timeout, run history, reserved-permission gate, the Fortnox two-way demo.
+- **S2**: outbound retry/backoff unified with the inbox; per-run idempotency tokens.
 - **S3**: cron-grade schedule specs; secret-access audit; a secrets admin UI page (today: API/MCP, plus settings/secrets grids are trivial to bind).

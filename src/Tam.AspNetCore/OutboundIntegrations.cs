@@ -37,7 +37,7 @@ internal sealed class IntegrationRunContext(
 /// </summary>
 public static class OutboundRunner
 {
-    public static async Task RunAsync(
+    public static async Task<OutboundResult> RunAsync(
         OutboundIntegrationDefinition integration, string trigger,
         OperationContext context, IServiceProvider services, JsonElement? eventPayload,
         DbContext db, CancellationToken ct)
@@ -51,8 +51,11 @@ public static class OutboundRunner
         {
             result = await integration.Handler(run, ct);
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception e)
         {
+            // A handler that runs long or hangs is cancelled by a per-run deadline (the scheduler
+            // passes a timeout token); that surfaces here as a failed run, not a stuck loop.
             result = OutboundResult.Failure(e.GetType().Name);
         }
 
@@ -67,6 +70,7 @@ public static class OutboundRunner
             RanAtIso = DateTimeOffset.UtcNow.ToString("O"),
         });
         await db.SaveChangesAsync(ct);
+        return result;
     }
 }
 
@@ -79,6 +83,7 @@ public static class ScheduleSpec
     public static bool TryNext(string spec, DateTimeOffset after, out DateTimeOffset next)
     {
         next = default;
+        if (string.IsNullOrEmpty(spec)) return false;
         var parts = spec.Split(':', 2);
         if (parts.Length != 2) return false;
 
@@ -88,16 +93,26 @@ public static class ScheduleSpec
             if (value.Length < 2) return false;
             var unit = value[^1];
             if (!int.TryParse(value[..^1], out var n) || n <= 0) return false;
-            var interval = unit switch
+            // A very large interval (every:2000000000d) overflows TimeSpan/DateTimeOffset; a malformed
+            // spec must fail closed, not throw into the scheduler tick. Both the TimeSpan.From* build
+            // and the addition can throw, so the whole computation is guarded.
+            try
             {
-                'm' => TimeSpan.FromMinutes(n),
-                'h' => TimeSpan.FromHours(n),
-                'd' => TimeSpan.FromDays(n),
-                _ => TimeSpan.Zero,
-            };
-            if (interval == TimeSpan.Zero) return false;
-            next = after + interval;
-            return true;
+                var interval = unit switch
+                {
+                    'm' => TimeSpan.FromMinutes(n),
+                    'h' => TimeSpan.FromHours(n),
+                    'd' => TimeSpan.FromDays(n),
+                    _ => TimeSpan.Zero,
+                };
+                if (interval == TimeSpan.Zero) return false;
+                next = after + interval;
+                return true;
+            }
+            catch (Exception e) when (e is OverflowException or ArgumentOutOfRangeException)
+            {
+                return false;
+            }
         }
 
         if (parts[0] == "daily")
@@ -138,14 +153,22 @@ public sealed class IntegrationScheduler(
         }
     }
 
+    /// <summary>A single scheduled handler gets this long before its per-run token trips — a hung
+    /// external call fails that run, it does not wedge the once-a-minute tick behind it.</summary>
+    private static readonly TimeSpan RunTimeout = TimeSpan.FromMinutes(2);
+
     private async Task TickAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
         var now = DateTimeOffset.UtcNow;
+        var nowIso = now.ToString("O");
 
+        // Push the ordering into the index; parse-and-filter only the small due set. NextRunIso is
+        // ISO-8601 UTC ("O"), so string ordering is chronological ordering.
         var due = (await db.Set<IntegrationScheduleEntity>()
-                .Where(x => x.Enabled)
+                .Where(x => x.Enabled && string.Compare(x.NextRunIso, nowIso) <= 0)
+                .OrderBy(x => x.NextRunIso)
                 .ToListAsync(ct))
             .Where(x => DateTimeOffset.TryParse(x.NextRunIso, null,
                 System.Globalization.DateTimeStyles.RoundtripKind, out var n) && n <= now)
@@ -158,17 +181,38 @@ public sealed class IntegrationScheduler(
             var active = await PluginActivations.ActiveAsync(db, schedule.TenantId, ct);
             if (!active.Contains(integration.PluginId)) continue;
 
-            var context = SystemContext(schedule.TenantId, scope.ServiceProvider);
-            await OutboundRunner.RunAsync(
-                integration, "schedule", context, scope.ServiceProvider, null, db, ct);
+            // Claim first: roll NextRunIso forward and commit under the concurrency token BEFORE
+            // running. If another instance already claimed this tick the token has changed and the
+            // save throws — we skip, so the handler fires at most once across the fleet.
+            schedule.NextRunIso = ScheduleSpec.TryNext(schedule.Spec, now, out var next)
+                ? next.ToString("O")
+                : now.AddYears(100).ToString("O");   // unparseable spec: park it, don't hot-loop
+            schedule.LastRunIso = nowIso;
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                db.Entry(schedule).State = EntityState.Detached;
+                continue;
+            }
 
-            var last = await db.Set<IntegrationRunEntity>()
-                .Where(x => x.TenantId == schedule.TenantId && x.IntegrationId == schedule.IntegrationId)
-                .OrderByDescending(x => x.RanAtIso).FirstOrDefaultAsync(ct);
-            schedule.LastRunIso = now.ToString("O");
-            schedule.LastStatus = last?.Status;
-            if (ScheduleSpec.TryNext(schedule.Spec, now, out var next))
-                schedule.NextRunIso = next.ToString("O");
+            var context = SystemContext(schedule.TenantId, scope.ServiceProvider);
+            using var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            runCts.CancelAfter(RunTimeout);
+            OutboundResult result;
+            try
+            {
+                result = await OutboundRunner.RunAsync(
+                    integration, "schedule", context, scope.ServiceProvider, null, db, runCts.Token);
+            }
+            catch (OperationCanceledException) when (runCts.IsCancellationRequested && !ct.IsCancellationRequested)
+            {
+                result = OutboundResult.Failure("Timeout");
+            }
+
+            schedule.LastStatus = result.Ok ? "ok" : "failed";
             await db.SaveChangesAsync(ct);
         }
     }

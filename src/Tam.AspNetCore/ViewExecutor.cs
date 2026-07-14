@@ -25,7 +25,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         if (view.Plugin is { } plugin
             && services.GetService(typeof(ITamDb)) is ITamDb tam)
         {
-            var active = await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct);
+            var active = await ActivationCache.ForAsync(services, tam.Db, context.TenantId.Value, ct);
             if (!active.Contains(plugin))
                 return (null, PipelineFindings.UnknownView.With(("view", viewId)));
         }

@@ -86,6 +86,12 @@ public static class TamModelConventions
             b.ToTable("integration_schedules");
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.IntegrationId }).IsUnique();
+            // The due-scan filters on Enabled and orders by NextRunIso every minute.
+            b.HasIndex(x => new { x.Enabled, x.NextRunIso });
+            // NextRunIso is the scheduler's lease: claiming a due schedule means moving it forward,
+            // and this makes that move optimistically concurrent — two instances racing to fire the
+            // same tick collide on the token and only one wins (docs/25). No lock table needed.
+            b.Property(x => x.NextRunIso).IsConcurrencyToken();
         });
         modelBuilder.Entity<IntegrationRunEntity>(b =>
         {

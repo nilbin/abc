@@ -62,14 +62,25 @@ public readonly record struct TenantId(string Value)
 /// </summary>
 public sealed record Actor(string Id, string Name, IReadOnlySet<string> Permissions)
 {
+    /// <summary>
+    /// Permissions a wildcard grant ("*") deliberately does NOT confer. These gate actions that
+    /// change the tenant's own commercial standing — provisioning seats, entitling plugins — which
+    /// the billing provider drives, never a tenant admin or a plugin running as the system actor.
+    /// Granting one requires naming it explicitly; "*" is "everything the app does", not "everything
+    /// the platform can do to itself". Closes the self-service entitlement bypass (docs/24).
+    /// </summary>
+    public static readonly IReadOnlySet<string> Reserved =
+        new HashSet<string> { "subscriptions.manage" };
+
     public bool Can(string permission) =>
-        Permissions.Contains("*")
-        || Permissions.Contains(permission)
-        || Permissions.Contains(permission + ":own");
+        Permissions.Contains(permission)
+        || Permissions.Contains(permission + ":own")
+        || (Permissions.Contains("*") && !Reserved.Contains(permission));
 
     /// <summary>"all" or "own" for a granted permission.</summary>
     public string Scope(string permission) =>
-        Permissions.Contains("*") || Permissions.Contains(permission) ? "all"
+        Permissions.Contains(permission)
+            || (Permissions.Contains("*") && !Reserved.Contains(permission)) ? "all"
         : Permissions.Contains(permission + ":own") ? "own"
         : "none";
 

@@ -6,11 +6,17 @@ using Tam.EntityFrameworkCore;
 
 namespace Erp;
 
-public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options) : DbContext(options)
+public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options)
+    : DbContext(options), Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.IDataProtectionKeyContext
 {
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Order> Orders => Set<Order>();
+
+    // Data Protection key ring in the shared DB (docs/25): survives restarts, shared across
+    // instances — so encrypted secrets stay decryptable. One DbSet is the whole opt-in.
+    public DbSet<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>
+        DataProtectionKeys => Set<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

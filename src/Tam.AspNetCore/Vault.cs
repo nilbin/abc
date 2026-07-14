@@ -14,8 +14,11 @@ namespace Tam.AspNetCore;
 /// </summary>
 public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
 {
-    // Purpose-string isolation: secrets can't be unprotected by any other protector.
-    private readonly IDataProtector protector = provider.CreateProtector("Tam.Secrets.v1");
+    // Purpose isolation, chained per tenant: "Tam.Secrets.v1" separates vault secrets from any
+    // other protector, and the tenant id binds each ciphertext to its tenant — a blob copied into
+    // another tenant's row cannot be unprotected there. Cheap to derive, so per call, not cached.
+    private IDataProtector Protector(string tenantId) =>
+        provider.CreateProtector("Tam.Secrets.v1", tenantId);
 
     public async Task SetAsync(string tenantId, string key, string plaintext, CancellationToken ct)
     {
@@ -26,7 +29,7 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
             entity = new TenantSecretEntity { Id = Guid.NewGuid(), TenantId = tenantId, Key = key };
             tam.Db.Add(entity);
         }
-        entity.ProtectedValue = protector.Protect(plaintext);
+        entity.ProtectedValue = Protector(tenantId).Protect(plaintext);
     }
 
     /// <summary>Decrypts one secret transiently. Returns null if unset or the key ring can no
@@ -36,7 +39,7 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
         var entity = await tam.Db.Set<TenantSecretEntity>().AsNoTracking().SingleOrDefaultAsync(
             x => x.TenantId == tenantId && x.Key == key, ct);
         if (entity is null) return null;
-        try { return protector.Unprotect(entity.ProtectedValue); }
+        try { return Protector(tenantId).Unprotect(entity.ProtectedValue); }
         catch { return null; }
     }
 

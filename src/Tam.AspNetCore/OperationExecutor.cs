@@ -25,7 +25,7 @@ public sealed class OperationExecutor(
         // before authorization so the answer is indistinguishable from an unknown id.
         if (operation.Plugin is { } plugin)
         {
-            var active = await PluginActivations.ActiveAsync(dbResolver(services), context.TenantId.Value, ct);
+            var active = await ActivationCache.ForAsync(services, dbResolver(services), context.TenantId.Value, ct);
             if (!active.Contains(plugin))
                 return Fail(context, PipelineFindings.UnknownOperation.With(("operation", operationId)));
         }
@@ -85,7 +85,7 @@ public sealed class OperationExecutor(
         // change underneath the handler it guards. Wire input only, never host CLR types.
         if (model.Gates.TryGetValue(operationId, out var gates))
         {
-            var activePlugins = await PluginActivations.ActiveAsync(db, context.TenantId.Value, ct);
+            var activePlugins = await ActivationCache.ForAsync(services, db, context.TenantId.Value, ct);
             foreach (var gate in gates.Where(g => activePlugins.Contains(g.PluginId)))
             {
                 var gateResult = await gate.Handler(new GateContext(body, context, services), ct);

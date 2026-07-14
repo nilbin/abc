@@ -1,5 +1,7 @@
+using System.Net.Http;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,7 +56,9 @@ public class RoleActorProvider(
 
 public static class TamAspNetCore
 {
-    public static IServiceCollection AddTam<TDbContext>(this IServiceCollection services, TamModel model)
+    public static IServiceCollection AddTam<TDbContext>(
+        this IServiceCollection services, TamModel model,
+        Action<TamIntegrationOptions>? configureIntegrations = null)
         where TDbContext : DbContext
     {
         services.AddSingleton(model);
@@ -62,16 +66,46 @@ public static class TamAspNetCore
         services.AddScoped(sp => new ViewExecutor(model, sp));
         services.AddScoped(sp => new ResolveExecutor(model, sp.GetRequiredService<OperationExecutor>(), sp));
         services.AddScoped<IExtensionRegistry>(sp => new PluginAwareExtensionRegistry(
-            new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()), model, sp.GetRequiredService<TDbContext>()));
+            new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()), model, sp.GetRequiredService<TDbContext>(), sp));
         services.AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<TDbContext>()));
+        // Request-scoped memoization of plugin activation (read 3-4× per request across existence,
+        // gate, overlay and manifest) — collapses those to one query and keeps them coherent.
+        services.AddScoped<ActivationCache>();
 
-        // Secrets vault (docs/25): ASP.NET Data Protection encrypts at rest — no dependency, and
-        // the key ring is production-swappable for Azure Key Vault / AWS KMS without code change.
-        services.AddDataProtection();
+        // Secrets vault (docs/25): ASP.NET Data Protection encrypts at rest. The key ring is
+        // persisted in the shared database (via the app's DbContext when it implements
+        // IDataProtectionKeyContext) so it survives restarts and is shared across instances —
+        // otherwise the default ephemeral ring orphans every stored secret on redeploy. A stable
+        // application name keys the ring; production may wrap it with Azure KV / AWS KMS.
+        var dp = services.AddDataProtection().SetApplicationName("Tam");
+        // AddTam is unconstrained, so persist-to-DbContext (which needs TContext :
+        // IDataProtectionKeyContext) is invoked reflectively when the app opts in by
+        // implementing the interface. Apps that don't get the platform default and a warning.
+        if (typeof(Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.IDataProtectionKeyContext)
+            .IsAssignableFrom(typeof(TDbContext)))
+        {
+            typeof(Microsoft.AspNetCore.DataProtection.EntityFrameworkCoreDataProtectionExtensions)
+                .GetMethod(nameof(Microsoft.AspNetCore.DataProtection
+                    .EntityFrameworkCoreDataProtectionExtensions.PersistKeysToDbContext))!
+                .MakeGenericMethod(typeof(TDbContext))
+                .Invoke(null, [dp]);
+        }
         services.AddScoped(sp => new SecretVault(
             sp.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(),
             sp.GetRequiredService<ITamDb>()));
-        services.AddHttpClient("tam-integrations", c => c.Timeout = TimeSpan.FromSeconds(30));
+
+        // The outbound client's destination is tenant-controlled, so it is SSRF-guarded (blocks
+        // private/link-local egress) and never follows redirects — a 302 could bounce a secret-bearing
+        // request to an attacker host. A deployment reaching real internal targets opts in explicitly.
+        var integrationOptions = new TamIntegrationOptions();
+        configureIntegrations?.Invoke(integrationOptions);
+        services.AddSingleton(integrationOptions);
+        services.AddHttpClient("tam-integrations", c => c.Timeout = TimeSpan.FromSeconds(30))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false,
+                ConnectCallback = IntegrationEgress.Guard(integrationOptions),
+            });
 
         // Scheduler for outbound integrations (docs/25): one lightweight loop, no external deps.
         services.AddHostedService(sp => new IntegrationScheduler(
@@ -135,7 +169,7 @@ public static class TamAspNetCore
         {
             var context = BuildContext(http, model);
             var overlay = await registry.All(context.TenantId, ct);
-            var activePlugins = await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct);
+            var activePlugins = await ActivationCache.ForAsync(http.RequestServices, tam.Db, context.TenantId.Value, ct);
             var manifest = ManifestBuilder.Build(
                 model, overlay, revision: OverlayRevision(overlay, activePlugins), activePlugins);
             manifest = manifest with
@@ -155,11 +189,22 @@ public static class TamAspNetCore
                 return Results.NotFound();
 
             var context = BuildContext(http, model);
-            var active = await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct);
+            var active = await ActivationCache.ForAsync(http.RequestServices, tam.Db, context.TenantId.Value, ct);
             if (!active.Contains(integration.PluginId))
                 return Results.NotFound();   // inactive plugin → the integration does not exist
 
-            var payload = await JsonSerializer.DeserializeAsync<JsonElement>(http.Request.Body, TamJson.Options, ct);
+            JsonElement payload;
+            try
+            {
+                payload = await JsonSerializer.DeserializeAsync<JsonElement>(http.Request.Body, TamJson.Options, ct);
+            }
+            catch (JsonException)
+            {
+                // A partner posting malformed JSON is a client error, not a server fault.
+                return Results.Json(
+                    new { findings = new[] { new { code = "integrations.malformed-payload" } } },
+                    TamJson.Options, statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
             var results = await PluginIntegrationRunner.RunAsync(integration, payload, executor, context, tam.Db, ct);
             return Results.Json(new { results }, TamJson.Options);
         });

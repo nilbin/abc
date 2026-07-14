@@ -15,7 +15,8 @@ public static class PluginFindings
 /// already treats overlay specs uniformly, so packaged fields cost nothing new there.
 /// </summary>
 public sealed class PluginAwareExtensionRegistry(
-    IExtensionRegistry inner, TamModel model, Microsoft.EntityFrameworkCore.DbContext db) : IExtensionRegistry
+    IExtensionRegistry inner, TamModel model, Microsoft.EntityFrameworkCore.DbContext db,
+    IServiceProvider services) : IExtensionRegistry
 {
     public async Task<IReadOnlyList<ExtensionFieldSpec>> For(
         TenantId tenant, string entityKey, CancellationToken ct)
@@ -45,7 +46,7 @@ public sealed class PluginAwareExtensionRegistry(
         TenantId tenant, CancellationToken ct)
     {
         if (model.PackagedFields.Count == 0) return [];
-        var active = await PluginActivations.ActiveAsync(db, tenant.Value, ct);
+        var active = await ActivationCache.ForAsync(services, db, tenant.Value, ct);
         return model.PackagedFields
             .Where(f => active.Contains(f.PluginId))
             .GroupBy(f => f.EntityKey)
@@ -65,6 +66,33 @@ public static class PluginActivations
             .ToListAsync(ct);
         return active.ToHashSet();
     }
+}
+
+/// <summary>
+/// Request-scoped memoization of the activation set. The set is read up to 3-4 times per
+/// operation/view request (existence check, gate stage, extension overlay, manifest) — caching
+/// it per (scope, tenant) collapses those to one query AND removes the incoherency window where
+/// a concurrent deactivate could be seen by one read and not another in the same request.
+/// </summary>
+public sealed class ActivationCache(ITamDb tam)
+{
+    private readonly Dictionary<string, IReadOnlySet<string>> byTenant = new();
+
+    public async ValueTask<IReadOnlySet<string>> ActiveAsync(string tenantId, CancellationToken ct)
+    {
+        if (byTenant.TryGetValue(tenantId, out var set)) return set;
+        set = await PluginActivations.ActiveAsync(tam.Db, tenantId, ct);
+        byTenant[tenantId] = set;
+        return set;
+    }
+
+    /// <summary>Resolve the request cache if present, else fall back to a direct query (background
+    /// services outside a request scope pass their own DbContext).</summary>
+    public static ValueTask<IReadOnlySet<string>> ForAsync(
+        IServiceProvider services, DbContext db, string tenantId, CancellationToken ct) =>
+        services.GetService(typeof(ActivationCache)) is ActivationCache cache
+            ? cache.ActiveAsync(tenantId, ct)
+            : new ValueTask<IReadOnlySet<string>>(PluginActivations.ActiveAsync(db, tenantId, ct));
 }
 
 /// <summary>

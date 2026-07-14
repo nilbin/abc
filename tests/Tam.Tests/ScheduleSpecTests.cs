@@ -46,4 +46,13 @@ public class ScheduleSpecTests
         Assert.True(ScheduleSpec.TryNext("daily:22:00", Base, out var next));
         Assert.Equal(new DateTimeOffset(2026, 1, 15, 22, 0, 0, TimeSpan.Zero), next);
     }
+
+    [Theory]
+    [InlineData("every:2000000000d")]   // days that overflow DateTimeOffset
+    [InlineData("every:9999999999m")]   // minutes past int range
+    public void Overflowing_intervals_fail_closed_instead_of_throwing(string spec)
+    {
+        // A malformed/absurd interval must return false, never throw into the scheduler tick.
+        Assert.False(ScheduleSpec.TryNext(spec, Base, out _));
+    }
 }
