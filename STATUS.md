@@ -172,13 +172,14 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     promotion remain.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
-12. **Plugin system: P1 + P2 built and verified**; P3–P5 remain designed-only
-    ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial step 13): tenant packages,
-    custom objects, Px-bounded automation rules. P4 (custom objects) additionally waits on
-    typed JSON predicates + index promotion + RLS. PLG### are model-build errors today, not
-    yet Roslyn analyzer diagnostics; subscriber delivery is at-most-once (no retry/inbox for
-    plugin subscribers yet); field-level audit shows the extensions column as one change, not
-    per extension key.
+12. **Plugin system: P1–P3 built and verified**; P4–P5 remain designed-only
+    ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial step 13): custom objects
+    and Px-bounded automation rules. P4 (custom objects) additionally waits on typed JSON
+    predicates + index promotion + RLS. PLG### are model-build errors today, not yet Roslyn
+    analyzer diagnostics; subscriber delivery is at-most-once (no retry/inbox for plugin
+    subscribers yet); field-level audit shows the extensions column as one change, not per
+    extension key; package uninstall leaves package-defined roles in place (they may be
+    granted to real users) and there is no admin UI page for packages yet (API/MCP only).
 
 ## The one-night verdict
 

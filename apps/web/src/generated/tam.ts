@@ -106,6 +106,28 @@ export interface PluginsDeactivateOutput {
   active: boolean;
 }
 
+export interface PackagesInstallInput {
+  document: string;
+  dryRun?: boolean;
+}
+
+export interface PackagesInstallOutput {
+  package: string;
+  version: number;
+  applied: boolean;
+  fieldsAdded: number;
+  rolesDefined: number;
+}
+
+export interface PackagesUninstallInput {
+  package: string;
+}
+
+export interface PackagesUninstallOutput {
+  package: string;
+  fieldsRetired: number;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
@@ -229,6 +251,17 @@ export interface PluginsListQuery {
   search?: string;
 }
 
+export interface PackagesListRow {
+  id: string;
+  package: string;
+  version: number;
+  installedAt: string;
+}
+
+export interface PackagesListQuery {
+  search?: string;
+}
+
 export interface InspectChecklistsListRow {
   id: string;
   title: string;
@@ -287,6 +320,16 @@ export class TypedTamClient {
     return this.client.operation("plugins.deactivate", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<PluginsDeactivateOutput>>;
   }
 
+  /** packages.install (requires packages.manage) */
+  packagesInstall(input: PackagesInstallInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<PackagesInstallOutput>> {
+    return this.client.operation("packages.install", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<PackagesInstallOutput>>;
+  }
+
+  /** packages.uninstall (requires packages.manage) */
+  packagesUninstall(input: PackagesUninstallInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<PackagesUninstallOutput>> {
+    return this.client.operation("packages.uninstall", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<PackagesUninstallOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
@@ -335,6 +378,11 @@ export class TypedTamClient {
   /** view plugins.list (requires plugins.manage) */
   pluginsList(query?: PluginsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }> {
     return this.client.view("plugins.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }>;
+  }
+
+  /** view packages.list (requires packages.manage) */
+  packagesList(query?: PackagesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }> {
+    return this.client.view("packages.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }>;
   }
 
   /** view inspect.checklists.list (requires inspect.checklists.read) */

@@ -62,5 +62,16 @@
   "labels.plugin": "Tillägg",
   "labels.plugin-id": "Tillägg",
   "labels.active": "Aktivt",
-  "plugins.unknown": "Okänt tillägg: {plugin}."
+  "plugins.unknown": "Okänt tillägg: {plugin}.",
+  "operations.packages.install.title": "Installera paket",
+  "operations.packages.uninstall.title": "Avinstallera paket",
+  "labels.package-document": "Paketdokument",
+  "labels.package": "Paket",
+  "labels.version": "Version",
+  "labels.installed-at": "Installerat",
+  "labels.dry-run": "Testkörning",
+  "packages.invalid-document": "Ogiltigt paketdokument.",
+  "packages.field-conflict": "Fältet {key} finns redan med en annan definition.",
+  "packages.older-version": "Version {offered} är äldre än den installerade ({installed}).",
+  "packages.not-installed": "Paketet {package} är inte installerat."
 }

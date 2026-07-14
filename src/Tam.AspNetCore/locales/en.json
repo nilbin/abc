@@ -62,5 +62,16 @@
   "labels.plugin": "Plugin",
   "labels.plugin-id": "Plugin",
   "labels.active": "Active",
-  "plugins.unknown": "Unknown plugin: {plugin}."
+  "plugins.unknown": "Unknown plugin: {plugin}.",
+  "operations.packages.install.title": "Install package",
+  "operations.packages.uninstall.title": "Uninstall package",
+  "labels.package-document": "Package document",
+  "labels.package": "Package",
+  "labels.version": "Version",
+  "labels.installed-at": "Installed",
+  "labels.dry-run": "Dry run",
+  "packages.invalid-document": "Invalid package document.",
+  "packages.field-conflict": "The field {key} already exists with a different definition.",
+  "packages.older-version": "Version {offered} is older than the installed version ({installed}).",
+  "packages.not-installed": "The package {package} is not installed."
 }

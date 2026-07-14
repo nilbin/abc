@@ -62,6 +62,12 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.PluginId }).IsUnique();
         });
+        modelBuilder.Entity<PackageInstallationEntity>(b =>
+        {
+            b.ToTable("package_installations");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.Package }).IsUnique();
+        });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes().ToList())
         {
@@ -165,6 +171,18 @@ public sealed class PluginActivationEntity
     public string PluginId { get; set; } = "";
 }
 
+/// <summary>An installed tenant package (docs/22 P3): the bundle document is retained so
+/// upgrades can diff against what was actually applied.</summary>
+public sealed class PackageInstallationEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Package { get; set; } = "";
+    public int Version { get; set; }
+    public string DocumentJson { get; set; } = "";
+    public string InstalledAtIso { get; set; } = "";
+}
+
 /// <summary>Registry storage for tenant-defined fields (docs/15). Managed only through operations.</summary>
 public sealed class ExtensionFieldEntity
 {
@@ -179,6 +197,10 @@ public sealed class ExtensionFieldEntity
     public string? DescriptionsJson { get; set; }
     public string? OptionsJson { get; set; }
     public ExtensionFieldState State { get; set; } = ExtensionFieldState.Active;
+
+    /// <summary>Set when the field arrived via a tenant package (docs/22 P3) — uninstall
+    /// retires exactly these, never fields the tenant defined by hand.</summary>
+    public string? Package { get; set; }
 
     public ExtensionFieldSpec ToSpec() => new(
         Key, Entity, Type, Required, MaxLength,

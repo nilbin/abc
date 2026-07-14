@@ -29,10 +29,13 @@ public static class SystemModule
             .AddOperationType(typeof(DefineRole))
             .AddOperationType(typeof(ActivatePlugin))
             .AddOperationType(typeof(DeactivatePlugin))
+            .AddOperationType(typeof(InstallPackage))
+            .AddOperationType(typeof(UninstallPackage))
             .AddViewType(typeof(ExtensionFieldList))
             .AddViewType(typeof(RoleList))
             .AddViewType(typeof(AuditLog))
-            .AddViewType(typeof(PluginList));
+            .AddViewType(typeof(PluginList))
+            .AddViewType(typeof(PackageList));
     }
 }
 

@@ -67,6 +67,17 @@
       "labels.plugin-id": "Till\u00E4gg",
       "labels.active": "Aktivt",
       "plugins.unknown": "Ok\u00E4nt till\u00E4gg: {plugin}.",
+      "operations.packages.install.title": "Installera paket",
+      "operations.packages.uninstall.title": "Avinstallera paket",
+      "labels.package-document": "Paketdokument",
+      "labels.package": "Paket",
+      "labels.version": "Version",
+      "labels.installed-at": "Installerat",
+      "labels.dry-run": "Testk\u00F6rning",
+      "packages.invalid-document": "Ogiltigt paketdokument.",
+      "packages.field-conflict": "F\u00E4ltet {key} finns redan med en annan definition.",
+      "packages.older-version": "Version {offered} \u00E4r \u00E4ldre \u00E4n den installerade ({installed}).",
+      "packages.not-installed": "Paketet {package} \u00E4r inte installerat.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -98,7 +109,6 @@
       "labels.order-id": "Order",
       "labels.number": "Ordernummer",
       "labels.status": "Status",
-      "labels.version": "Version",
       "labels.extensions": "Anpassade f\u00E4lt",
       "labels.active-only": "Endast aktiva",
       "enums.service": "Service",
@@ -185,6 +195,17 @@
       "labels.plugin-id": "Plugin",
       "labels.active": "Active",
       "plugins.unknown": "Unknown plugin: {plugin}.",
+      "operations.packages.install.title": "Install package",
+      "operations.packages.uninstall.title": "Uninstall package",
+      "labels.package-document": "Package document",
+      "labels.package": "Package",
+      "labels.version": "Version",
+      "labels.installed-at": "Installed",
+      "labels.dry-run": "Dry run",
+      "packages.invalid-document": "Invalid package document.",
+      "packages.field-conflict": "The field {key} already exists with a different definition.",
+      "packages.older-version": "Version {offered} is older than the installed version ({installed}).",
+      "packages.not-installed": "The package {package} is not installed.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -216,7 +237,6 @@
       "labels.order-id": "Order",
       "labels.number": "Order number",
       "labels.status": "Status",
-      "labels.version": "Version",
       "labels.extensions": "Custom fields",
       "labels.active-only": "Active only",
       "enums.service": "Service",
@@ -706,6 +726,114 @@
           "labelKey": "labels.active",
           "type": "boolean",
           "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "packages.install": {
+      "permission": "packages.manage",
+      "titleKey": "operations.packages.install.title",
+      "fields": [
+        {
+          "name": "document",
+          "labelKey": "labels.package-document",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "dryRun",
+          "labelKey": "labels.dry-run",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "package",
+          "labelKey": "labels.package",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "applied",
+          "labelKey": "labels.applied",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "fieldsAdded",
+          "labelKey": "labels.fields-added",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "rolesDefined",
+          "labelKey": "labels.roles-defined",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "packages.uninstall": {
+      "permission": "packages.manage",
+      "titleKey": "operations.packages.uninstall.title",
+      "fields": [
+        {
+          "name": "package",
+          "labelKey": "labels.package",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "package",
+          "labelKey": "labels.package",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "fieldsRetired",
+          "labelKey": "labels.fields-retired",
+          "type": "integer",
+          "wireKind": "integer",
           "required": true,
           "changeSet": false,
           "extension": false
@@ -1445,6 +1573,64 @@
       "defaultSort": "pluginId",
       "defaultSortDescending": false
     },
+    "packages.list": {
+      "permission": "packages.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "package",
+          "labelKey": "labels.package",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "installedAt",
+          "labelKey": "labels.installed-at",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "package"
+      ],
+      "filterable": [],
+      "defaultSort": "package",
+      "defaultSortDescending": false
+    },
     "inspect.checklists.list": {
       "permission": "inspect.checklists.read",
       "queryFields": [
@@ -1891,6 +2077,7 @@
     "orders.create",
     "orders.edit",
     "orders.read",
+    "packages.manage",
     "plugins.manage",
     "roles.manage"
   ],
