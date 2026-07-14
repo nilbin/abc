@@ -13,6 +13,7 @@ public static class TamModelConventions
     public static ModelBuilder UseTam(this ModelBuilder modelBuilder, string? providerName = null)
     {
         var isNpgsql = providerName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+        TamDbFunctions.Register(modelBuilder, isNpgsql);
         modelBuilder.Entity<AuditEntry>(b =>
         {
             b.ToTable("audit_entries");

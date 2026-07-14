@@ -61,7 +61,8 @@ export function ViewGrid(props: ViewGridProps) {
   const filterFields = view.filterable
     .map(f => view.resultFields.find(r => r.name === f))
     .filter((f): f is ManifestField => f !== undefined);
-  const extensionFilterFields = extensionColumns.filter(f => f.wireKind === 'string');
+  const extensionFilterFields = extensionColumns.filter(f =>
+    ['string', 'number', 'integer', 'date'].includes(f.wireKind));
 
   const setFilter = (key: string, value: string | null) => {
     setPage(1);
@@ -153,16 +154,9 @@ export function ViewGrid(props: ViewGridProps) {
         <Group gap="xs">
           {filterFields.map(field => <FilterControl key={field.name} field={field}
             filters={filters} setFilter={setFilter} />)}
-          {extensionFilterFields.map(field => (
-            <TextInput
-              key={field.name}
-              size="xs"
-              w={170}
-              placeholder={t(`ext.${field.name}`)}
-              value={filters[`ext.${field.name}`] ?? ''}
-              onChange={e => setFilter(`ext.${field.name}`, e.currentTarget.value)}
-            />
-          ))}
+          {extensionFilterFields.map(field => <FilterControl key={`ext.${field.name}`}
+            field={field} filterKey={`ext.${field.name}`}
+            filters={filters} setFilter={setFilter} />)}
         </Group>
         <Group>
           {toolbarActions.map(action => (
@@ -251,14 +245,17 @@ export function ViewGrid(props: ViewGridProps) {
   );
 }
 
-/** One declared-filterable field → the control set its wire kind supports (mirrors the server). */
+/** One declared-filterable field → the control set its wire kind supports (mirrors the
+ *  server). Extension fields pass filterKey="ext.{key}" — same controls, same operators. */
 function FilterControl(props: {
   field: ManifestField;
   filters: Record<string, string>;
   setFilter: (key: string, value: string | null) => void;
+  filterKey?: string;
 }) {
   const { manifest, culture, t } = useTam();
   const { field, filters, setFilter } = props;
+  const key = props.filterKey ?? field.name;
   const label = field.extension ? t(`ext.${field.name}`) : t(field.labelKey);
 
   if (field.options) {
@@ -269,8 +266,8 @@ function FilterControl(props: {
           value: toWireEnum(o),
           label: enumLabel(manifest, culture, o),
         }))}
-        value={filters[field.name] ?? null}
-        onChange={v => setFilter(field.name, v)}
+        value={filters[key] ?? null}
+        onChange={v => setFilter(key, v)}
       />
     );
   }
@@ -284,8 +281,8 @@ function FilterControl(props: {
             { value: 'true', label: t('common.yes') },
             { value: 'false', label: t('common.no') },
           ]}
-          value={filters[field.name] ?? null}
-          onChange={v => setFilter(field.name, v)}
+          value={filters[key] ?? null}
+          onChange={v => setFilter(key, v)}
         />
       );
     case 'number':
@@ -296,8 +293,8 @@ function FilterControl(props: {
             <NumberInput
               key={bound} size="xs" w={110} hideControls
               placeholder={`${label} ${t(`filters.${bound}`)}`}
-              value={filters[`${field.name}.${bound}`] ?? ''}
-              onChange={v => setFilter(`${field.name}.${bound}`,
+              value={filters[`${key}.${bound}`] ?? ''}
+              onChange={v => setFilter(`${key}.${bound}`,
                 v === '' || v === null ? null : String(v))}
             />
           ))}
@@ -310,9 +307,9 @@ function FilterControl(props: {
             <DateInput
               key={bound} size="xs" w={130} clearable valueFormat="YYYY-MM-DD"
               placeholder={`${label} ${t(`filters.${bound}`)}`}
-              value={filters[`${field.name}.${bound}`]
-                ? dayjs(filters[`${field.name}.${bound}`]).toDate() : null}
-              onChange={v => setFilter(`${field.name}.${bound}`,
+              value={filters[`${key}.${bound}`]
+                ? dayjs(filters[`${key}.${bound}`]).toDate() : null}
+              onChange={v => setFilter(`${key}.${bound}`,
                 v ? dayjs(v).format('YYYY-MM-DD') : null)}
             />
           ))}
@@ -322,8 +319,8 @@ function FilterControl(props: {
       return (
         <TextInput
           size="xs" w={150} placeholder={label}
-          value={filters[`${field.name}.contains`] ?? ''}
-          onChange={e => setFilter(`${field.name}.contains`, e.currentTarget.value)}
+          value={filters[`${key}.contains`] ?? ''}
+          onChange={e => setFilter(`${key}.contains`, e.currentTarget.value)}
         />
       );
   }

@@ -70,6 +70,9 @@ One `Filterable(field)` declaration yields every operator the field's type suppo
 | enum, boolean, id | equality | `status=open` |
 | date, number | equality + inclusive range | `requestedDate.from=2026-02-01&requestedDate.to=2026-02-28` |
 | string (incl. semantic wrappers) | equality + substring + ordinal range | `customerName.contains=Nord`, `number.from=2026-01400` |
+| extension fields (tenant/plugin/package) | same, typed by the declared spec | `ext.weightKg.from=100`, `ext.machineSerialNumber.contains=2201` |
+
+Extension-field predicates are real JSON extraction, not string containment: per-provider translations (`json_extract` on SQLite, `jsonb_extract_path_text` + numeric cast on PostgreSQL) behind two owned DbFunctions, with the extraction key always coming from the declared overlay — user input only ever becomes the comparison value. Boolean extension filtering and extension *sorting* remain open (provider-divergent JSON boolean forms; index promotion is the performance path, docs/15).
 
 Range bounds use the lifted comparison — a row whose cell is null is outside every range. Operator values are parsed into expression *constants*, never expression *structure*: the filter language can grow (via the portable Px AST) but a string-parsed expression DSL is banned (see D7's consequences).
 

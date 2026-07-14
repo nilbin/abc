@@ -46,13 +46,53 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         }
 
         // Tenant extension fields filter by "ext.{key}" params — necessarily mechanical:
-        // runtime-defined fields can never appear in a compiled Query record (docs/15).
-        var extensionFilters = view.ExtensibleEntity is null
-            ? []
-            : query.Where(kv => kv.Key.StartsWith("ext.", StringComparison.Ordinal)
+        // runtime-defined fields can never appear in a compiled Query record (docs/15). The
+        // operator set derives from the declared spec's wire kind, exactly like compiled
+        // fields: equality everywhere, from/to for numbers/strings/dates, contains for strings.
+        var extensionFilters = new List<ExtensionFilter>();
+        if (view.ExtensibleEntity is { } extensibleEntity)
+        {
+            var raw = query
+                .Where(kv => kv.Key.StartsWith("ext.", StringComparison.Ordinal)
                     && !string.IsNullOrEmpty(kv.Value))
-                .Select(kv => (Key: kv.Key["ext.".Length..], Value: kv.Value!))
+                .Select(kv => (Param: kv.Key["ext.".Length..], kv.Value))
                 .ToList();
+            if (raw.Count > 0
+                && services.GetService(typeof(IExtensionRegistry)) is IExtensionRegistry registry)
+            {
+                var specs = (await registry.For(
+                        context.TenantId, TamModel.EntityKey(extensibleEntity), ct))
+                    .ToDictionary(s => s.Key, StringComparer.Ordinal);
+                foreach (var (param, value) in raw)
+                {
+                    var (key, op) = param switch
+                    {
+                        _ when param.EndsWith(".from", StringComparison.Ordinal) =>
+                            (param[..^".from".Length], FilterOperator.From),
+                        _ when param.EndsWith(".to", StringComparison.Ordinal) =>
+                            (param[..^".to".Length], FilterOperator.To),
+                        _ when param.EndsWith(".contains", StringComparison.Ordinal) =>
+                            (param[..^".contains".Length], FilterOperator.Contains),
+                        _ => (param, FilterOperator.Equal),
+                    };
+                    if (!specs.TryGetValue(key, out var spec)) continue;   // undeclared → ignored
+                    var kind = spec.Semantic.WireKind;
+                    var legal = op switch
+                    {
+                        FilterOperator.Contains => kind == "string",
+                        FilterOperator.From or FilterOperator.To =>
+                            kind is "string" or "number" or "integer" or "date",
+                        _ => kind != "boolean",   // boolean JSON extraction differs per provider
+                    };
+                    if (!legal) continue;
+                    if (kind is "number" or "integer"
+                        && !decimal.TryParse(value, System.Globalization.NumberStyles.Number,
+                            System.Globalization.CultureInfo.InvariantCulture, out _))
+                        return (null, PipelineFindings.InvalidInput.Create());
+                    extensionFilters.Add(new ExtensionFilter(key, kind, op, value!));
+                }
+            }
+        }
         var args = view.Execute.GetParameters().Select(p =>
         {
             if (p.Position == 0) return queryRecord;
@@ -87,6 +127,8 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
     internal enum FilterOperator { Equal, From, To, Contains }
 
     internal sealed record FieldFilter(PropertyInfo Property, FilterOperator Op, object? Value);
+
+    internal sealed record ExtensionFilter(string Key, string WireKind, FilterOperator Op, string Value);
 
     /// <summary>
     /// Declared filterable fields → typed predicates. One declaration yields the operators the
@@ -134,7 +176,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
     private static async Task<ViewResponse> Run<T>(
         object queryable, string? sort, bool descending, int page, int pageSize,
         List<FieldFilter> fieldFilters,
-        List<(string Key, string Value)> extensionFilters,
+        List<ExtensionFilter> extensionFilters,
         CancellationToken ct)
     {
         var source = (IQueryable<T>)queryable;
@@ -159,8 +201,9 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             && typeof(T).GetProperty("Extensions") is { } extensionsProperty
             && source.Provider is Microsoft.EntityFrameworkCore.Query.IAsyncQueryProvider)
         {
-            foreach (var (key, value) in extensionFilters)
-                source = TamExpressions.WhereExtensionEquals(source, extensionsProperty, key, value);
+            foreach (var filter in extensionFilters)
+                source = TamExpressions.WhereExtension(
+                    source, extensionsProperty, filter.Key, filter.WireKind, filter.Op, filter.Value);
         }
 
         if (sort is not null)

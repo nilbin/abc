@@ -154,6 +154,16 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   compiled field (class-2 cold chain without a date → localized 422; with date or class 1 →
   passes; retired → stops). `rules.retire`/`rules.list` manage the registry.
 
+- **Typed extension predicates (docs/15's "real JSON translation" — P4's main prerequisite)**:
+  `ext.{key}` filters now do real JSON extraction through two owned DbFunctions with
+  per-provider translations (SQLite `json_extract`, PostgreSQL `jsonb_extract_path_text` with
+  a numeric cast); the operator set derives from the declared spec's wire kind exactly like
+  compiled fields — exact equality (replacing containment matching), `contains`, ordinal
+  ranges for strings/ISO dates, and true numeric equality/ranges (`ext.weightKg.from=100` —
+  double-typed, so SQLite compares REAL, not TEXT). Grid controls render mechanically for
+  extension fields by wire kind. Verified on SQLite AND PostgreSQL, including the
+  `from=1000`-excludes-380 text-compare trap, malformed numbers → 422, undeclared keys ignored.
+
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
 ## Gaps vs. the design docs (deliberate, in rough priority order)
@@ -185,9 +195,10 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
    per-tenant and include extension fields with admin-authored descriptions.
 10. **PostgreSQL supported and CI-smoked**: connection-string switch (Host=… → Npgsql), real
     `jsonb` extensions column, full wire regression verified on PG 16. SQLite remains the
-    zero-setup dev default. Extension filtering covers string-typed fields (containment over the
-    canonical JSON); numeric extension filters, extension sorting, and expression-index
-    promotion remain.
+    zero-setup dev default. Extension filtering is now TYPED JSON extraction (see the verified
+    list): exact equality + contains + ordinal ranges for strings/dates, numeric equality +
+    ranges for numbers, on both providers. Still open: boolean extension filters (JSON boolean
+    forms diverge per provider), extension sorting, and expression-index promotion.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
 12. **Plugin system: P1–P3 and P5-v1 built and verified**; remaining design-only

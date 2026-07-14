@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
@@ -76,26 +77,57 @@ internal static class TamExpressions
     }
 
     /// <summary>
-    /// x => ((string)(object)x.Extensions).Contains("\"key\":\"value\"") — the ExtensionData
-    /// column converts to its canonical JSON string, so quoted containment is an exact match for
-    /// string-typed custom fields on every relational provider. Promoted expression indexes are
-    /// the performance path (docs/15); numeric extension filtering awaits real JSON translation.
+    /// Typed predicate over a tenant/plugin/package extension field: the ExtensionData column
+    /// (via the converted-column double-cast) feeds <see cref="Tam.EntityFrameworkCore.TamDbFunctions"/>,
+    /// whose per-provider translations do real JSON extraction — exact equality, substring, and
+    /// inclusive ranges for numbers, strings and ISO dates (ordinal-safe). The key comes from
+    /// the declared overlay; user input only ever becomes the comparison VALUE constant.
+    /// Promoted expression indexes remain the performance path (docs/15).
     /// </summary>
-    public static IQueryable<T> WhereExtensionEquals<T>(
-        IQueryable<T> source, PropertyInfo extensionsProperty, string key, string value)
+    public static IQueryable<T> WhereExtension<T>(
+        IQueryable<T> source, PropertyInfo extensionsProperty, string key, string wireKind,
+        ViewExecutor.FilterOperator op, string raw)
     {
-        // SQLite stores our compact serialization ("key":"v"); PG jsonb's canonical text form
-        // inserts a space ("key": "v") — match either, so the predicate is provider-agnostic.
-        var jsonKey = System.Text.Json.JsonSerializer.Serialize(key);
-        var jsonValue = System.Text.Json.JsonSerializer.Serialize(value);
         var parameter = Expression.Parameter(typeof(T), "x");
         var asString = Expression.Convert(
             Expression.Convert(Expression.Property(parameter, extensionsProperty), typeof(object)),
             typeof(string));
-        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
-        var body = Expression.OrElse(
-            Expression.Call(asString, containsMethod, Expression.Constant($"{jsonKey}:{jsonValue}")),
-            Expression.Call(asString, containsMethod, Expression.Constant($"{jsonKey}: {jsonValue}")));
+        var keyConstant = Expression.Constant(key);
+
+        Expression body;
+        if (wireKind is "number" or "integer")
+        {
+            var member = Expression.Call(
+                typeof(TamDbFunctions).GetMethod(nameof(TamDbFunctions.JsonNumber))!,
+                asString, keyConstant);
+            var value = Expression.Constant(
+                (double?)double.Parse(raw, System.Globalization.CultureInfo.InvariantCulture),
+                typeof(double?));
+            body = op switch
+            {
+                ViewExecutor.FilterOperator.From => Expression.GreaterThanOrEqual(member, value),
+                ViewExecutor.FilterOperator.To => Expression.LessThanOrEqual(member, value),
+                _ => Expression.Equal(member, value),
+            };
+        }
+        else
+        {
+            var member = Expression.Call(
+                typeof(TamDbFunctions).GetMethod(nameof(TamDbFunctions.JsonValue))!,
+                asString, keyConstant);
+            var value = Expression.Constant(raw);
+            var compare = typeof(string).GetMethod(nameof(string.Compare), [typeof(string), typeof(string)])!;
+            body = op switch
+            {
+                ViewExecutor.FilterOperator.Contains => Expression.Call(
+                    member, typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!, value),
+                ViewExecutor.FilterOperator.From => Expression.GreaterThanOrEqual(
+                    Expression.Call(compare, member, value), Expression.Constant(0)),
+                ViewExecutor.FilterOperator.To => Expression.LessThanOrEqual(
+                    Expression.Call(compare, member, value), Expression.Constant(0)),
+                _ => Expression.Equal(member, value),
+            };
+        }
         return source.Where(Expression.Lambda<Func<T, bool>>(body, parameter));
     }
 

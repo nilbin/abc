@@ -109,6 +109,21 @@ public static class Seed
         });
         orders[4].Extensions = orders[4].Extensions.WithValue("machineSerialNumber", "KA-2201-X");
 
+        // A numeric tenant field: exercises typed JSON predicates (equality + ranges) end to end.
+        db.Add(new ExtensionFieldEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            Entity = "order",
+            Key = "weightKg",
+            Type = "number",
+            LabelsJson = """{"sv":"Vikt (kg)","en":"Weight (kg)"}""",
+            State = ExtensionFieldState.Active,
+        });
+        orders[1].Extensions = orders[1].Extensions.WithValue("weightKg", 1250);
+        orders[2].Extensions = orders[2].Extensions.WithValue("weightKg", 380);
+        orders[4].Extensions = orders[4].Extensions.WithValue("weightKg", 95.5);
+
         db.SaveChanges();
     }
 }
