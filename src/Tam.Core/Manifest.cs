@@ -40,7 +40,10 @@ public sealed record ManifestOperation(
     string Permission,
     string TitleKey,
     IReadOnlyList<ManifestField> Fields,
-    string? ExtensibleEntity);
+    string? ExtensibleEntity)
+{
+    public IReadOnlyList<ManifestField> OutputFields { get; init; } = [];
+}
 
 public sealed record ManifestView(
     string Permission,
@@ -78,7 +81,12 @@ public static class ManifestBuilder
                 kv.Value.Permission,
                 kv.Value.TitleKey,
                 kv.Value.InputFields.Select(ToField).ToList(),
-                kv.Value.ExtensibleEntity is { } e ? TamModel.EntityKey(e) : null));
+                kv.Value.ExtensibleEntity is { } e ? TamModel.EntityKey(e) : null)
+            {
+                OutputFields = kv.Value.OutputType is { } output
+                    ? FieldModel.FromRecord(output).Select(ToField).ToList()
+                    : [],
+            });
 
         var views = model.Views.ToDictionary(
             kv => kv.Key,

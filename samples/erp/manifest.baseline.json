@@ -220,6 +220,17 @@
           "changeSet": false,
           "extension": false
         }
+      ],
+      "outputFields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
       ]
     },
     "extensions.define-field": {
@@ -298,12 +309,34 @@
           "changeSet": false,
           "extension": false
         }
+      ],
+      "outputFields": [
+        {
+          "name": "fieldId",
+          "labelKey": "labels.field-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
       ]
     },
     "extensions.retire-field": {
       "permission": "extensions.manage",
       "titleKey": "operations.extensions.retire-field.title",
       "fields": [
+        {
+          "name": "fieldId",
+          "labelKey": "labels.field-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
         {
           "name": "fieldId",
           "labelKey": "labels.field-id",
@@ -389,7 +422,27 @@
           "extension": false
         }
       ],
-      "extensibleEntity": "order"
+      "extensibleEntity": "order",
+      "outputFields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
     },
     "orders.edit-details": {
       "permission": "orders.edit",
@@ -443,7 +496,18 @@
           "extension": false
         }
       ],
-      "extensibleEntity": "order"
+      "extensibleEntity": "order",
+      "outputFields": [
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
     },
     "orders.complete": {
       "permission": "orders.complete",
@@ -454,6 +518,17 @@
           "labelKey": "labels.order-id",
           "type": "reference",
           "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
           "required": true,
           "changeSet": false,
           "extension": false
@@ -478,6 +553,17 @@
           "labelKey": "labels.permissions",
           "type": "object",
           "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "roleId",
+          "labelKey": "labels.role-id",
+          "type": "reference",
+          "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false

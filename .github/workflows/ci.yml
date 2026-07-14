@@ -30,6 +30,11 @@ jobs:
           dotnet run --project samples/erp --no-build -- manifest /tmp/manifest.current.json
           python3 scripts/check_manifest.py samples/erp/manifest.baseline.json /tmp/manifest.current.json
 
+      - name: Generated TS client is current
+        run: |
+          node scripts/generate-types.mjs samples/erp/manifest.baseline.json apps/web/src/generated/tam.ts
+          git diff --exit-code apps/web/src/generated/tam.ts
+
       - name: Frontend type-check and build
         run: |
           npm ci

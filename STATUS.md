@@ -78,6 +78,9 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   the baseline is consciously re-committed. GitHub Actions runs build/tests/baseline/frontend.
 - **Idempotency hardened**: replay verifies a payload hash; same key + different payload is
   rejected (`pipeline.idempotency-mismatch`), verified on the wire.
+- **Typed TS client**: `scripts/generate-types.mjs` emits per-operation input/output interfaces,
+  view row/query types, and a `TypedTamClient` from the manifest (outputs now in the manifest);
+  CI fails if the committed generated file drifts from the baseline.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -100,8 +103,7 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
    no EF global filters, no RLS (D2).
 7. **Idempotency**: replay + payload-hash rejection work; a retention policy doesn't exist yet.
 8. **Not started**: integrations runtime (inbox/outbox/reconciliation), OpenAPI emission,
-   generated TS *types* (the runtime is manifest-driven instead — typed per-operation clients
-   are the gap), offline/mobile, audit read views/UI.
+   offline/mobile, audit read views/UI.
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming, no per-tool schema for
    extension fields on tools/list — they validate at call time).
 10. **SQLite** backs the demo (JSON column as TEXT); Postgres/JSONB + expression-index promotion
