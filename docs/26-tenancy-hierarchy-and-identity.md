@@ -30,25 +30,31 @@ Every tenant-scoped row keeps its single owning `TenantId` (unchanged — no row
 "in a subtree" is a **prefix test on the path**, which is one indexed range scan, not a recursive
 CTE per query.
 
-### Two scoping modes, declared per view/operation
+### Three scoping modes, declared per view/operation
 
-- **Strict** (default, today's behaviour): a request scoped to tenant *T* sees only *T*'s own rows.
-- **Inherited**: a request scoped to *T* sees rows of *T* and every descendant — "roll-up" reads
-  (a region manager's dashboard over all its companies).
+- **Strict** (default): a request at node *T* sees only *T*'s own rows.
+- **subtree** (downward roll-up): *T* sees rows of *T* and every **descendant** — a region manager's
+  dashboard over all its companies.
+- **inherited** (upward shared): *T* sees rows of *T* and every **ancestor** — shared/reference data
+  owned high and used by every leaf below (a group-level price list every company reads).
 
-The global query filter generalizes cleanly. Instead of `row.TenantId == current`, the ambient
-context carries the **current tenant's path**, and the filter is:
+The global query filter generalizes cleanly. The ambient context carries the **current node's path**,
+and the filter is a path-prefix test — in one direction or the other:
 
 - strict: `row.TenantId == current.Id`
-- inherited: `row.Path (of row's tenant) starts-with current.Path` — i.e. `row.TenantPath LIKE
-  current.Path || '%'`, backed by an index on the denormalized `TenantPath` we copy onto each row
-  (or a join to the tenant table; denormalizing the path onto the row keeps reads single-table).
+- subtree (down): `row.TenantPath LIKE current.Path || '%'` (row owner at/below current)
+- inherited (up): `current.Path LIKE row.TenantPath || '%'` (row owner at/above current)
 
-Writes still stamp the **leaf** tenant (the `TenantStampInterceptor` is unchanged — a row is
-created *in* one tenant). Inheritance is a read-time widening, never a write-time ambiguity.
+backed by an index on the denormalized `TenantPath` copied onto each row (or a join to the tenant
+table; denormalizing keeps reads single-table). `inherited` only ever exposes the active node's *own*
+ancestors' rows — never a sibling subtree — so isolation holds.
 
-**Decision D-H1 — default scope.** Strict by default, `inherited` opt-in per view, because silent
-roll-up is a data-exposure footgun; a view asks for it explicitly. (Recommended.)
+Writes always stamp the **active node** (`TenantStampInterceptor` unchanged — a row is created *in*
+the node the actor stands in). Any inheritance is a read-time widening, never a write-time ambiguity;
+this is the D-H4 create-target invariant (grants fan out, writes fan in).
+
+**Decision D-H1 — default scope.** Strict by default; `subtree`/`inherited` are opt-in per view,
+because silent roll-up is a data-exposure footgun and a view should ask for breadth explicitly.
 
 ### Permissions across the hierarchy
 
@@ -143,11 +149,22 @@ node; roll-up is the Part-A inherited scope).
 
 ## Decisions (settled)
 
-- **D-H1 — default hierarchy scope: INHERITED.** A request scoped to a tenant sees its own rows and
-  its descendants' by default; a resource/view opts into strict. Note the exposure caveat: inherited
-  default means a parent-node membership rolls up unless narrowed — which the row-scope model
-  ([docs/27](27-authorization-model.md)) makes explicit as the `subtree` scope, so a sensitive
-  resource can carry `own`/`all`-strict while the default stays inherited.
+- **D-H1 — default read scope: STRICT, roll-up opt-in per view (revised).** A view sees only the
+  active node's own rows unless it explicitly opts into `subtree` (downward roll-up) or `inherited`
+  (upward shared-data read). *This reverses the earlier "inherited by default"* — the design review
+  found inherited-default couples read-breadth to data exposure (a parent-node membership silently
+  rolls up unless every sensitive resource remembers to narrow itself), and roll-up is net-new work
+  regardless, so making breadth an explicit per-view choice is safer and no more code. A purpose-built
+  "region dashboard" view opts into `subtree`; a shared-catalog view opts into `inherited`; everything
+  else stays strict.
+- **D-H4 — hierarchy write model: grants fan out, writes fan in (M1).** A created row is stamped with
+  the **active node** (the deliberately-selected tenant), never inferred from a rolled-up view; to
+  create elsewhere, switch the active node. Capability at the active node is the union up its cascading
+  ancestor memberships, collapsed to one flat set. Rows may be owned at any level (no framework
+  "leaf"); shared reference data owned high is read by leaves via `inherited` scope and edited at its
+  owner node. Rejected the cross-node create picker (M2/M3) — it pluralizes the flat capability set
+  across the C#→manifest→TS→React chain for little gain. Full rationale + the read/write scope kinds:
+  [docs/27 — "The hierarchy write model"](27-authorization-model.md).
 - **D-H2 — account ownership: Option 1 (platform-global `Account` + `TenantMembership`).** Global
   identity, access via memberships; the only model that supports a user across unrelated tenants.
 - **D-H3** active-tenant selection — **implemented via the PKCE flow.** The framework-rendered
