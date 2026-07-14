@@ -8,6 +8,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tam
+          POSTGRES_PASSWORD: tam
+          POSTGRES_DB: erp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +45,16 @@ jobs:
         run: |
           node scripts/generate-types.mjs samples/erp/manifest.baseline.json apps/web/src/generated/tam.ts
           git diff --exit-code apps/web/src/generated/tam.ts
+
+      - name: Postgres smoke test (jsonb extensions, seed, views)
+        env:
+          ConnectionStrings__erp: Host=localhost;Database=erp;Username=tam;Password=tam
+          ASPNETCORE_URLS: http://localhost:5100
+        run: |
+          dotnet run --project samples/erp --no-build &
+          for i in $(seq 1 30); do curl -sf http://localhost:5100/api/manifest > /dev/null && break; sleep 1; done
+          curl -sf "http://localhost:5100/api/views/orders.list" | grep -q '"total":5'
+          kill %1
 
       - name: Frontend type-check and build
         run: |

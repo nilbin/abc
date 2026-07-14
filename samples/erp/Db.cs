@@ -25,7 +25,7 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options) : DbCon
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
         });
 
-        modelBuilder.UseTam();
+        modelBuilder.UseTam(Database.ProviderName);
     }
 }
 

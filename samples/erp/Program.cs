@@ -113,8 +113,15 @@ if (args is ["manifest", ..])
 }
 
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("erp") ?? "Data Source=erp.db";
 builder.Services.AddDbContext<ErpDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("erp") ?? "Data Source=erp.db"));
+{
+    // Provider by connection-string shape: "Host=..." → PostgreSQL (jsonb), else SQLite dev file.
+    if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+        options.UseNpgsql(connectionString);
+    else
+        options.UseSqlite(connectionString);
+});
 builder.Services.AddTam<ErpDbContext>(model);
 builder.Services.AddSingleton<Tam.AspNetCore.IActorProvider, DbRoleActorProvider>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>

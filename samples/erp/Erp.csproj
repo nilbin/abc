@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -26,9 +27,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Tam.Compiler\Tam.Compiler.csproj"
-                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\src\Tam.Compiler\Tam.Compiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="locales/**/*.json" />
+    <Compile Remove="generated/**/*.cs" />
+    <None Include="generated/**/*.cs" />
     <CompilerVisibleProperty Include="TamDefaultCulture" />
   </ItemGroup>
 

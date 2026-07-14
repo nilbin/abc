@@ -119,8 +119,10 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
    re-send. Outbox dispatch and reconciliation remain. Also not started: offline/mobile.
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
    per-tenant and include extension fields with admin-authored descriptions.
-10. **SQLite** backs the demo (JSON column as TEXT); Postgres/JSONB + expression-index promotion
-    unexercised. Extension grid columns are display-only (no JSON filter/sort translation yet).
+10. **PostgreSQL supported and CI-smoked**: connection-string switch (Host=… → Npgsql), real
+    `jsonb` extensions column, full wire regression verified on PG 16 including a native
+    `extensions->>'key'` query. SQLite remains the zero-setup dev default. Expression-index
+    promotion and extension filter/sort translation remain.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
 

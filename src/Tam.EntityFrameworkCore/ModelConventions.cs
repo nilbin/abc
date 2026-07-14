@@ -10,8 +10,9 @@ public static class TamModelConventions
     /// <see cref="ExtensionData"/> JSON columns for <see cref="IExtensible"/> entities,
     /// audit and idempotency tables, and concurrency tokens for <see cref="IVersioned"/>.
     /// </summary>
-    public static ModelBuilder UseTam(this ModelBuilder modelBuilder)
+    public static ModelBuilder UseTam(this ModelBuilder modelBuilder, string? providerName = null)
     {
+        var isNpgsql = providerName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
         modelBuilder.Entity<AuditEntry>(b =>
         {
             b.ToTable("audit_entries");
@@ -54,13 +55,15 @@ public static class TamModelConventions
         {
             if (typeof(IExtensible).IsAssignableFrom(entity.ClrType))
             {
-                modelBuilder.Entity(entity.ClrType)
+                var property = modelBuilder.Entity(entity.ClrType)
                     .Property<ExtensionData>(nameof(IExtensible.Extensions))
                     .HasConversion(
                         new ValueConverter<ExtensionData, string>(
                             d => d.ToJson(),
                             json => ExtensionData.FromJson(json)))
                     .HasColumnName("extensions");
+                // The design's target storage (docs/15): one JSONB column per extensible aggregate.
+                if (isNpgsql) property.HasColumnType("jsonb");
             }
 
             if (typeof(IVersioned).IsAssignableFrom(entity.ClrType))
