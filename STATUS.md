@@ -197,8 +197,10 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     `jsonb` extensions column, full wire regression verified on PG 16. SQLite remains the
     zero-setup dev default. Extension filtering is now TYPED JSON extraction (see the verified
     list): exact equality + contains + ordinal ranges for strings/dates, numeric equality +
-    ranges for numbers, on both providers. Still open: boolean extension filters (JSON boolean
-    forms diverge per provider), extension sorting, and expression-index promotion.
+    ranges for numbers, on both providers. Extension SORTING now works the same
+    way (`sort=ext.weightKg` — numeric via JsonNumber, ordinal via JsonValue; grid headers on
+    extension columns are clickable; null placement follows the provider). Still open: boolean
+    extension filters (JSON boolean forms diverge per provider) and expression-index promotion.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
 12. **Plugin system: P1–P3 and P5-v1 built and verified**; remaining design-only

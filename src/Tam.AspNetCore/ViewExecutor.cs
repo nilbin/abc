@@ -108,8 +108,30 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         var sort = query.GetValueOrDefault("sort") ?? view.Capabilities.DefaultSort;
         var descending = query.GetValueOrDefault("dir") is "desc"
             || (query.GetValueOrDefault("sort") is null && view.Capabilities.DefaultSortDescending);
-        if (sort is not null && !view.Capabilities.Sortable.Contains(sort))
+
+        // Extension fields sort mechanically like they filter (docs/04): "sort=ext.{key}",
+        // typed by the declared spec via the same JSON-extraction functions.
+        ExtensionFilter? extensionSort = null;
+        if (sort is { } s && s.StartsWith("ext.", StringComparison.Ordinal))
+        {
+            var key = s["ext.".Length..];
+            if (view.ExtensibleEntity is { } sortEntity
+                && services.GetService(typeof(IExtensionRegistry)) is IExtensionRegistry sortRegistry
+                && (await sortRegistry.For(context.TenantId, TamModel.EntityKey(sortEntity), ct))
+                    .FirstOrDefault(x => x.Key == key) is { } spec)
+            {
+                extensionSort = new ExtensionFilter(key, spec.Semantic.WireKind, FilterOperator.Equal, "");
+                sort = null;
+            }
+            else
+            {
+                sort = view.Capabilities.DefaultSort;
+            }
+        }
+        else if (sort is not null && !view.Capabilities.Sortable.Contains(sort))
+        {
             sort = view.Capabilities.DefaultSort;
+        }
 
         var page = int.TryParse(query.GetValueOrDefault("page"), out var p1) ? Math.Max(1, p1) : 1;
         var pageSize = int.TryParse(query.GetValueOrDefault("pageSize"), out var p2)
@@ -117,7 +139,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
 
         var run = RunMethod.MakeGenericMethod(view.ResultType);
         var task = (Task<ViewResponse>)run.Invoke(
-            null, [queryable, sort, descending, page, pageSize, fieldFilters, extensionFilters, ct])!;
+            null, [queryable, sort, descending, page, pageSize, fieldFilters, extensionFilters, extensionSort, ct])!;
         return (await task, null);
     }
 
@@ -177,6 +199,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         object queryable, string? sort, bool descending, int page, int pageSize,
         List<FieldFilter> fieldFilters,
         List<ExtensionFilter> extensionFilters,
+        ExtensionFilter? extensionSort,
         CancellationToken ct)
     {
         var source = (IQueryable<T>)queryable;
@@ -206,7 +229,14 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
                     source, extensionsProperty, filter.Key, filter.WireKind, filter.Op, filter.Value);
         }
 
-        if (sort is not null)
+        if (extensionSort is not null
+            && typeof(T).GetProperty("Extensions") is { } sortProperty
+            && source.Provider is Microsoft.EntityFrameworkCore.Query.IAsyncQueryProvider)
+        {
+            source = TamExpressions.OrderByExtension(
+                source, sortProperty, extensionSort.Key, extensionSort.WireKind, descending);
+        }
+        else if (sort is not null)
         {
             var member = typeof(T).GetProperties().FirstOrDefault(
                 p => Naming.Camel(p.Name) == sort);

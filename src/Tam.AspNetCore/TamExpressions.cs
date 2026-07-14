@@ -131,6 +131,28 @@ internal static class TamExpressions
         return source.Where(Expression.Lambda<Func<T, bool>>(body, parameter));
     }
 
+    /// <summary>Sort by an extension field via the same typed JSON extraction as filtering:
+    /// numbers order numerically (JsonNumber), everything else ordinally (JsonValue).</summary>
+    public static IQueryable<T> OrderByExtension<T>(
+        IQueryable<T> source, PropertyInfo extensionsProperty, string key, string wireKind, bool descending)
+    {
+        var parameter = Expression.Parameter(typeof(T), "x");
+        var asString = Expression.Convert(
+            Expression.Convert(Expression.Property(parameter, extensionsProperty), typeof(object)),
+            typeof(string));
+        var numeric = wireKind is "number" or "integer";
+        var member = Expression.Call(
+            typeof(TamDbFunctions).GetMethod(
+                numeric ? nameof(TamDbFunctions.JsonNumber) : nameof(TamDbFunctions.JsonValue))!,
+            asString, Expression.Constant(key));
+        var lambda = Expression.Lambda(member, parameter);
+        var method = typeof(Queryable).GetMethods()
+            .First(m => m.Name == (descending ? "OrderByDescending" : "OrderBy")
+                && m.GetParameters().Length == 2)
+            .MakeGenericMethod(typeof(T), numeric ? typeof(double?) : typeof(string));
+        return (IQueryable<T>)method.Invoke(null, [source, lambda])!;
+    }
+
     /// <summary>OrderBy/OrderByDescending with a strongly typed key — an (object) cast would
     /// defeat EF's projection member matching and fail translation (VIEW001 territory).</summary>
     public static IQueryable<T> OrderByProperty<T>(IQueryable<T> source, PropertyInfo property, bool descending)

@@ -172,17 +172,19 @@ export function ViewGrid(props: ViewGridProps) {
           <Table.Thead>
             <Table.Tr>
               {columns.map(field => {
-                const sortable = !field.extension && view.sortable.includes(field.name);
+                // Extension columns sort mechanically ("sort=ext.{key}") like they filter.
+                const sortKey = field.extension ? `ext.${field.name}` : field.name;
+                const sortable = field.extension || view.sortable.includes(field.name);
                 const label = field.extension ? t(`ext.${field.name}`) : t(field.labelKey);
                 return (
                   <Table.Th key={field.name}>
                     {sortable ? (
                       <UnstyledButton onClick={() => {
-                        if (sort === field.name) setDesc(d => !d);
-                        else { setSort(field.name); setDesc(false); }
+                        if (sort === sortKey) setDesc(d => !d);
+                        else { setSort(sortKey); setDesc(false); }
                       }}>
                         <Text size="sm" fw={600}>
-                          {label}{sort === field.name ? (desc ? ' ↓' : ' ↑') : ''}
+                          {label}{sort === sortKey ? (desc ? ' ↓' : ' ↑') : ''}
                         </Text>
                       </UnstyledButton>
                     ) : <Text size="sm" fw={600}>{label}</Text>}
