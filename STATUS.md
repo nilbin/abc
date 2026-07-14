@@ -104,8 +104,8 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 7. **Idempotency**: replay + payload-hash rejection work; a retention policy doesn't exist yet.
 8. **Not started**: integrations runtime (inbox/outbox/reconciliation), OpenAPI emission,
    offline/mobile, audit read views/UI.
-9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming, no per-tool schema for
-   extension fields on tools/list — they validate at call time).
+9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
+   per-tenant and include extension fields with admin-authored descriptions.
 10. **SQLite** backs the demo (JSON column as TEXT); Postgres/JSONB + expression-index promotion
     unexercised. Extension grid columns are display-only (no JSON filter/sort translation yet).
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability

@@ -30,7 +30,7 @@ public static class McpEndpoint
             },
             "notifications/initialized" => null,
             "ping" => new { },
-            "tools/list" => new { tools = Tools(model, McpCulture(http, model)) },
+            "tools/list" => new { tools = await Tools(http, model, ct) },
             "tools/call" => await Call(http, model, request, ct),
             _ => null,
         };
@@ -39,21 +39,31 @@ public static class McpEndpoint
         return Results.Json(new { jsonrpc = "2.0", id, result }, TamJson.Options);
     }
 
-    private static string McpCulture(HttpContext http, TamModel model) =>
-        TamAspNetCore.BuildContext(http, model).Culture;
-
-    private static List<object> Tools(TamModel model, string culture)
+    private static async Task<List<object>> Tools(HttpContext http, TamModel model, CancellationToken ct)
     {
+        var context = TamAspNetCore.BuildContext(http, model);
+        var culture = context.Culture;
         string Label(string key) => model.Locales.Lookup(key, culture) ?? key;
+
+        // Per-tenant schemas (docs/15): agents see the tenant's custom fields with the
+        // admin-authored labels and descriptions — the same words the tenant's humans read.
+        var registry = http.RequestServices.GetService(typeof(IExtensionRegistry)) as IExtensionRegistry;
+        var overlay = registry is null
+            ? new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>()
+            : await registry.All(context.TenantId, ct);
+
         var tools = new List<object>();
 
         foreach (var (opId, op) in model.Operations)
         {
+            var extensible = op.ExtensibleEntity is { } entity
+                ? overlay.GetValueOrDefault(TamModel.EntityKey(entity))
+                : null;
             tools.Add(new
             {
                 name = ToolName(opId),
                 description = Label(op.TitleKey),
-                inputSchema = Schema(op.InputFields, Label),
+                inputSchema = Schema(op.InputFields, Label, allOptional: false, extensible, culture),
             });
         }
 
@@ -137,23 +147,48 @@ public static class McpEndpoint
     }
 
     private static object Schema(
-        IReadOnlyList<FieldModel> fields, Func<string, string> label, bool allOptional = false)
+        IReadOnlyList<FieldModel> fields,
+        Func<string, string> label,
+        bool allOptional = false,
+        IReadOnlyList<ExtensionFieldSpec>? extensions = null,
+        string culture = "en")
     {
         var properties = new Dictionary<string, object>();
         foreach (var field in fields)
         {
-            var schemaType = field.Semantic.WireKind switch
-            {
-                "number" => "number",
-                "integer" => "integer",
-                "boolean" => "boolean",
-                "object" => "object",
-                _ => "string",
-            };
+            var schemaType = SchemaType(field.Semantic.WireKind);
             properties[field.WireName] = field.EnumOptions is { Count: > 0 } options
                 ? new { type = schemaType, description = label(field.LabelKey), @enum = options }
                 : new { type = schemaType, description = label(field.LabelKey) };
         }
+
+        if (extensions is { Count: > 0 })
+        {
+            var extensionProperties = new Dictionary<string, object>();
+            foreach (var spec in extensions.Where(s => s.State == ExtensionFieldState.Active))
+            {
+                var text = spec.Labels.GetValueOrDefault(culture) ?? spec.Labels.Values.FirstOrDefault() ?? spec.Key;
+                var description = spec.Descriptions?.GetValueOrDefault(culture)
+                    ?? spec.Descriptions?.Values.FirstOrDefault();
+                extensionProperties[spec.Key] = new
+                {
+                    type = "object",
+                    description = description is null ? text : $"{text}. {description}",
+                    properties = new
+                    {
+                        original = new { type = SchemaType(spec.Semantic.WireKind) },
+                        value = new { type = SchemaType(spec.Semantic.WireKind) },
+                    },
+                };
+            }
+            properties["extensions"] = new
+            {
+                type = "object",
+                description = "Tenant-defined custom fields as change sets ({original, value} per key).",
+                properties = extensionProperties,
+            };
+        }
+
         return new
         {
             type = "object",
@@ -163,6 +198,15 @@ public static class McpEndpoint
                 : fields.Where(f => f.Required).Select(f => f.WireName).ToArray(),
         };
     }
+
+    private static string SchemaType(string wireKind) => wireKind switch
+    {
+        "number" => "number",
+        "integer" => "integer",
+        "boolean" => "boolean",
+        "object" => "object",
+        _ => "string",
+    };
 
     // MCP tool names allow [a-zA-Z0-9_-]; operation ids use dots + kebab, so the reverse
     // mapping is a lookup against known ids, never string surgery.
