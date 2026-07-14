@@ -36,6 +36,7 @@ public sealed class IdempotencyRecord
     public string Key { get; set; } = "";        // (tenant, operation, key) composite
     public string TenantId { get; set; } = "";
     public string OperationId { get; set; } = "";
+    public string PayloadHash { get; set; } = "";  // same key + different payload = client bug, rejected
     public string ResponseJson { get; set; } = "";
     public DateTimeOffset Timestamp { get; set; }
 }

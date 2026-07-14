@@ -1,0 +1,1282 @@
+{
+  "version": "1",
+  "defaultCulture": "sv",
+  "catalogs": {
+    "sv": {
+      "app.title": "Norrservice ERP",
+      "nav.orders": "Ordrar",
+      "nav.customers": "Kunder",
+      "nav.extensions": "Anpassade f\u00E4lt",
+      "operations.customers.create.title": "Ny kund",
+      "operations.orders.create.title": "Ny order",
+      "operations.orders.edit-details.title": "\u00C4ndra orderdetaljer",
+      "operations.orders.complete.title": "Slutf\u00F6r order",
+      "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
+      "operations.extensions.retire-field.title": "Avveckla anpassat f\u00E4lt",
+      "labels.name": "Namn",
+      "labels.visit-address": "Bes\u00F6ksadress",
+      "labels.email": "E-post",
+      "labels.phone": "Telefon",
+      "labels.is-active": "Aktiv",
+      "labels.customer": "Kund",
+      "labels.order-type": "Ordertyp",
+      "labels.project": "Projekt",
+      "labels.work-address": "Arbetsadress",
+      "labels.description": "Arbetsbeskrivning",
+      "labels.requested-date": "\u00D6nskat datum",
+      "labels.estimated-total": "Uppskattat belopp",
+      "labels.order-id": "Order",
+      "labels.id": "Id",
+      "labels.number": "Ordernummer",
+      "labels.type": "Typ",
+      "labels.status": "Status",
+      "labels.version": "Version",
+      "labels.extensions": "Anpassade f\u00E4lt",
+      "labels.entity": "Entitet",
+      "labels.key": "Nyckel",
+      "labels.labels": "Etiketter",
+      "labels.required": "Obligatoriskt",
+      "labels.max-length": "Maxl\u00E4ngd",
+      "labels.descriptions": "Beskrivningar",
+      "labels.options": "Alternativ",
+      "labels.field-id": "F\u00E4lt",
+      "labels.state": "Tillst\u00E5nd",
+      "labels.search": "S\u00F6k",
+      "labels.active-only": "Endast aktiva",
+      "enums.service": "Service",
+      "enums.project": "Projekt",
+      "enums.open": "\u00D6ppen",
+      "enums.completed": "Slutf\u00F6rd",
+      "enums.cancelled": "Makulerad",
+      "enums.draft": "Utkast",
+      "enums.active": "Aktivt",
+      "enums.deprecated": "Utfasas",
+      "enums.retired": "Avvecklat",
+      "orders.already-completed": "Ordern \u00E4r redan slutf\u00F6rd.",
+      "orders.cannot-complete-cancelled": "En makulerad order kan inte slutf\u00F6ras.",
+      "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar.",
+      "orders.project-required": "V\u00E4lj ett projekt f\u00F6r projektordrar.",
+      "orders.project-not-for-customer": "Projektet tillh\u00F6r inte den valda kunden.",
+      "orders.not-found": "Ordern finns inte.",
+      "orders.not-editable": "Ordern kan inte l\u00E4ngre \u00E4ndras.",
+      "customers.not-found": "Kunden finns inte l\u00E4ngre.",
+      "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
+      "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
+      "customers.duplicate-name": "Det finns redan en kund med det namnet.",
+      "validation.required": "F\u00E4ltet \u00E4r obligatoriskt.",
+      "validation.too-long": "F\u00E5r inneh\u00E5lla h\u00F6gst {max} tecken.",
+      "validation.invalid-email": "Ogiltig e-postadress.",
+      "validation.invalid-value": "Ogiltigt v\u00E4rde.",
+      "validation.unknown-field": "Ok\u00E4nt f\u00E4lt.",
+      "concurrency.field-conflict": "F\u00E4ltet har \u00E4ndrats av n\u00E5gon annan.",
+      "concurrency.version-conflict": "Posten har \u00E4ndrats av n\u00E5gon annan. Ladda om och f\u00F6rs\u00F6k igen.",
+      "pipeline.not-authorized": "Du saknar beh\u00F6righet ({permission}).",
+      "pipeline.unknown-operation": "Ok\u00E4nd operation: {operation}.",
+      "pipeline.unknown-view": "Ok\u00E4nd vy: {view}.",
+      "pipeline.invalid-input": "Ogiltig indata.",
+      "pipeline.not-found": "Posten finns inte.",
+      "pipeline.idempotent-replay": "Svaret \u00E5teranv\u00E4ndes fr\u00E5n en tidigare identisk beg\u00E4ran.",
+      "pipeline.idempotency-mismatch": "Idempotensnyckeln har redan anv\u00E4nts med en annan beg\u00E4ran.",
+      "extensions.unknown-field": "Ok\u00E4nt anpassat f\u00E4lt.",
+      "extensions.retired-field": "F\u00E4ltet \u00E4r avvecklat och kan inte \u00E4ndras.",
+      "extensions.deprecated-field": "F\u00E4ltet h\u00E5ller p\u00E5 att fasas ut.",
+      "extensions.unknown-type": "Ok\u00E4nd f\u00E4lttyp.",
+      "extensions.key-conflict": "Nyckeln anv\u00E4nds redan.",
+      "extensions.missing-label": "Etikett saknas f\u00F6r standardspr\u00E5ket.",
+      "extensions.invalid-option": "V\u00E4rdet finns inte bland alternativen."
+    },
+    "en": {
+      "app.title": "Norrservice ERP",
+      "nav.orders": "Orders",
+      "nav.customers": "Customers",
+      "nav.extensions": "Custom fields",
+      "operations.customers.create.title": "New customer",
+      "operations.orders.create.title": "New order",
+      "operations.orders.edit-details.title": "Edit order details",
+      "operations.orders.complete.title": "Complete order",
+      "operations.extensions.define-field.title": "New custom field",
+      "operations.extensions.retire-field.title": "Retire custom field",
+      "labels.name": "Name",
+      "labels.visit-address": "Visit address",
+      "labels.email": "Email",
+      "labels.phone": "Phone",
+      "labels.is-active": "Active",
+      "labels.customer": "Customer",
+      "labels.order-type": "Order type",
+      "labels.project": "Project",
+      "labels.work-address": "Work address",
+      "labels.description": "Description",
+      "labels.requested-date": "Requested date",
+      "labels.estimated-total": "Estimated total",
+      "labels.order-id": "Order",
+      "labels.id": "Id",
+      "labels.number": "Order number",
+      "labels.type": "Type",
+      "labels.status": "Status",
+      "labels.version": "Version",
+      "labels.extensions": "Custom fields",
+      "labels.entity": "Entity",
+      "labels.key": "Key",
+      "labels.labels": "Labels",
+      "labels.required": "Required",
+      "labels.max-length": "Max length",
+      "labels.descriptions": "Descriptions",
+      "labels.options": "Options",
+      "labels.field-id": "Field",
+      "labels.state": "State",
+      "labels.search": "Search",
+      "labels.active-only": "Active only",
+      "enums.service": "Service",
+      "enums.project": "Project",
+      "enums.open": "Open",
+      "enums.completed": "Completed",
+      "enums.cancelled": "Cancelled",
+      "enums.draft": "Draft",
+      "enums.active": "Active",
+      "enums.deprecated": "Deprecated",
+      "enums.retired": "Retired",
+      "orders.already-completed": "The order is already completed.",
+      "orders.cannot-complete-cancelled": "A cancelled order cannot be completed.",
+      "orders.invalid-customer": "The selected customer cannot receive orders.",
+      "orders.project-required": "Select a project for project orders.",
+      "orders.project-not-for-customer": "The project does not belong to the selected customer.",
+      "orders.not-found": "The order does not exist.",
+      "orders.not-editable": "The order can no longer be edited.",
+      "customers.not-found": "The customer no longer exists.",
+      "customers.inactive": "The selected customer is inactive.",
+      "customers.credit-blocked": "The customer is credit blocked.",
+      "customers.duplicate-name": "A customer with that name already exists.",
+      "validation.required": "This field is required.",
+      "validation.too-long": "Must be at most {max} characters.",
+      "validation.invalid-email": "Invalid email address.",
+      "validation.invalid-value": "Invalid value.",
+      "validation.unknown-field": "Unknown field.",
+      "concurrency.field-conflict": "This field was changed by someone else.",
+      "concurrency.version-conflict": "The record was changed by someone else. Reload and try again.",
+      "pipeline.not-authorized": "You lack the required permission ({permission}).",
+      "pipeline.unknown-operation": "Unknown operation: {operation}.",
+      "pipeline.unknown-view": "Unknown view: {view}.",
+      "pipeline.invalid-input": "Invalid input.",
+      "pipeline.not-found": "The record does not exist.",
+      "pipeline.idempotent-replay": "The response was replayed from an earlier identical request.",
+      "pipeline.idempotency-mismatch": "The idempotency key was already used with a different request.",
+      "extensions.unknown-field": "Unknown custom field.",
+      "extensions.retired-field": "The field is retired and cannot be changed.",
+      "extensions.deprecated-field": "The field is being phased out.",
+      "extensions.unknown-type": "Unknown field type.",
+      "extensions.key-conflict": "The key is already in use.",
+      "extensions.missing-label": "A label for the default culture is missing.",
+      "extensions.invalid-option": "The value is not among the allowed options."
+    }
+  },
+  "operations": {
+    "customers.create": {
+      "permission": "customers.create",
+      "titleKey": "operations.customers.create.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "visitAddress",
+          "labelKey": "labels.visit-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "email",
+          "labelKey": "labels.email",
+          "type": "email",
+          "wireKind": "string",
+          "format": "email",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "phone",
+          "labelKey": "labels.phone",
+          "type": "phone",
+          "wireKind": "string",
+          "format": "phone",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
+    },
+    "extensions.define-field": {
+      "permission": "extensions.manage",
+      "titleKey": "operations.extensions.define-field.title",
+      "fields": [
+        {
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "type",
+          "labelKey": "labels.type",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "labels",
+          "labelKey": "labels.labels",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "required",
+          "labelKey": "labels.required",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "maxLength",
+          "labelKey": "labels.max-length",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "descriptions",
+          "labelKey": "labels.descriptions",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "options",
+          "labelKey": "labels.options",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
+    },
+    "extensions.retire-field": {
+      "permission": "extensions.manage",
+      "titleKey": "operations.extensions.retire-field.title",
+      "fields": [
+        {
+          "name": "fieldId",
+          "labelKey": "labels.field-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
+    },
+    "orders.create": {
+      "permission": "orders.create",
+      "titleKey": "operations.orders.create.title",
+      "fields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "orderType",
+          "labelKey": "labels.order-type",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Service",
+            "Project"
+          ],
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "workAddress",
+          "labelKey": "labels.work-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": true,
+          "maxLength": 1000,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "requestedDate",
+          "labelKey": "labels.requested-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "estimatedTotal",
+          "labelKey": "labels.estimated-total",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "extensibleEntity": "order"
+    },
+    "orders.edit-details": {
+      "permission": "orders.edit",
+      "titleKey": "operations.orders.edit-details.title",
+      "fields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": false,
+          "maxLength": 1000,
+          "changeSet": true,
+          "extension": false
+        },
+        {
+          "name": "requestedDate",
+          "labelKey": "labels.requested-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": true,
+          "extension": false
+        },
+        {
+          "name": "workAddress",
+          "labelKey": "labels.work-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false
+        },
+        {
+          "name": "estimatedTotal",
+          "labelKey": "labels.estimated-total",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": true,
+          "extension": false
+        }
+      ],
+      "extensibleEntity": "order"
+    },
+    "orders.complete": {
+      "permission": "orders.complete",
+      "titleKey": "operations.orders.complete.title",
+      "fields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
+    }
+  },
+  "views": {
+    "customers.list": {
+      "permission": "customers.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "activeOnly",
+          "labelKey": "labels.active-only",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "email",
+          "labelKey": "labels.email",
+          "type": "email",
+          "wireKind": "string",
+          "format": "email",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "phone",
+          "labelKey": "labels.phone",
+          "type": "phone",
+          "wireKind": "string",
+          "format": "phone",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "visitAddress",
+          "labelKey": "labels.visit-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "isActive",
+          "labelKey": "labels.is-active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "name",
+        "isActive"
+      ],
+      "filterable": [
+        "isActive"
+      ],
+      "defaultSort": "name",
+      "defaultSortDescending": false
+    },
+    "customers.lookup": {
+      "permission": "customers.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "isActive",
+          "labelKey": "labels.is-active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "name"
+      ],
+      "filterable": [],
+      "defaultSort": "name",
+      "defaultSortDescending": false
+    },
+    "extensions.fields": {
+      "permission": "extensions.manage",
+      "queryFields": [
+        {
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "type",
+          "labelKey": "labels.type",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "required",
+          "labelKey": "labels.required",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "state",
+          "labelKey": "labels.state",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Active",
+            "Deprecated",
+            "Retired"
+          ],
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "key"
+      ],
+      "filterable": [],
+      "defaultSort": "key",
+      "defaultSortDescending": false
+    },
+    "orders.list": {
+      "permission": "orders.read",
+      "queryFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": false,
+          "options": [
+            "Open",
+            "Completed",
+            "Cancelled"
+          ],
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "customerName",
+          "labelKey": "labels.customer",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "type",
+          "labelKey": "labels.type",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Service",
+            "Project"
+          ],
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Open",
+            "Completed",
+            "Cancelled"
+          ],
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "requestedDate",
+          "labelKey": "labels.requested-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "estimatedTotal",
+          "labelKey": "labels.estimated-total",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "extensions",
+          "labelKey": "labels.extensions",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "number",
+        "customerName",
+        "requestedDate"
+      ],
+      "filterable": [
+        "status",
+        "type"
+      ],
+      "defaultSort": "number",
+      "defaultSortDescending": true,
+      "extensibleEntity": "order"
+    },
+    "orders.detail": {
+      "permission": "orders.read",
+      "queryFields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "customerName",
+          "labelKey": "labels.customer",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "type",
+          "labelKey": "labels.type",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Service",
+            "Project"
+          ],
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Open",
+            "Completed",
+            "Cancelled"
+          ],
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "workAddress",
+          "labelKey": "labels.work-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": true,
+          "maxLength": 1000,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "requestedDate",
+          "labelKey": "labels.requested-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "estimatedTotal",
+          "labelKey": "labels.estimated-total",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "extensions",
+          "labelKey": "labels.extensions",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false,
+      "extensibleEntity": "order"
+    }
+  },
+  "forms": {
+    "web.orders.create": {
+      "operation": "orders.create",
+      "fields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "customer-picker"
+        },
+        {
+          "name": "orderType",
+          "labelKey": "labels.order-type",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Service",
+            "Project"
+          ],
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "visibleWhen": {
+            "t": "bin",
+            "op": "eq",
+            "l": {
+              "t": "field",
+              "f": "orderType"
+            },
+            "r": {
+              "t": "const",
+              "v": "Project"
+            }
+          },
+          "requiredWhen": {
+            "t": "bin",
+            "op": "eq",
+            "l": {
+              "t": "field",
+              "f": "orderType"
+            },
+            "r": {
+              "t": "const",
+              "v": "Project"
+            }
+          }
+        },
+        {
+          "name": "workAddress",
+          "labelKey": "labels.work-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": true,
+          "maxLength": 1000,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "requestedDate",
+          "labelKey": "labels.requested-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "estimatedTotal",
+          "labelKey": "labels.estimated-total",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "money"
+        }
+      ],
+      "includeExtensions": true,
+      "serverDependencies": [
+        "customerId",
+        "orderType"
+      ]
+    },
+    "web.orders.edit": {
+      "operation": "orders.edit-details",
+      "fields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden"
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": false,
+          "maxLength": 1000,
+          "changeSet": true,
+          "extension": false
+        },
+        {
+          "name": "requestedDate",
+          "labelKey": "labels.requested-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": true,
+          "extension": false
+        },
+        {
+          "name": "workAddress",
+          "labelKey": "labels.work-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false
+        },
+        {
+          "name": "estimatedTotal",
+          "labelKey": "labels.estimated-total",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "renderer": "money"
+        }
+      ],
+      "includeExtensions": true,
+      "serverDependencies": []
+    },
+    "web.customers.create": {
+      "operation": "customers.create",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "visitAddress",
+          "labelKey": "labels.visit-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "email",
+          "labelKey": "labels.email",
+          "type": "email",
+          "wireKind": "string",
+          "format": "email",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "phone",
+          "labelKey": "labels.phone",
+          "type": "phone",
+          "wireKind": "string",
+          "format": "phone",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.extensions.define": {
+      "operation": "extensions.define-field",
+      "fields": [
+        {
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "type",
+          "labelKey": "labels.type",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "labels",
+          "labelKey": "labels.labels",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "culture-text"
+        },
+        {
+          "name": "required",
+          "labelKey": "labels.required",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "maxLength",
+          "labelKey": "labels.max-length",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    }
+  },
+  "grids": {
+    "web.orders.list": {
+      "view": "orders.list",
+      "columns": [
+        "number",
+        "customerName",
+        "type",
+        "status",
+        "requestedDate",
+        "estimatedTotal"
+      ],
+      "rowActions": [
+        "orders.complete"
+      ],
+      "toolbarActions": [
+        "orders.create"
+      ],
+      "includeExtensions": true
+    },
+    "web.customers.list": {
+      "view": "customers.list",
+      "columns": [
+        "name",
+        "email",
+        "phone",
+        "visitAddress",
+        "isActive"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "customers.create"
+      ],
+      "includeExtensions": false
+    },
+    "web.extensions.fields": {
+      "view": "extensions.fields",
+      "columns": [
+        "entity",
+        "key",
+        "type",
+        "required",
+        "state"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "extensions.define-field"
+      ],
+      "includeExtensions": false
+    }
+  },
+  "extensions": {},
+  "permissions": [
+    "customers.create",
+    "customers.read",
+    "extensions.manage",
+    "orders.complete",
+    "orders.create",
+    "orders.edit",
+    "orders.read"
+  ],
+  "revision": 0,
+  "actorPermissions": []
+}

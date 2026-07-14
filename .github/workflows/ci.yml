@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build (analyzers included)
+        run: dotnet build Tam.sln
+
+      - name: Tests
+        run: dotnet test tests/Tam.Tests --no-build
+
+      - name: Manifest baseline check (D4, additive-only)
+        run: |
+          dotnet run --project samples/erp --no-build -- manifest /tmp/manifest.current.json
+          python3 scripts/check_manifest.py samples/erp/manifest.baseline.json /tmp/manifest.current.json
+
+      - name: Frontend type-check and build
+        run: |
+          npm ci
+          cd apps/web && npx tsc --noEmit && npx vite build

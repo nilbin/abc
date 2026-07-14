@@ -79,6 +79,7 @@
   "pipeline.invalid-input": "Invalid input.",
   "pipeline.not-found": "The record does not exist.",
   "pipeline.idempotent-replay": "The response was replayed from an earlier identical request.",
+  "pipeline.idempotency-mismatch": "The idempotency key was already used with a different request.",
 
   "extensions.unknown-field": "Unknown custom field.",
   "extensions.retired-field": "The field is retired and cannot be changed.",

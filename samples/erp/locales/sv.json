@@ -79,6 +79,7 @@
   "pipeline.invalid-input": "Ogiltig indata.",
   "pipeline.not-found": "Posten finns inte.",
   "pipeline.idempotent-replay": "Svaret återanvändes från en tidigare identisk begäran.",
+  "pipeline.idempotency-mismatch": "Idempotensnyckeln har redan använts med en annan begäran.",
 
   "extensions.unknown-field": "Okänt anpassat fält.",
   "extensions.retired-field": "Fältet är avvecklat och kan inte ändras.",

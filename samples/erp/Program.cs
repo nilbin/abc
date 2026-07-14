@@ -87,6 +87,19 @@ var model = new TamModelBuilder()
 
     .Build();
 
+// Manifest export mode (D4): `dotnet run -- manifest [path]` writes the compiled model's manifest
+// for the CI baseline check, then exits. No server, no database.
+if (args is ["manifest", ..])
+{
+    var path = args.Length > 1 ? args[1] : "manifest.baseline.json";
+    var exported = Tam.ManifestBuilder.Build(
+        model, new Dictionary<string, IReadOnlyList<Tam.ExtensionFieldSpec>>(), revision: 0);
+    File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(
+        exported, new System.Text.Json.JsonSerializerOptions(Tam.TamJson.Options) { WriteIndented = true }));
+    Console.WriteLine($"manifest written to {path}");
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ErpDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("erp") ?? "Data Source=erp.db"));

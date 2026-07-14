@@ -25,13 +25,20 @@ public sealed class OperationExecutor(
             return Fail(context, PipelineFindings.NotAuthorized.With(("permission", operation.Permission)));
 
         var db = dbResolver(services);
+        var payloadHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(body.GetRawText())));
 
         if (context.IdempotencyKey is { } key)
         {
             var replay = await db.Set<IdempotencyRecord>().FindAsync(
                 [context.TenantId.Value, operationId, key], ct);
             if (replay is not null)
+            {
+                // Same key + same payload → replay the stored outcome. Different payload → client bug.
+                if (replay.PayloadHash != payloadHash)
+                    return Fail(context, Finding.Error("pipeline.idempotency-mismatch").Create());
                 return JsonSerializer.Deserialize<OperationResponse>(replay.ResponseJson, TamJson.Options)!;
+            }
         }
 
         object? input;
@@ -127,6 +134,7 @@ public sealed class OperationExecutor(
                 Key = storeKey,
                 TenantId = context.TenantId.Value,
                 OperationId = operationId,
+                PayloadHash = payloadHash,
                 ResponseJson = JsonSerializer.Serialize(response, TamJson.Options),
                 Timestamp = DateTimeOffset.UtcNow,
             });
