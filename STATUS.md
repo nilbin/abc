@@ -73,6 +73,10 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 - **Roles as tenant data (D1 back half)**: roles live in the database, managed via `roles.define`
   which validates grants against the compiled permission catalogue at definition time (typo'd
   permission → localized finding); a runtime-defined role works as an actor immediately.
+- **Record scopes (D1 complete)**: grants may carry `:own` (e.g. `orders.complete:own`); views
+  scope declaratively (`.ScopedTo(context, permission, x => x.AssignedToActorId)`) and operations
+  re-check ownership authoritatively. Verified: the technician role sees only assigned orders and
+  is rejected (localized) when completing others.
 - **D4 baseline in CI**: `manifest` export mode + committed baseline + additive-only checker;
   removed members, type changes, optional→required flips, and new required inputs fail CI until
   the baseline is consciously re-committed. GitHub Actions runs build/tests/baseline/frontend.
@@ -97,8 +101,8 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 4. **Value update policies**: only `RecomputeIfUntouched`; `DefaultOnce/Derived/RequireConfirmation`
    and `SuggestFrom` bindings are absent. Conditional requiredness is enforced at resolve +
    client, not re-checked at submit.
-5. **Authorization**: roles are tenant data now, but identity is still the X-Demo-Role header
-   stand-in, and D1's record scopes (All/Team/Own) are unimplemented.
+5. **Authorization**: identity is still the X-Demo-Role header stand-in (no real authn), and
+   only the Own scope exists — Team would need an org dimension.
 6. **Tenancy**: envelope + stamping + per-tenant registry/overlay work, but a fixed "demo" tenant,
    no EF global filters, no RLS (D2).
 7. **Idempotency**: replay + payload-hash rejection work; a retention policy doesn't exist yet.

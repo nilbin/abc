@@ -17,6 +17,7 @@ public sealed class DbRoleActorProvider : IActorProvider
         ["admin"] = "Alva Andersson",
         ["dispatcher"] = "Didrik Berg",
         ["viewer"] = "Vera Lund",
+        ["technician"] = "Tekla Nilsson",
     };
 
     public Actor GetActor(HttpContext http)

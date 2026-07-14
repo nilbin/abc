@@ -168,6 +168,9 @@ public static class CompleteOrder
         var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
         if (order is null) return OrderErrors.NotFound;
 
+        var scope = context.CheckOwnership("orders.complete", order.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
+
         var result = order.Complete();
         if (result.IsError) return result.As<Output>();
 
@@ -200,9 +203,9 @@ public static class OrderList
         public ExtensionData Extensions { get; init; } = new();
     }
 
-    public static IQueryable<Result> Execute(Query query, ErpDbContext db)
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
-        var orders = db.Orders.AsQueryable();
+        var orders = db.Orders.ScopedTo(context, "orders.read", x => x.AssignedToActorId);
         if (query.Status is { } status) orders = orders.Where(x => x.Status == status);
         if (query.CustomerId is { } customer) orders = orders.Where(x => x.CustomerId == customer);
         if (!string.IsNullOrWhiteSpace(query.Search))

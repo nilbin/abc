@@ -134,6 +134,7 @@ function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
               data={[
                 { value: 'admin', label: 'Alva Andersson (admin)' },
                 { value: 'dispatcher', label: 'Didrik Berg (dispatcher)' },
+                { value: 'technician', label: 'Tekla Nilsson (technician)' },
                 { value: 'viewer', label: 'Vera Lund (viewer)' },
               ]}
             />

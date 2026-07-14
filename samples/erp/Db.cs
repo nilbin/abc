@@ -84,6 +84,11 @@ public static class Seed
             "orders.read", "orders.create", "orders.edit", "orders.complete",
             "customers.read", "customers.create");
         Role("viewer", "orders.read", "customers.read");
+        Role("technician",
+            "orders.read:own", "orders.edit:own", "orders.complete:own", "customers.read");
+
+        orders[3].AssignTo("technician");
+        orders[4].AssignTo("technician");
 
         // A tenant-defined custom field, exactly as an admin would create it at runtime (docs/15).
         db.Add(new ExtensionFieldEntity

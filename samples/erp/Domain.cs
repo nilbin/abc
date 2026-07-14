@@ -113,6 +113,7 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned
     public DateOnly? RequestedDate { get; private set; }
     public decimal? EstimatedTotal { get; private set; }
     public OrderStatus Status { get; private set; }
+    public string? AssignedToActorId { get; private set; }
     public long Version { get; set; }
     public ExtensionData Extensions { get; set; } = new();
 
@@ -133,6 +134,8 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned
         EstimatedTotal = estimatedTotal,
         Status = OrderStatus.Open,
     };
+
+    public void AssignTo(string actorId) => AssignedToActorId = actorId;
 
     public Result Complete()
     {
