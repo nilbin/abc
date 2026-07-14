@@ -106,10 +106,11 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 6. **Tenancy**: envelope + stamping + per-tenant registry/overlay work, but a fixed "demo" tenant,
    no EF global filters, no RLS (D2).
 7. **Idempotency**: replay + payload-hash rejection work; a retention policy doesn't exist yet.
-8. **Integrations**: mapping binding with INT001 required-field validation and an idempotent
-   import runner exist (Fortnox sample verified: create/fail/replay); inbox persistence,
-   retries/dead-letter, outbox dispatch, and reconciliation remain. Also not started: OpenAPI
-   emission, offline/mobile, audit read views/UI.
+8. **Integrations**: mapping binding (INT001 validation), idempotent runner, and a persisted
+   inbox with retry + dead-letter (3 attempts) exist — failed-sync recovery verified: a row that
+   failed on a missing customer processed automatically after the customer was created, with no
+   re-send. Outbox dispatch and reconciliation remain. Also not started: OpenAPI emission,
+   offline/mobile, audit read views/UI.
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
    per-tenant and include extension fields with admin-authored descriptions.
 10. **SQLite** backs the demo (JSON column as TEXT); Postgres/JSONB + expression-index promotion

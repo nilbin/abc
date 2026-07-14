@@ -42,6 +42,13 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
         });
+        modelBuilder.Entity<InboxRecord>(b =>
+        {
+            b.ToTable("integration_inbox");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.IntegrationId, x.Key }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.Status });
+        });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes().ToList())
         {
@@ -80,6 +87,33 @@ public static class TamModelConventions
     private sealed class WrapperConverter<TWrapper, TValue>() : ValueConverter<TWrapper, TValue>(
         w => (TValue)ValueWrapper.Unwrap(w)!,
         v => (TWrapper)ValueWrapper.Wrap(typeof(TWrapper), v));
+}
+
+public enum InboxStatus
+{
+    Pending,
+    Processed,
+    Failed,
+    Dead,
+}
+
+/// <summary>
+/// Integration inbox (docs/10): every received external row is persisted before processing,
+/// retried from its stored payload on later runs, and dead-lettered after repeated failure —
+/// so a fixed root cause (e.g. the missing customer) recovers without re-sending anything.
+/// </summary>
+public sealed class InboxRecord
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string IntegrationId { get; set; } = "";
+    public string Key { get; set; } = "";
+    public string PayloadJson { get; set; } = "";
+    public InboxStatus Status { get; set; } = InboxStatus.Pending;
+    public int Attempts { get; set; }
+    public string? LastError { get; set; }
+    public DateTimeOffset ReceivedAt { get; set; }
+    public DateTimeOffset? ProcessedAt { get; set; }
 }
 
 /// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>

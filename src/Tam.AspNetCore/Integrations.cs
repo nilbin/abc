@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
@@ -62,24 +64,67 @@ public sealed record IntegrationDefinition<TSource>(
     Func<TSource, string> IdempotencyKey);
 
 public sealed record IntegrationRowResult(
-    string Key, string Status, IReadOnlyList<Finding> Findings);   // created | replayed | failed
+    string Key, string Status, IReadOnlyList<Finding> Findings);   // created | replayed | failed | dead
 
 public static class IntegrationRunner
 {
-    /// <summary>Each row executes the target operation through the full pipeline, keyed for replay safety.</summary>
+    public const int MaxAttempts = 3;
+
+    /// <summary>
+    /// Inbox-backed processing (docs/10): incoming rows are persisted first, then every
+    /// pending/failed row for this integration — including ones from earlier runs — is
+    /// (re)processed from its stored payload through the full operation pipeline. A row that
+    /// keeps failing is dead-lettered after <see cref="MaxAttempts"/>; a fixed root cause
+    /// recovers on the next run without the external system re-sending anything.
+    /// </summary>
     public static async Task<IReadOnlyList<IntegrationRowResult>> Run<TSource>(
         IntegrationDefinition<TSource> integration,
         IEnumerable<TSource> rows,
         OperationExecutor executor,
         OperationContext context,
+        Microsoft.EntityFrameworkCore.DbContext db,
         CancellationToken ct)
     {
-        var results = new List<IntegrationRowResult>();
+        var inbox = db.Set<InboxRecord>();
+
+        // 1. Receive: persist unseen rows before any processing.
         foreach (var row in rows)
         {
             var key = $"{integration.Id}:{integration.IdempotencyKey(row)}";
+            var existing = inbox.Local.FirstOrDefault(x => x.Key == key)
+                ?? await inbox.FirstOrDefaultAsync(
+                    x => x.TenantId == context.TenantId.Value
+                        && x.IntegrationId == integration.Id && x.Key == key, ct);
+            if (existing is null)
+            {
+                inbox.Add(new InboxRecord
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = context.TenantId.Value,
+                    IntegrationId = integration.Id,
+                    Key = key,
+                    PayloadJson = JsonSerializer.Serialize(row, TamJson.Options),
+                    ReceivedAt = DateTimeOffset.UtcNow,
+                });
+            }
+        }
+        await db.SaveChangesAsync(ct);
+
+        // 2. Process everything retryable, oldest first.
+        var retryable = (await inbox
+            .Where(x => x.TenantId == context.TenantId.Value
+                && x.IntegrationId == integration.Id
+                && (x.Status == InboxStatus.Pending || x.Status == InboxStatus.Failed))
+            .ToListAsync(ct))
+            .OrderBy(x => x.ReceivedAt)   // client-side: SQLite can't ORDER BY DateTimeOffset
+            .ToList();
+
+        var results = new List<IntegrationRowResult>();
+        foreach (var record in retryable)
+        {
+            var source = JsonSerializer.Deserialize<TSource>(record.PayloadJson, TamJson.Options)!;
             var input = integration.Mappings
-                .Select(m => (m.Target, Value: m.Map(row)))
+                .Select(m => (m.Target, Value: m.Map(source)))
                 .Where(m => m.Value is not null)
                 .ToDictionary(m => m.Target, m => m.Value);
             var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
@@ -90,7 +135,7 @@ public static class IntegrationRunner
                 TenantId = context.TenantId,
                 Source = InvocationSource.Integration,
                 Culture = context.Culture,
-                IdempotencyKey = key,
+                IdempotencyKey = record.Key,
                 CorrelationId = context.CorrelationId,
                 Services = context.Services,
             };
@@ -98,11 +143,30 @@ public static class IntegrationRunner
             var response = await executor.ExecuteAsync(integration.OperationId, body, rowContext, ct);
             var failed = response.Findings.Any(f => f.Severity == FindingSeverity.Error);
             var replayed = response.Findings.Any(f => f.Code == PipelineFindings.IdempotentReplay.Code);
+
+            if (failed)
+            {
+                record.Attempts++;
+                record.Status = record.Attempts >= MaxAttempts ? InboxStatus.Dead : InboxStatus.Failed;
+                record.LastError = string.Join(", ", response.Findings
+                    .Where(f => f.Severity == FindingSeverity.Error).Select(f => f.Code).Distinct());
+            }
+            else
+            {
+                record.Status = InboxStatus.Processed;
+                record.ProcessedAt = DateTimeOffset.UtcNow;
+                record.LastError = null;
+            }
+
             results.Add(new IntegrationRowResult(
-                key,
-                failed ? "failed" : replayed ? "replayed" : "created",
+                record.Key,
+                record.Status == InboxStatus.Dead ? "dead"
+                    : failed ? "failed"
+                    : replayed ? "replayed" : "created",
                 response.Findings));
         }
+        await db.SaveChangesAsync(ct);
+
         return results;
     }
 }

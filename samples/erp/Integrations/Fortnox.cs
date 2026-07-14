@@ -43,7 +43,7 @@ public static class ImportFortnoxOrders
                 .IdempotencyKey(s => s.DocumentNumber)
                 .Build("fortnox.orders.import", model, "orders.create");
 
-            var results = await IntegrationRunner.Run(integration, payload, executor, context, ct);
+            var results = await IntegrationRunner.Run(integration, payload, executor, context, db, ct);
             return Results.Json(new { results }, TamJson.Options);
         });
     }
