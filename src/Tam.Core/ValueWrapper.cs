@@ -75,6 +75,7 @@ public static class TamJson
         };
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         options.Converters.Add(new ValueWrapperJsonConverterFactory());
+        options.Converters.Add(new ExtensionDataJsonConverter());
         return options;
     }
 }

@@ -16,6 +16,9 @@ public class Result
 
     public IReadOnlyList<OperationEffect> Effects { get; init; } = [];
 
+    /// <summary>Structured field conflicts from the three-way merge, when the failure is concurrency.</summary>
+    public IReadOnlyList<FieldConflict>? Conflicts { get; init; }
+
     public bool IsError => Findings.Any(f => f.Severity == FindingSeverity.Error);
 
     public static Result Success() => new();

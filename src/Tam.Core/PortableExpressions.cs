@@ -70,7 +70,7 @@ public sealed record PxBinary(string Op, Px L, Px R) : Px
 
     public override IEnumerable<string> Fields() => [.. L.Fields(), .. R.Fields()];
 
-    internal static bool Truthy(object? v) => v is true;
+    public static bool Truthy(object? v) => v is true;
 
     private static object? Normalize(object? v)
     {

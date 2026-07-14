@@ -58,6 +58,37 @@ public interface IExtensible
     ExtensionData Extensions { get; set; }
 }
 
+/// <summary>On the wire, <see cref="ExtensionData"/> is a plain key/value object.</summary>
+public sealed class ExtensionDataJsonConverter : System.Text.Json.Serialization.JsonConverter<ExtensionData>
+{
+    public override ExtensionData Read(
+        ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+    {
+        using var doc = System.Text.Json.JsonDocument.ParseValue(ref reader);
+        return ExtensionData.FromJson(doc.RootElement.GetRawText());
+    }
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer, ExtensionData value, System.Text.Json.JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        foreach (var (key, element) in value.Values)
+        {
+            writer.WritePropertyName(key);
+            element.WriteTo(writer);
+        }
+        writer.WriteEndObject();
+    }
+}
+
+/// <summary>Registry access as the pipeline and manifest see it (implementation in Tam.EntityFrameworkCore).</summary>
+public interface IExtensionRegistry
+{
+    Task<IReadOnlyList<ExtensionFieldSpec>> For(TenantId tenant, string entityKey, CancellationToken ct);
+
+    Task<IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>>> All(TenantId tenant, CancellationToken ct);
+}
+
 public enum ExtensionFieldState
 {
     Draft,
