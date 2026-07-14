@@ -47,10 +47,18 @@ public static class TamOpenIddict
                        .SetEndSessionEndpointUris("/connect/logout");
 
                 // Humans: Authorization Code + PKCE (PKCE required — the SPA is a public client with
-                // no secret). Machines: client credentials. No password grant (OAuth 2.1).
+                // no secret) + refresh so a short-lived access token renews silently. Machines: client
+                // credentials. No password grant (OAuth 2.1).
                 options.AllowAuthorizationCodeFlow()
+                       .AllowRefreshTokenFlow()
                        .AllowClientCredentialsFlow();
                 options.RequireProofKeyForCodeExchange();
+                options.RegisterScopes(Scopes.OfflineAccess);
+
+                // A short access-token lifetime makes the refresh path real (the client renews behind
+                // the scenes); the refresh token carries the longer session. Production tunes both.
+                options.SetAccessTokenLifetime(TimeSpan.FromMinutes(10));
+                options.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
 
                 // Development keys: ephemeral, tokens do not survive a restart. Production supplies
                 // certificates here — the one deliberate configuration seam.
@@ -161,7 +169,9 @@ public static class TamOpenIddict
         identity.SetClaim(Claims.Name, account.DisplayName);
         identity.SetClaim(ClaimsActorProvider.AccountClaim, accountId.ToString());
         identity.SetClaim(ClaimsActorProvider.ActiveTenantClaim, chosen);
-        identity.SetScopes(request.GetScopes());
+        // Always grant offline_access for an interactive human login so a refresh token is issued and
+        // the client can renew the short-lived access token silently — the library handles it.
+        identity.SetScopes(request.GetScopes().Append(Scopes.OfflineAccess).Distinct());
         identity.SetDestinations(_ => [Destinations.AccessToken]);
 
         return Results.SignIn(new ClaimsPrincipal(identity), properties: null,
@@ -199,10 +209,12 @@ public static class TamOpenIddict
         var request = http.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenIddict request cannot be retrieved.");
 
-        if (request.IsAuthorizationCodeGrantType())
+        if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
         {
-            // The code carries the principal minted at the authorization endpoint (subject = account,
-            // active tenant, scopes). OpenIddict has already validated the PKCE code_verifier.
+            // Both grants re-issue the SAME stored principal: the code (from the login flow) or the
+            // refresh token both carry subject = account, active tenant, and scopes. OpenIddict has
+            // already validated the PKCE verifier / the refresh token, so this just re-emits — a
+            // refresh silently renews the short-lived access token without another login.
             var result = await http.AuthenticateAsync(
                 OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             if (result.Principal is null) return Deny();
@@ -308,6 +320,7 @@ public static class TamOpenIddict
                 Permissions.Endpoints.Token,
                 Permissions.Endpoints.EndSession,
                 Permissions.GrantTypes.AuthorizationCode,
+                Permissions.GrantTypes.RefreshToken,
                 Permissions.ResponseTypes.Code,
             },
             Requirements = { Requirements.Features.ProofKeyForCodeExchange },

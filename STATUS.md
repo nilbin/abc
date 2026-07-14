@@ -181,18 +181,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   extension fields by wire kind. Verified on SQLite AND PostgreSQL, including the
   `from=1000`-excludes-380 text-compare trap, malformed numbers → 422, undeclared keys ignored.
 
-- **Auth (Tam.Auth.OpenIddict)**: embedded OpenIddict server with **Authorization Code + PKCE**
-  for humans (a framework-rendered, localized login + tenant picker at /connect/authorize) and
-  **client credentials** for machines — no password grant (OAuth 2.1). Platform-global accounts
-  (docs/26): the token subject is the account id; the chosen tenant rides a `tam:tenant` claim that
-  `ClaimTenantProvider` turns into the request's scope, and `ClaimsActorProvider` resolves grants
+- **Auth (Tam.Auth.OpenIddict)**: embedded OpenIddict server with **Authorization Code + PKCE +
+  refresh** for humans (a framework-rendered, localized login + tenant picker at /connect/authorize)
+  and **client credentials** for machines — no password grant (OAuth 2.1). Access tokens are
+  short-lived (10 min) and renew silently via a rotating refresh token (`offline_access`). Platform-global
+  accounts (docs/26): the token subject is the account id; the chosen tenant rides a `tam:tenant` claim
+  that `ClaimTenantProvider` turns into the request's scope, and `ClaimsActorProvider` resolves grants
   fresh from that tenant's membership each request (an account with no membership there gets none —
   the cross-tenant guard). Users are account+membership through users.define/deactivate/list; PBKDF2
-  hashing. IActorProvider stays the seam for any external IdP. Verified end-to-end (curl + browser):
-  framework login, tenant picker (Alva a member of two unrelated tenants), PKCE enforced (wrong
-  verifier → 400), cross-tenant switch (demo → 5 orders/5 customers as admin; demo2 → 0 orders/2
-  customers as viewer), client credentials (mcp-agent), anonymous/insufficient → 403, tekla's :own
-  scope through real tokens, SPA redirect + /callback code exchange, login/logout UI.
+  hashing. IActorProvider stays the seam for any external IdP. **The PKCE + refresh mechanics live in
+  the framework client, not the app**: `@tam/core` `TamAuth` (redirect, callback exchange, token
+  storage, bearer wiring, silent refresh) + `@tam/react` `useTamAuth` hook; `TamClient` retries a 401
+  once after an automatic refresh. Verified end-to-end (curl + browser): framework login, tenant picker
+  (Alva a member of two unrelated tenants), PKCE enforced (wrong verifier → 400), refresh grant issues
+  a working rotated token, SPA stores + renews it, cross-tenant switch (demo → 5 orders/5 customers as
+  admin; demo2 → 0 orders/2 customers as viewer), client credentials (mcp-agent), anonymous/insufficient
+  → 403, tekla's :own scope through real tokens, reload keeps the session, login/logout UI.
 - **Subscriptions & seats (docs/24)**: subscription registry (plan, seats, plugin entitlements,
   status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
   view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —

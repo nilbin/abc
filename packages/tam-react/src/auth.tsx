@@ -26,6 +26,9 @@ export function useTamAuth(client: TamClient, options: TamAuthOptions): TamAuthS
   const started = useRef(false);
 
   useEffect(() => {
+    // A silent refresh that ultimately fails (refresh token gone/expired) ends the session — drop to
+    // anonymous so the app shows the sign-in surface instead of spinning on 401s.
+    auth.onSessionEnded = () => setSession(null);
     if (!auth.isCallback() || started.current) return;
     started.current = true;   // guard React 18 StrictMode's double-invoke: redeem the code once
     auth.completeCallback()

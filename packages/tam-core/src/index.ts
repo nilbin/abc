@@ -216,6 +216,13 @@ export class TamClient {
     readonly baseUrl: string = '',
     public culture: string = 'sv') {}
 
+  /**
+   * Called with no args when a request comes back 401 (the access token expired). If it resolves
+   * true, the one failed request is retried once with the (now refreshed) headers. TamAuth wires
+   * this to its silent refresh; unset, a 401 simply surfaces.
+   */
+  public onUnauthorized?: () => Promise<boolean>;
+
   private url(path: string, params?: Record<string, unknown>): string {
     const search = new URLSearchParams({ culture: this.culture });
     for (const [k, v] of Object.entries(params ?? {})) {
@@ -224,14 +231,24 @@ export class TamClient {
     return `${this.baseUrl}${path}?${search}`;
   }
 
+  /** Every request routes through here so the bearer header and 401→refresh→retry live in one place. */
+  private async send(url: string, init: RequestInit = {}): Promise<Response> {
+    const withHeaders = (): RequestInit => ({ ...init, headers: { ...(init.headers ?? {}), ...this.headers } });
+    let response = await fetch(url, withHeaders());
+    if (response.status === 401 && this.onUnauthorized && (await this.onUnauthorized())) {
+      response = await fetch(url, withHeaders());   // retry once with the refreshed token
+    }
+    return response;
+  }
+
   async manifest(): Promise<Manifest> {
-    const response = await fetch(this.url('/api/manifest'), { headers: this.headers });
+    const response = await this.send(this.url('/api/manifest'));
     if (!response.ok) throw new Error(`manifest: ${response.status}`);
     return await response.json();
   }
 
   async view(viewId: string, params?: Record<string, unknown>): Promise<ViewResponse> {
-    const response = await fetch(this.url(`/api/views/${viewId}`, params), { headers: this.headers });
+    const response = await this.send(this.url(`/api/views/${viewId}`, params));
     if (!response.ok) throw new Error(`view ${viewId}: ${response.status}`);
     return await response.json();
   }
@@ -241,11 +258,10 @@ export class TamClient {
     body: Record<string, unknown>,
     options?: { idempotencyKey?: string },
   ): Promise<OperationResponse> {
-    const response = await fetch(this.url(`/api/operations/${operationId}`), {
+    const response = await this.send(this.url(`/api/operations/${operationId}`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...this.headers,
         ...(options?.idempotencyKey ? { 'X-Idempotency-Key': options.idempotencyKey } : {}),
       },
       body: JSON.stringify(body),
@@ -260,9 +276,9 @@ export class TamClient {
     changed: string[] | null,
     revision: number,
   ): Promise<ResolveResponse> {
-    const response = await fetch(this.url(`/api/forms/${formId}/resolve`), {
+    const response = await this.send(this.url(`/api/forms/${formId}/resolve`), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...this.headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ input, changed, revision }),
     });
     if (!response.ok) throw new Error(`resolve ${formId}: ${response.status}`);
@@ -317,8 +333,14 @@ export class TamAuth {
   private readonly tokenPath: string;
   private readonly callbackPath: string;
   private readonly storageKey: string;
+  private readonly refreshKey: string;
   private readonly verifierKey = 'tam-pkce-verifier';
   private readonly stateKey = 'tam-pkce-state';
+  private refreshing: Promise<boolean> | null = null;
+
+  /** Invoked when the session ends involuntarily (a refresh failed). The React hook uses this to
+   * flip back to anonymous so the app shows the sign-in surface again. */
+  public onSessionEnded?: () => void;
 
   constructor(private readonly client: TamClient, options: TamAuthOptions) {
     this.clientId = options.clientId;
@@ -327,6 +349,9 @@ export class TamAuth {
     this.tokenPath = options.tokenPath ?? '/connect/token';
     this.callbackPath = options.callbackPath ?? '/callback';
     this.storageKey = options.storageKey ?? 'tam-token';
+    this.refreshKey = `${this.storageKey}-refresh`;
+    // Silent renewal: when the client hits a 401, try to refresh and let it retry the request once.
+    this.client.onUnauthorized = () => this.refresh();
   }
 
   /** True when the browser is on the redirect-back URL and a code needs redeeming. */
@@ -353,6 +378,7 @@ export class TamAuth {
       redirect_uri: this.redirectUri,
       code_challenge: b64urlBytes(new Uint8Array(digest)),
       code_challenge_method: 'S256',
+      scope: 'offline_access',   // ask for a refresh token so the session can renew silently
       state,
     });
     window.location.href = `${this.client.baseUrl}${this.authorizePath}?${params}`;
@@ -377,7 +403,9 @@ export class TamAuth {
         }),
       });
       const data = await response.json().catch(() => ({}));
-      return typeof data.access_token === 'string' ? this.adopt(data.access_token) : null;
+      return typeof data.access_token === 'string'
+        ? this.adopt(data.access_token, data.refresh_token)
+        : null;
     } finally {
       sessionStorage.removeItem(this.verifierKey);
       sessionStorage.removeItem(this.stateKey);
@@ -385,14 +413,57 @@ export class TamAuth {
     }
   }
 
-  /** Forget the token and unwire the client. (Re-auth is a fresh signIn.) */
+  /**
+   * Exchange the stored refresh token for a fresh access token. De-duplicated, so a burst of 401s
+   * triggers exactly one network refresh and they all await it. Returns false (and ends the session)
+   * when there is no usable refresh token; a transient network error returns false without ending it.
+   */
+  async refresh(): Promise<boolean> {
+    return (this.refreshing ??= this.doRefresh().finally(() => { this.refreshing = null; }));
+  }
+
+  private async doRefresh(): Promise<boolean> {
+    const refreshToken = typeof window === 'undefined' ? null : sessionStorage.getItem(this.refreshKey);
+    if (!refreshToken) { this.endSession(); return false; }
+    let response: Response;
+    try {
+      response = await fetch(`${this.client.baseUrl}${this.tokenPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: this.clientId,
+        }),
+      });
+    } catch {
+      return false;   // network hiccup: keep the session, let the original request's failure surface
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || typeof data.access_token !== 'string') { this.endSession(); return false; }
+    // Refresh tokens rotate (the server issues a new one and revokes the old), so store the new one.
+    this.adopt(data.access_token, data.refresh_token);
+    return true;
+  }
+
+  /** Forget the tokens and unwire the client. (Re-auth is a fresh signIn.) */
   signOut(): void {
     sessionStorage.removeItem(this.storageKey);
+    sessionStorage.removeItem(this.refreshKey);
     delete this.client.headers['Authorization'];
   }
 
-  private adopt(token: string): TamSession {
+  private endSession(): void {
+    this.signOut();
+    this.onSessionEnded?.();
+  }
+
+  private adopt(token: string, refreshToken?: string): TamSession {
     sessionStorage.setItem(this.storageKey, token);
+    // The refresh token is stored to survive reloads. sessionStorage (not localStorage) keeps it to
+    // the tab session; a hardened deployment would move refresh handling behind a BFF cookie.
+    if (typeof refreshToken === 'string' && refreshToken.length > 0)
+      sessionStorage.setItem(this.refreshKey, refreshToken);
     this.client.headers['Authorization'] = `Bearer ${token}`;
     const payload = decodeJwt(token);
     return {
