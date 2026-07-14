@@ -86,6 +86,8 @@ A tenant package is a *file*: it lives in a repo, gets code review, installs int
 
 ## Custom objects (the tenant-defined entity)
 
+> Superseded in detail by [23-custom-objects.md](23-custom-objects.md), which resolves the permission model and storage reuse; the sketch below records the original direction.
+
 The largest step, and the reason the extension registry was built as a compiler from day one. A custom object definition is registry data:
 
 ```jsonc
