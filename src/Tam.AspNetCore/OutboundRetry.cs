@@ -63,7 +63,6 @@ public sealed class IntegrationRetryDriver(
     RetryPolicy policy,
     TimeSpan interval) : BackgroundService
 {
-    private static readonly TimeSpan RunTimeout = TimeSpan.FromMinutes(2);
     private const int BatchSize = 50;
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -121,19 +120,9 @@ public sealed class IntegrationRetryDriver(
             JsonElement? payload = task.PayloadJson is { } json
                 ? JsonSerializer.Deserialize<JsonElement>(json)
                 : null;
-            var context = IntegrationScheduler.SystemContext(task.TenantId, scope.ServiceProvider);
-            using var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            runCts.CancelAfter(RunTimeout);
-            OutboundResult result;
-            try
-            {
-                result = await OutboundRunner.RunAsync(
-                    integration, "retry", context, scope.ServiceProvider, payload, db, runCts.Token);
-            }
-            catch (OperationCanceledException) when (runCts.IsCancellationRequested && !ct.IsCancellationRequested)
-            {
-                result = OutboundResult.Failure("Timeout");
-            }
+            var context = OutboundRunner.SystemContext(task.TenantId, scope.ServiceProvider);
+            var result = await OutboundRunner.WithDeadline(
+                integration, "retry", context, scope.ServiceProvider, payload, db, ct);
 
             task.Attempts++;
             if (result.Ok)

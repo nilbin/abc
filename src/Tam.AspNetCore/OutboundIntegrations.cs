@@ -38,6 +38,40 @@ internal sealed class IntegrationRunContext(
 /// </summary>
 public static class OutboundRunner
 {
+    /// <summary>A single outbound run gets this long before its per-run token trips — a hung
+    /// external call fails that run, it never wedges the once-a-minute loop behind it. One value
+    /// for all three drivers (event, schedule, retry), not a copy per loop.</summary>
+    public static readonly TimeSpan RunTimeout = TimeSpan.FromMinutes(2);
+
+    /// <summary>The system actor a schedule/event/retry run acts as — no HTTP request, so no user
+    /// (its operations still enforce authorization). One home, not a reach-through into the scheduler.</summary>
+    public static OperationContext SystemContext(string tenantId, IServiceProvider services) => new()
+    {
+        Actor = new Actor("system", "System", new HashSet<string> { "*" }),
+        TenantId = new TenantId(tenantId),
+        Source = InvocationSource.Integration,
+        Culture = "en",
+        Services = services,
+    };
+
+    /// <summary>Runs one outbound integration under the per-run deadline: a timeout becomes a failed
+    /// result, not a stuck loop; a real shutdown (outer <paramref name="ct"/>) still cancels hard.</summary>
+    public static async Task<OutboundResult> WithDeadline(
+        OutboundIntegrationDefinition integration, string trigger, OperationContext context,
+        IServiceProvider services, JsonElement? eventPayload, DbContext db, CancellationToken ct)
+    {
+        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        runCts.CancelAfter(RunTimeout);
+        try
+        {
+            return await RunAsync(integration, trigger, context, services, eventPayload, db, runCts.Token);
+        }
+        catch (OperationCanceledException) when (runCts.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            return OutboundResult.Failure("Timeout");
+        }
+    }
+
     public static async Task<OutboundResult> RunAsync(
         OutboundIntegrationDefinition integration, string trigger,
         OperationContext context, IServiceProvider services, JsonElement? eventPayload,
@@ -154,10 +188,6 @@ public sealed class IntegrationScheduler(
         }
     }
 
-    /// <summary>A single scheduled handler gets this long before its per-run token trips — a hung
-    /// external call fails that run, it does not wedge the once-a-minute tick behind it.</summary>
-    private static readonly TimeSpan RunTimeout = TimeSpan.FromMinutes(2);
-
     private async Task TickAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
@@ -204,19 +234,9 @@ public sealed class IntegrationScheduler(
                 continue;
             }
 
-            var context = SystemContext(schedule.TenantId, scope.ServiceProvider);
-            using var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            runCts.CancelAfter(RunTimeout);
-            OutboundResult result;
-            try
-            {
-                result = await OutboundRunner.RunAsync(
-                    integration, "schedule", context, scope.ServiceProvider, null, db, runCts.Token);
-            }
-            catch (OperationCanceledException) when (runCts.IsCancellationRequested && !ct.IsCancellationRequested)
-            {
-                result = OutboundResult.Failure("Timeout");
-            }
+            var context = OutboundRunner.SystemContext(schedule.TenantId, scope.ServiceProvider);
+            var result = await OutboundRunner.WithDeadline(
+                integration, "schedule", context, scope.ServiceProvider, null, db, ct);
 
             schedule.LastStatus = result.Ok ? "ok" : "failed";
             if (!result.Ok)
@@ -226,15 +246,4 @@ public sealed class IntegrationScheduler(
             await db.SaveChangesAsync(ct);
         }
     }
-
-    /// <summary>A schedule/event run has no HTTP request; it acts as a system actor with the
-    /// permissions the app grants (its own operations still enforce authorization).</summary>
-    internal static OperationContext SystemContext(string tenantId, IServiceProvider services) => new()
-    {
-        Actor = new Actor("system", "System", new HashSet<string> { "*" }),
-        TenantId = new TenantId(tenantId),
-        Source = InvocationSource.Integration,
-        Culture = "en",
-        Services = services,
-    };
 }

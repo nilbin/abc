@@ -144,20 +144,11 @@ public sealed class OutboxDispatcher(
         if (outbound.Count == 0) return;
 
         var policy = RetryPolicy.Resolve(services);
-        var context = IntegrationScheduler.SystemContext(record.TenantId, services);
+        var context = OutboundRunner.SystemContext(record.TenantId, services);
         foreach (var integration in outbound)
         {
-            OutboundResult result;
-            using var runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            runCts.CancelAfter(TimeSpan.FromMinutes(2));
-            try
-            {
-                result = await OutboundRunner.RunAsync(
-                    integration, "event", context, services, effect.Payload, db, runCts.Token);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch (OperationCanceledException) { result = OutboundResult.Failure("Timeout"); }
-            catch (Exception e) { result = OutboundResult.Failure(e.GetType().Name); }
+            var result = await OutboundRunner.WithDeadline(
+                integration, "event", context, services, effect.Payload, db, ct);
 
             if (!result.Ok)
                 await OutboundRetryQueue.EnqueueFailureAsync(
