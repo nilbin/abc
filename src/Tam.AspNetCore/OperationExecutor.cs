@@ -134,6 +134,10 @@ public sealed class OperationExecutor(
         }
 
         await transaction.CommitAsync(ct);
+
+        (services.GetService(typeof(EffectBroadcaster)) as EffectBroadcaster)
+            ?.Publish(context.TenantId.Value, operationId, response.Effects);
+
         return response;
     }
 

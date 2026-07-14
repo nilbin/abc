@@ -55,11 +55,12 @@ registerRenderer('culture-text', CultureText);
 // ---- Pages: each is a grid + modals, everything else comes from the manifest ----
 
 function OrdersPage() {
-  const { client, t, refreshManifest } = useTam();
+  const { client, t, refreshManifest, can } = useTam();
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const openEdit = async (row: Record<string, unknown>) => {
+    if (!can('orders.edit')) return;
     const detail = await client.view('orders.detail', { orderId: row.id });
     setEditing(detail.rows[0] ?? null);
   };
@@ -106,8 +107,8 @@ function ExtensionsPage() {
   return <ViewGrid grid="web.extensions.fields" onAction={() => void refreshManifest()} />;
 }
 
-function Shell() {
-  const { t, culture, setCulture } = useTam();
+function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
+  const { t, culture, setCulture, can } = useTam();
   const [page, setPage] = useState<'orders' | 'customers' | 'extensions'>('orders');
 
   const pages = useMemo(() => ({
@@ -124,18 +125,33 @@ function Shell() {
             <Text fw={700} size="lg" c="indigo">◆</Text>
             <Title order={4}>{t('app.title')}</Title>
           </Group>
-          <SegmentedControl
-            size="xs"
-            value={culture}
-            onChange={v => setCulture(v)}
-            data={[{ value: 'sv', label: 'Svenska' }, { value: 'en', label: 'English' }]}
-          />
+          <Group gap="sm">
+            <Select
+              size="xs"
+              w={170}
+              value={props.role}
+              onChange={v => v && props.onRoleChange(v)}
+              data={[
+                { value: 'admin', label: 'Alva Andersson (admin)' },
+                { value: 'dispatcher', label: 'Didrik Berg (dispatcher)' },
+                { value: 'viewer', label: 'Vera Lund (viewer)' },
+              ]}
+            />
+            <SegmentedControl
+              size="xs"
+              value={culture}
+              onChange={v => setCulture(v)}
+              data={[{ value: 'sv', label: 'Svenska' }, { value: 'en', label: 'English' }]}
+            />
+          </Group>
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="xs">
         <NavLink label={t('nav.orders')} active={page === 'orders'} onClick={() => setPage('orders')} />
         <NavLink label={t('nav.customers')} active={page === 'customers'} onClick={() => setPage('customers')} />
-        <NavLink label={t('nav.extensions')} active={page === 'extensions'} onClick={() => setPage('extensions')} />
+        {can('extensions.manage') && (
+          <NavLink label={t('nav.extensions')} active={page === 'extensions'} onClick={() => setPage('extensions')} />
+        )}
       </AppShell.Navbar>
       <AppShell.Main>{pages[page]}</AppShell.Main>
     </AppShell>
@@ -143,9 +159,13 @@ function Shell() {
 }
 
 export function App() {
+  const [role, setRole] = useState('admin');
+  client.headers['X-Demo-Role'] = role;
+
+  // Remount the provider on role change: new actor → new effective manifest (permissions overlay).
   return (
-    <TamProvider client={client} initialCulture="sv">
-      <Shell />
+    <TamProvider key={role} client={client} initialCulture="sv">
+      <Shell role={role} onRoleChange={setRole} />
     </TamProvider>
   );
 }

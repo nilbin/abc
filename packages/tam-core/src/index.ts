@@ -130,6 +130,7 @@ export interface Manifest {
   }>;
   extensions: Record<string, ManifestField[]>;
   permissions: string[];
+  actorPermissions?: string[];
   revision: number;
 }
 
@@ -193,8 +194,11 @@ export function enumLabel(manifest: Manifest, culture: string, value: unknown): 
 // ---- Client ----
 
 export class TamClient {
+  /** Extra headers on every request (e.g. demo role selection, auth tokens). */
+  public headers: Record<string, string> = {};
+
   constructor(
-    private readonly baseUrl: string = '',
+    readonly baseUrl: string = '',
     public culture: string = 'sv') {}
 
   private url(path: string, params?: Record<string, unknown>): string {
@@ -206,12 +210,12 @@ export class TamClient {
   }
 
   async manifest(): Promise<Manifest> {
-    const response = await fetch(this.url('/api/manifest'));
+    const response = await fetch(this.url('/api/manifest'), { headers: this.headers });
     return await response.json();
   }
 
   async view(viewId: string, params?: Record<string, unknown>): Promise<ViewResponse> {
-    const response = await fetch(this.url(`/api/views/${viewId}`, params));
+    const response = await fetch(this.url(`/api/views/${viewId}`, params), { headers: this.headers });
     if (!response.ok) throw new Error(`view ${viewId}: ${response.status}`);
     return await response.json();
   }
@@ -225,6 +229,7 @@ export class TamClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...this.headers,
         ...(options?.idempotencyKey ? { 'X-Idempotency-Key': options.idempotencyKey } : {}),
       },
       body: JSON.stringify(body),
@@ -240,7 +245,7 @@ export class TamClient {
   ): Promise<ResolveResponse> {
     const response = await fetch(this.url(`/api/forms/${formId}/resolve`), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...this.headers },
       body: JSON.stringify({ input, changed, revision }),
     });
     if (!response.ok) throw new Error(`resolve ${formId}: ${response.status}`);

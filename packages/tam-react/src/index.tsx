@@ -25,6 +25,10 @@ export interface TamContextValue {
   setCulture: (culture: string) => void;
   refreshManifest: () => Promise<void>;
   t: (key: string) => string;
+  /** Effective-permission check from the manifest's actor overlay (decision D1). */
+  can: (permission: string) => boolean;
+  /** Subscribe to committed-operation effects over SSE (decision D5); returns unsubscribe. */
+  subscribeEffects: (callback: () => void) => () => void;
 }
 
 const TamContext = createContext<TamContextValue | null>(null);
@@ -42,12 +46,19 @@ export function TamProvider(props: {
 }) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [culture, setCultureState] = useState(props.initialCulture ?? props.client.culture);
+  const effectListeners = useRef(new Set<() => void>());
 
   const refreshManifest = useCallback(async () => {
     setManifest(await props.client.manifest());
   }, [props.client]);
 
   useEffect(() => { void refreshManifest(); }, [refreshManifest]);
+
+  useEffect(() => {
+    const source = new EventSource(`${props.client.baseUrl}/api/events`);
+    source.onmessage = () => effectListeners.current.forEach(listener => listener());
+    return () => source.close();
+  }, [props.client.baseUrl]);
 
   const setCulture = useCallback((next: string) => {
     props.client.culture = next;
@@ -61,6 +72,14 @@ export function TamProvider(props: {
     setCulture,
     refreshManifest,
     t: (key: string) => translate(manifest, culture, key),
+    can: (permission: string) => {
+      const granted = manifest.actorPermissions ?? ['*'];
+      return granted.includes('*') || granted.includes(permission);
+    },
+    subscribeEffects: (callback: () => void) => {
+      effectListeners.current.add(callback);
+      return () => effectListeners.current.delete(callback);
+    },
   }), [manifest, culture, props.client, setCulture, refreshManifest]);
 
   if (!value) {
@@ -407,10 +426,14 @@ export interface ViewGridProps {
 
 export function ViewGrid(props: ViewGridProps) {
   const tam = useTam();
-  const { manifest, client, t, culture } = tam;
+  const { manifest, client, t, culture, can, subscribeEffects } = tam;
   const gridDef = manifest.grids[props.grid];
   if (!gridDef) throw new Error(`Unknown grid '${props.grid}'`);
   const view = manifest.views[gridDef.view];
+
+  const allowed = (operationId: string) => can(manifest.operations[operationId].permission);
+  const toolbarActions = gridDef.toolbarActions.filter(allowed);
+  const rowActions = gridDef.rowActions.filter(allowed);
 
   const resultByName = useMemo(
     () => new Map(view.resultFields.map(f => [f.name, f])),
@@ -445,6 +468,16 @@ export function ViewGrid(props: ViewGridProps) {
       props.refreshKey, localRefresh, JSON.stringify(props.query)]);
 
   const refresh = () => { setLocalRefresh(x => x + 1); props.onAction?.(); };
+
+  // Live refresh from committed effects (D5): debounced, so bursts collapse into one reload.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const unsubscribe = subscribeEffects(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setLocalRefresh(x => x + 1), 400);
+    });
+    return () => { clearTimeout(timer); unsubscribe(); };
+  }, [subscribeEffects]);
 
   const cell = (row: Record<string, unknown>, field: ManifestField): React.ReactNode => {
     const value = field.extension
@@ -488,7 +521,7 @@ export function ViewGrid(props: ViewGridProps) {
   return (
     <Stack gap="sm">
       <Group justify="flex-end">
-        {gridDef.toolbarActions.map(action => (
+        {toolbarActions.map(action => (
           <Button key={action} size="sm" onClick={() => setModalAction(action)}>
             {t(`operations.${action}.title`)}
           </Button>
@@ -517,7 +550,7 @@ export function ViewGrid(props: ViewGridProps) {
                   </Table.Th>
                 );
               })}
-              {gridDef.rowActions.length > 0 && <Table.Th />}
+              {rowActions.length > 0 && <Table.Th />}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -533,10 +566,10 @@ export function ViewGrid(props: ViewGridProps) {
                 {columns.map(field => (
                   <Table.Td key={field.name}>{cell(row, field)}</Table.Td>
                 ))}
-                {gridDef.rowActions.length > 0 && (
+                {rowActions.length > 0 && (
                   <Table.Td onClick={e => e.stopPropagation()}>
                     <Group gap="xs" justify="flex-end">
-                      {gridDef.rowActions.map(action => (
+                      {rowActions.map(action => (
                         <Button key={action} size="compact-xs" variant="light"
                           onClick={() => void runRowAction(action, row)}>
                           {t(`operations.${action}.title`)}

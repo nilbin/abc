@@ -9,6 +9,8 @@ reality still falls short of [docs/20-tutorial.md](docs/20-tutorial.md).
 ```
 src/Tam.Core                 contracts, findings+args, Change<T>, semantic types, portable AST,
                              model builder, manifest, locale catalogs (L10N001 gate at startup)
+src/Tam.Compiler             Roslyn analyzer: TAM001-003 model-shape checks and L10N001 locale
+                             coverage as build errors (locales via AdditionalFiles)
 src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effects, idempotency,
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor (sort/page over declared
@@ -61,15 +63,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   live, including tenant field labels and finding messages with args.
 - **MCP**: 15 tools generated from the model; `*_resolve` preflight returns missing/required/options/
   warnings for partial input — agents hit the identical pipeline.
+- **Build-time diagnostics**: the analyzer turns a missing [Authorize], missing Execute, or a
+  label key absent from sv.json into compiler errors (verified with a negative-test operation).
+- **Authorization (D1, first layer)**: role-based actors (admin/dispatcher/viewer via X-Demo-Role),
+  pipeline 403s with localized findings, actor permissions in the manifest overlay, and the UI
+  hides ungranted actions (verified: viewer sees no create/complete/custom-fields surfaces).
+- **Live refresh (D5)**: committed effects broadcast over `/api/events` SSE; grids subscribe and
+  auto-refresh debounced (verified: subscriber received entity-modified during an edit).
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
 ## Gaps vs. the design docs (deliberate, in rough priority order)
 
-1. **No Roslyn source generator/analyzers yet** (docs/12). The model is built by explicit
-   reflection at startup; FORM/VIEW/GRID/L10N001 rules run as **startup gates** (fail the boot,
-   not the build). Missing entirely: L10N000 (hardcoded-text analyzer), DB001 (EF length vs
-   contract), EDIT001/002, impact reports, manifest baseline check (D4).
+1. **Compiler package is analyzer-only so far.** TAM001-003 + L10N001 are build errors; the
+   manifest is still built by reflection at startup (no compile-time manifest emission), and
+   L10N000, DB001, EDIT001/002, impact reports, and the D4 manifest baseline check remain.
 2. **View result records are init-property, not positional** — EF cannot compose sort over
    positional-record ctor projections; the compiler phase should rewrite sort into the projection
    source so the tutorial's positional style works.
@@ -78,14 +86,14 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 4. **Value update policies**: only `RecomputeIfUntouched`; `DefaultOnce/Derived/RequireConfirmation`
    and `SuggestFrom` bindings are absent. Conditional requiredness is enforced at resolve +
    client, not re-checked at submit.
-5. **Authorization is the dev allow-all actor.** Permission catalogue exists in the manifest;
-   D1's roles/grants/scopes are unimplemented.
+5. **Authorization**: demo roles are hardcoded grant sets, not tenant-managed role data; D1's
+   record scopes (All/Team/Own) are unimplemented.
 6. **Tenancy**: envelope + stamping + per-tenant registry/overlay work, but a fixed "demo" tenant,
    no EF global filters, no RLS (D2).
 7. **Idempotency**: replay works; payload-hash mismatch rejection and retention policy don't.
-8. **Not started**: integrations runtime (inbox/outbox/reconciliation), effects→SSE change
-   notifications (D5), OpenAPI emission, generated TS *types* (the runtime is manifest-driven
-   instead — typed per-operation clients are the gap), offline/mobile, audit read views/UI.
+8. **Not started**: integrations runtime (inbox/outbox/reconciliation), OpenAPI emission,
+   generated TS *types* (the runtime is manifest-driven instead — typed per-operation clients
+   are the gap), offline/mobile, audit read views/UI.
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming, no per-tool schema for
    extension fields on tools/list — they validate at call time).
 10. **SQLite** backs the demo (JSON column as TEXT); Postgres/JSONB + expression-index promotion

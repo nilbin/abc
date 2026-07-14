@@ -15,7 +15,11 @@ public sealed record ManifestDto(
     IReadOnlyDictionary<string, ManifestGrid> Grids,
     IReadOnlyDictionary<string, IReadOnlyList<ManifestField>> Extensions,
     IReadOnlyList<string> Permissions,
-    long Revision);
+    long Revision)
+{
+    /// <summary>The requesting actor's effective permissions — the user overlay of docs/12.</summary>
+    public IReadOnlyList<string> ActorPermissions { get; init; } = [];
+}
 
 public sealed record ManifestField(
     string Name,

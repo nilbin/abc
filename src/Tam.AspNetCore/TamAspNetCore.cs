@@ -40,6 +40,7 @@ public static class TamAspNetCore
         services.AddScoped<IExtensionRegistry>(sp => new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()));
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
+        services.AddSingleton<EffectBroadcaster>();
         return services;
     }
 
@@ -87,11 +88,18 @@ public static class TamAspNetCore
             var context = BuildContext(http, model);
             var overlay = await registry.All(context.TenantId, ct);
             var manifest = ManifestBuilder.Build(model, overlay, revision: OverlayRevision(overlay));
-            manifest = manifest with { Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model) };
+            manifest = manifest with
+            {
+                Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model),
+                ActorPermissions = context.Actor.Permissions.ToList(),
+            };
             return Results.Json(manifest, TamJson.Options);
         });
 
         app.MapPost("/api/mcp", McpEndpoint.Handle);
+
+        app.MapGet("/api/events", (HttpContext http, EffectBroadcaster broadcaster, CancellationToken ct) =>
+            broadcaster.Stream(http, ct));
 
         return app;
     }
