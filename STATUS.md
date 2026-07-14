@@ -135,6 +135,14 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (isolated failures, at-most-once), verified: completion auto-opens a follow-up checklist;
   none of the three fire for tenants with the plugin inactive. PLG002/PLG004/PLG005 validate
   gate targets, packaged-field entities/types and plugin-only registration at model build.
+- **Tenant packages (docs/22 P3)**: `packages.install` takes the bundle document (fields +
+  roles), validates every item with the registry's own rules, and applies all-or-nothing in
+  the pipeline transaction; `dryRun: true` runs identical validation and answers "what would
+  this do" without applying. Verified on the wire: broken package → localized EXT findings and
+  nothing applied; good package → field in manifest with labels, package-defined role usable
+  immediately; identical re-install → no-op; downgrade → `packages.older-version`; conflicting
+  redefinition → `packages.field-conflict`; `packages.uninstall` retires the package's fields
+  (data and keys preserved) and drops the installation row; `packages.list` is the admin view.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
