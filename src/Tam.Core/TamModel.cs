@@ -57,7 +57,8 @@ public sealed class TamModelBuilder
         return this;
     }
 
-    /// <summary>Explicit registration, inspectable: scans one assembly for [Operation]/[View]/[ServerDerivation].</summary>
+    /// <summary>Explicit registration, inspectable: scans one assembly for [Operation]/[View]/[ServerDerivation].
+    /// Prefer the generated <c>AddDiscovered()</c> (Tam.Compiler source generator) — same result, no runtime scan.</summary>
     public TamModelBuilder AddAssembly(Assembly assembly)
     {
         foreach (var type in assembly.GetTypes())
@@ -71,6 +72,24 @@ public sealed class TamModelBuilder
                 derivationTypes.Add(type);
             }
         }
+        return this;
+    }
+
+    public TamModelBuilder AddOperationType(Type type)
+    {
+        operationTypes.Add(type);
+        return this;
+    }
+
+    public TamModelBuilder AddViewType(Type type)
+    {
+        viewTypes.Add(type);
+        return this;
+    }
+
+    public TamModelBuilder AddDerivationHost(Type type)
+    {
+        derivationTypes.Add(type);
         return this;
     }
 

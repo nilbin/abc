@@ -96,9 +96,10 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
 ## Gaps vs. the design docs (deliberate, in rough priority order)
 
-1. **Compiler package is analyzer-only so far.** TAM001-003, L10N001 and EDIT001 are build
-   errors; the manifest is still built by reflection at startup (no compile-time manifest
-   emission), and L10N000, DB001, EDIT002 and impact reports remain.
+1. **Compiler package**: analyzer (TAM001-003, L10N001, EDIT001 as build errors) + incremental
+   source generator emitting compile-time discovery (`AddDiscovered()`, visible under
+   samples/erp/generated/ — no runtime assembly scanning). Field metadata is still reflected at
+   startup; L10N000, DB001, EDIT002 and impact reports remain.
 2. **View result records are init-property, not positional** — EF cannot compose sort over
    positional-record ctor projections; the compiler phase should rewrite sort into the projection
    source so the tutorial's positional style works.

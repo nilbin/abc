@@ -21,6 +21,8 @@
   </ItemGroup>
   <PropertyGroup>
     <TamDefaultCulture>sv</TamDefaultCulture>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

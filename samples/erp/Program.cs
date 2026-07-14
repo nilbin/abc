@@ -3,11 +3,12 @@ using Erp.Features;
 using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.AspNetCore;
+using Tam.Generated;
 
 var model = new TamModelBuilder()
     .DefaultCulture("sv")
     .Locales(Path.Combine(AppContext.BaseDirectory, "locales"))
-    .AddAssembly(typeof(Program).Assembly)
+    .AddDiscovered()   // compile-time discovery from Tam.Compiler — no runtime assembly scan
 
     .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
     {
