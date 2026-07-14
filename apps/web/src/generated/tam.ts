@@ -128,6 +128,26 @@ export interface PackagesUninstallOutput {
   fieldsRetired: number;
 }
 
+export interface RulesDefineInput {
+  name: string;
+  onOperation: string;
+  condition: string;
+  messages: Record<string, unknown>;
+  targetField?: string;
+}
+
+export interface RulesDefineOutput {
+  ruleId: string;
+}
+
+export interface RulesRetireInput {
+  name: string;
+}
+
+export interface RulesRetireOutput {
+  name: string;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
@@ -262,6 +282,17 @@ export interface PackagesListQuery {
   search?: string;
 }
 
+export interface RulesListRow {
+  id: string;
+  name: string;
+  onOperation: string;
+  retired: boolean;
+}
+
+export interface RulesListQuery {
+  search?: string;
+}
+
 export interface InspectChecklistsListRow {
   id: string;
   title: string;
@@ -330,6 +361,16 @@ export class TypedTamClient {
     return this.client.operation("packages.uninstall", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<PackagesUninstallOutput>>;
   }
 
+  /** rules.define (requires rules.manage) */
+  rulesDefine(input: RulesDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<RulesDefineOutput>> {
+    return this.client.operation("rules.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RulesDefineOutput>>;
+  }
+
+  /** rules.retire (requires rules.manage) */
+  rulesRetire(input: RulesRetireInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<RulesRetireOutput>> {
+    return this.client.operation("rules.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RulesRetireOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
@@ -383,6 +424,11 @@ export class TypedTamClient {
   /** view packages.list (requires packages.manage) */
   packagesList(query?: PackagesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }> {
     return this.client.view("packages.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }>;
+  }
+
+  /** view rules.list (requires rules.manage) */
+  rulesList(query?: RulesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }> {
+    return this.client.view("rules.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }>;
   }
 
   /** view inspect.checklists.list (requires inspect.checklists.read) */

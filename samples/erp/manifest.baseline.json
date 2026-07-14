@@ -78,6 +78,18 @@
       "packages.field-conflict": "F\u00E4ltet {key} finns redan med en annan definition.",
       "packages.older-version": "Version {offered} \u00E4r \u00E4ldre \u00E4n den installerade ({installed}).",
       "packages.not-installed": "Paketet {package} \u00E4r inte installerat.",
+      "operations.rules.define.title": "Definiera regel",
+      "operations.rules.retire.title": "Avveckla regel",
+      "labels.rule": "Regel",
+      "labels.on-operation": "Vid operation",
+      "labels.condition": "Villkor",
+      "labels.messages": "Meddelanden",
+      "labels.target-field": "F\u00E4lt",
+      "labels.retired": "Avvecklad",
+      "rules.unknown-operation": "Ok\u00E4nd operation: {operation}.",
+      "rules.unknown-field": "Ok\u00E4nt f\u00E4lt i villkoret: {field}.",
+      "rules.missing-message": "Meddelande saknas f\u00F6r standardspr\u00E5ket.",
+      "rules.invalid-condition": "Ogiltigt villkor.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -206,6 +218,18 @@
       "packages.field-conflict": "The field {key} already exists with a different definition.",
       "packages.older-version": "Version {offered} is older than the installed version ({installed}).",
       "packages.not-installed": "The package {package} is not installed.",
+      "operations.rules.define.title": "Define rule",
+      "operations.rules.retire.title": "Retire rule",
+      "labels.rule": "Rule",
+      "labels.on-operation": "On operation",
+      "labels.condition": "Condition",
+      "labels.messages": "Messages",
+      "labels.target-field": "Field",
+      "labels.retired": "Retired",
+      "rules.unknown-operation": "Unknown operation: {operation}.",
+      "rules.unknown-field": "Unknown field in condition: {field}.",
+      "rules.missing-message": "A message for the default culture is missing.",
+      "rules.invalid-condition": "Invalid condition.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -834,6 +858,96 @@
           "labelKey": "labels.fields-retired",
           "type": "integer",
           "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "rules.define": {
+      "permission": "rules.manage",
+      "titleKey": "operations.rules.define.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.rule",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "onOperation",
+          "labelKey": "labels.on-operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "condition",
+          "labelKey": "labels.condition",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "messages",
+          "labelKey": "labels.messages",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "targetField",
+          "labelKey": "labels.target-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "ruleId",
+          "labelKey": "labels.rule-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "rules.retire": {
+      "permission": "rules.manage",
+      "titleKey": "operations.rules.retire.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.rule",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false
@@ -1631,6 +1745,64 @@
       "defaultSort": "package",
       "defaultSortDescending": false
     },
+    "rules.list": {
+      "permission": "rules.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.rule",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "onOperation",
+          "labelKey": "labels.on-operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "retired",
+          "labelKey": "labels.retired",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "name"
+      ],
+      "filterable": [],
+      "defaultSort": "name",
+      "defaultSortDescending": false
+    },
     "inspect.checklists.list": {
       "permission": "inspect.checklists.read",
       "queryFields": [
@@ -2079,7 +2251,8 @@
     "orders.read",
     "packages.manage",
     "plugins.manage",
-    "roles.manage"
+    "roles.manage",
+    "rules.manage"
   ],
   "revision": 0,
   "actorPermissions": [],

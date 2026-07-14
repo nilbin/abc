@@ -73,5 +73,17 @@
   "packages.invalid-document": "Invalid package document.",
   "packages.field-conflict": "The field {key} already exists with a different definition.",
   "packages.older-version": "Version {offered} is older than the installed version ({installed}).",
-  "packages.not-installed": "The package {package} is not installed."
+  "packages.not-installed": "The package {package} is not installed.",
+  "operations.rules.define.title": "Define rule",
+  "operations.rules.retire.title": "Retire rule",
+  "labels.rule": "Rule",
+  "labels.on-operation": "On operation",
+  "labels.condition": "Condition",
+  "labels.messages": "Messages",
+  "labels.target-field": "Field",
+  "labels.retired": "Retired",
+  "rules.unknown-operation": "Unknown operation: {operation}.",
+  "rules.unknown-field": "Unknown field in condition: {field}.",
+  "rules.missing-message": "A message for the default culture is missing.",
+  "rules.invalid-condition": "Invalid condition."
 }

@@ -1,0 +1,231 @@
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Tam.AspNetCore.SystemOps;
+using Tam.EntityFrameworkCore;
+
+namespace Tam.AspNetCore;
+
+public static class RuleFindings
+{
+    public static readonly FindingFactory UnknownOperation = Finding.Error("rules.unknown-operation"); // RUL001
+    public static readonly FindingFactory UnknownField = Finding.Error("rules.unknown-field");         // RUL002
+    public static readonly FindingFactory MissingMessage = Finding.Error("rules.missing-message");     // RUL003
+    public static readonly FindingFactory InvalidCondition = Finding.Error("rules.invalid-condition");
+}
+
+/// <summary>
+/// Tenant automation rules (docs/22 P5): declarative validation authored as data. The
+/// condition is the same portable Px AST forms already evaluate — structured, analyzable,
+/// bounded — never a string-parsed expression. The action set is closed: v1 is the blocking
+/// finding (the Salesforce validation rule); set-field / publish-event follow the same shape.
+/// </summary>
+public static class RuleEvaluator
+{
+    /// <summary>
+    /// Evaluates the tenant's active rules for this operation against the wire input.
+    /// A firing rule contributes a blocking finding whose message is the rule's own
+    /// tenant-authored text in the request culture (code = "rules.{name}", D6 as data).
+    /// </summary>
+    public static async Task<List<Finding>> EvaluateAsync(
+        DbContext db, string operationId, JsonElement body, OperationContext context, CancellationToken ct)
+    {
+        var rules = await db.Set<AutomationRuleEntity>()
+            .Where(x => x.TenantId == context.TenantId.Value
+                && x.OnOperation == operationId && !x.Retired)
+            .ToListAsync(ct);
+        if (rules.Count == 0) return [];
+
+        var findings = new List<Finding>();
+        foreach (var rule in rules)
+        {
+            Px condition;
+            try
+            {
+                condition = JsonSerializer.Deserialize<Px>(rule.ConditionJson, TamJson.Options)!;
+            }
+            catch (JsonException)
+            {
+                continue;   // definition-time validation should make this unreachable
+            }
+
+            if (!PxBinary.Truthy(condition.Evaluate(name => FieldValue(body, name)))) continue;
+
+            var messages = JsonSerializer.Deserialize<Dictionary<string, string>>(rule.MessagesJson) ?? [];
+            var finding = Finding.Error($"rules.{rule.Name}").Create() with
+            {
+                Message = messages.GetValueOrDefault(context.Culture)
+                    ?? messages.Values.FirstOrDefault(),
+                Targets = rule.TargetField is { Length: > 0 } target
+                    ? [target.StartsWith("ext.", StringComparison.Ordinal)
+                        ? FieldPath.Extension(target["ext.".Length..])
+                        : FieldPath.For(target)]
+                    : [],
+            };
+            findings.Add(finding);
+        }
+        return findings;
+    }
+
+    /// <summary>Wire input → Px field values: plain members by wire name, tenant/plugin/package
+    /// extension fields as "ext.{key}" (reading the change-set's value).</summary>
+    internal static object? FieldValue(JsonElement body, string name)
+    {
+        if (body.ValueKind != JsonValueKind.Object) return null;
+        JsonElement element;
+        if (name.StartsWith("ext.", StringComparison.Ordinal))
+        {
+            if (!body.TryGetProperty("extensions", out var extensions)
+                || extensions.ValueKind != JsonValueKind.Object
+                || !extensions.TryGetProperty(name["ext.".Length..], out var change))
+                return null;
+            if (change.ValueKind == JsonValueKind.Object && change.TryGetProperty("value", out var value))
+                element = value;
+            else element = change;
+        }
+        else if (!body.TryGetProperty(name, out element))
+        {
+            return null;
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number => element.GetDecimal(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null,
+        };
+    }
+}
+
+[Operation("rules.define")]
+[Authorize("rules.manage")]
+public static class DefineAutomationRule
+{
+    public sealed record Input(
+        [property: LabelKey("labels.rule")] string Name,
+        [property: LabelKey("labels.on-operation")] string OnOperation,
+        [property: LabelKey("labels.condition")] string Condition,
+        [property: LabelKey("labels.messages")] Dictionary<string, string> Messages,
+        [property: LabelKey("labels.target-field")] string? TargetField = null);
+
+    public sealed record Output(Guid RuleId);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, TamModel model,
+        IExtensionRegistry registry, CancellationToken ct)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
+            return ValidationFindings.InvalidValue.At(nameof(Input.Name));
+
+        // RUL001: the trigger must be a compiled operation.
+        if (!model.Operations.TryGetValue(input.OnOperation, out var operation))
+            return RuleFindings.UnknownOperation.With(("operation", input.OnOperation))
+                .At(nameof(Input.OnOperation));
+
+        // The condition is structured Px, stored as authored — a parse failure is a finding,
+        // and user data only ever lands in const nodes.
+        Px? condition;
+        try
+        {
+            condition = JsonSerializer.Deserialize<Px>(input.Condition, TamJson.Options);
+        }
+        catch (JsonException)
+        {
+            condition = null;
+        }
+        if (condition is null)
+            return RuleFindings.InvalidCondition.At(nameof(Input.Condition));
+
+        // RUL002: every field the condition references must exist on the operation's input —
+        // compiled members by wire name, extension fields (tenant/plugin/package) as ext.{key}.
+        var known = operation.InputFields.Select(f => f.WireName).ToHashSet(StringComparer.Ordinal);
+        if (operation.ExtensibleEntity is { } entity)
+        {
+            var specs = await registry.For(context.TenantId, TamModel.EntityKey(entity), ct);
+            foreach (var spec in specs) known.Add($"ext.{spec.Key}");
+        }
+        var unknown = condition.Fields().Distinct().Where(f => !known.Contains(f)).ToList();
+        if (unknown.Count > 0)
+        {
+            return new Result<Output>
+            {
+                Findings = unknown.Select(f => RuleFindings.UnknownField
+                    .With(("field", f)).At(nameof(Input.Condition))).ToList(),
+            };
+        }
+        if (input.TargetField is { Length: > 0 } target && !known.Contains(target))
+            return RuleFindings.UnknownField.With(("field", target)).At(nameof(Input.TargetField));
+
+        // RUL003: the rule's message is product surface — default culture is mandatory.
+        if (!input.Messages.ContainsKey(model.DefaultCulture))
+            return RuleFindings.MissingMessage.At(nameof(Input.Messages));
+
+        var rule = await tam.Db.Set<AutomationRuleEntity>().SingleOrDefaultAsync(
+            x => x.TenantId == context.TenantId.Value && x.Name == input.Name, ct);
+        if (rule is null)
+        {
+            rule = new AutomationRuleEntity
+            {
+                Id = Guid.NewGuid(),
+                TenantId = context.TenantId.Value,
+                Name = input.Name,
+            };
+            tam.Db.Add(rule);
+        }
+        rule.OnOperation = input.OnOperation;
+        rule.ConditionJson = input.Condition;
+        rule.TargetField = input.TargetField;
+        rule.MessagesJson = JsonSerializer.Serialize(input.Messages);
+        rule.Retired = false;
+
+        return new Output(rule.Id);
+    }
+}
+
+[Operation("rules.retire")]
+[Authorize("rules.manage")]
+public static class RetireRule
+{
+    public sealed record Input([property: LabelKey("labels.rule")] string Name);
+
+    public sealed record Output(string Name);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, CancellationToken ct)
+    {
+        var rule = await tam.Db.Set<AutomationRuleEntity>().SingleOrDefaultAsync(
+            x => x.TenantId == context.TenantId.Value && x.Name == input.Name, ct);
+        if (rule is null) return PipelineFindings.NotFound.Create();
+
+        rule.Retired = true;
+        return new Output(rule.Name);
+    }
+}
+
+[View("rules.list")]
+[Authorize("rules.manage")]
+public static class RuleList
+{
+    public sealed record Query(string? Search = null);
+
+    public sealed record Result
+    {
+        public Guid Id { get; init; }
+        [LabelKey("labels.rule")]
+        public string Name { get; init; } = "";
+        [LabelKey("labels.on-operation")]
+        public string OnOperation { get; init; } = "";
+        [LabelKey("labels.retired")]
+        public bool Retired { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
+        tam.Db.Set<AutomationRuleEntity>().Select(x => new Result
+        {
+            Id = x.Id, Name = x.Name, OnOperation = x.OnOperation, Retired = x.Retired,
+        });
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) =>
+        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
+}

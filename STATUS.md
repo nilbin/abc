@@ -143,6 +143,16 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   immediately; identical re-install → no-op; downgrade → `packages.older-version`; conflicting
   redefinition → `packages.field-conflict`; `packages.uninstall` retires the package's fields
   (data and keys preserved) and drops the installation row; `packages.list` is the admin view.
+- **Automation rules (docs/22 P5, v1 = validation rules)**: `rules.define` stores a trigger
+  operation + a Px-AST condition (structured JSON, never a parsed string — user data only ever
+  lands in const nodes) + tenant-authored per-culture messages. Definition-time diagnostics:
+  RUL001 unknown operation, RUL002 unknown condition/target field (checked against input wire
+  names AND the live ext.{key} overlay), RUL003 missing default-culture message. The pipeline
+  evaluates active rules against the wire input before the handler; a firing rule fails the
+  operation with `rules.{name}`, the tenant's message in the request culture, targeted at the
+  declared field. Verified: a condition spanning a package-installed extension field and a
+  compiled field (class-2 cold chain without a date → localized 422; with date or class 1 →
+  passes; retired → stops). `rules.retire`/`rules.list` manage the registry.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -180,14 +190,17 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     promotion remain.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
-12. **Plugin system: P1–P3 built and verified**; P4–P5 remain designed-only
-    ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial step 13): custom objects
-    and Px-bounded automation rules. P4 (custom objects) additionally waits on typed JSON
-    predicates + index promotion + RLS. PLG### are model-build errors today, not yet Roslyn
-    analyzer diagnostics; subscriber delivery is at-most-once (no retry/inbox for plugin
-    subscribers yet); field-level audit shows the extensions column as one change, not per
-    extension key; package uninstall leaves package-defined roles in place (they may be
-    granted to real users) and there is no admin UI page for packages yet (API/MCP only).
+12. **Plugin system: P1–P3 and P5-v1 built and verified**; remaining design-only
+    ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial step 13): P4 custom
+    objects (waits on typed JSON predicates + index promotion + RLS), rule actions beyond the
+    blocking finding (set-field, publish-event), effect-triggered rules, a rule-builder UI,
+    and rules inside tenant packages. PLG###/RUL### are runtime errors/findings today, not
+    Roslyn analyzer diagnostics; subscriber delivery is at-most-once (no retry/inbox for
+    plugin subscribers yet); field-level audit shows the extensions column as one change, not
+    per extension key; package uninstall leaves package-defined roles in place (they may be
+    granted to real users); no admin UI pages for packages/rules yet (API/MCP only); client-
+    side portable evaluation of tenant rules (offline parity) needs the rule conditions
+    merged into the manifest, which is not done yet.
 
 ## The one-night verdict
 

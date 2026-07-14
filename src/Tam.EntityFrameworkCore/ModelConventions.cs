@@ -68,6 +68,13 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.Package }).IsUnique();
         });
+        modelBuilder.Entity<AutomationRuleEntity>(b =>
+        {
+            b.ToTable("automation_rules");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.OnOperation });
+        });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes().ToList())
         {
@@ -169,6 +176,23 @@ public sealed class PluginActivationEntity
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
     public string PluginId { get; set; } = "";
+}
+
+/// <summary>
+/// A tenant automation rule (docs/22 P5): trigger operation + Px condition (stored as the
+/// structured AST, never a parsed string) + a blocking finding. Managed only through
+/// operations; retire-don't-delete like every registry artifact.
+/// </summary>
+public sealed class AutomationRuleEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string OnOperation { get; set; } = "";
+    public string ConditionJson { get; set; } = "";
+    public string? TargetField { get; set; }
+    public string MessagesJson { get; set; } = "{}";
+    public bool Retired { get; set; }
 }
 
 /// <summary>An installed tenant package (docs/22 P3): the bundle document is retained so

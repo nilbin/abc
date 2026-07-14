@@ -73,5 +73,17 @@
   "packages.invalid-document": "Ogiltigt paketdokument.",
   "packages.field-conflict": "Fältet {key} finns redan med en annan definition.",
   "packages.older-version": "Version {offered} är äldre än den installerade ({installed}).",
-  "packages.not-installed": "Paketet {package} är inte installerat."
+  "packages.not-installed": "Paketet {package} är inte installerat.",
+  "operations.rules.define.title": "Definiera regel",
+  "operations.rules.retire.title": "Avveckla regel",
+  "labels.rule": "Regel",
+  "labels.on-operation": "Vid operation",
+  "labels.condition": "Villkor",
+  "labels.messages": "Meddelanden",
+  "labels.target-field": "Fält",
+  "labels.retired": "Avvecklad",
+  "rules.unknown-operation": "Okänd operation: {operation}.",
+  "rules.unknown-field": "Okänt fält i villkoret: {field}.",
+  "rules.missing-message": "Meddelande saknas för standardspråket.",
+  "rules.invalid-condition": "Ogiltigt villkor."
 }

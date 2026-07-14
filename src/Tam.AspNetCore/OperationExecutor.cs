@@ -83,6 +83,12 @@ public sealed class OperationExecutor(
             }
         }
 
+        // Tenant automation rules (docs/22 P5): declarative Px conditions over the wire input,
+        // firing tenant-authored blocking findings — validation as data, evaluated in-pipeline.
+        var ruleFindings = await RuleEvaluator.EvaluateAsync(db, operationId, body, context, ct);
+        if (ruleFindings.Count > 0)
+            return Fail(context, [.. ruleFindings]);
+
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
         Result result;

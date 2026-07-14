@@ -31,11 +31,14 @@ public static class SystemModule
             .AddOperationType(typeof(DeactivatePlugin))
             .AddOperationType(typeof(InstallPackage))
             .AddOperationType(typeof(UninstallPackage))
+            .AddOperationType(typeof(DefineAutomationRule))
+            .AddOperationType(typeof(RetireRule))
             .AddViewType(typeof(ExtensionFieldList))
             .AddViewType(typeof(RoleList))
             .AddViewType(typeof(AuditLog))
             .AddViewType(typeof(PluginList))
-            .AddViewType(typeof(PackageList));
+            .AddViewType(typeof(PackageList))
+            .AddViewType(typeof(RuleList));
     }
 }
 
