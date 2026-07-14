@@ -50,6 +50,11 @@ public sealed class ClaimsActorProvider : IActorProvider
 {
     public const string UserClaim = "tam:user";
 
+    /// <summary>The tenant the token was minted for. The request's own tenant must match it, so a
+    /// token issued at tenant A cannot be replayed against tenant B where a same-named user exists
+    /// (host-based multi-tenancy). Set at grant time in the token server's SignIn.</summary>
+    public const string TenantClaim = "tam:tenant";
+
     public Actor GetActor(HttpContext http)
     {
         var userName = http.User.FindFirst(UserClaim)?.Value
@@ -58,6 +63,13 @@ public sealed class ClaimsActorProvider : IActorProvider
             return new Actor("anonymous", "Anonymous", new HashSet<string>());
 
         var tenant = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http);
+
+        // Token/tenant binding: a token carries the tenant it was issued for; if the request
+        // resolved to a different tenant, this token does not speak for it. Reject to anonymous.
+        var tokenTenant = http.User.FindFirst(TenantClaim)?.Value;
+        if (tokenTenant is null || tokenTenant != tenant.Value)
+            return new Actor("anonymous", "Anonymous", new HashSet<string>());
+
         var db = http.RequestServices.GetRequiredService<ITamDb>().Db;
 
         var user = db.Set<TamUserEntity>().FirstOrDefault(

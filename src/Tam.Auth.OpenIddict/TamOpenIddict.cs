@@ -32,9 +32,11 @@ public static class TamOpenIddict
             .AddServer(options =>
             {
                 options.SetTokenEndpointUris("/connect/token");
+                // Only the grants the token endpoint actually redeems (password + client
+                // credentials). Refresh was advertised but the exchange never handled it, so a
+                // client that took a refresh token got invalid_grant — don't claim what we can't do.
                 options.AllowPasswordFlow()
-                       .AllowClientCredentialsFlow()
-                       .AllowRefreshTokenFlow();
+                       .AllowClientCredentialsFlow();
                 options.AcceptAnonymousClients();   // the SPA uses the password grant directly
 
                 // Development keys: ephemeral, tokens do not survive a restart. Production
@@ -84,7 +86,7 @@ public static class TamOpenIddict
                 || !TamPasswords.Verify(request.Password, user.PasswordHash))
                 return Deny();
 
-            return SignIn(user.UserName, user.DisplayName, request);
+            return SignIn(user.UserName, user.DisplayName, tenant.Value, request);
         }
 
         if (request.IsClientCredentialsGrantType())
@@ -96,13 +98,13 @@ public static class TamOpenIddict
                 x => x.TenantId == tenant.Value && x.UserName == request.ClientId && x.Active);
             if (user is null) return Deny();
 
-            return SignIn(user.UserName, user.DisplayName, request);
+            return SignIn(user.UserName, user.DisplayName, tenant.Value, request);
         }
 
         return Deny();
     }
 
-    private static IResult SignIn(string userName, string displayName, OpenIddictRequest request)
+    private static IResult SignIn(string userName, string displayName, string tenantId, OpenIddictRequest request)
     {
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationConstants.AuthenticationType,
@@ -111,6 +113,7 @@ public static class TamOpenIddict
         identity.SetClaim(Claims.Subject, userName);
         identity.SetClaim(Claims.Name, displayName);
         identity.SetClaim(ClaimsActorProvider.UserClaim, userName);
+        identity.SetClaim(ClaimsActorProvider.TenantClaim, tenantId);
         identity.SetDestinations(_ => [Destinations.AccessToken]);
 
         var principal = new ClaimsPrincipal(identity);

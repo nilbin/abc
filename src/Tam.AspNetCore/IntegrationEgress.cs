@@ -85,8 +85,11 @@ public static class IntegrationEgress
                 || b[0] == 10                                  // 10.0.0.0/8 private
                 || (b[0] == 172 && b[1] is >= 16 and <= 31)    // 172.16.0.0/12 private
                 || (b[0] == 192 && b[1] == 168)                // 192.168.0.0/16 private
+                || (b[0] == 192 && b[1] == 0 && b[2] == 0)     // 192.0.0.0/24 IETF protocol assignments
                 || (b[0] == 169 && b[1] == 254)                // 169.254.0.0/16 link-local (metadata)
-                || (b[0] == 100 && b[1] is >= 64 and <= 127);  // 100.64.0.0/10 CGNAT
+                || (b[0] == 100 && b[1] is >= 64 and <= 127)   // 100.64.0.0/10 CGNAT
+                || (b[0] == 198 && b[1] is 18 or 19)           // 198.18.0.0/15 benchmarking (often routed internally)
+                || (b[0] == 255 && b[1] == 255 && b[2] == 255 && b[3] == 255);  // limited broadcast
         }
         if (ip.AddressFamily == AddressFamily.InterNetworkV6)
         {

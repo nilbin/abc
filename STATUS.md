@@ -27,7 +27,7 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              74 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              78 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy
 ```
@@ -234,6 +234,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   A unified `integrations.dead-letter` view + `integrations.requeue` op, a retention janitor (trims
   dispatched outbox / processed inbox+tasks / old runs / expired idempotency past 30d; audit and
   dead-letters kept), and a manifest `ETag`/`304` (verified) round it out. 74 tests; baseline additive.
+
+- **Security round 3 (review follow-ups)**: closed the ways the round-2 `Reserved` fix could be
+  side-stepped and tightened auth. `roles.define` and package install now **reject reserved
+  permissions** (`subscriptions.manage`) — verified a `"*"` admin gets `roles.reserved-permission`
+  instead of being able to mint a role that carries it and self-entitle (a normal role define still
+  200s; `subscriptions.set-plan` still 403). **Tokens are tenant-bound**: a `tam:tenant` claim is set
+  at grant time and `ClaimsActorProvider` rejects a token whose tenant ≠ the request's, so a token
+  minted at tenant A can't be replayed at tenant B (same-named user); the demo's own auth still works.
+  **Idempotency is actor-scoped** — verified two actors reusing the same key + payload get independent
+  outcomes (no cross-actor replay), while same-actor replay still returns the stored result. The
+  refresh-token grant (advertised but never redeemable) was **dropped** (now `unsupported_grant_type`),
+  and the SSRF egress guard gained `192.0.0.0/24`, `198.18.0.0/15` and limited-broadcast. 78 tests.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 

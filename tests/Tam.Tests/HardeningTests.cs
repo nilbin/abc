@@ -47,6 +47,10 @@ public class EgressGuardTests
     [InlineData("::1")]              // IPv6 loopback
     [InlineData("fd00::1")]          // IPv6 unique-local
     [InlineData("::ffff:127.0.0.1")] // IPv4-mapped loopback
+    [InlineData("192.0.0.1")]        // IETF protocol assignments 192.0.0.0/24
+    [InlineData("198.18.0.1")]       // benchmarking 198.18.0.0/15
+    [InlineData("198.19.5.5")]       // benchmarking 198.18.0.0/15
+    [InlineData("255.255.255.255")]  // limited broadcast
     public void Internal_addresses_are_blocked(string ip) =>
         Assert.True(IntegrationEgress.IsBlocked(IPAddress.Parse(ip)));
 

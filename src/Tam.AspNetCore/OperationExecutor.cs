@@ -37,10 +37,14 @@ public sealed class OperationExecutor(
         var payloadHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(body.GetRawText())));
 
+        // Idempotency is scoped to the actor as well as tenant+operation: a replay must return the
+        // caller's OWN prior outcome, never another actor's stored response (whose output/version
+        // may reflect a different ownership scope). Different actor + same key = independent record.
         if (context.IdempotencyKey is { } key)
         {
+            var scopedKey = context.Actor.Id + ":" + key;
             var replay = await db.Set<IdempotencyRecord>().FindAsync(
-                [context.TenantId.Value, operationId, key], ct);
+                [context.TenantId.Value, operationId, scopedKey], ct);
             if (replay is not null)
             {
                 // Same key + same payload → replay the stored outcome. Different payload → client bug.
@@ -194,9 +198,10 @@ public sealed class OperationExecutor(
 
         if (context.IdempotencyKey is { } storeKey)
         {
+            var scopedStoreKey = context.Actor.Id + ":" + storeKey;
             db.Add(new IdempotencyRecord
             {
-                Key = storeKey,
+                Key = scopedStoreKey,
                 TenantId = context.TenantId.Value,
                 OperationId = operationId,
                 PayloadHash = payloadHash,
@@ -214,7 +219,7 @@ public sealed class OperationExecutor(
                 await transaction.RollbackAsync(ct);
                 db.ChangeTracker.Clear();
                 var winner = await db.Set<IdempotencyRecord>().FindAsync(
-                    [context.TenantId.Value, operationId, storeKey], ct);
+                    [context.TenantId.Value, operationId, scopedStoreKey], ct);
                 if (winner is null || winner.PayloadHash != payloadHash)
                     return Fail(context, Finding.Error("pipeline.idempotency-mismatch").Create());
                 var stored = JsonSerializer.Deserialize<OperationResponse>(winner.ResponseJson, TamJson.Options)!;

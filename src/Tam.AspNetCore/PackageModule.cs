@@ -158,6 +158,10 @@ public static class InstallPackage
             findings.AddRange(role.Permissions
                 .Where(p => p != "*" && !model.Permissions.Contains(TrimScope(p)))
                 .Select(p => RoleFindings.UnknownPermission.With(("permission", p)).At(nameof(Input.Document))));
+            // A package can't smuggle a reserved permission (docs/24) into a tenant role either.
+            findings.AddRange(role.Permissions
+                .Where(p => Actor.Reserved.Contains(TrimScope(p)))
+                .Select(p => RoleFindings.ReservedPermission.With(("permission", p)).At(nameof(Input.Document))));
             // A role is a PERMISSION grant — never silently overwrite one the tenant already
             // authored differently. Identical → no-op; different → explicit conflict.
             var existingRole = existingRoles.FirstOrDefault(x => x.Name == role.Name);

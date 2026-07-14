@@ -177,6 +177,7 @@ public static class RoleFindings
 {
     public static readonly FindingFactory UnknownPermission = Finding.Error("roles.unknown-permission");
     public static readonly FindingFactory InvalidName = Finding.Error("roles.invalid-name");
+    public static readonly FindingFactory ReservedPermission = Finding.Error("roles.reserved-permission");
 }
 
 /// <summary>
@@ -206,6 +207,21 @@ public static class DefineRole
             {
                 Findings = unknown.Select(p =>
                     RoleFindings.UnknownPermission.With(("permission", p))
+                        .At(nameof(Input.Permissions))).ToList(),
+            };
+        }
+
+        // Reserved permissions (docs/24) can't be granted through a tenant-defined role — else a
+        // "*" admin would define a role carrying subscriptions.manage, assign it, and re-plan the
+        // tenant, bypassing the wildcard exclusion in Actor.Can. They're grantable only by seeded
+        // roles the platform sets up directly.
+        var reserved = input.Permissions.Where(p => Actor.Reserved.Contains(TrimScope(p))).ToList();
+        if (reserved.Count > 0)
+        {
+            return new Result<Output>
+            {
+                Findings = reserved.Select(p =>
+                    RoleFindings.ReservedPermission.With(("permission", p))
                         .At(nameof(Input.Permissions))).ToList(),
             };
         }
