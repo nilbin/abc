@@ -37,7 +37,12 @@ public sealed class OperationExecutor(
                 // Same key + same payload → replay the stored outcome. Different payload → client bug.
                 if (replay.PayloadHash != payloadHash)
                     return Fail(context, Finding.Error("pipeline.idempotency-mismatch").Create());
-                return JsonSerializer.Deserialize<OperationResponse>(replay.ResponseJson, TamJson.Options)!;
+                var stored = JsonSerializer.Deserialize<OperationResponse>(replay.ResponseJson, TamJson.Options)!;
+                return stored with
+                {
+                    Findings = [.. stored.Findings,
+                        model.Locales.Resolve(PipelineFindings.IdempotentReplay.Create(), context.Culture)],
+                };
             }
         }
 

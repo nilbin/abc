@@ -113,6 +113,7 @@ app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapTam();
+Erp.Integrations.ImportFortnoxOrders.Map(app, model);
 app.MapFallbackToFile("index.html");
 
 using (var scope = app.Services.CreateScope())

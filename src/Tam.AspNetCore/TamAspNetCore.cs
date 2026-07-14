@@ -104,7 +104,7 @@ public static class TamAspNetCore
         return app;
     }
 
-    internal static OperationContext BuildContext(HttpContext http, TamModel model)
+    public static OperationContext BuildContext(HttpContext http, TamModel model)
     {
         var actor = http.RequestServices.GetRequiredService<IActorProvider>().GetActor(http);
         var tenant = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http);
