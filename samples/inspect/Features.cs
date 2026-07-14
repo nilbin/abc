@@ -4,6 +4,12 @@ using Tam.EntityFrameworkCore;
 
 namespace Inspect;
 
+public static class InspectFindings
+{
+    public static readonly FindingFactory ChecklistIncomplete =
+        Finding.Error("inspect.checklist-incomplete");
+}
+
 /// <summary>
 /// Plugin operations and views are ordinary Tam modules under the plugin's permanent prefix
 /// (PLG001). They use <see cref="ITamDb"/> — the framework database seam — never the host's

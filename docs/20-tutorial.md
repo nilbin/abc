@@ -678,7 +678,7 @@ Two red lines, both at compile/CI time: the Fortnox mapping must be extended, an
 
 ---
 
-## Step 13 — A partner ships a plugin *(P1 — packaging, namespacing, per-tenant activation — is implemented; packaged fields and gates below are P2 design. [22-plugins.md](22-plugins.md), decision D8)*
+## Step 13 — A partner ships a plugin *(implemented — [22-plugins.md](22-plugins.md), decision D8; running in samples/inspect)*
 
 Norrservice's certification partner sells an inspection-checklist capability. It arrives as a NuGet package, and the host application adds one line:
 
@@ -694,17 +694,29 @@ public sealed class InspectionPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.RequiresHostEntity<Order>();
+        plugin.Model.AddDiscovered();                   // the plugin's own compile-time discovery
 
         // A packaged field on the HOST's entity — same channel as tenant custom fields,
-        // compiled origin, collision-proof key: "inspect.requiresInspection".
-        plugin.ExtensionField<Order>("requiresInspection", SemanticType.Flag);
+        // compiled origin, collision-proof key "inspect.requiresInspection", label from the
+        // plugin's own locale files. Addressed by WIRE key: a plugin references the host's
+        // contract, never its assembly.
+        plugin.ExtensionField("order", "requiresInspection", "boolean");
 
-        // A typed precondition on the HOST's operation — visible in manifest + impact report.
-        plugin.Gate<CompleteOrder>(async (input, context, db, ct) =>
-            await db.OpenChecklistsFor(input.OrderId, ct)
-                ? InspectFindings.ChecklistIncomplete           // finding code = message key, as always
-                : Result.Success());
+        // A declared precondition on the HOST's operation — visible in the manifest as
+        // orders.complete.gatedBy: ["inspect"] and in the impact report. The gate reads the
+        // wire input and the plugin's OWN data (via the ITamDb seam), never host CLR types.
+        plugin.Gate("orders.complete", async (gate, ct) =>
+        {
+            var orderId = gate.Input.GetProperty("orderId").GetGuid();
+            var db = ((ITamDb)gate.Services.GetService(typeof(ITamDb))!).Db;
+            var blocked = await db.Set<Checklist>().AnyAsync(
+                x => x.TenantId == gate.Context.TenantId.Value && x.OrderId == orderId && !x.Passed, ct);
+            return blocked ? InspectFindings.ChecklistIncomplete : Result.Success();
+        });
+
+        // A reaction to a committed HOST effect — post-commit, off the outbox, in the
+        // plugin's own scope. Completing an order opens its follow-up checklist.
+        plugin.OnEffect("order-completed", async (effect, services, ct) => { /* create checklist */ });
     }
 }
 ```

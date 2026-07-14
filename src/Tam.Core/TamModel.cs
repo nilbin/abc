@@ -27,6 +27,16 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, PluginDefinition> Plugins { get; init; } =
         new Dictionary<string, PluginDefinition>();
 
+    /// <summary>Plugin-packaged extension fields on host entities, by entity key (docs/22 P2).</summary>
+    public IReadOnlyList<PackagedFieldDefinition> PackagedFields { get; init; } = [];
+
+    /// <summary>Plugin gates by target operation id (docs/22 P2).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<GateDefinition>> Gates { get; init; } =
+        new Dictionary<string, IReadOnlyList<GateDefinition>>();
+
+    /// <summary>Plugin effect subscribers by event type (docs/22 P2).</summary>
+    public IReadOnlyList<SubscriberDefinition> Subscribers { get; init; } = [];
+
     public IReadOnlyList<string> Permissions =>
         Operations.Values.Select(o => o.Permission)
             .Concat(Views.Values.Select(v => v.Permission))
@@ -47,6 +57,9 @@ public sealed class TamModelBuilder
     private readonly Dictionary<string, (Type Input, object Builder, string OperationId, string? Plugin)> forms = [];
     private readonly Dictionary<string, (object Builder, string ViewId, string? Plugin)> grids = [];
     private readonly Dictionary<string, PluginDefinition> plugins = [];
+    private readonly List<(string EntityKey, string Key, string Type, bool Required, int? MaxLength, IReadOnlyList<string>? Options, string Plugin)> packagedFields = [];
+    private readonly List<GateDefinition> gates = [];
+    private readonly List<SubscriberDefinition> subscribers = [];
     private readonly LocaleCatalogsBuilder locales = new();
     private string defaultCulture = "en";
     private string? currentPlugin;
@@ -133,6 +146,28 @@ public sealed class TamModelBuilder
         return this;
     }
 
+    internal void PackagedField(
+        string entityKey, string key, string type, bool required, int? maxLength, IReadOnlyList<string>? options)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: packaged fields can only be declared by a plugin.");
+        packagedFields.Add((entityKey, key, type, required, maxLength, options, currentPlugin));
+    }
+
+    internal void Gate(string operationId, OperationGate gate)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: gates can only be declared by a plugin.");
+        gates.Add(new GateDefinition(operationId, currentPlugin, gate));
+    }
+
+    internal void OnEffect(string eventType, EffectSubscriber handler)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: effect subscribers can only be declared by a plugin.");
+        subscribers.Add(new SubscriberDefinition(eventType, currentPlugin, handler));
+    }
+
     public TamModelBuilder Form<TInput>(string id, string operationId, Action<FormBuilder<TInput>> configure)
     {
         var builder = new FormBuilder<TInput>();
@@ -194,6 +229,36 @@ public sealed class TamModelBuilder
             gridDefs[id] = def;
         }
 
+        // Packaged fields materialize against the finished catalogs: their labels are plugin
+        // locale defaults under "ext.{key}" — data in catalogs, never display text in code.
+        var extensibleKeys = operations.Values.Select(o => o.ExtensibleEntity)
+            .Concat(views.Values.Select(v => v.ExtensibleEntity))
+            .Where(t => t is not null).Select(t => TamModel.EntityKey(t!)).ToHashSet();
+        var packaged = packagedFields.Select(r =>
+        {
+            if (!extensibleKeys.Contains(r.EntityKey))
+                throw new InvalidOperationException(
+                    $"PLG004: packaged field '{r.Key}' targets unknown extensible entity '{r.EntityKey}'.");
+            if (!SemanticTypes.ByKey.ContainsKey(r.Type))
+                throw new InvalidOperationException(
+                    $"PLG004: packaged field '{r.Key}' has unknown type '{r.Type}'.");
+            var labels = catalogs.Cultures
+                .Select(c => (Culture: c, Text: catalogs.Lookup($"ext.{r.Key}", c)))
+                .Where(x => x.Text is not null)
+                .ToDictionary(x => x.Culture, x => x.Text!);
+            if (!labels.ContainsKey(defaultCulture))
+                throw new InvalidOperationException(
+                    $"L10N001: packaged field '{r.Key}' has no 'ext.{r.Key}' label in default culture '{defaultCulture}'.");
+            return new PackagedFieldDefinition(r.Plugin, r.EntityKey, new ExtensionFieldSpec(
+                r.Key, r.EntityKey, r.Type, r.Required, r.MaxLength,
+                labels, null, r.Options, ExtensionFieldState.Active));
+        }).ToList();
+
+        foreach (var gate in gates)
+            if (!operations.ContainsKey(gate.OperationId))
+                throw new InvalidOperationException(
+                    $"PLG002: plugin '{gate.PluginId}' gates unknown operation '{gate.OperationId}'.");
+
         var model = new TamModel
         {
             DefaultCulture = defaultCulture,
@@ -204,6 +269,10 @@ public sealed class TamModelBuilder
             Forms = formDefs,
             Grids = gridDefs,
             Plugins = plugins,
+            PackagedFields = packaged,
+            Gates = gates.GroupBy(g => g.OperationId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<GateDefinition>)g.ToList()),
+            Subscribers = subscribers,
         };
 
         VerifyPluginNamespaces(model);

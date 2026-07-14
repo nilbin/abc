@@ -61,7 +61,8 @@ public static class TamAspNetCore
         services.AddScoped(sp => new OperationExecutor(model, sp, s => s.GetRequiredService<TDbContext>()));
         services.AddScoped(sp => new ViewExecutor(model, sp));
         services.AddScoped(sp => new ResolveExecutor(model, sp.GetRequiredService<OperationExecutor>(), sp));
-        services.AddScoped<IExtensionRegistry>(sp => new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()));
+        services.AddScoped<IExtensionRegistry>(sp => new PluginAwareExtensionRegistry(
+            new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()), model, sp.GetRequiredService<TDbContext>()));
         services.AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<TDbContext>()));
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
@@ -71,7 +72,8 @@ public static class TamAspNetCore
         services.AddHostedService(sp => new OutboxDispatcher(
             sp.GetRequiredService<IServiceScopeFactory>(),
             s => s.GetRequiredService<TDbContext>(),
-            sp.GetRequiredService<IOutboxTransport>()));
+            sp.GetRequiredService<IOutboxTransport>(),
+            model));
         return services;
     }
 

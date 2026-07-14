@@ -56,6 +56,76 @@ public class PluginTests
         Assert.StartsWith("PLG001", error.Message);
     }
 
+    [TamPlugin("pkg")]
+    private sealed class PackagingPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin)
+        {
+            plugin.LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["plugins.pkg.title"] = "Pkg",
+                ["ext.pkg.priority"] = "Priority",
+            });
+            plugin.ExtensionField("thing", "priority", "integer");
+            plugin.Gate("host.things.close", (_, _) => Task.FromResult(Result.Success()));
+        }
+    }
+
+    private sealed class Thing : IExtensible
+    {
+        public ExtensionData Extensions { get; set; } = new();
+    }
+
+    [Operation("host.things.close")]
+    [Authorize("host.things.close")]
+    [AcceptsExtensions(typeof(Thing))]
+    private static class CloseThing
+    {
+        public sealed record Input([property: LabelKey("labels.name")] string Name);
+
+        public static Task<Result> Execute(Input input, OperationContext context) =>
+            Task.FromResult(Result.Success());
+    }
+
+    [Fact]
+    public void Packaged_fields_and_gates_land_in_model_and_manifest()
+    {
+        var model = new TamModelBuilder()
+            .LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["operations.host.things.close.title"] = "Close",
+                ["labels.name"] = "Name",
+            })
+            .AddOperationType(typeof(CloseThing))
+            .AddPlugin<PackagingPlugin>()
+            .Build();
+
+        var field = Assert.Single(model.PackagedFields);
+        Assert.Equal("pkg.priority", field.Spec.Key);          // key-prefixed, label from locales
+        Assert.Equal("Priority", field.Spec.Labels["en"]);
+        Assert.Single(model.Gates["host.things.close"]);
+
+        var manifest = ManifestBuilder.Build(model,
+            new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(), 0, new HashSet<string> { "pkg" });
+        Assert.Equal(["pkg"], manifest.Operations["host.things.close"].GatedBy);
+
+        var inactive = ManifestBuilder.Build(model,
+            new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(), 0, new HashSet<string>());
+        Assert.Empty(inactive.Operations["host.things.close"].GatedBy);
+    }
+
+    [Fact]
+    public void Plugin_contributions_referencing_unknown_host_surface_fail_the_build()
+    {
+        // Without the host operation, both the packaged field's entity (PLG004) and the gate's
+        // target (PLG002) are unknown — the first one hit fails the build.
+        var builder = new TamModelBuilder()
+            .LocaleDefaults("en", new Dictionary<string, string> { ["plugins.pkg.title"] = "Pkg", ["ext.pkg.priority"] = "Priority" })
+            .AddPlugin<PackagingPlugin>();
+        var error = Assert.Throws<InvalidOperationException>(() => builder.Build());
+        Assert.Contains("PLG00", error.Message);
+    }
+
     [Fact]
     public void Manifest_omits_inactive_plugins_and_lists_active_ones()
     {

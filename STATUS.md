@@ -122,6 +122,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   SSE-refreshed) → MCP tools appear → deactivate → 404 again → reactivate → data intact. In
   the web app the "Besiktning" nav entry and plugin page render purely from `manifest.plugins`
   + grid plugin tags — no app code names the plugin.
+- **Plugin depth (docs/22 P2)**: three seams, all verified on the wire and gated per tenant.
+  *Packaged fields*: `plugin.ExtensionField("order", "requiresInspection", "boolean")` joins
+  the effective overlay through a plugin-aware registry wrapper — key-prefixed, labels from
+  the plugin's locale files (`ext.inspect.requiresInspection`), validating/persisting through
+  the same Change channel and appearing in forms, grid columns, MCP schemas alongside tenant
+  fields with zero new downstream code. *Gates*: `plugin.Gate("orders.complete", …)` runs
+  declared preconditions after validation, before the handler — the gate reads wire input and
+  the plugin's own data, never host CLR types; manifest shows `gatedBy: ["inspect"]`; verified:
+  unpassed linked checklist → 422 localized finding, pass → completes. *Effect subscribers*:
+  `plugin.OnEffect("order-completed", …)` runs post-commit off the outbox in its own scope
+  (isolated failures, at-most-once), verified: completion auto-opens a follow-up checklist;
+  none of the three fire for tenants with the plugin inactive. PLG002/PLG004/PLG005 validate
+  gate targets, packaged-field entities/types and plugin-only registration at model build.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -159,12 +172,13 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     promotion remain.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
-12. **Plugin system: P1 (packaging + per-tenant activation) is built and verified**; P2–P5
-    remain designed-only ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial
-    step 13): packaged fields on host entities, operation gates, effect subscribers, tenant
-    packages, custom objects, Px-bounded automation rules. P4 (custom objects) additionally
-    waits on typed JSON predicates + index promotion + RLS. PLG001 is a model-build error
-    today, not yet a Roslyn analyzer diagnostic.
+12. **Plugin system: P1 + P2 built and verified**; P3–P5 remain designed-only
+    ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial step 13): tenant packages,
+    custom objects, Px-bounded automation rules. P4 (custom objects) additionally waits on
+    typed JSON predicates + index promotion + RLS. PLG### are model-build errors today, not
+    yet Roslyn analyzer diagnostics; subscriber delivery is at-most-once (no retry/inbox for
+    plugin subscribers yet); field-level audit shows the extensions column as one change, not
+    per extension key.
 
 ## The one-night verdict
 

@@ -8,6 +8,51 @@ public static class PluginFindings
     public static readonly FindingFactory Unknown = Finding.Error("plugins.unknown");
 }
 
+/// <summary>
+/// Wraps the tenant registry so plugin-packaged fields (docs/22 P2) join the effective overlay
+/// exactly like tenant-defined fields — but only for tenants with the owning plugin active.
+/// Everything downstream (forms, grids, audit, MCP, D7 filtering, the extension change channel)
+/// already treats overlay specs uniformly, so packaged fields cost nothing new there.
+/// </summary>
+public sealed class PluginAwareExtensionRegistry(
+    IExtensionRegistry inner, TamModel model, Microsoft.EntityFrameworkCore.DbContext db) : IExtensionRegistry
+{
+    public async Task<IReadOnlyList<ExtensionFieldSpec>> For(
+        TenantId tenant, string entityKey, CancellationToken ct)
+    {
+        var specs = await inner.For(tenant, entityKey, ct);
+        var packaged = await PackagedFor(tenant, ct);
+        return packaged.TryGetValue(entityKey, out var extra) ? [.. extra, .. specs] : specs;
+    }
+
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>>> All(
+        TenantId tenant, CancellationToken ct)
+    {
+        var specs = await inner.All(tenant, ct);
+        var packaged = await PackagedFor(tenant, ct);
+        if (packaged.Count == 0) return specs;
+
+        var merged = specs.ToDictionary(kv => kv.Key, kv => kv.Value.ToList());
+        foreach (var (entity, extras) in packaged)
+        {
+            if (!merged.TryGetValue(entity, out var list)) merged[entity] = list = [];
+            list.InsertRange(0, extras);
+        }
+        return merged.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<ExtensionFieldSpec>)kv.Value);
+    }
+
+    private async Task<Dictionary<string, List<ExtensionFieldSpec>>> PackagedFor(
+        TenantId tenant, CancellationToken ct)
+    {
+        if (model.PackagedFields.Count == 0) return [];
+        var active = await PluginActivations.ActiveAsync(db, tenant.Value, ct);
+        return model.PackagedFields
+            .Where(f => active.Contains(f.PluginId))
+            .GroupBy(f => f.EntityKey)
+            .ToDictionary(g => g.Key, g => g.Select(f => f.Spec).ToList());
+    }
+}
+
 /// <summary>Per-tenant plugin activation state (docs/22): compiled code, tenant data switch.</summary>
 public static class PluginActivations
 {

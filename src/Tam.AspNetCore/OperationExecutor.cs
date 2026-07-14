@@ -70,6 +70,19 @@ public sealed class OperationExecutor(
         if (structural.Any(f => f.Severity == FindingSeverity.Error))
             return Fail(context, [.. structural]);
 
+        // Plugin gates (docs/22 P2): declared preconditions on this operation, run only for
+        // tenants with the owning plugin active — after validation, before the handler. The
+        // gate reads the wire input, never host CLR types; its findings fail like any other.
+        if (model.Gates.TryGetValue(operationId, out var gates))
+        {
+            var activePlugins = await PluginActivations.ActiveAsync(db, context.TenantId.Value, ct);
+            foreach (var gate in gates.Where(g => activePlugins.Contains(g.PluginId)))
+            {
+                var gateResult = await gate.Handler(new GateContext(body, context, services), ct);
+                if (gateResult.IsError) return Fail(context, [.. gateResult.Findings]);
+            }
+        }
+
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
         Result result;
@@ -98,7 +111,10 @@ public sealed class OperationExecutor(
                     .FirstOrDefault(e => extensibleType.IsInstanceOfType(e.Entity));
                 if (tracked?.Entity is IExtensible extensible)
                 {
-                    var registry = new EfExtensionRegistry(db);
+                    // The registered registry, not a bare EF one: plugin-packaged fields
+                    // (docs/22 P2) must validate exactly like tenant-defined fields.
+                    var registry = services.GetService(typeof(IExtensionRegistry)) as IExtensionRegistry
+                        ?? new EfExtensionRegistry(db);
                     var specs = await registry.For(
                         context.TenantId, TamModel.EntityKey(extensibleType), ct);
                     var applied = ExtensionApplier.Apply(

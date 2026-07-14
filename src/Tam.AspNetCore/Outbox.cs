@@ -30,7 +30,8 @@ public sealed class BroadcasterOutboxTransport(EffectBroadcaster broadcaster) : 
 public sealed class OutboxDispatcher(
     IServiceScopeFactory scopes,
     Func<IServiceProvider, DbContext> dbResolver,
-    IOutboxTransport transport) : BackgroundService
+    IOutboxTransport transport,
+    TamModel? model = null) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -49,6 +50,7 @@ public sealed class OutboxDispatcher(
                 foreach (var record in pending)
                 {
                     await transport.Dispatch(record, ct);
+                    await InvokeSubscribers(record, scope.ServiceProvider, db, ct);
                     record.DispatchedAtIso = DateTimeOffset.UtcNow.ToString("O");
                 }
                 if (pending.Count > 0) await db.SaveChangesAsync(ct);
@@ -62,6 +64,40 @@ public sealed class OutboxDispatcher(
                 // transient dispatch/db failure: rows stay undispatched and retry next tick
             }
             await Task.Delay(TimeSpan.FromSeconds(2), ct);
+        }
+    }
+
+    /// <summary>
+    /// Plugin effect subscribers (docs/22 P2): each runs post-commit in the dispatcher's scope,
+    /// only for tenants with the owning plugin active. A failing subscriber never blocks
+    /// dispatch or other subscribers — at-most-once, isolated, like any external consumer.
+    /// </summary>
+    private async Task InvokeSubscribers(
+        OutboxRecord record, IServiceProvider services, DbContext db, CancellationToken ct)
+    {
+        if (model is null || model.Subscribers.Count == 0) return;
+        var matching = model.Subscribers.Where(s => s.EventType == record.EventType).ToList();
+        if (matching.Count == 0) return;
+
+        var active = await PluginActivations.ActiveAsync(db, record.TenantId, ct);
+        var payload = System.Text.Json.JsonDocument.Parse(
+            string.IsNullOrEmpty(record.PayloadJson) ? "{}" : record.PayloadJson);
+        var effect = new EffectEvent(record.TenantId, record.OperationId, record.EventType, payload.RootElement);
+
+        foreach (var subscriber in matching.Where(s => active.Contains(s.PluginId)))
+        {
+            try
+            {
+                await subscriber.Handler(effect, services, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                // an unhealthy plugin must not take down dispatch — the row still completes
+            }
         }
     }
 }

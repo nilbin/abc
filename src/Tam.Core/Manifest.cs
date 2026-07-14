@@ -49,6 +49,10 @@ public sealed record ManifestOperation(
     public IReadOnlyList<ManifestField> OutputFields { get; init; } = [];
 
     public string? Plugin { get; init; }
+
+    /// <summary>Plugins that gate this operation with declared preconditions (docs/22 P2) —
+    /// the coupling is visible here and in impact reports, never magic.</summary>
+    public IReadOnlyList<string> GatedBy { get; init; } = [];
 }
 
 public sealed record ManifestView(
@@ -111,6 +115,10 @@ public static class ManifestBuilder
                     ? FieldModel.FromRecord(output).Select(ToField).ToList()
                     : [],
                 Plugin = kv.Value.Plugin,
+                GatedBy = model.Gates.TryGetValue(kv.Key, out var opGates)
+                    ? opGates.Where(g => Included(g.PluginId))
+                        .Select(g => g.PluginId).Distinct().Order().ToList()
+                    : [],
             });
 
         var views = model.Views

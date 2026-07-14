@@ -166,7 +166,8 @@ public static class CompleteOrder
         if (result.IsError) return result.As<Output>();
 
         return new Result<Output> { Output = new Output(order.Version + 1) }
-            .Effect(new EventPublished("order-completed", new { orderId = order.Id.Value }));
+            .Effect(new EventPublished("order-completed",
+                new { orderId = order.Id.Value, number = order.Number.Value }));
     }
 }
 

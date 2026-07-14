@@ -1,6 +1,6 @@
 # 22 — Plugins: Packaged Extensibility
 
-**Status: P1 implemented and verified** (packaging, PLG001, per-tenant activation, manifest/MCP/OpenAPI omission, 404 gating, the samples/inspect plugin, manifest-driven nav — see STATUS.md); **P2–P5 are design**. Decision summary: D8 in [19-decisions.md](19-decisions.md).
+**Status: P1 and P2 implemented and verified** (packaging, PLG001–PLG005, per-tenant activation, manifest/MCP/OpenAPI omission, 404 gating, packaged fields on host entities, gates on host operations, effect subscribers, the samples/inspect plugin, manifest-driven nav — see STATUS.md); **P3–P5 are design**. One correction from implementation: plugins address host entities and operations by *wire key* (`"order"`, `"orders.complete"`), not CLR types — a plugin references the host's contract, never its assembly. Decision summary: D8 in [19-decisions.md](19-decisions.md).
 
 ## The problem this solves
 

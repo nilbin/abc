@@ -6,5 +6,7 @@
   "inspect.labels.passed": "Godkänd",
   "inspect.labels.order": "Order",
   "inspect.labels.checklist-id": "Checklista",
-  "labels.id": "Id"
+  "labels.id": "Id",
+  "ext.inspect.requiresInspection": "Kräver besiktning",
+  "inspect.checklist-incomplete": "Ordern har en checklista som inte är godkänd."
 }
