@@ -59,8 +59,7 @@ public sealed class ClaimsActorProvider : IActorProvider
 
     public Actor GetActor(HttpContext http)
     {
-        var accountClaim = http.User.FindFirst(AccountClaim)?.Value
-            ?? http.User.FindFirst("tam:user")?.Value;   // back-compat with older tokens
+        var accountClaim = http.User.FindFirst(AccountClaim)?.Value;
         if (http.User.Identity?.IsAuthenticated != true
             || !Guid.TryParse(accountClaim, out var accountId))
             return Anonymous;

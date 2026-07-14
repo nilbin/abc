@@ -34,6 +34,8 @@ Two chokepoints, both already the right place:
 
 Both read the subscription row once (cheap, one-per-tenant), and both degrade safely: a tenant with **no** subscription row is treated as the `free` plan with a default seat count and no plugin entitlements — the framework is fully usable without a billing system wired up, which keeps the OSS/self-hosted story clean.
 
+**Seats vs the tenant hierarchy (docs/26–27).** Seats count memberships at their **attachment node**. A *cascading* membership (docs/27) attached at a region therefore consumes **one seat at the region** while reaching every descendant company — one region admin over 50 companies is 1 seat, not 50. This is acknowledged and accepted: cascade is an authorization construct, and pricing it per-reach would tax exactly the roll-up roles the hierarchy exists for. If a commercial plan ever needs reach-based pricing, that is a docs/24 counting change (e.g. count a cascading membership against each descendant's ceiling, or price cascading seats differently) — the authorization model doesn't move.
+
 Because entitlement is enforced at activation, not at every request, an entitled-then-downgraded tenant keeps working until the next activation attempt; a background reconciliation (deactivate plugins a lapsed plan no longer entitles) is the `past_due`/`canceled` handler — designed, on the integration channel, not yet built.
 
 ## Marketplace composition (docs/22 tiers × this)

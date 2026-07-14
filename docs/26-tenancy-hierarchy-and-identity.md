@@ -39,15 +39,21 @@ CTE per query.
   owned high and used by every leaf below (a group-level price list every company reads).
 
 The global query filter generalizes cleanly. The ambient context carries the **current node's path**,
-and the filter is a path-prefix test — in one direction or the other:
+and the widened filters resolve tenant sets through the **tenants table** — rows keep carrying only
+`TenantId`, nothing is denormalized onto them:
 
 - strict: `row.TenantId == current.Id`
-- subtree (down): `row.TenantPath LIKE current.Path || '%'` (row owner at/below current)
-- inherited (up): `current.Path LIKE row.TenantPath || '%'` (row owner at/above current)
+- subtree (down): `row.TenantId IN (SELECT Id FROM tenants WHERE Path LIKE current.Path || '%')` —
+  a semi-join against the tiny, effectively-cached tenants table (indexed on `Path`), then the row's
+  existing `TenantId` index does the work.
+- inherited (up): `row.TenantId IN (ancestor ids)` — the ancestor set is enumerable from the current
+  node's own path, so it's a bounded IN-list; no LIKE at all.
 
-backed by an index on the denormalized `TenantPath` copied onto each row (or a join to the tenant
-table; denormalizing keeps reads single-table). `inherited` only ever exposes the active node's *own*
-ancestors' rows — never a sibling subtree — so isolation holds.
+This is deliberately **not** the denormalize-`TenantPath`-onto-every-row design: keeping rows
+single-tenant-keyed avoids a new column + index on every scoped table and makes **re-parenting nearly
+free** — moving a subtree rewrites `Path` values in the tenants table only, never a row sweep.
+`inherited` only ever exposes the active node's *own* ancestors' rows — never a sibling subtree — so
+isolation holds.
 
 Writes always stamp the **active node** (`TenantStampInterceptor` unchanged — a row is created *in*
 the node the actor stands in). Any inheritance is a read-time widening, never a write-time ambiguity;
@@ -158,16 +164,24 @@ node; roll-up is the Part-A inherited scope).
   "region dashboard" view opts into `subtree`; a shared-catalog view opts into `inherited`; everything
   else stays strict.
 - **D-H4 — hierarchy write model: grants fan out, writes fan in.** A created row is stamped with **one
-  explicit target node**, never inferred from a rolled-up view. The target defaults to the active node;
-  an actor whose `X.create` scope spans a subtree (an admin) picks the sub-company in a **target-node
-  form field** (a subtree-scoped lookup, server-validated) — so an admin high in the tree creates an
-  order in a sub-company **without switching active company** (the Azure resource-group / GitHub owner
-  pattern). Capability stays **flat** (`X.create` is one gated bit; *which* nodes is data-scope via a
-  lookup), so this does not touch the manifest→TS→UI-gating chain. What is rejected is per-node create
-  *buttons*. Capability at the active node is the union up its cascading ancestor memberships, collapsed
-  to one flat set. Rows may be owned at any level (no framework "leaf"); shared reference data owned
-  high is read by leaves via `inherited` scope and edited at its owner node. Full rationale + scope
-  kinds: [docs/27 — "The hierarchy write model"](27-authorization-model.md).
+  explicit target node**, never inferred from a rolled-up view. Eligibility is a **capability**
+  question (the nodes where the actor's cascaded capability grants `create` — data-scope is a predicate
+  over existing rows and cannot bind a create target). The target defaults to the active node; an admin
+  holding a cascading `X.create` picks the sub-company in a **target-node form field**
+  (server-validated) — creating in a sub-company **without switching active company** (the Azure
+  resource-group / GitHub owner pattern). **The validated target becomes the request's execution
+  tenant** (ambient rebind): audit, outbox/effects, idempotency and in-form lookups all land in the
+  target with the row — stamping only the row would strand those side-artifacts in the parent (audit in
+  the wrong trail, SSE on the wrong channel, lookups showing the wrong node's data). Capability stays
+  **flat** (`X.create` is one gated bit; eligible nodes come from a lookup over the cascade), so this
+  does not touch the manifest→TS→UI-gating chain; per-node create *buttons* remain rejected. Capability
+  at the active node is the union up its cascading ancestor memberships, collapsed to one flat set,
+  with each membership's role names resolved **in its own tenant** (docs/27). Rows may be owned at any
+  level (no framework "leaf"); shared reference data owned high is read by leaves via `inherited` scope
+  and edited at its owner node. Two stated asymmetries: a grant held **at a child** never surfaces a
+  no-switch create at the parent (grants don't flow up — switch context instead), and the target lookup
+  covers the **active subtree only** (an unrelated sibling-tree membership means switching). Full
+  rationale + scope kinds: [docs/27 — "The hierarchy write model"](27-authorization-model.md).
 - **D-H2 — account ownership: Option 1 (platform-global `Account` + `TenantMembership`).** Global
   identity, access via memberships; the only model that supports a user across unrelated tenants.
 - **D-H3** active-tenant selection — **implemented via the PKCE flow.** The framework-rendered
@@ -175,6 +189,17 @@ node; roll-up is the Part-A inherited scope).
   (auto-selects the sole one otherwise); the chosen tenant is carried on the token's `tam:tenant`
   claim and turned into the request's scope by `ClaimTenantProvider`. Switching tenants = re-running
   the flow and picking another. (Subdomain/path selection remain open alternatives for later.)
+  **Hierarchy note (Stage 3/4):** with cascade, the set of standable nodes is *memberships plus every
+  descendant of a cascading membership* — the picker must therefore offer drill-down/search into
+  cascaded descendants, not just list membership rows, or admins can't stand where they're allowed to
+  act. Nodes are labeled by path (e.g. "Acme ▸ EU ▸ Sales") and each distinct effective-grant context
+  is offered — never collapsed to "the highest".
+- **D-H5 — cascade granularity: OPEN (recommend per-role).** The design so far treats cascade as a
+  per-membership boolean, but a region admin may want `orders.*` to cascade while `users.manage` stays
+  node-local. Recommendation: carry cascade **per role assignment** on the membership (e.g.
+  `roles: [{name, cascade}]`) rather than one flag for the whole membership — same resolver, finer
+  control, and the schema should be born this way rather than migrated later. Decide before
+  `TenantMembershipEntity` grows the column in Stage 3.
 
 The membership row carries **both** authorization axes — capability (roles) and data scope (access
 policies) — designed in [docs/27](27-authorization-model.md).
