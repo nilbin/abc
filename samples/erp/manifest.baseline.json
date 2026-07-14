@@ -87,7 +87,15 @@
       "operations.roles.define.title": "Definiera roll",
       "labels.permissions": "Beh\u00F6righeter",
       "roles.unknown-permission": "Ok\u00E4nd beh\u00F6righet: {permission}.",
-      "roles.invalid-name": "Ogiltigt rollnamn (sm\u00E5 bokst\u00E4ver, siffror och bindestreck)."
+      "roles.invalid-name": "Ogiltigt rollnamn (sm\u00E5 bokst\u00E4ver, siffror och bindestreck).",
+      "nav.audit": "Historik",
+      "labels.timestamp": "Tidpunkt",
+      "labels.operation": "Operation",
+      "labels.actor": "Utf\u00F6rd av",
+      "labels.old-value": "F\u00F6reg\u00E5ende v\u00E4rde",
+      "labels.new-value": "Nytt v\u00E4rde",
+      "labels.entity-id": "Post",
+      "labels.field": "F\u00E4lt"
     },
     "en": {
       "app.title": "Norrservice ERP",
@@ -174,7 +182,15 @@
       "operations.roles.define.title": "Define role",
       "labels.permissions": "Permissions",
       "roles.unknown-permission": "Unknown permission: {permission}.",
-      "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens)."
+      "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens).",
+      "nav.audit": "History",
+      "labels.timestamp": "Timestamp",
+      "labels.operation": "Operation",
+      "labels.actor": "Performed by",
+      "labels.old-value": "Old value",
+      "labels.new-value": "New value",
+      "labels.entity-id": "Record",
+      "labels.field": "Field"
     }
   },
   "operations": {
@@ -572,6 +588,119 @@
     }
   },
   "views": {
+    "audit.entries": {
+      "permission": "audit.read",
+      "queryFields": [
+        {
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "entityId",
+          "labelKey": "labels.entity-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "timestamp",
+          "labelKey": "labels.timestamp",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "operationId",
+          "labelKey": "labels.operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "actorName",
+          "labelKey": "labels.actor",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "entityId",
+          "labelKey": "labels.entity-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "field",
+          "labelKey": "labels.field",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "oldValue",
+          "labelKey": "labels.old-value",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "newValue",
+          "labelKey": "labels.new-value",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "timestamp",
+        "operationId"
+      ],
+      "filterable": [],
+      "defaultSort": "timestamp",
+      "defaultSortDescending": true
+    },
     "customers.list": {
       "permission": "customers.read",
       "queryFields": [
@@ -1408,6 +1537,21 @@
       ],
       "includeExtensions": false
     },
+    "web.audit.list": {
+      "view": "audit.entries",
+      "columns": [
+        "timestamp",
+        "operationId",
+        "actorName",
+        "entity",
+        "field",
+        "oldValue",
+        "newValue"
+      ],
+      "rowActions": [],
+      "toolbarActions": [],
+      "includeExtensions": false
+    },
     "web.extensions.fields": {
       "view": "extensions.fields",
       "columns": [
@@ -1426,6 +1570,7 @@
   },
   "extensions": {},
   "permissions": [
+    "audit.read",
     "customers.create",
     "customers.read",
     "extensions.manage",

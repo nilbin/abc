@@ -88,6 +88,23 @@ export interface RolesDefineOutput {
   roleId: string;
 }
 
+export interface AuditEntriesRow {
+  id: string;
+  timestamp: string;
+  operationId: string;
+  actorName: string;
+  entity: string;
+  entityId: string;
+  field: string;
+  oldValue?: string;
+  newValue?: string;
+}
+
+export interface AuditEntriesQuery {
+  entity?: string;
+  entityId?: string;
+}
+
 export interface CustomersListRow {
   id: string;
   name: string;
@@ -207,6 +224,11 @@ export class TypedTamClient {
   /** roles.define (requires roles.manage) */
   rolesDefine(input: RolesDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<RolesDefineOutput>> {
     return this.client.operation("roles.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RolesDefineOutput>>;
+  }
+
+  /** view audit.entries (requires audit.read) */
+  auditEntries(query?: AuditEntriesQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<ViewResponse & { rows: AuditEntriesRow[] }> {
+    return this.client.view("audit.entries", query as unknown as Record<string, unknown>) as Promise<ViewResponse & { rows: AuditEntriesRow[] }>;
   }
 
   /** view customers.list (requires customers.read) */

@@ -102,6 +102,10 @@ function CustomersPage() {
   return <ViewGrid grid="web.customers.list" />;
 }
 
+function AuditPage() {
+  return <ViewGrid grid="web.audit.list" pageSize={20} />;
+}
+
 function ExtensionsPage() {
   const { refreshManifest } = useTam();
   return <ViewGrid grid="web.extensions.fields" onAction={() => void refreshManifest()} />;
@@ -109,12 +113,13 @@ function ExtensionsPage() {
 
 function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
   const { t, culture, setCulture, can } = useTam();
-  const [page, setPage] = useState<'orders' | 'customers' | 'extensions'>('orders');
+  const [page, setPage] = useState<'orders' | 'customers' | 'extensions' | 'audit'>('orders');
 
   const pages = useMemo(() => ({
     orders: <OrdersPage />,
     customers: <CustomersPage />,
     extensions: <ExtensionsPage />,
+    audit: <AuditPage />,
   }), []);
 
   return (
@@ -152,6 +157,9 @@ function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
         <NavLink label={t('nav.customers')} active={page === 'customers'} onClick={() => setPage('customers')} />
         {can('extensions.manage') && (
           <NavLink label={t('nav.extensions')} active={page === 'extensions'} onClick={() => setPage('extensions')} />
+        )}
+        {can('audit.read') && (
+          <NavLink label={t('nav.audit')} active={page === 'audit'} onClick={() => setPage('audit')} />
         )}
       </AppShell.Navbar>
       <AppShell.Main>{pages[page]}</AppShell.Main>

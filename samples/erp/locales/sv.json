@@ -83,5 +83,13 @@
   "operations.roles.define.title": "Definiera roll",
   "labels.permissions": "Behörigheter",
   "roles.unknown-permission": "Okänd behörighet: {permission}.",
-  "roles.invalid-name": "Ogiltigt rollnamn (små bokstäver, siffror och bindestreck)."
+  "roles.invalid-name": "Ogiltigt rollnamn (små bokstäver, siffror och bindestreck).",
+  "nav.audit": "Historik",
+  "labels.timestamp": "Tidpunkt",
+  "labels.operation": "Operation",
+  "labels.actor": "Utförd av",
+  "labels.old-value": "Föregående värde",
+  "labels.new-value": "Nytt värde",
+  "labels.entity-id": "Post",
+  "labels.field": "Fält"
 }

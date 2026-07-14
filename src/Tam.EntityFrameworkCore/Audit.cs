@@ -16,6 +16,8 @@ public sealed class AuditEntry
     public string? CorrelationId { get; set; }
     public string? IdempotencyKey { get; set; }
     public DateTimeOffset Timestamp { get; set; }
+    /// <summary>ISO-8601 copy of <see cref="Timestamp"/>: sortable as text on every provider.</summary>
+    public string TimestampIso { get; set; } = "";
     public List<AuditChange> Changes { get; set; } = [];
 }
 
@@ -67,6 +69,7 @@ public static class TamAudit
             CorrelationId = context.CorrelationId,
             IdempotencyKey = context.IdempotencyKey,
             Timestamp = DateTimeOffset.UtcNow,
+            TimestampIso = DateTimeOffset.UtcNow.ToString("O"),
         };
 
         foreach (var tracked in db.ChangeTracker.Entries().ToList())

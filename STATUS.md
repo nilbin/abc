@@ -87,6 +87,9 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   CI fails if the committed generated file drifts from the baseline.
 - **OpenAPI 3.1** at `/openapi.json`, derived from the model: localized summaries, required from
   nullability, enum values, change-set schemas, 403/409/422 finding responses.
+- **Audit as a read model (D3)**: `audit.entries` view + History page (admin-only nav) showing the
+  field-level trail — timestamp, operation, actor, entity.field, old → new — straight from the
+  same-transaction audit tables.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -111,8 +114,7 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 8. **Integrations**: mapping binding (INT001 validation), idempotent runner, and a persisted
    inbox with retry + dead-letter (3 attempts) exist — failed-sync recovery verified: a row that
    failed on a missing customer processed automatically after the customer was created, with no
-   re-send. Outbox dispatch and reconciliation remain. Also not started: offline/mobile,
-   audit read views/UI.
+   re-send. Outbox dispatch and reconciliation remain. Also not started: offline/mobile.
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
    per-tenant and include extension fields with admin-authored descriptions.
 10. **SQLite** backs the demo (JSON column as TEXT); Postgres/JSONB + expression-index promotion

@@ -83,5 +83,13 @@
   "operations.roles.define.title": "Define role",
   "labels.permissions": "Permissions",
   "roles.unknown-permission": "Unknown permission: {permission}.",
-  "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens)."
+  "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens).",
+  "nav.audit": "History",
+  "labels.timestamp": "Timestamp",
+  "labels.operation": "Operation",
+  "labels.actor": "Performed by",
+  "labels.old-value": "Old value",
+  "labels.new-value": "New value",
+  "labels.entity-id": "Record",
+  "labels.field": "Field"
 }

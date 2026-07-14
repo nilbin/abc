@@ -75,6 +75,17 @@ var model = new TamModelBuilder()
         grid.ToolbarAction("customers.create");
     })
 
+    .Grid<AuditLog.Result>("web.audit.list", "audit.entries", grid =>
+    {
+        grid.Column(x => x.Timestamp);
+        grid.Column(x => x.OperationId);
+        grid.Column(x => x.ActorName);
+        grid.Column(x => x.Entity);
+        grid.Column(x => x.Field);
+        grid.Column(x => x.OldValue);
+        grid.Column(x => x.NewValue);
+    })
+
     .Grid<ExtensionFieldList.Result>("web.extensions.fields", "extensions.fields", grid =>
     {
         grid.Column(x => x.Entity);
