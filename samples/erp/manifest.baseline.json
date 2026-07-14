@@ -83,7 +83,11 @@
       "extensions.unknown-type": "Ok\u00E4nd f\u00E4lttyp.",
       "extensions.key-conflict": "Nyckeln anv\u00E4nds redan.",
       "extensions.missing-label": "Etikett saknas f\u00F6r standardspr\u00E5ket.",
-      "extensions.invalid-option": "V\u00E4rdet finns inte bland alternativen."
+      "extensions.invalid-option": "V\u00E4rdet finns inte bland alternativen.",
+      "operations.roles.define.title": "Definiera roll",
+      "labels.permissions": "Beh\u00F6righeter",
+      "roles.unknown-permission": "Ok\u00E4nd beh\u00F6righet: {permission}.",
+      "roles.invalid-name": "Ogiltigt rollnamn (sm\u00E5 bokst\u00E4ver, siffror och bindestreck)."
     },
     "en": {
       "app.title": "Norrservice ERP",
@@ -166,7 +170,11 @@
       "extensions.unknown-type": "Unknown field type.",
       "extensions.key-conflict": "The key is already in use.",
       "extensions.missing-label": "A label for the default culture is missing.",
-      "extensions.invalid-option": "The value is not among the allowed options."
+      "extensions.invalid-option": "The value is not among the allowed options.",
+      "operations.roles.define.title": "Define role",
+      "labels.permissions": "Permissions",
+      "roles.unknown-permission": "Unknown permission: {permission}.",
+      "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens)."
     }
   },
   "operations": {
@@ -446,6 +454,30 @@
           "labelKey": "labels.order-id",
           "type": "reference",
           "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ]
+    },
+    "roles.define": {
+      "permission": "roles.manage",
+      "titleKey": "operations.roles.define.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "permissions",
+          "labelKey": "labels.permissions",
+          "type": "object",
+          "wireKind": "object",
           "required": true,
           "changeSet": false,
           "extension": false
@@ -945,6 +977,45 @@
       "filterable": [],
       "defaultSortDescending": false,
       "extensibleEntity": "order"
+    },
+    "roles.list": {
+      "permission": "roles.manage",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "permissions",
+          "labelKey": "labels.permissions",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "name"
+      ],
+      "filterable": [],
+      "defaultSort": "name",
+      "defaultSortDescending": false
     }
   },
   "forms": {
@@ -1275,7 +1346,8 @@
     "orders.complete",
     "orders.create",
     "orders.edit",
-    "orders.read"
+    "orders.read",
+    "roles.manage"
   ],
   "revision": 0,
   "actorPermissions": []

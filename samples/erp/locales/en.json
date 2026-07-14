@@ -3,14 +3,12 @@
   "nav.orders": "Orders",
   "nav.customers": "Customers",
   "nav.extensions": "Custom fields",
-
   "operations.customers.create.title": "New customer",
   "operations.orders.create.title": "New order",
   "operations.orders.edit-details.title": "Edit order details",
   "operations.orders.complete.title": "Complete order",
   "operations.extensions.define-field.title": "New custom field",
   "operations.extensions.retire-field.title": "Retire custom field",
-
   "labels.name": "Name",
   "labels.visit-address": "Visit address",
   "labels.email": "Email",
@@ -41,7 +39,6 @@
   "labels.state": "State",
   "labels.search": "Search",
   "labels.active-only": "Active only",
-
   "enums.service": "Service",
   "enums.project": "Project",
   "enums.open": "Open",
@@ -51,7 +48,6 @@
   "enums.active": "Active",
   "enums.deprecated": "Deprecated",
   "enums.retired": "Retired",
-
   "orders.already-completed": "The order is already completed.",
   "orders.cannot-complete-cancelled": "A cancelled order cannot be completed.",
   "orders.invalid-customer": "The selected customer cannot receive orders.",
@@ -63,16 +59,13 @@
   "customers.inactive": "The selected customer is inactive.",
   "customers.credit-blocked": "The customer is credit blocked.",
   "customers.duplicate-name": "A customer with that name already exists.",
-
   "validation.required": "This field is required.",
   "validation.too-long": "Must be at most {max} characters.",
   "validation.invalid-email": "Invalid email address.",
   "validation.invalid-value": "Invalid value.",
   "validation.unknown-field": "Unknown field.",
-
   "concurrency.field-conflict": "This field was changed by someone else.",
   "concurrency.version-conflict": "The record was changed by someone else. Reload and try again.",
-
   "pipeline.not-authorized": "You lack the required permission ({permission}).",
   "pipeline.unknown-operation": "Unknown operation: {operation}.",
   "pipeline.unknown-view": "Unknown view: {view}.",
@@ -80,12 +73,15 @@
   "pipeline.not-found": "The record does not exist.",
   "pipeline.idempotent-replay": "The response was replayed from an earlier identical request.",
   "pipeline.idempotency-mismatch": "The idempotency key was already used with a different request.",
-
   "extensions.unknown-field": "Unknown custom field.",
   "extensions.retired-field": "The field is retired and cannot be changed.",
   "extensions.deprecated-field": "The field is being phased out.",
   "extensions.unknown-type": "Unknown field type.",
   "extensions.key-conflict": "The key is already in use.",
   "extensions.missing-label": "A label for the default culture is missing.",
-  "extensions.invalid-option": "The value is not among the allowed options."
+  "extensions.invalid-option": "The value is not among the allowed options.",
+  "operations.roles.define.title": "Define role",
+  "labels.permissions": "Permissions",
+  "roles.unknown-permission": "Unknown permission: {permission}.",
+  "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens)."
 }

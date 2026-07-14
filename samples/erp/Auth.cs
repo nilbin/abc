@@ -1,33 +1,38 @@
 using Microsoft.AspNetCore.Http;
 using Tam;
 using Tam.AspNetCore;
+using Tam.EntityFrameworkCore;
 
 namespace Erp;
 
 /// <summary>
-/// Demo stand-in for decision D1's role layer: three roles with grant sets, selected per
-/// request via the X-Demo-Role header. Production replaces this with tenant-managed roles;
-/// the enforcement path (Actor.Can in the pipeline) is already the real one.
+/// Decision D1's role layer, resolved from tenant data: the X-Demo-Role header stands in for
+/// real authentication and names a role stored in the roles registry (see Features/Roles.cs).
+/// Enforcement is the real path — Actor.Can in the pipeline; only the identity source is demo.
 /// </summary>
-public sealed class DemoRoleActorProvider : IActorProvider
+public sealed class DbRoleActorProvider : IActorProvider
 {
-    private static readonly Dictionary<string, Actor> Roles = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> DisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["admin"] = new("admin", "Alva Andersson", new HashSet<string> { "*" }),
-        ["dispatcher"] = new("dispatcher", "Didrik Berg", new HashSet<string>
-        {
-            "orders.read", "orders.create", "orders.edit", "orders.complete",
-            "customers.read", "customers.create",
-        }),
-        ["viewer"] = new("viewer", "Vera Lund", new HashSet<string>
-        {
-            "orders.read", "customers.read",
-        }),
+        ["admin"] = "Alva Andersson",
+        ["dispatcher"] = "Didrik Berg",
+        ["viewer"] = "Vera Lund",
     };
 
     public Actor GetActor(HttpContext http)
     {
-        var role = http.Request.Headers["X-Demo-Role"].FirstOrDefault() ?? "admin";
-        return Roles.GetValueOrDefault(role, Roles["admin"]);
+        var roleName = http.Request.Headers["X-Demo-Role"].FirstOrDefault() ?? "admin";
+        var db = http.RequestServices.GetRequiredService<ErpDbContext>();
+
+        var role = db.Set<RoleEntity>().FirstOrDefault(
+            x => x.TenantId == Seed.Tenant && x.Name == roleName);
+
+        var permissions = role?.Permissions()
+            ?? (roleName == "admin" ? new HashSet<string> { "*" } : []);
+
+        return new Actor(
+            roleName,
+            DisplayNames.GetValueOrDefault(roleName, roleName),
+            permissions);
     }
 }

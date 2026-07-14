@@ -71,6 +71,20 @@ public static class Seed
         orders[0].Complete();
         db.Orders.AddRange(orders);
 
+        // Tenant-managed roles (decision D1): named grant sets, stored as data.
+        void Role(string name, params string[] permissions) => db.Add(new RoleEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            Name = name,
+            PermissionsJson = System.Text.Json.JsonSerializer.Serialize(permissions),
+        });
+        Role("admin", "*");
+        Role("dispatcher",
+            "orders.read", "orders.create", "orders.edit", "orders.complete",
+            "customers.read", "customers.create");
+        Role("viewer", "orders.read", "customers.read");
+
         // A tenant-defined custom field, exactly as an admin would create it at runtime (docs/15).
         db.Add(new ExtensionFieldEntity
         {

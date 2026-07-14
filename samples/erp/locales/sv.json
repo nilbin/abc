@@ -3,14 +3,12 @@
   "nav.orders": "Ordrar",
   "nav.customers": "Kunder",
   "nav.extensions": "Anpassade fält",
-
   "operations.customers.create.title": "Ny kund",
   "operations.orders.create.title": "Ny order",
   "operations.orders.edit-details.title": "Ändra orderdetaljer",
   "operations.orders.complete.title": "Slutför order",
   "operations.extensions.define-field.title": "Nytt anpassat fält",
   "operations.extensions.retire-field.title": "Avveckla anpassat fält",
-
   "labels.name": "Namn",
   "labels.visit-address": "Besöksadress",
   "labels.email": "E-post",
@@ -41,7 +39,6 @@
   "labels.state": "Tillstånd",
   "labels.search": "Sök",
   "labels.active-only": "Endast aktiva",
-
   "enums.service": "Service",
   "enums.project": "Projekt",
   "enums.open": "Öppen",
@@ -51,7 +48,6 @@
   "enums.active": "Aktivt",
   "enums.deprecated": "Utfasas",
   "enums.retired": "Avvecklat",
-
   "orders.already-completed": "Ordern är redan slutförd.",
   "orders.cannot-complete-cancelled": "En makulerad order kan inte slutföras.",
   "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar.",
@@ -63,16 +59,13 @@
   "customers.inactive": "Den valda kunden är inaktiv.",
   "customers.credit-blocked": "Kunden är kreditspärrad.",
   "customers.duplicate-name": "Det finns redan en kund med det namnet.",
-
   "validation.required": "Fältet är obligatoriskt.",
   "validation.too-long": "Får innehålla högst {max} tecken.",
   "validation.invalid-email": "Ogiltig e-postadress.",
   "validation.invalid-value": "Ogiltigt värde.",
   "validation.unknown-field": "Okänt fält.",
-
   "concurrency.field-conflict": "Fältet har ändrats av någon annan.",
   "concurrency.version-conflict": "Posten har ändrats av någon annan. Ladda om och försök igen.",
-
   "pipeline.not-authorized": "Du saknar behörighet ({permission}).",
   "pipeline.unknown-operation": "Okänd operation: {operation}.",
   "pipeline.unknown-view": "Okänd vy: {view}.",
@@ -80,12 +73,15 @@
   "pipeline.not-found": "Posten finns inte.",
   "pipeline.idempotent-replay": "Svaret återanvändes från en tidigare identisk begäran.",
   "pipeline.idempotency-mismatch": "Idempotensnyckeln har redan använts med en annan begäran.",
-
   "extensions.unknown-field": "Okänt anpassat fält.",
   "extensions.retired-field": "Fältet är avvecklat och kan inte ändras.",
   "extensions.deprecated-field": "Fältet håller på att fasas ut.",
   "extensions.unknown-type": "Okänd fälttyp.",
   "extensions.key-conflict": "Nyckeln används redan.",
   "extensions.missing-label": "Etikett saknas för standardspråket.",
-  "extensions.invalid-option": "Värdet finns inte bland alternativen."
+  "extensions.invalid-option": "Värdet finns inte bland alternativen.",
+  "operations.roles.define.title": "Definiera roll",
+  "labels.permissions": "Behörigheter",
+  "roles.unknown-permission": "Okänd behörighet: {permission}.",
+  "roles.invalid-name": "Ogiltigt rollnamn (små bokstäver, siffror och bindestreck)."
 }

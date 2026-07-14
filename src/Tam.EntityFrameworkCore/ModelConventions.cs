@@ -36,6 +36,12 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.Entity, x.Key }).IsUnique();
         });
+        modelBuilder.Entity<RoleEntity>(b =>
+        {
+            b.ToTable("roles");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+        });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes().ToList())
         {
@@ -74,6 +80,18 @@ public static class TamModelConventions
     private sealed class WrapperConverter<TWrapper, TValue>() : ValueConverter<TWrapper, TValue>(
         w => (TValue)ValueWrapper.Unwrap(w)!,
         v => (TWrapper)ValueWrapper.Wrap(typeof(TWrapper), v));
+}
+
+/// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>
+public sealed class RoleEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string PermissionsJson { get; set; } = "[]";
+
+    public IReadOnlySet<string> Permissions() =>
+        System.Text.Json.JsonSerializer.Deserialize<HashSet<string>>(PermissionsJson) ?? [];
 }
 
 /// <summary>Registry storage for tenant-defined fields (docs/15). Managed only through operations.</summary>

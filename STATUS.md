@@ -70,6 +70,14 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   hides ungranted actions (verified: viewer sees no create/complete/custom-fields surfaces).
 - **Live refresh (D5)**: committed effects broadcast over `/api/events` SSE; grids subscribe and
   auto-refresh debounced (verified: subscriber received entity-modified during an edit).
+- **Roles as tenant data (D1 back half)**: roles live in the database, managed via `roles.define`
+  which validates grants against the compiled permission catalogue at definition time (typo'd
+  permission → localized finding); a runtime-defined role works as an actor immediately.
+- **D4 baseline in CI**: `manifest` export mode + committed baseline + additive-only checker;
+  removed members, type changes, optional→required flips, and new required inputs fail CI until
+  the baseline is consciously re-committed. GitHub Actions runs build/tests/baseline/frontend.
+- **Idempotency hardened**: replay verifies a payload hash; same key + different payload is
+  rejected (`pipeline.idempotency-mismatch`), verified on the wire.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -86,11 +94,11 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 4. **Value update policies**: only `RecomputeIfUntouched`; `DefaultOnce/Derived/RequireConfirmation`
    and `SuggestFrom` bindings are absent. Conditional requiredness is enforced at resolve +
    client, not re-checked at submit.
-5. **Authorization**: demo roles are hardcoded grant sets, not tenant-managed role data; D1's
-   record scopes (All/Team/Own) are unimplemented.
+5. **Authorization**: roles are tenant data now, but identity is still the X-Demo-Role header
+   stand-in, and D1's record scopes (All/Team/Own) are unimplemented.
 6. **Tenancy**: envelope + stamping + per-tenant registry/overlay work, but a fixed "demo" tenant,
    no EF global filters, no RLS (D2).
-7. **Idempotency**: replay works; payload-hash mismatch rejection and retention policy don't.
+7. **Idempotency**: replay + payload-hash rejection work; a retention policy doesn't exist yet.
 8. **Not started**: integrations runtime (inbox/outbox/reconciliation), OpenAPI emission,
    generated TS *types* (the runtime is manifest-driven instead — typed per-operation clients
    are the gap), offline/mobile, audit read views/UI.

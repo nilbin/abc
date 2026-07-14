@@ -104,7 +104,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ErpDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("erp") ?? "Data Source=erp.db"));
 builder.Services.AddTam<ErpDbContext>(model);
-builder.Services.AddSingleton<Tam.AspNetCore.IActorProvider, DemoRoleActorProvider>();
+builder.Services.AddSingleton<Tam.AspNetCore.IActorProvider, DbRoleActorProvider>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
