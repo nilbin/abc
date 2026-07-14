@@ -19,4 +19,15 @@
   <ItemGroup>
     <Content Update="locales/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <PropertyGroup>
+    <TamDefaultCulture>sv</TamDefaultCulture>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Tam.Compiler\Tam.Compiler.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="locales/**/*.json" />
+    <CompilerVisibleProperty Include="TamDefaultCulture" />
+  </ItemGroup>
+
 </Project>
