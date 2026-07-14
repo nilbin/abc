@@ -157,14 +157,17 @@ node; roll-up is the Part-A inherited scope).
   regardless, so making breadth an explicit per-view choice is safer and no more code. A purpose-built
   "region dashboard" view opts into `subtree`; a shared-catalog view opts into `inherited`; everything
   else stays strict.
-- **D-H4 — hierarchy write model: grants fan out, writes fan in (M1).** A created row is stamped with
-  the **active node** (the deliberately-selected tenant), never inferred from a rolled-up view; to
-  create elsewhere, switch the active node. Capability at the active node is the union up its cascading
-  ancestor memberships, collapsed to one flat set. Rows may be owned at any level (no framework
-  "leaf"); shared reference data owned high is read by leaves via `inherited` scope and edited at its
-  owner node. Rejected the cross-node create picker (M2/M3) — it pluralizes the flat capability set
-  across the C#→manifest→TS→React chain for little gain. Full rationale + the read/write scope kinds:
-  [docs/27 — "The hierarchy write model"](27-authorization-model.md).
+- **D-H4 — hierarchy write model: grants fan out, writes fan in.** A created row is stamped with **one
+  explicit target node**, never inferred from a rolled-up view. The target defaults to the active node;
+  an actor whose `X.create` scope spans a subtree (an admin) picks the sub-company in a **target-node
+  form field** (a subtree-scoped lookup, server-validated) — so an admin high in the tree creates an
+  order in a sub-company **without switching active company** (the Azure resource-group / GitHub owner
+  pattern). Capability stays **flat** (`X.create` is one gated bit; *which* nodes is data-scope via a
+  lookup), so this does not touch the manifest→TS→UI-gating chain. What is rejected is per-node create
+  *buttons*. Capability at the active node is the union up its cascading ancestor memberships, collapsed
+  to one flat set. Rows may be owned at any level (no framework "leaf"); shared reference data owned
+  high is read by leaves via `inherited` scope and edited at its owner node. Full rationale + scope
+  kinds: [docs/27 — "The hierarchy write model"](27-authorization-model.md).
 - **D-H2 — account ownership: Option 1 (platform-global `Account` + `TenantMembership`).** Global
   identity, access via memberships; the only model that supports a user across unrelated tenants.
 - **D-H3** active-tenant selection — **implemented via the PKCE flow.** The framework-rendered

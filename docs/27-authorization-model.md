@@ -114,14 +114,25 @@ update targets an *existing* row, so its owning tenant is read off the row — a
 unambiguous. A create targets a row that does not exist yet, so its tenant is a free variable that
 must be *bound*; data-scope (a predicate over existing rows) cannot bind it. Therefore:
 
-- **Create-target invariant.** A new row is stamped with the **active node** — the tenant the actor
-  deliberately selected (login / tenant switcher), pinned in the UI. It is **never inferred from a
-  rolled-up read view**. To create in a different node, switch the active node to it (the switcher can
-  deep-link). This is model **M1**: one active node per request; all writes target it. (A cross-node
-  "create into a child from a parent view" picker — M2/M3 — was rejected: it forces per-node
-  capability, which breaks the single flat `actorPermissions` set that flows from the manifest through
-  the typed client to every gated control, and it is a misfiled-record generator. Revisit only on a
-  concrete need.)
+- **Create-target invariant.** Every create fans in to exactly **one explicit target node**, and the
+  row is stamped with it; the target is **never inferred from a rolled-up read view**. The target is an
+  explicit input that **defaults to the active node**:
+  - Single-node actor (create scope = just the active node): the target *is* the active node, no
+    prompt — a leaf worker never sees a chooser.
+  - Subtree actor (an admin with a cascading `X.create` over a subtree): the create form surfaces a
+    **target-node field** — a subtree-scoped lookup of the nodes they may create in — so they create an
+    order **in a sub-company without switching active company** (the Azure "pick the resource group" /
+    GitHub "pick the owner" pattern). The server validates the chosen target is within the actor's
+    create data-scope (the `subtree` write re-check) and stamps it; a forged/out-of-scope target is
+    rejected. The handler sets `TenantId` explicitly (like `DefineUser`), so the interceptor doesn't
+    re-stamp.
+
+  Capability stays **flat**: `X.create` is one bit in the manifest ("can create X"), gated once;
+  *which* nodes is the data-scope axis, served by a lookup — not per-node capability. So this does NOT
+  touch the `actorPermissions` → typed-client → UI-gating chain. What is rejected is per-node create
+  *buttons* (one gated control per node), which would pluralize that flat set for no gain; the
+  target-as-field keeps it singular. Switching the active node remains available but is never required
+  to create in a node within your scope.
 
 - **Capability across the tree** is the union up the active node's **cascading** ancestor memberships,
   collapsed to **one flat set** at the active node — so `Actor.Can`, the manifest, and the UI gating
