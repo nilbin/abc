@@ -25,6 +25,11 @@ These are three different trust levels, and the design's central move is to refu
 
 Salesforce's equivalents, for orientation: plugin ≈ managed package, tenant package ≈ unmanaged package/change set, custom object ≈ custom object, automation rule ≈ validation rule/flow. What we deliberately do not clone is Apex.
 
+Two clarifications the boundary implies rather than forbids:
+
+- **Tenants may run all the code they want — out of process, on their compute, with their credentials.** An external app holds a scoped actor (permissions from the D1 catalogue, nothing more), calls operations and views through the public API, and subscribes to committed effects via webhooks off the outbox. The full pipeline — authorization, validation, audit, idempotency — applies to their code exactly as to a human. This is the Shopify model, and it is the primary answer to "I need custom logic": the marketplace's third tier below.
+- **The researched escalation path, if hot-path in-process tenant logic is ever truly required, is a WebAssembly sandbox** (Wasmtime-class: fuel-metered, memory-capped, capability-based — the guest sees only host functions we hand it: read these fields, return findings). Data in, data out; no EF, no reflection, no network. That is the modern Apex, adopted for good reasons by Shopify Functions for their own hot paths. It is named here so the future debate starts from a real design, not from "let's just load their DLL" — which modern .NET cannot isolate at all.
+
 ## Plugins (the compiled channel)
 
 A plugin is an ordinary .NET assembly containing the same five concepts as the host — domain state, operations, views, derivations, bindings — plus a manifest class that names it:
@@ -115,6 +120,33 @@ The last Salesforce pillar, and the one where the "no tenant code" line matters 
 Rules are registry data (RUL### diagnostics at definition: unknown field, type mismatch, unreachable condition), evaluated in the pipeline with a budget (no loops, no recursion, bounded tree depth), fully audited, and — because Px is portable — the *same* condition can drive client-side form behavior without a round trip. Message keys, as always: the finding's text lives in the tenant's label catalog, per culture.
 
 What rules never get: arbitrary code, HTTP calls (that's the integration channel, via the enqueue action), or writes to compiled fields (operations own compiled state transitions — EDIT001's philosophy extended to tenants).
+
+## The marketplace: three tiers, one trust model
+
+"Pick and choose from a marketplace" needs no tenant code upload — it decomposes onto the channels above:
+
+| Tier | Listing | Install | Contained by |
+| --- | --- | --- | --- |
+| **Configurations** | tenant packages (fields, roles, rules) | self-service: dry-run → findings → atomic apply | the registry compiler |
+| **Vetted plugins** | compiled partner modules | vendor reviews + builds in; tenant clicks *Activate* | build-time diagnostics + review |
+| **External apps** | third-party services | tenant grants the app a scoped actor; app uses API + webhooks | D1 permissions |
+
+Catalog UI, ratings, and billing are product features on top of `plugins.activate` and package install; the framework owes the marketplace only what D8 already defines — namespacing, per-tenant activation, entitlement guards, atomic validated install, scoped app actors (arrives with real authn).
+
+What the mechanics make possible that incumbent marketplaces get only from manual review: **a provable capability manifest per listing**. A tenant package's exact footprint — which entities it touches, which fields it adds, which operations its rules gate, which events it consumes — is *derived from its content by the registry compiler*, not claimed by its author. A plugin's footprint (contributed operations, packaged fields, gates, subscribers) is likewise a build artifact, and a plugin *upgrade* diffs as a manifest diff. The install screen can therefore say "this package reads orders, writes `ext.coldChainClass`, gates `orders.complete`, and never sees customer emails" with compiler authority. Shopify approximates this with coarse OAuth scopes; Salesforce with human security review. Here it falls out of contributions-as-data.
+
+A tenant's entire customization — installed packages, fields, roles, rules, custom objects — is likewise one serializable, diffable document: **the org is a file**. Test-to-production promotion is a diff review; migrating a tenant is an export; the "what changed in our org this quarter" question is version control, not archaeology.
+
+## Beyond parity: what the model enables that the incumbents can't retrofit
+
+Everything above reaches parity with Salesforce/Shopify on safer foundations. These four are the moves that go *past* them — each is possible only because of commitments already made (manifest as the single contract, operations as the only write path, Px as structured expressions, same-transaction audit), which is precisely why they are hard to copy. Design-stage, ranked by leverage:
+
+1. **Agent-authored customization.** Both incumbents built human-first admin UIs and are now bolting agents onto metadata swamps. Tam's effective manifest *is* an agent's world model — typed, per-tenant, complete — and the registry's diagnostics are the agent's guardrails: it structurally cannot install an invalid package, and dry-run gives it a feedback loop. The endgame: a tenant admin says "we need cold-chain tracking on orders with an auditor role and a rule that class-2 requires a date", and the agent authors the tenant package, dry-runs it, presents the findings and the capability manifest, and installs on approval — through `extensions.define-field`-class operations that already exist and are already MCP tools. Extensibility-by-conversation with compiler-checked output is a different product category than "AI helps you click".
+2. **Time-machine dry-run (replay impact preview).** Because operations are the only mutation path and the audit trail stores every invocation in canonical wire form, a candidate rule/package can be evaluated against *recorded reality*, not a guess: replay the tenant's last N weeks of audited operations through the pipeline with the candidate configuration overlaid, inside transactions that never commit and with effects suppressed, and report "this rule would have blocked 37 of 412 real orders — these three users hit it most". Advisory (time-dependent logic and sequences make replay approximate), but it converts the scariest moment of tenant self-service — "what will this break?" — into evidence. Salesforce cannot do this generally (Apex side effects, no uniform operation log); it falls out of Tam's audit + purity decisions.
+3. **Deterministic composition with provenance.** The moment two packages and a plugin all touch `orders.complete`, incumbents descend into undefined trigger order and flow-vs-trigger folklore. Tam can compile each tenant's full contribution set (gates, rules, subscribers — all data or declared code) into one ordered, cycle-checked execution plan at install time: two writers to one extension field is an *install-time finding*, not a production mystery; and every runtime finding carries the rule/package/plugin that produced it, so "why was this blocked?" has a provenance answer in the UI. The effective manifest already merges origins; this extends the merge from fields to behavior.
+4. **The binding-time dial (graduation as tooling, both directions).** For the incumbents, clicks and code are different universes with no path between them — orgs rot into hundreds of flows nobody dares touch. Tam's thesis is that a custom object and a compiled entity are *the same model at different binding times*, so graduation becomes a command: scaffold the C# entity/operations from the registry definition, generate the data migration, preserve wire names so no client notices. And the dial turns both ways — a compiled feature that only one tenant uses can be demoted to a package. Nobody offers configuration→code→configuration mobility; the wire-name permanence rule (D4) is what makes it invisible to callers.
+
+Ordering note: #2 needs only machinery that exists today (audit + pipeline + overlay), #1 needs P3's dry-run install plus the MCP tools that already exist, #3 becomes real at P5, #4 at P4. None create new trust surface — they are leverage on the boundary, not holes in it.
 
 ## Phasing
 

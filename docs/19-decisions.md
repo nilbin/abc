@@ -125,4 +125,4 @@ If a future compliance requirement demands tamper-*evidence* (not just tamper-re
 
 **Consequences.** The extension overlay gains origins (compiled / plugin / tenant) with key prefixes; the pipeline gains a gate stage and per-tenant activation checks; the registry compiler grows package/object/rule validation (`RUL###`). Custom objects wait on typed JSON predicates, index promotion, and D2's RLS.
 
-**Revisit when.** A partner ecosystem genuinely needs to ship logic without a host redeploy — the answer would be out-of-process plugins over the integration channel (webhooks/outbox), still not in-process tenant code.
+**Revisit when.** A partner ecosystem genuinely needs to ship logic without a host redeploy — the first answer is external apps over the integration channel (scoped actors + API + outbox webhooks, the marketplace's third tier); the researched escalation for hot-path in-process logic is a capability-based WebAssembly sandbox (fuel-metered, data-in/data-out, host functions only — see the trust-boundary section of [22-plugins.md](22-plugins.md)). Never raw tenant assemblies in-process: modern .NET has no isolation for them.
