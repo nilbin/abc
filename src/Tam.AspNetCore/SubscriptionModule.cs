@@ -84,7 +84,9 @@ public static class CurrentSubscription
         var tenant = context.TenantId.Value;
         var subscription = tam.Db.Set<SubscriptionEntity>().Find(tenant)
             ?? new SubscriptionEntity { TenantId = tenant };
-        var used = tam.Db.Set<TamUserEntity>().Count(x => x.Active);
+        // Seats are consumed per tenant by active memberships (docs/26); the global filter already
+        // scopes the count to this tenant.
+        var used = tam.Db.Set<TenantMembershipEntity>().Count(x => x.Active);
 
         return new[]
         {

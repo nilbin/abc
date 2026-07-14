@@ -40,52 +40,50 @@ public static class TamPasswords
 }
 
 /// <summary>
-/// Actor resolution from the authenticated ClaimsPrincipal: the "tam:user" claim names the
-/// user record; grants resolve fresh from the user's roles each request, so a revoked role
-/// takes effect immediately regardless of token lifetime. This is the seam for ANY
-/// authentication mechanism that yields claims — the built-in OpenIddict server, an external
-/// IdP, or a reverse proxy; replace IActorProvider entirely for anything else.
+/// Actor resolution (docs/26 + docs/27): the "tam:account" claim names the global account; access
+/// to THIS request's tenant is its <see cref="TenantMembershipEntity"/>, and grants resolve fresh
+/// from that membership's roles each request (a revoked role takes effect immediately). An account
+/// with no membership in the active tenant gets no grants — this is the cross-tenant guard: a token
+/// for account X speaks for tenant Y only if X is a member of Y. Replace IActorProvider for any
+/// other authentication mechanism.
 /// </summary>
 public sealed class ClaimsActorProvider : IActorProvider
 {
-    public const string UserClaim = "tam:user";
-
-    /// <summary>The tenant the token was minted for. The request's own tenant must match it, so a
-    /// token issued at tenant A cannot be replayed against tenant B where a same-named user exists
-    /// (host-based multi-tenancy). Set at grant time in the token server's SignIn.</summary>
-    public const string TenantClaim = "tam:tenant";
+    /// <summary>The token subject: the global account id (Guid). Set at grant time in SignIn.</summary>
+    public const string AccountClaim = "tam:account";
 
     public Actor GetActor(HttpContext http)
     {
-        var userName = http.User.FindFirst(UserClaim)?.Value
-            ?? http.User.Identity?.Name;
-        if (http.User.Identity?.IsAuthenticated != true || userName is null)
-            return new Actor("anonymous", "Anonymous", new HashSet<string>());
-
-        var tenant = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http);
-
-        // Token/tenant binding: a token carries the tenant it was issued for; if the request
-        // resolved to a different tenant, this token does not speak for it. Reject to anonymous.
-        var tokenTenant = http.User.FindFirst(TenantClaim)?.Value;
-        if (tokenTenant is null || tokenTenant != tenant.Value)
-            return new Actor("anonymous", "Anonymous", new HashSet<string>());
+        var accountClaim = http.User.FindFirst(AccountClaim)?.Value
+            ?? http.User.FindFirst("tam:user")?.Value;   // back-compat with older tokens
+        if (http.User.Identity?.IsAuthenticated != true
+            || !Guid.TryParse(accountClaim, out var accountId))
+            return Anonymous;
 
         var db = http.RequestServices.GetRequiredService<ITamDb>().Db;
 
-        var user = db.Set<TamUserEntity>().FirstOrDefault(
-            x => x.UserName == userName && x.Active);
-        if (user is null)
-            return new Actor(userName, userName, new HashSet<string>());
+        // The account is global (not tenant-scoped), so this lookup isn't filtered.
+        var account = db.Set<AccountEntity>().FirstOrDefault(a => a.Id == accountId && a.Active);
+        if (account is null) return Anonymous;
 
-        var roleNames = user.Roles();
+        // Membership in the ACTIVE tenant — the global filter already scopes this to the request's
+        // tenant. No membership here ⇒ the account has no access to this tenant ⇒ no grants.
+        var membership = db.Set<TenantMembershipEntity>()
+            .FirstOrDefault(m => m.AccountId == accountId && m.Active);
+        if (membership is null)
+            return new Actor(account.Id.ToString(), account.DisplayName, new HashSet<string>());
+
+        var roleNames = membership.Roles();
         var grants = db.Set<RoleEntity>()
             .Where(x => roleNames.Contains(x.Name))
             .AsEnumerable()
             .SelectMany(x => x.Permissions())
             .ToHashSet();
 
-        return new Actor(user.UserName, user.DisplayName, grants);
+        return new Actor(account.Id.ToString(), account.DisplayName, grants);
     }
+
+    private static Actor Anonymous => new("anonymous", "Anonymous", new HashSet<string>());
 }
 
 /// <summary>Users are tenant data managed through operations, like roles and custom fields (D1).</summary>
@@ -120,33 +118,51 @@ public static class DefineUser
             };
         }
 
-        var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-            x => x.UserName == input.UserName, ct);
-        if (user is null)
+        // A "user in this tenant" is a platform-global account (docs/26) plus its membership here.
+        // The account is looked up globally by handle; the membership is tenant-scoped (global filter).
+        var account = await tam.Db.Set<AccountEntity>().SingleOrDefaultAsync(
+            a => a.Email == input.UserName, ct);
+        var membership = account is null
+            ? null
+            : await tam.Db.Set<TenantMembershipEntity>()
+                .SingleOrDefaultAsync(m => m.AccountId == account.Id, ct);
+
+        if (membership is null)
         {
-            // Seat gate (docs/24): a NEW active user consumes a seat; reactivating or editing
-            // an existing one does not. Over the plan's ceiling → a localized upsell.
+            // Seat gate (docs/24): a NEW membership in this tenant consumes a seat; reactivating or
+            // editing an existing one does not. Over the plan's ceiling → a localized upsell.
             var subscription = await Subscriptions.ForAsync(tam.Db, context.TenantId.Value, ct);
-            var activeUsers = await tam.Db.Set<TamUserEntity>()
-                .CountAsync(x => x.Active, ct);
-            if (activeUsers >= subscription.Seats)
+            var activeMembers = await tam.Db.Set<TenantMembershipEntity>()
+                .CountAsync(m => m.Active, ct);
+            if (activeMembers >= subscription.Seats)
                 return SubscriptionFindings.SeatLimit
                     .With(("seats", subscription.Seats)).At(nameof(Input.UserName));
+        }
 
-            user = new TamUserEntity
+        if (account is null)
+        {
+            account = new AccountEntity { Id = Guid.NewGuid(), Email = input.UserName };
+            tam.Db.Add(account);
+        }
+        account.DisplayName = input.DisplayName;
+        if (input.Password is { Length: > 0 } password)
+            account.PasswordHash = TamPasswords.Hash(password);
+        account.Active = true;
+
+        if (membership is null)
+        {
+            membership = new TenantMembershipEntity
             {
                 Id = Guid.NewGuid(),
-                UserName = input.UserName,
+                TenantId = context.TenantId.Value,   // explicit: seed/background inserts aren't stamped
+                AccountId = account.Id,
             };
-            tam.Db.Add(user);
+            tam.Db.Add(membership);
         }
-        user.DisplayName = input.DisplayName;
-        user.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
-        if (input.Password is { Length: > 0 } password)
-            user.PasswordHash = TamPasswords.Hash(password);
-        user.Active = true;
+        membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
+        membership.Active = true;
 
-        return new Output(user.Id);
+        return new Output(account.Id);
     }
 }
 
@@ -161,12 +177,18 @@ public static class DeactivateUser
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
-        var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-            x => x.UserName == input.UserName, ct);
-        if (user is null) return PipelineFindings.NotFound.Create();
+        // Deactivate the account's access to THIS tenant (its membership), not the global account —
+        // the same person may still be active in other tenants (docs/26).
+        var account = await tam.Db.Set<AccountEntity>().SingleOrDefaultAsync(
+            a => a.Email == input.UserName, ct);
+        var membership = account is null
+            ? null
+            : await tam.Db.Set<TenantMembershipEntity>()
+                .SingleOrDefaultAsync(m => m.AccountId == account.Id, ct);
+        if (membership is null) return PipelineFindings.NotFound.Create();
 
-        user.Active = false;   // deactivate, never delete — the audit trail references the actor
-        return new Output(user.UserName);
+        membership.Active = false;   // revoke access here, never delete — the audit trail references the actor
+        return new Output(input.UserName);
     }
 }
 
@@ -191,13 +213,19 @@ public static class UserList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var users = tam.Db.Set<TamUserEntity>().AsQueryable();
+        // A tenant's user list is its memberships (global filter scopes them to this tenant) joined
+        // to the platform-global accounts they grant access to (docs/26).
+        var members = tam.Db.Set<TenantMembershipEntity>();
+        var accounts = tam.Db.Set<AccountEntity>();
+        var rows = from m in members
+                   join a in accounts on m.AccountId equals a.Id
+                   select new { Account = a, Membership = m };
         if (!string.IsNullOrWhiteSpace(query.Search))
-            users = users.Where(x => x.UserName.Contains(query.Search!));
-        return users.Select(x => new Result
+            rows = rows.Where(x => x.Account.Email.Contains(query.Search!));
+        return rows.Select(x => new Result
         {
-            Id = x.Id, UserName = x.UserName, DisplayName = x.DisplayName,
-            Roles = x.RolesJson, Active = x.Active,
+            Id = x.Account.Id, UserName = x.Account.Email, DisplayName = x.Account.DisplayName,
+            Roles = x.Membership.RolesJson, Active = x.Membership.Active,
         });
     }
 

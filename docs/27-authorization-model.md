@@ -120,18 +120,16 @@ scope is a line worker. Seats (docs/24) count memberships per tenant.
   client keep hiding/showing on it. TAM004-style analyzer rules can later assert every resource
   declares its actions/levels.
 
-## Open decisions (recommendations)
+## Decisions (settled)
 
-- **D-A1 — access levels vs raw permissions.** Introduce `None/View/Edit/Manage` presets as the
-  authoring model over the existing atoms. *Recommend yes* — ergonomic, and it's sugar, so nothing
-  downstream changes.
-- **D-A2 — row-scope kinds for v1.** `all`, `own`, `subtree`, `where`. *Recommend yes*; **defer
-  `shared` (record ACLs)** — it needs a share table and UI and is a distinct feature.
-- **D-A3 — field-level.** *Recommend: build the seam and read-masking now* (resources opt fields in),
-  defer write-masking. Or defer field-level entirely if no near-term need — this is the one that most
-  changes scope, so it's a real fork.
-- **D-A4 — deny rules.** *Recommend no* — union-grant only; revisit if a concrete need appears.
-- **D-A5 — scope combination.** Union (broadest wins) for the same capability. *Recommend yes.*
+- **D-A1 — access levels: YES.** `None/View/Edit/Manage` presets are the authoring model over the
+  existing permission atoms (sugar; nothing downstream changes).
+- **D-A2 — row-scope kinds: `all`, `own`, `subtree`, `where` now; DEFER `shared` (record ACLs).**
+  Per-record sharing is a per-domain design later, not a framework primitive yet.
+- **D-A3 — field-level: FULL now (read + write masking).** Resources opt a field in as sensitive; a
+  grant can hide it from views/manifest (read) AND reject a `Change` to it (write).
+- **D-A4 — deny rules: NO.** Union-grant only.
+- **D-A5 — scope combination: UNION** (broadest wins) for the same capability.
 
 ## Sequencing note
 

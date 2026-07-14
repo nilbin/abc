@@ -114,18 +114,35 @@ public static class Seed
         Role("technician",
             "orders.read:own", "orders.edit:own", "orders.complete:own", "customers.read");
 
-        // Users are tenant data (D1); identity is proven by the embedded OpenIddict server.
-        // Everyone's demo password: "demo123". "mcp-agent" is the machine client's user —
-        // agents authenticate with client credentials and act as it, fully audited.
-        void User(string name, string display, params string[] roles) => db.Add(new TamUserEntity
+        // The tenant node (docs/26): the demo tenant is the root of its own hierarchy, so its
+        // materialized Path is just its own id. Nesting adds children with Path = "demo.<child>".
+        db.Add(new TenantEntity { Id = Tenant, ParentId = null, Path = Tenant, DisplayName = "Demo AB" });
+
+        // Identity is platform-global (docs/26): an Account is owned by the platform and reachable
+        // across tenants; a TenantMembership grants it access to THIS tenant with a set of roles.
+        // The login handle is the account Email (short names here so the demo's one-click buttons
+        // keep working). Everyone's demo password: "demo123". "mcp-agent" is the machine client's
+        // account — agents authenticate with client credentials and act as it, fully audited.
+        var accountIds = new Dictionary<string, Guid>();
+        void User(string handle, string display, params string[] roles)
         {
-            Id = Guid.NewGuid(),
-            TenantId = Tenant,
-            UserName = name,
-            DisplayName = display,
-            PasswordHash = TamPasswords.Hash("demo123"),
-            RolesJson = System.Text.Json.JsonSerializer.Serialize(roles),
-        });
+            var accountId = Guid.NewGuid();
+            accountIds[handle] = accountId;
+            db.Add(new AccountEntity
+            {
+                Id = accountId,
+                Email = handle,
+                DisplayName = display,
+                PasswordHash = TamPasswords.Hash("demo123"),
+            });
+            db.Add(new TenantMembershipEntity
+            {
+                Id = Guid.NewGuid(),
+                TenantId = Tenant,
+                AccountId = accountId,
+                RolesJson = System.Text.Json.JsonSerializer.Serialize(roles),
+            });
+        }
         User("alva", "Alva Andersson", "admin");
         User("didrik", "Didrik Berg", "dispatcher");
         User("tekla", "Tekla Nilsson", "technician");
@@ -143,8 +160,10 @@ public static class Seed
             Status = "active",
         });
 
-        orders[3].AssignTo("tekla");
-        orders[4].AssignTo("tekla");
+        // Ownership (:own scope) compares against the actor id, which is now the global account id
+        // (docs/26), so assign by Tekla's account id — not the login handle.
+        orders[3].AssignTo(accountIds["tekla"].ToString());
+        orders[4].AssignTo(accountIds["tekla"].ToString());
 
         // Integration config (docs/25): a non-secret base URL and — via the vault at startup —
         // an encrypted API key. The base URL points at this app's own mock Fortnox endpoint so

@@ -111,11 +111,24 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.IntegrationId });
         });
-        modelBuilder.Entity<TamUserEntity>(b =>
+        modelBuilder.Entity<AccountEntity>(b =>
         {
-            b.ToTable("users");
+            b.ToTable("accounts");
             b.HasKey(x => x.Id);
-            b.HasIndex(x => new { x.TenantId, x.UserName }).IsUnique();
+            b.HasIndex(x => x.Email).IsUnique();
+        });
+        modelBuilder.Entity<TenantMembershipEntity>(b =>
+        {
+            b.ToTable("tenant_memberships");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.AccountId }).IsUnique();
+            b.HasIndex(x => x.AccountId);
+        });
+        modelBuilder.Entity<TenantEntity>(b =>
+        {
+            b.ToTable("tenants");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.Path);
         });
         modelBuilder.Entity<SubscriptionEntity>(b =>
         {
@@ -275,18 +288,49 @@ public sealed class SubscriptionEntity : ITenantScoped
 /// proves the identity (the built-in OpenIddict server, an external IdP, a header in dev) is an
 /// application decision behind IActorProvider — the user store is mechanism-agnostic.
 /// </summary>
-public sealed class TamUserEntity : ITenantScoped
+/// <summary>
+/// A platform-global identity (docs/26 Option 1): one human, one account, reachable across any
+/// number of tenants — related or not. Deliberately NOT <see cref="ITenantScoped"/>: the account is
+/// owned by the platform, not a tenant. Access to a tenant is a <see cref="TenantMembershipEntity"/>.
+/// </summary>
+public sealed class AccountEntity
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = "";        // the global, unique login handle
+    public string DisplayName { get; set; } = "";
+    public string PasswordHash { get; set; } = "";
+    public bool Active { get; set; } = true;
+}
+
+/// <summary>
+/// An account's access to one tenant (docs/26 + docs/27): the join that carries authorization. Its
+/// <see cref="RolesJson"/> is the capability axis (docs/27); the data-scope axis (access policies)
+/// lands in Stage 3. Tenant-scoped, so the global filter already limits a tenant's membership list
+/// to that tenant. The same account has independent memberships in other tenants.
+/// </summary>
+public sealed class TenantMembershipEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
-    public string UserName { get; set; } = "";
-    public string DisplayName { get; set; } = "";
-    public string PasswordHash { get; set; } = "";
+    public Guid AccountId { get; set; }
     public string RolesJson { get; set; } = "[]";
     public bool Active { get; set; } = true;
 
     public IReadOnlyList<string> Roles() =>
         System.Text.Json.JsonSerializer.Deserialize<List<string>>(RolesJson) ?? [];
+}
+
+/// <summary>
+/// A tenant node and its place in the hierarchy (docs/26): <see cref="Path"/> is the ancestor chain
+/// including self ("acme.eu.sales"), so "in my subtree" is a path-prefix test — one indexed range
+/// scan, not a recursive query. The registry of tenants itself; not tenant-scoped.
+/// </summary>
+public sealed class TenantEntity
+{
+    public string Id { get; set; } = "";          // the tenant id used as TenantId across the model
+    public string? ParentId { get; set; }
+    public string Path { get; set; } = "";
+    public string DisplayName { get; set; } = "";
 }
 
 /// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>

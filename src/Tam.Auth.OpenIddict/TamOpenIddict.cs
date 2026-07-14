@@ -72,48 +72,52 @@ public static class TamOpenIddict
         return app;
     }
 
-    private static async Task<IResult> Exchange(HttpContext http, ITamDb tam, ITenantProvider tenants)
+    private static async Task<IResult> Exchange(HttpContext http, ITamDb tam)
     {
         var request = http.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenIddict request cannot be retrieved.");
-        var tenant = tenants.GetTenant(http);
 
         if (request.IsPasswordGrantType())
         {
-            var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-                x => x.UserName == request.Username && x.Active);
-            if (user is null || request.Password is null
-                || !TamPasswords.Verify(request.Password, user.PasswordHash))
+            // The account is platform-global (docs/26): authenticate the Email/handle across the
+            // whole platform, not within a tenant. The request's active tenant — and thus the
+            // actor's grants — is resolved per request from the account's memberships.
+            var account = await tam.Db.Set<AccountEntity>().SingleOrDefaultAsync(
+                a => a.Email == request.Username && a.Active);
+            if (account is null || request.Password is null
+                || !TamPasswords.Verify(request.Password, account.PasswordHash))
                 return Deny();
 
-            return SignIn(user.UserName, user.DisplayName, tenant.Value, request);
+            return SignIn(account.Id.ToString(), account.DisplayName, request);
         }
 
         if (request.IsClientCredentialsGrantType())
         {
             // The client was already authenticated against the OpenIddict application store.
-            // Convention: a machine client acts as the SAME-NAMED framework user, so agents
-            // and integrations get roles, permissions and an audit identity like any human.
-            var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-                x => x.UserName == request.ClientId && x.Active);
-            if (user is null) return Deny();
+            // Convention: a machine client acts as the SAME-NAMED global account (by Email/handle),
+            // so agents and integrations get memberships, roles and an audit identity like a human.
+            var account = await tam.Db.Set<AccountEntity>().SingleOrDefaultAsync(
+                a => a.Email == request.ClientId && a.Active);
+            if (account is null) return Deny();
 
-            return SignIn(user.UserName, user.DisplayName, tenant.Value, request);
+            return SignIn(account.Id.ToString(), account.DisplayName, request);
         }
 
         return Deny();
     }
 
-    private static IResult SignIn(string userName, string displayName, string tenantId, OpenIddictRequest request)
+    private static IResult SignIn(string accountId, string displayName, OpenIddictRequest request)
     {
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationConstants.AuthenticationType,
             nameType: Claims.Name,
             roleType: Claims.Role);
-        identity.SetClaim(Claims.Subject, userName);
+        // Subject is the global account id; access to a given tenant is proven by the account's
+        // membership in it, checked per request (ClaimsActorProvider) — so no tenant claim is bound
+        // into the token. One account, many tenants (docs/26).
+        identity.SetClaim(Claims.Subject, accountId);
         identity.SetClaim(Claims.Name, displayName);
-        identity.SetClaim(ClaimsActorProvider.UserClaim, userName);
-        identity.SetClaim(ClaimsActorProvider.TenantClaim, tenantId);
+        identity.SetClaim(ClaimsActorProvider.AccountClaim, accountId);
         identity.SetDestinations(_ => [Destinations.AccessToken]);
 
         var principal = new ClaimsPrincipal(identity);
