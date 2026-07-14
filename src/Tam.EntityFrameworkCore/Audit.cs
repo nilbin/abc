@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 namespace Tam.EntityFrameworkCore;
 
 /// <summary>Append-only audit written in the operation's own transaction (decision D3).</summary>
-public sealed class AuditEntry
+public sealed class AuditEntry : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -33,7 +33,7 @@ public sealed class AuditChange
     public string? NewValue { get; set; }
 }
 
-public sealed class IdempotencyRecord
+public sealed class IdempotencyRecord : ITenantScoped
 {
     public string Key { get; set; } = "";        // (tenant, operation, key) composite
     public string TenantId { get; set; } = "";

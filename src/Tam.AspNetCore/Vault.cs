@@ -20,9 +20,12 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
     private IDataProtector Protector(string tenantId) =>
         provider.CreateProtector("Tam.Secrets.v1", tenantId);
 
+    // Every read here takes an explicit tenantId and is reached from background integration runs
+    // (scheduler/retry/outbox) where no ambient request tenant is set — so they opt out of the
+    // global tenant filter and rely on the explicit predicate, correct in request and job scopes.
     public async Task SetAsync(string tenantId, string key, string plaintext, CancellationToken ct)
     {
-        var entity = await tam.Db.Set<TenantSecretEntity>().SingleOrDefaultAsync(
+        var entity = await tam.Db.Set<TenantSecretEntity>().IgnoreQueryFilters().SingleOrDefaultAsync(
             x => x.TenantId == tenantId && x.Key == key, ct);
         if (entity is null)
         {
@@ -36,8 +39,8 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
     /// longer unprotect it (rotated-away key); callers treat that as "not configured".</summary>
     public async Task<string?> GetAsync(string tenantId, string key, CancellationToken ct)
     {
-        var entity = await tam.Db.Set<TenantSecretEntity>().AsNoTracking().SingleOrDefaultAsync(
-            x => x.TenantId == tenantId && x.Key == key, ct);
+        var entity = await tam.Db.Set<TenantSecretEntity>().IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Key == key, ct);
         if (entity is null) return null;
         try { return Protector(tenantId).Unprotect(entity.ProtectedValue); }
         catch { return null; }
@@ -45,8 +48,8 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
 
     public async Task<string?> SettingAsync(string tenantId, string key, CancellationToken ct)
     {
-        var entity = await tam.Db.Set<TenantSettingEntity>().AsNoTracking().SingleOrDefaultAsync(
-            x => x.TenantId == tenantId && x.Key == key, ct);
+        var entity = await tam.Db.Set<TenantSettingEntity>().IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Key == key, ct);
         return entity?.Value;
     }
 }

@@ -48,7 +48,7 @@ public static class CustomerFindings
 
 // ---- Entities: plain C#, invariants in methods, no framework base classes ----
 
-public sealed class Customer
+public sealed class Customer : Tam.EntityFrameworkCore.ITenantScoped
 {
     private Customer() { }
 
@@ -78,7 +78,7 @@ public sealed class Customer
     public void Deactivate() => IsActive = false;
 }
 
-public sealed class Project
+public sealed class Project : Tam.EntityFrameworkCore.ITenantScoped
 {
     private Project() { }
 
@@ -98,7 +98,7 @@ public sealed class Project
     };
 }
 
-public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned
+public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam.EntityFrameworkCore.ITenantScoped
 {
     private Order() { }
 

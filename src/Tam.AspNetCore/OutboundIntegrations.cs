@@ -168,6 +168,7 @@ public sealed class IntegrationScheduler(
         // Push the ordering into the index; parse-and-filter only the small due set. NextRunIso is
         // ISO-8601 UTC ("O"), so string ordering is chronological ordering.
         var due = (await db.Set<IntegrationScheduleEntity>()
+                .IgnoreQueryFilters()   // cross-tenant background scan (no ambient tenant)
                 .Where(x => x.Enabled && string.Compare(x.NextRunIso, nowIso) <= 0)
                 .OrderBy(x => x.NextRunIso)
                 .ToListAsync(ct))

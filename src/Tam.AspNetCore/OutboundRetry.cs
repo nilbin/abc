@@ -26,7 +26,7 @@ public static class OutboundRetryQueue
     {
         if (trigger == "schedule")
         {
-            var live = await db.Set<OutboundTaskEntity>().AnyAsync(x =>
+            var live = await db.Set<OutboundTaskEntity>().IgnoreQueryFilters().AnyAsync(x =>
                 x.TenantId == tenantId && x.IntegrationId == integrationId
                 && x.Trigger == "schedule" && x.Status == InboxStatus.Failed, ct);
             if (live) return;
@@ -85,6 +85,7 @@ public sealed class IntegrationRetryDriver(
         var nowIso = now.ToString("O");
 
         var due = (await db.Set<OutboundTaskEntity>()
+                .IgnoreQueryFilters()   // cross-tenant background scan (no ambient tenant)
                 .Where(x => x.Status == InboxStatus.Failed && string.Compare(x.NextAttemptIso, nowIso) <= 0)
                 .OrderBy(x => x.NextAttemptIso)
                 .Take(BatchSize)

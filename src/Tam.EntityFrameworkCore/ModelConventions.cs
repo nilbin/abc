@@ -184,7 +184,7 @@ public enum InboxStatus
 /// retried from its stored payload on later runs, and dead-lettered after repeated failure —
 /// so a fixed root cause (e.g. the missing customer) recovers without re-sending anything.
 /// </summary>
-public sealed class InboxRecord
+public sealed class InboxRecord : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -208,7 +208,7 @@ public sealed class InboxRecord
 /// the IntegrationRetryDriver with the same attempts/backoff/dead-letter semantics as the inbound
 /// inbox. The event payload is stored so a retry replays the exact push without the source event.
 /// </summary>
-public sealed class OutboundTaskEntity
+public sealed class OutboundTaskEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -224,7 +224,7 @@ public sealed class OutboundTaskEntity
 }
 
 /// <summary>Outbox row: an explicit event effect, persisted in the operation's transaction (docs/09).</summary>
-public sealed class OutboxRecord
+public sealed class OutboxRecord : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -251,7 +251,7 @@ public sealed class OutboxRecord
 /// provider drives through subscriptions.set-plan. One row per tenant; its absence means the
 /// free default, so the framework is fully usable without any billing system wired up.
 /// </summary>
-public sealed class SubscriptionEntity
+public sealed class SubscriptionEntity : ITenantScoped
 {
     public string TenantId { get; set; } = "";
     public string Plan { get; set; } = "free";
@@ -275,7 +275,7 @@ public sealed class SubscriptionEntity
 /// proves the identity (the built-in OpenIddict server, an external IdP, a header in dev) is an
 /// application decision behind IActorProvider — the user store is mechanism-agnostic.
 /// </summary>
-public sealed class TamUserEntity
+public sealed class TamUserEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -290,7 +290,7 @@ public sealed class TamUserEntity
 }
 
 /// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>
-public sealed class RoleEntity
+public sealed class RoleEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -304,7 +304,7 @@ public sealed class RoleEntity
 /// <summary>Per-tenant plugin activation (docs/22): the row's existence IS the activation.
 /// The plugin's code is compiled into the deployment either way; for tenants without the row,
 /// its contributions are omitted from the manifest and its endpoints answer 404.</summary>
-public sealed class PluginActivationEntity
+public sealed class PluginActivationEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -316,7 +316,7 @@ public sealed class PluginActivationEntity
 /// structured AST, never a parsed string) + a blocking finding. Managed only through
 /// operations; retire-don't-delete like every registry artifact.
 /// </summary>
-public sealed class AutomationRuleEntity
+public sealed class AutomationRuleEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -330,7 +330,7 @@ public sealed class AutomationRuleEntity
 
 /// <summary>Non-secret per-tenant integration config (docs/25): base URLs, account ids, flags.
 /// Readable in the clear; managed through settings.set / settings.list.</summary>
-public sealed class TenantSettingEntity
+public sealed class TenantSettingEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -343,7 +343,7 @@ public sealed class TenantSettingEntity
 /// only ever holds the Data-Protection ciphertext; the plaintext is decrypted transiently when
 /// an integration runs and is never returned by any view or operation output.
 /// </summary>
-public sealed class TenantSecretEntity
+public sealed class TenantSecretEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -352,7 +352,7 @@ public sealed class TenantSecretEntity
 }
 
 /// <summary>A schedule for an outbound integration (docs/25): spec + next-run bookkeeping.</summary>
-public sealed class IntegrationScheduleEntity
+public sealed class IntegrationScheduleEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -365,7 +365,7 @@ public sealed class IntegrationScheduleEntity
 }
 
 /// <summary>One execution of an integration (docs/25): the audit trail for external calls.</summary>
-public sealed class IntegrationRunEntity
+public sealed class IntegrationRunEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -378,7 +378,7 @@ public sealed class IntegrationRunEntity
 
 /// <summary>An installed tenant package (docs/22 P3): the bundle document is retained so
 /// upgrades can diff against what was actually applied.</summary>
-public sealed class PackageInstallationEntity
+public sealed class PackageInstallationEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
@@ -389,7 +389,7 @@ public sealed class PackageInstallationEntity
 }
 
 /// <summary>Registry storage for tenant-defined fields (docs/15). Managed only through operations.</summary>
-public sealed class ExtensionFieldEntity
+public sealed class ExtensionFieldEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";

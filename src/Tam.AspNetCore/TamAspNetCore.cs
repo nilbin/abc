@@ -68,6 +68,9 @@ public static class TamAspNetCore
         services.AddScoped<IExtensionRegistry>(sp => new PluginAwareExtensionRegistry(
             new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()), model, sp.GetRequiredService<TDbContext>(), sp));
         services.AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<TDbContext>()));
+        // Ambient tenant for the EF global query filter (docs: tenant isolation is enforced once at
+        // the model, not re-filtered at every call site). Set per request by UseTamTenantScope.
+        services.AddScoped<TenantScope>();
         // Request-scoped memoization of plugin activation (read 3-4× per request across existence,
         // gate, overlay and manifest) — collapses those to one query and keeps them coherent.
         services.AddScoped<ActivationCache>();

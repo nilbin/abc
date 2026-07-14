@@ -58,7 +58,10 @@ public sealed class OutboxDispatcher(
         var now = DateTimeOffset.UtcNow;
         var nowIso = now.ToString("O");
 
+        // Cross-tenant background scan: no ambient tenant, so opt out of the global filter and
+        // dispatch each row under its own TenantId (read from the row).
         var pending = await db.Set<OutboxRecord>()
+            .IgnoreQueryFilters()
             .Where(x => x.DispatchedAtIso == null && x.DeadAtIso == null
                 && (x.ClaimedUntilIso == null || string.Compare(x.ClaimedUntilIso, nowIso) < 0))
             .OrderBy(x => x.CreatedAtIso)

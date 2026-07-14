@@ -27,7 +27,7 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              78 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              81 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy
 ```
@@ -246,6 +246,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   outcomes (no cross-actor replay), while same-actor replay still returns the stored result. The
   refresh-token grant (advertised but never redeemable) was **dropped** (now `unsupported_grant_type`),
   and the SSRF egress guard gained `192.0.0.0/24`, `198.18.0.0/15` and limited-broadcast. 78 tests.
+
+- **Tenant isolation as a model property (not 50 Where-clauses)**: row-level tenant scoping was
+  hand-written at ~50 call sites and *omitted at 11* domain queries in the sample (latent
+  cross-tenant leaks the moment a real tenant provider is wired). It's now one EF global query
+  filter over every `ITenantScoped` entity, keyed off an ambient `TenantScope` set per request by
+  middleware; background jobs (scheduler/outbox/retry/retention) and the vault's explicit-tenant
+  reads opt out with `IgnoreQueryFilters`, and the startup seed guard does too. Proven by a test
+  with **two context instances carrying different tenants over one cached model** — each sees only
+  its own rows (guards against the model-cache capture pitfall); a cross-tenant by-id read returns
+  nothing with no manual filter. Verified on the wire: single-tenant views still return data, auth
+  resolves, the background outbound push still fires, and the seed stays idempotent across restart.
+  81 tests.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 

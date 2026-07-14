@@ -37,29 +37,32 @@ public sealed class RetentionJanitor(
         var cutoff = DateTimeOffset.UtcNow - options.RetentionPeriod;
         var cutoffIso = cutoff.ToString("O");
 
+        // A cross-tenant janitor: every sweep opts out of the ambient global filter (there is no
+        // request tenant here) and trims across all tenants by timestamp.
+
         // Delivered events — keep dead-lettered (DeadAtIso) rows for inspection.
-        await db.Set<OutboxRecord>()
+        await db.Set<OutboxRecord>().IgnoreQueryFilters()
             .Where(x => x.DispatchedAtIso != null && string.Compare(x.DispatchedAtIso, cutoffIso) < 0)
             .ExecuteDeleteAsync(ct);
 
         // Successfully processed inbound rows — Dead rows stay for the dead-letter queue.
-        await db.Set<InboxRecord>()
+        await db.Set<InboxRecord>().IgnoreQueryFilters()
             .Where(x => x.Status == InboxStatus.Processed && x.ProcessedAt != null && x.ProcessedAt < cutoff)
             .ExecuteDeleteAsync(ct);
 
         // Completed outbound retry tasks — Dead tasks stay for the dead-letter queue.
-        await db.Set<OutboundTaskEntity>()
+        await db.Set<OutboundTaskEntity>().IgnoreQueryFilters()
             .Where(x => x.Status == InboxStatus.Processed && x.CompletedAtIso != null
                 && string.Compare(x.CompletedAtIso, cutoffIso) < 0)
             .ExecuteDeleteAsync(ct);
 
         // Integration-run audit history (the external-call log, not the domain audit trail).
-        await db.Set<IntegrationRunEntity>()
+        await db.Set<IntegrationRunEntity>().IgnoreQueryFilters()
             .Where(x => string.Compare(x.RanAtIso, cutoffIso) < 0)
             .ExecuteDeleteAsync(ct);
 
         // Idempotency records past the retention window (must exceed the client's retry horizon).
-        await db.Set<IdempotencyRecord>()
+        await db.Set<IdempotencyRecord>().IgnoreQueryFilters()
             .Where(x => x.Timestamp < cutoff)
             .ExecuteDeleteAsync(ct);
     }

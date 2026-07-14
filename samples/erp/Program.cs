@@ -189,6 +189,9 @@ var app = builder.Build();
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+// Pin the request's tenant before any endpoint touches the DB — token exchange, actor/role
+// resolution and every view already run through the global tenant filter.
+app.UseTamTenantScope();
 app.MapTamAuth();
 app.MapTam();
 

@@ -6,9 +6,15 @@ using Tam.EntityFrameworkCore;
 
 namespace Erp;
 
-public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options)
-    : DbContext(options), Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.IDataProtectionKeyContext
+public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantScope tenantScope)
+    : DbContext(options),
+      Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.IDataProtectionKeyContext,
+      ITenantScopeContext
 {
+    // The ambient request tenant that drives the global query filter (ITenantScoped). Null in a
+    // background or startup-seed scope — those opt out explicitly with IgnoreQueryFilters.
+    public string? CurrentTenantId => tenantScope.Current;
+
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Order> Orders => Set<Order>();
@@ -39,6 +45,12 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options)
 
         modelBuilder.UseTam(Database.ProviderName);
         modelBuilder.UseTamOpenIddict();   // token/client storage for the embedded auth server
+
+        // One tenant boundary for the whole model: every ITenantScoped entity — framework and
+        // domain alike — is filtered to CurrentTenantId, so isolation is a property of the model,
+        // not a Where-clause each of 50 call sites has to remember. Closes the sample's unfiltered
+        // Customer/Order/Project reads by construction. Background scopes use IgnoreQueryFilters.
+        modelBuilder.ApplyTenantFilter(this);
     }
 }
 
@@ -49,7 +61,9 @@ public static class Seed
     public static void Run(ErpDbContext db)
     {
         db.Database.EnsureCreated();
-        if (db.Customers.Any()) return;
+        // Seeding runs outside a request (no ambient tenant), so this cross-tenant guard opts out
+        // of the global filter — otherwise it would see no rows and re-seed on every startup.
+        if (db.Customers.IgnoreQueryFilters().Any()) return;
 
         var acme = Customer.Create(Tenant, new("Acme Industri AB"), new("Industrigatan 4, Västerås"),
             new("info@acme-industri.se"), new("+46 21 12 34 56"));
