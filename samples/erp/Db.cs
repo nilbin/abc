@@ -126,6 +126,18 @@ public static class Seed
         orders[3].AssignTo("tekla");
         orders[4].AssignTo("tekla");
 
+        // Integration config (docs/25): a non-secret base URL and — via the vault at startup —
+        // an encrypted API key. The base URL points at this app's own mock Fortnox endpoint so
+        // the outbound loop is verifiable. (The secret is seeded in Program.cs through the vault,
+        // since encryption needs the Data-Protection provider.)
+        db.Add(new TenantSettingEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            Key = "fortnox.baseUrl",
+            Value = "http://localhost:5100/mock/fortnox",
+        });
+
         // A tenant-defined custom field, exactly as an admin would create it at runtime (docs/15).
         db.Add(new ExtensionFieldEntity
         {

@@ -32,6 +32,53 @@ public sealed class FortnoxPlugin : ITamPlugin
             "orders.import", "orders.create",
             key: row => row.GetProperty("documentNumber").GetString() ?? "",
             map: MapOrderAsync);
+
+        // OUTBOUND on event (docs/25): when an order completes, push it to Fortnox's accounting
+        // API. Reads the tenant's base URL (setting) and API key (secret) from the vault.
+        plugin.OutboundIntegration(
+            "push-completed-order", new EventTrigger("order-completed"), PushCompletedOrderAsync);
+
+        // OUTBOUND on schedule (docs/25): poll Fortnox for new orders and hand them to the same
+        // inbound import. The tenant configures the cadence via integrations.schedule.
+        plugin.OutboundIntegration(
+            "poll-orders", new ScheduleTrigger(), PollOrdersAsync);
+    }
+
+    private static async Task<OutboundResult> PushCompletedOrderAsync(
+        IIntegrationRunContext run, CancellationToken ct)
+    {
+        var baseUrl = await run.Setting("fortnox.baseUrl", ct);
+        var apiKey = await run.Secret("fortnox.apiKey", ct);
+        if (baseUrl is null || apiKey is null)
+            return OutboundResult.Failure("not-configured");   // no base URL / API key set
+
+        var number = run.EventPayload?.TryGetProperty("number", out var n) == true ? n.GetString() : null;
+        run.Http.DefaultRequestHeaders.TryAddWithoutValidation("Access-Token", apiKey);
+        var response = await run.Http.PostAsync(
+            $"{baseUrl.TrimEnd('/')}/vouchers",
+            new StringContent(
+                JsonSerializer.Serialize(new { orderNumber = number }),
+                System.Text.Encoding.UTF8, "application/json"),
+            ct);
+        return response.IsSuccessStatusCode
+            ? OutboundResult.Success($"pushed {number}")
+            : OutboundResult.Failure($"http {(int)response.StatusCode}");
+    }
+
+    private static async Task<OutboundResult> PollOrdersAsync(
+        IIntegrationRunContext run, CancellationToken ct)
+    {
+        var baseUrl = await run.Setting("fortnox.baseUrl", ct);
+        var apiKey = await run.Secret("fortnox.apiKey", ct);
+        if (baseUrl is null || apiKey is null)
+            return OutboundResult.Failure("not-configured");
+
+        run.Http.DefaultRequestHeaders.TryAddWithoutValidation("Access-Token", apiKey);
+        var response = await run.Http.GetAsync($"{baseUrl.TrimEnd('/')}/orders?status=new", ct);
+        if (!response.IsSuccessStatusCode) return OutboundResult.Failure($"http {(int)response.StatusCode}");
+        var body = await response.Content.ReadAsStringAsync(ct);
+        var count = JsonSerializer.Deserialize<JsonElement>(body).GetArrayLength();
+        return OutboundResult.Success($"polled {count} orders");
     }
 
     private static async Task<IReadOnlyDictionary<string, object?>> MapOrderAsync(

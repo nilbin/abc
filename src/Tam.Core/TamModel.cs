@@ -45,6 +45,10 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, PluginIntegrationDefinition> Integrations { get; init; } =
         new Dictionary<string, PluginIntegrationDefinition>();
 
+    /// <summary>Plugin-shipped outbound integrations by id (docs/25).</summary>
+    public IReadOnlyDictionary<string, OutboundIntegrationDefinition> OutboundIntegrations { get; init; } =
+        new Dictionary<string, OutboundIntegrationDefinition>();
+
     public IReadOnlyList<string> Permissions =>
         Operations.Values.Select(o => o.Permission)
             .Concat(Views.Values.Select(v => v.Permission))
@@ -69,6 +73,7 @@ public sealed class TamModelBuilder
     private readonly List<GateDefinition> gates = [];
     private readonly List<SubscriberDefinition> subscribers = [];
     private readonly List<(string Id, string OperationId, IntegrationKeySelector Key, IntegrationRowMapper Map, string Plugin)> integrations = [];
+    private readonly List<(string Id, IntegrationTrigger Trigger, OutboundIntegrationHandler Handler, string Plugin)> outboundIntegrations = [];
     private readonly LocaleCatalogsBuilder locales = new();
     private string defaultCulture = "en";
     private string? currentPlugin;
@@ -188,6 +193,13 @@ public sealed class TamModelBuilder
         integrations.Add((id, operationId, key, map, currentPlugin));
     }
 
+    internal void OutboundIntegration(string id, IntegrationTrigger trigger, OutboundIntegrationHandler handler)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: integrations can only be declared by a plugin.");
+        outboundIntegrations.Add((id, trigger, handler, currentPlugin));
+    }
+
     public TamModelBuilder Form<TInput>(string id, string operationId, Action<FormBuilder<TInput>> configure)
     {
         var builder = new FormBuilder<TInput>();
@@ -292,6 +304,10 @@ public sealed class TamModelBuilder
                 throw new InvalidOperationException(
                     $"PLG001: integration '{integration.Id}' is not under '{integration.Plugin}.'.");
         }
+        foreach (var outbound in outboundIntegrations)
+            if (!outbound.Id.StartsWith(outbound.Plugin + ".", StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"PLG001: outbound integration '{outbound.Id}' is not under '{outbound.Plugin}.'.");
         var duplicateGate = gates.GroupBy(g => (g.OperationId, g.PluginId))
             .FirstOrDefault(g => g.Count() > 1);
         if (duplicateGate is not null)
@@ -316,6 +332,9 @@ public sealed class TamModelBuilder
             Integrations = integrations.ToDictionary(
                 i => i.Id,
                 i => new PluginIntegrationDefinition(i.Id, i.Plugin, i.OperationId, i.Key, i.Map)),
+            OutboundIntegrations = outboundIntegrations.ToDictionary(
+                i => i.Id,
+                i => new OutboundIntegrationDefinition(i.Id, i.Plugin, i.Trigger, i.Handler)),
         };
 
         VerifyPluginNamespaces(model);

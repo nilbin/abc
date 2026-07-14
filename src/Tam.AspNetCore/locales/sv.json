@@ -105,5 +105,20 @@
   "labels.entitlements": "Rättigheter",
   "subscriptions.not-entitled": "Ditt abonnemang omfattar inte tillägget {plugin}. Uppgradera för att aktivera det.",
   "subscriptions.seat-limit": "Platsgränsen ({seats}) är nådd. Uppgradera för fler platser.",
-  "labels.renews-at": "Förnyas"
+  "labels.renews-at": "Förnyas",
+  "operations.settings.set.title": "Ange inställning",
+  "operations.secrets.set.title": "Ange hemlighet",
+  "operations.integrations.schedule.title": "Schemalägg integration",
+  "operations.integrations.run.title": "Kör integration",
+  "labels.value": "Värde",
+  "labels.secret-set": "Angiven",
+  "labels.integration": "Integration",
+  "labels.spec": "Schema",
+  "labels.enabled": "Aktiverad",
+  "labels.trigger": "Utlösare",
+  "labels.detail": "Detalj",
+  "vault.invalid-key": "Ogiltig nyckel.",
+  "integrations.unknown": "Okänd integration: {integration}.",
+  "integrations.not-schedulable": "Integrationen {integration} kan inte schemaläggas.",
+  "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00)."
 }

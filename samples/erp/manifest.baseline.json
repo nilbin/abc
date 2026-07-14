@@ -110,6 +110,21 @@
       "subscriptions.not-entitled": "Ditt abonnemang omfattar inte till\u00E4gget {plugin}. Uppgradera f\u00F6r att aktivera det.",
       "subscriptions.seat-limit": "Platsgr\u00E4nsen ({seats}) \u00E4r n\u00E5dd. Uppgradera f\u00F6r fler platser.",
       "labels.renews-at": "F\u00F6rnyas",
+      "operations.settings.set.title": "Ange inst\u00E4llning",
+      "operations.secrets.set.title": "Ange hemlighet",
+      "operations.integrations.schedule.title": "Schemal\u00E4gg integration",
+      "operations.integrations.run.title": "K\u00F6r integration",
+      "labels.value": "V\u00E4rde",
+      "labels.secret-set": "Angiven",
+      "labels.integration": "Integration",
+      "labels.spec": "Schema",
+      "labels.enabled": "Aktiverad",
+      "labels.trigger": "Utl\u00F6sare",
+      "labels.detail": "Detalj",
+      "vault.invalid-key": "Ogiltig nyckel.",
+      "integrations.unknown": "Ok\u00E4nd integration: {integration}.",
+      "integrations.not-schedulable": "Integrationen {integration} kan inte schemal\u00E4ggas.",
+      "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -275,6 +290,21 @@
       "subscriptions.not-entitled": "Your plan does not include the {plugin} plugin. Upgrade to enable it.",
       "subscriptions.seat-limit": "The seat limit ({seats}) is reached. Upgrade for more seats.",
       "labels.renews-at": "Renews",
+      "operations.settings.set.title": "Set setting",
+      "operations.secrets.set.title": "Set secret",
+      "operations.integrations.schedule.title": "Schedule integration",
+      "operations.integrations.run.title": "Run integration",
+      "labels.value": "Value",
+      "labels.secret-set": "Set",
+      "labels.integration": "Integration",
+      "labels.spec": "Schedule",
+      "labels.enabled": "Enabled",
+      "labels.trigger": "Trigger",
+      "labels.detail": "Detail",
+      "vault.invalid-key": "Invalid key.",
+      "integrations.unknown": "Unknown integration: {integration}.",
+      "integrations.not-schedulable": "The integration {integration} cannot be scheduled.",
+      "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00).",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -1158,6 +1188,168 @@
       ],
       "gatedBy": []
     },
+    "settings.set": {
+      "permission": "settings.manage",
+      "titleKey": "operations.settings.set.title",
+      "fields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "value",
+          "labelKey": "labels.value",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "secrets.set": {
+      "permission": "secrets.manage",
+      "titleKey": "operations.secrets.set.title",
+      "fields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "value",
+          "labelKey": "labels.value",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "integrations.schedule": {
+      "permission": "integrations.manage",
+      "titleKey": "operations.integrations.schedule.title",
+      "fields": [
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "spec",
+          "labelKey": "labels.spec",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "enabled",
+          "labelKey": "labels.enabled",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "nextRunIso",
+          "labelKey": "labels.next-run-iso",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "integrations.run": {
+      "permission": "integrations.manage",
+      "titleKey": "operations.integrations.run.title",
+      "fields": [
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
     "inspect.checklists.create": {
       "permission": "inspect.checklists.manage",
       "titleKey": "operations.inspect.checklists.create.title",
@@ -1726,6 +1918,166 @@
       "sortable": [],
       "filterable": [],
       "defaultSortDescending": false
+    },
+    "settings.list": {
+      "permission": "settings.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "value",
+          "labelKey": "labels.value",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "key"
+      ],
+      "filterable": [],
+      "defaultSort": "key",
+      "defaultSortDescending": false
+    },
+    "secrets.list": {
+      "permission": "secrets.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "isSet",
+          "labelKey": "labels.secret-set",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "key"
+      ],
+      "filterable": [],
+      "defaultSort": "key",
+      "defaultSortDescending": false
+    },
+    "integrations.runs": {
+      "permission": "integrations.manage",
+      "queryFields": [
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "trigger",
+          "labelKey": "labels.trigger",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "detail",
+          "labelKey": "labels.detail",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "ranAt",
+          "labelKey": "labels.timestamp",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "ranAt",
+        "integrationId"
+      ],
+      "filterable": [
+        "integrationId",
+        "status"
+      ],
+      "defaultSort": "ranAt",
+      "defaultSortDescending": true
     },
     "extensions.fields": {
       "permission": "extensions.manage",
@@ -2679,6 +3031,7 @@
     "extensions.manage",
     "inspect.checklists.manage",
     "inspect.checklists.read",
+    "integrations.manage",
     "orders.complete",
     "orders.create",
     "orders.edit",
@@ -2687,6 +3040,8 @@
     "plugins.manage",
     "roles.manage",
     "rules.manage",
+    "secrets.manage",
+    "settings.manage",
     "subscriptions.manage",
     "subscriptions.read",
     "users.manage"

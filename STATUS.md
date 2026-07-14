@@ -192,6 +192,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   creating the missing customer recovers the failed row from the inbox with no re-send, and
   reposting is idempotent (no duplicate orders).
 
+- **Secrets vault + external integrations (docs/25)**: per-tenant settings (clear) and secrets
+  (encrypted via ASP.NET Data Protection — no dependency, key ring swappable for Azure KV/AWS
+  KMS in prod). `secrets.set` is WRITE-ONLY: `secrets.list` shows keys + a set flag, never the
+  value; verified the DB holds 155 bytes of ciphertext, not the plaintext, and no view/manifest
+  surface leaks it; `secrets.manage` gates it (non-admin 403).
+- **Outbound integrations (docs/25)**: plugins ship `OutboundIntegration(id, trigger, handler)`
+  where the handler reads settings/secrets and does HTTP against an external system. Three
+  triggers, all activation-gated and recorded to `integration_runs`: EVENT (the outbox fires
+  it post-commit — verified: completing an order pushed `{"orderNumber":"2026-01416"}` to the
+  mock accounting API and logged an event/ok run), SCHEDULE (a one-minute `IntegrationScheduler`
+  hosted service + `integrations.schedule`, spec `every:Nm`/`daily:HH:MM` — verified next-run,
+  invalid-spec rejection, and that an event integration can't be scheduled), and MANUAL
+  (`integrations.run`). The Fortnox plugin is now a two-way connector (inbound import + outbound
+  push + scheduled poll), none of it host code.
+
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
 ## Gaps vs. the design docs (deliberate, in rough priority order)

@@ -101,5 +101,25 @@ public sealed class OutboxDispatcher(
                 // an unhealthy plugin must not take down dispatch — the row still completes
             }
         }
+
+        // Event-triggered outbound integrations (docs/25): push to external systems on commit.
+        var outbound = model.OutboundIntegrations.Values
+            .Where(i => i.Trigger is EventTrigger e && e.EventType == record.EventType
+                && active.Contains(i.PluginId))
+            .ToList();
+        if (outbound.Count > 0)
+        {
+            var context = IntegrationScheduler.SystemContext(record.TenantId, services);
+            foreach (var integration in outbound)
+            {
+                try
+                {
+                    await OutboundRunner.RunAsync(
+                        integration, "event", context, services, effect.Payload, db, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                catch { /* a failed outbound push is recorded as a run; dispatch continues */ }
+            }
+        }
     }
 }

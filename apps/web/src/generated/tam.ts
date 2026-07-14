@@ -180,6 +180,44 @@ export interface SubscriptionsSetPlanOutput {
   seats: number;
 }
 
+export interface SettingsSetInput {
+  key: string;
+  value: string;
+}
+
+export interface SettingsSetOutput {
+  key: string;
+}
+
+export interface SecretsSetInput {
+  key: string;
+  value: string;
+}
+
+export interface SecretsSetOutput {
+  key: string;
+}
+
+export interface IntegrationsScheduleInput {
+  integrationId: string;
+  spec: string;
+  enabled?: boolean;
+}
+
+export interface IntegrationsScheduleOutput {
+  integrationId: string;
+  nextRunIso: string;
+}
+
+export interface IntegrationsRunInput {
+  integrationId: string;
+}
+
+export interface IntegrationsRunOutput {
+  integrationId: string;
+  status: string;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
@@ -276,6 +314,37 @@ export interface SubscriptionsCurrentRow {
 
 export interface SubscriptionsCurrentQuery {
 
+}
+
+export interface SettingsListRow {
+  key: string;
+  value: string;
+}
+
+export interface SettingsListQuery {
+  search?: string;
+}
+
+export interface SecretsListRow {
+  key: string;
+  isSet: boolean;
+}
+
+export interface SecretsListQuery {
+  search?: string;
+}
+
+export interface IntegrationsRunsRow {
+  id: string;
+  integrationId: string;
+  trigger: string;
+  status: string;
+  detail?: string;
+  ranAt: string;
+}
+
+export interface IntegrationsRunsQuery {
+  integrationId?: string;
 }
 
 export interface ExtensionsFieldsRow {
@@ -442,6 +511,26 @@ export class TypedTamClient {
     return this.client.operation("subscriptions.set-plan", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<SubscriptionsSetPlanOutput>>;
   }
 
+  /** settings.set (requires settings.manage) */
+  settingsSet(input: SettingsSetInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<SettingsSetOutput>> {
+    return this.client.operation("settings.set", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<SettingsSetOutput>>;
+  }
+
+  /** secrets.set (requires secrets.manage) */
+  secretsSet(input: SecretsSetInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<SecretsSetOutput>> {
+    return this.client.operation("secrets.set", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<SecretsSetOutput>>;
+  }
+
+  /** integrations.schedule (requires integrations.manage) */
+  integrationsSchedule(input: IntegrationsScheduleInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<IntegrationsScheduleOutput>> {
+    return this.client.operation("integrations.schedule", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<IntegrationsScheduleOutput>>;
+  }
+
+  /** integrations.run (requires integrations.manage) */
+  integrationsRun(input: IntegrationsRunInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<IntegrationsRunOutput>> {
+    return this.client.operation("integrations.run", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<IntegrationsRunOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
@@ -480,6 +569,21 @@ export class TypedTamClient {
   /** view subscriptions.current (requires subscriptions.read) */
   subscriptionsCurrent(query?: SubscriptionsCurrentQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: SubscriptionsCurrentRow[] }> {
     return this.client.view("subscriptions.current", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: SubscriptionsCurrentRow[] }>;
+  }
+
+  /** view settings.list (requires settings.manage) */
+  settingsList(query?: SettingsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: SettingsListRow[] }> {
+    return this.client.view("settings.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: SettingsListRow[] }>;
+  }
+
+  /** view secrets.list (requires secrets.manage) */
+  secretsList(query?: SecretsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: SecretsListRow[] }> {
+    return this.client.view("secrets.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: SecretsListRow[] }>;
+  }
+
+  /** view integrations.runs (requires integrations.manage) */
+  integrationsRuns(query?: IntegrationsRunsQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsRunsRow[] }> {
+    return this.client.view("integrations.runs", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsRunsRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

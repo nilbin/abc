@@ -105,5 +105,20 @@
   "labels.entitlements": "Entitlements",
   "subscriptions.not-entitled": "Your plan does not include the {plugin} plugin. Upgrade to enable it.",
   "subscriptions.seat-limit": "The seat limit ({seats}) is reached. Upgrade for more seats.",
-  "labels.renews-at": "Renews"
+  "labels.renews-at": "Renews",
+  "operations.settings.set.title": "Set setting",
+  "operations.secrets.set.title": "Set secret",
+  "operations.integrations.schedule.title": "Schedule integration",
+  "operations.integrations.run.title": "Run integration",
+  "labels.value": "Value",
+  "labels.secret-set": "Set",
+  "labels.integration": "Integration",
+  "labels.spec": "Schedule",
+  "labels.enabled": "Enabled",
+  "labels.trigger": "Trigger",
+  "labels.detail": "Detail",
+  "vault.invalid-key": "Invalid key.",
+  "integrations.unknown": "Unknown integration: {integration}.",
+  "integrations.not-schedulable": "The integration {integration} cannot be scheduled.",
+  "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00)."
 }

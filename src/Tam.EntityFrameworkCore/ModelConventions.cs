@@ -69,6 +69,30 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.Package }).IsUnique();
         });
+        modelBuilder.Entity<TenantSettingEntity>(b =>
+        {
+            b.ToTable("tenant_settings");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.Key }).IsUnique();
+        });
+        modelBuilder.Entity<TenantSecretEntity>(b =>
+        {
+            b.ToTable("tenant_secrets");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.Key }).IsUnique();
+        });
+        modelBuilder.Entity<IntegrationScheduleEntity>(b =>
+        {
+            b.ToTable("integration_schedules");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.IntegrationId }).IsUnique();
+        });
+        modelBuilder.Entity<IntegrationRunEntity>(b =>
+        {
+            b.ToTable("integration_runs");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.IntegrationId });
+        });
         modelBuilder.Entity<TamUserEntity>(b =>
         {
             b.ToTable("users");
@@ -248,6 +272,54 @@ public sealed class AutomationRuleEntity
     public string? TargetField { get; set; }
     public string MessagesJson { get; set; } = "{}";
     public bool Retired { get; set; }
+}
+
+/// <summary>Non-secret per-tenant integration config (docs/25): base URLs, account ids, flags.
+/// Readable in the clear; managed through settings.set / settings.list.</summary>
+public sealed class TenantSettingEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Key { get; set; } = "";
+    public string Value { get; set; } = "";
+}
+
+/// <summary>
+/// A per-tenant secret (docs/25): API keys, tokens, passwords. Stored ENCRYPTED — the column
+/// only ever holds the Data-Protection ciphertext; the plaintext is decrypted transiently when
+/// an integration runs and is never returned by any view or operation output.
+/// </summary>
+public sealed class TenantSecretEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Key { get; set; } = "";
+    public string ProtectedValue { get; set; } = "";
+}
+
+/// <summary>A schedule for an outbound integration (docs/25): spec + next-run bookkeeping.</summary>
+public sealed class IntegrationScheduleEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string IntegrationId { get; set; } = "";
+    public string Spec { get; set; } = "";          // "every:15m" | "daily:02:00"
+    public bool Enabled { get; set; } = true;
+    public string NextRunIso { get; set; } = "";
+    public string? LastRunIso { get; set; }
+    public string? LastStatus { get; set; }
+}
+
+/// <summary>One execution of an integration (docs/25): the audit trail for external calls.</summary>
+public sealed class IntegrationRunEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string IntegrationId { get; set; } = "";
+    public string Trigger { get; set; } = "";       // event | schedule | manual
+    public string Status { get; set; } = "";        // ok | failed
+    public string? Detail { get; set; }
+    public string RanAtIso { get; set; } = "";
 }
 
 /// <summary>An installed tenant package (docs/22 P3): the bundle document is retained so

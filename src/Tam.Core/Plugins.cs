@@ -83,6 +83,58 @@ public sealed record PluginIntegrationDefinition(
     string Id, string PluginId, string OperationId,
     IntegrationKeySelector Key, IntegrationRowMapper Map);
 
+// ---- Outbound integrations (docs/25): fetch/push to external systems, triggered by event,
+//      schedule or manual call. The handler reads settings and secrets from the vault and does
+//      the HTTP; a run is recorded either way. All activation-gated.
+
+/// <summary>How an outbound integration fires.</summary>
+public abstract record IntegrationTrigger;
+
+/// <summary>Fire when a host effect of this event type commits (via the outbox).</summary>
+public sealed record EventTrigger(string EventType) : IntegrationTrigger;
+
+/// <summary>Fire on a schedule the tenant configures (<c>every:15m</c>, <c>daily:02:00</c>).</summary>
+public sealed record ScheduleTrigger : IntegrationTrigger;
+
+/// <summary>Fire only when a tenant admin calls it (integrations.run).</summary>
+public sealed record ManualTrigger : IntegrationTrigger;
+
+/// <summary>What an outbound handler is given: the vault (settings + secrets), an HttpClient,
+/// the pipeline (to write results back through operations), the triggering event payload if
+/// any, and the execution context. No host CLR types leak in.</summary>
+public interface IIntegrationRunContext
+{
+    OperationContext Context { get; }
+    IServiceProvider Services { get; }
+    System.Net.Http.HttpClient Http { get; }
+
+    /// <summary>Non-secret tenant config (base URLs, ids). Null if unset.</summary>
+    Task<string?> Setting(string key, CancellationToken ct);
+
+    /// <summary>A decrypted tenant secret (API key, token). Null if unset. Never logged.</summary>
+    Task<string?> Secret(string key, CancellationToken ct);
+
+    /// <summary>The committed effect payload that triggered this run (event trigger only).</summary>
+    System.Text.Json.JsonElement? EventPayload { get; }
+}
+
+/// <summary>Result of one outbound run: success + a short human detail for the run log.</summary>
+public sealed record OutboundResult(bool Ok, string? Detail = null)
+{
+    public static OutboundResult Success(string? detail = null) => new(true, detail);
+    public static OutboundResult Failure(string detail) => new(false, detail);
+}
+
+public delegate Task<OutboundResult> OutboundIntegrationHandler(
+    IIntegrationRunContext run, CancellationToken ct);
+
+/// <summary>A plugin-shipped outbound integration (docs/25).</summary>
+public sealed record OutboundIntegrationDefinition(
+    string Id, string PluginId, IntegrationTrigger Trigger, OutboundIntegrationHandler Handler)
+{
+    public string TitleKey => $"integrations.{Id}.title";
+}
+
 /// <summary>
 /// The plugin's registration surface. <see cref="Model"/> is the host's model builder in
 /// plugin scope: everything registered through it is tagged with the plugin id, so the
@@ -148,6 +200,18 @@ public sealed class PluginBuilder
         string id, string operationId, IntegrationKeySelector key, IntegrationRowMapper map)
     {
         Model.Integration($"{Id}.{id}", operationId, key, map);
+        return this;
+    }
+
+    /// <summary>
+    /// Ships an outbound integration (docs/25) that fetches from or pushes to an external system.
+    /// Triggered by a committed event, a tenant-configured schedule, or a manual call; reads
+    /// settings and secrets from the vault; activation-gated. The id is plugin-namespaced.
+    /// </summary>
+    public PluginBuilder OutboundIntegration(
+        string id, IntegrationTrigger trigger, OutboundIntegrationHandler handler)
+    {
+        Model.OutboundIntegration($"{Id}.{id}", trigger, handler);
         return this;
     }
 }

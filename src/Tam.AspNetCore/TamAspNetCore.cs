@@ -64,6 +64,21 @@ public static class TamAspNetCore
         services.AddScoped<IExtensionRegistry>(sp => new PluginAwareExtensionRegistry(
             new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()), model, sp.GetRequiredService<TDbContext>()));
         services.AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<TDbContext>()));
+
+        // Secrets vault (docs/25): ASP.NET Data Protection encrypts at rest — no dependency, and
+        // the key ring is production-swappable for Azure Key Vault / AWS KMS without code change.
+        services.AddDataProtection();
+        services.AddScoped(sp => new SecretVault(
+            sp.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(),
+            sp.GetRequiredService<ITamDb>()));
+        services.AddHttpClient("tam-integrations", c => c.Timeout = TimeSpan.FromSeconds(30));
+
+        // Scheduler for outbound integrations (docs/25): one lightweight loop, no external deps.
+        services.AddHostedService(sp => new IntegrationScheduler(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            s => s.GetRequiredService<TDbContext>(),
+            model));
+
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
         services.AddSingleton<EffectBroadcaster>();
