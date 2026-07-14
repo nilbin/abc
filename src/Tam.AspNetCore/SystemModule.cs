@@ -181,6 +181,36 @@ public static class RoleFindings
 }
 
 /// <summary>
+/// The single source of truth for what a tenant role may be (docs/1 + docs/24). Both the
+/// <c>roles.define</c> operation and package install validate through here, so a new rule — a new
+/// reserved permission especially — is enforced on every path at once, not added to one and
+/// forgotten in the other (which would make a package a privilege-escalation vector).
+/// </summary>
+public static class RoleRules
+{
+    /// <summary>A grant may carry a ":own" record-scope suffix; the catalogue holds the base name.</summary>
+    public static string TrimScope(string permission) =>
+        permission.EndsWith(":own", StringComparison.Ordinal) ? permission[..^4] : permission;
+
+    public static IReadOnlyList<Finding> Validate(
+        string name, IReadOnlyList<string> permissions, TamModel model, string field)
+    {
+        var findings = new List<Finding>();
+        if (!System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-z][a-z0-9-]*$"))
+            findings.Add(RoleFindings.InvalidName.At(field));
+        findings.AddRange(permissions
+            .Where(p => p != "*" && !model.Permissions.Contains(TrimScope(p)))
+            .Select(p => RoleFindings.UnknownPermission.With(("permission", p)).At(field)));
+        // Reserved permissions (subscriptions.manage) are never grantable through a tenant role,
+        // whether authored directly or shipped in a package — closes the wildcard-admin bypass.
+        findings.AddRange(permissions
+            .Where(p => Actor.Reserved.Contains(TrimScope(p)))
+            .Select(p => RoleFindings.ReservedPermission.With(("permission", p)).At(field)));
+        return findings;
+    }
+}
+
+/// <summary>
 /// Roles are tenant data managed through operations, validated at definition time against the
 /// compiled permission catalogue — the same registry-as-compiler pattern as custom fields.
 /// </summary>
@@ -195,36 +225,8 @@ public static class DefineRole
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
     {
-        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
-            return RoleFindings.InvalidName.At(nameof(Input.Name));
-
-        var unknown = input.Permissions
-            .Where(p => p != "*" && !model.Permissions.Contains(TrimScope(p)))
-            .ToList();
-        if (unknown.Count > 0)
-        {
-            return new Result<Output>
-            {
-                Findings = unknown.Select(p =>
-                    RoleFindings.UnknownPermission.With(("permission", p))
-                        .At(nameof(Input.Permissions))).ToList(),
-            };
-        }
-
-        // Reserved permissions (docs/24) can't be granted through a tenant-defined role — else a
-        // "*" admin would define a role carrying subscriptions.manage, assign it, and re-plan the
-        // tenant, bypassing the wildcard exclusion in Actor.Can. They're grantable only by seeded
-        // roles the platform sets up directly.
-        var reserved = input.Permissions.Where(p => Actor.Reserved.Contains(TrimScope(p))).ToList();
-        if (reserved.Count > 0)
-        {
-            return new Result<Output>
-            {
-                Findings = reserved.Select(p =>
-                    RoleFindings.ReservedPermission.With(("permission", p))
-                        .At(nameof(Input.Permissions))).ToList(),
-            };
-        }
+        var invalid = RoleRules.Validate(input.Name, input.Permissions, model, nameof(Input.Permissions));
+        if (invalid.Count > 0) return new Result<Output> { Findings = [.. invalid] };
 
         var role = await tam.Db.Set<RoleEntity>().SingleOrDefaultAsync(
             x => x.TenantId == context.TenantId.Value && x.Name == input.Name, ct);
@@ -242,9 +244,6 @@ public static class DefineRole
 
         return new Output(role.Id);
     }
-
-    private static string TrimScope(string permission) =>
-        permission.EndsWith(":own", StringComparison.Ordinal) ? permission[..^4] : permission;
 }
 
 [View("roles.list")]
