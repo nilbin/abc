@@ -14,13 +14,18 @@ src/Tam.Compiler             Roslyn analyzer: TAM001-003 model-shape checks and 
 src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effects, idempotency,
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
-                             OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, and the
-                             system module (custom fields, roles, audit view as framework
-                             operations with embedded sv/en locale defaults)
+                             OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, plugin
+                             system (packages/rules/integrations/subscriptions), users, and the
+                             system module (framework operations with embedded sv/en locales)
+src/Tam.Auth.OpenIddict      embedded OpenIddict token server + ClaimsActorProvider (the
+                             framework's own auth, behind the IActorProvider seam)
 packages/tam-core            manifest types, portable AST evaluator, localization, HTTP client
 packages/tam-react           context/renderers/OperationForm/ViewGrid modules + renderer
                              registry, Mantine renderer pack
-samples/erp                  Customers/Projects/Orders + extension admin, sv+en locales, seed
+samples/erp                  Customers/Projects/Orders + extension/plugin/package/rule/user
+                             admin, sv+en locales, seed (users, subscription)
+samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
+samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
 tests/Tam.Tests              17 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization

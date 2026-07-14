@@ -609,6 +609,8 @@ public static partial class ImportFortnoxOrder
 
 Imported orders execute `orders.create` — same authorization (as the integration principal), same rules, same findings, same audit. Inbox, retries, dead-lettering, replay, and reconciliation come from `Tam.Integrations`. Forgetting to map a required field is `INT001` at build time, not a support ticket.
 
+**Shipped as a plugin (implemented — samples/fortnox).** In the running system this integration is not host code at all — it lives in a `fortnox` plugin, activation- and entitlement-gated, mapped to `POST /api/integrations/fortnox.orders.import`. The plugin references no host CLR type: it maps to the `orders.create` *wire* contract and resolves the vendor customer name through the host's `customers.lookup` *view* (as the request's actor), and the inbox stores each source row so a customer created later recovers the failed import with no re-send. That a whole external-integration capability is a removable, per-tenant-priced plugin — over the same seams as fields and gates — is the extensibility thesis at full stretch.
+
 ---
 
 ## Step 11 — Tests exercise the contract, not the plumbing
@@ -724,6 +726,24 @@ public sealed class InspectionPlugin : ITamPlugin
 Because the packaged field rides the extension channel, it is already in every grid, form, audit trail, MCP schema, and D7 filter — none of that is plugin code. Because the gate is declared, `orders.complete` in the manifest now reads "gated by inspect", and the Step-12 impact report shows it when anyone touches `CompleteOrder`.
 
 The tenant admin flips it on — `plugins.activate("inspect")` — an audited framework operation like any other. For tenants that haven't, the manifest simply omits everything: no nav entry, no MCP tools, no packaged field, HTTP 404 on `inspect.*`. Installing code was the vendor's deploy; enabling it was the tenant's click. And the trust line holds: the partner wrote C# through a compiler and a review; the *tenant* still authors only data — fields, roles, packages, and (later) custom objects and Px-bounded automation rules, per D8.
+
+---
+
+## Step 14 — Who is asking, and what have they paid for *(implemented — [24-subscriptions.md](24-subscriptions.md))*
+
+Everything above assumed an actor with permissions. Two framework capabilities produce that actor and bound it, and neither is application code.
+
+**Identity is the framework's own** (`Tam.Auth.OpenIddict`, behind the `IActorProvider` seam). The app calls `AddTamOpenIddict<ErpDbContext>()` and gets an embedded OpenIddict token server: humans authenticate with the password grant, agents and integrations with client credentials (a machine client acts as a same-named framework user, so an agent has roles and an audited identity like any human). Users are tenant data — `users.define` / `users.list`, PBKDF2-hashed, roles validated against the tenant's role registry — and grants resolve *fresh from the user's roles on every request*, so revoking a role beats the token's lifetime. Swap in any external IdP by replacing the provider; the rest of the framework never knows.
+
+```csharp
+builder.Services.AddTam<ErpDbContext>(model);
+builder.Services.AddTamOpenIddict<ErpDbContext>();   // the whole auth story, one line
+app.MapTamAuth();                                    // POST /connect/token
+```
+
+**Entitlements bound what that actor can reach** (docs/24). A tenant's subscription — plan, seats, plugin entitlements — is data a billing provider drives through `subscriptions.set-plan` (a service-actor operation, not the tenant admin: a Stripe webhook maps to one call). Two mechanical gates, both already the right place: `plugins.activate` refuses a plugin the plan doesn't entitle (a localized upsell finding, not a crash), and `users.define` refuses a new user past the seat ceiling. A tenant with no subscription row is simply the free plan, so the framework runs fully without any billing wired up. This is how the inspect and fortnox plugins of the last two steps become things a tenant *buys*: the marketplace adds the plugin id to `PluginEntitlements`, and activation starts succeeding — the framework never touches money, it reads one boolean.
+
+The whole request now reads top to bottom as data: *the OpenIddict token names a user → the user's roles resolve to grants → the grants pass the operation's `[Authorize]` → the plan entitles the plugin the operation belongs to → the seat/entitlement gates hold → the pipeline runs → the audit row records the human's name.* Every arrow is a row in a table a tenant admin or a billing webhook can change without a deploy.
 
 ---
 
