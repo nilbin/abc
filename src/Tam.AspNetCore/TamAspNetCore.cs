@@ -136,12 +136,12 @@ public static class TamAspNetCore
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
         services.AddSingleton<EffectBroadcaster>();
-        services.AddSingleton<IOutboxTransport>(sp =>
-            new BroadcasterOutboxTransport(sp.GetRequiredService<EffectBroadcaster>()));
+        // Live-refresh backplane: in-process by default. A Postgres deployment registers the NOTIFY
+        // adapter after AddTam (last registration wins) for cross-instance SSE (docs/12).
+        services.AddSingleton<IEffectBackplane, LocalEffectBackplane>();
         services.AddHostedService(sp => new OutboxDispatcher(
             sp.GetRequiredService<IServiceScopeFactory>(),
             s => s.GetRequiredService<TDbContext>(),
-            sp.GetRequiredService<IOutboxTransport>(),
             model));
         return services;
     }

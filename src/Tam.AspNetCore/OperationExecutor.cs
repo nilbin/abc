@@ -233,8 +233,11 @@ public sealed class OperationExecutor(
 
         await transaction.CommitAsync(ct);
 
-        (services.GetService(typeof(EffectBroadcaster)) as EffectBroadcaster)
-            ?.Publish(context.TenantId.Value, operationId, response.Effects);
+        // Live-refresh fan-out through the backplane: local subscribers immediately, and every other
+        // instance via the configured transport (Postgres NOTIFY). Carries the entity effects grids
+        // refresh on — those exist only here, not in the event outbox.
+        (services.GetService(typeof(IEffectBackplane)) as IEffectBackplane)
+            ?.Send(context.TenantId.Value, operationId, response.Effects);
 
         return response;
     }

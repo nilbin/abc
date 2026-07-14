@@ -83,8 +83,14 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 - **Authorization (D1, first layer)**: role-based actors (admin/dispatcher/viewer via X-Demo-Role),
   pipeline 403s with localized findings, actor permissions in the manifest overlay, and the UI
   hides ungranted actions (verified: viewer sees no create/complete/custom-fields surfaces).
-- **Live refresh (D5)**: committed effects broadcast over `/api/events` SSE; grids subscribe and
-  auto-refresh debounced (verified: subscriber received entity-modified during an edit).
+- **Live refresh (D5), now cross-instance**: committed effects broadcast over `/api/events` SSE;
+  grids subscribe and auto-refresh debounced (verified: subscriber received entity-modified during
+  an edit). Fan-out is behind `IEffectBackplane` — in-process by default, a Postgres `LISTEN/NOTIFY`
+  adapter (`AddTamPostgresBackplane`) for multi-node so a grid on instance B refreshes from a commit
+  on instance A. Verified on Postgres end to end: an SSE client received the effect via
+  `NOTIFY→LISTEN→Deliver`, and a separate `LISTEN`er (standing in for another node) received the
+  app's `NOTIFY` on commit. The duplicate SSE send (event went out inline *and* via the outbox) is
+  gone — the outbox now owns only durable consumers (subscribers, outbound integrations).
 - **Roles as tenant data (D1 back half)**: roles live in the database, managed via `roles.define`
   which validates grants against the compiled permission catalogue at definition time (typo'd
   permission → localized finding); a runtime-defined role works as an actor immediately.

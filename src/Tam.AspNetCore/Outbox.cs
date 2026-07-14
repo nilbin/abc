@@ -8,29 +8,14 @@ namespace Tam.AspNetCore;
 /// <summary>
 /// The outbox half of docs/09-10: explicit event effects persist in the operation's own
 /// transaction (see <see cref="Tam.EntityFrameworkCore.OutboxRecord"/>) and are dispatched
-/// asynchronously afterwards — an event exists if and only if its operation committed.
-/// The demo transport is the SSE broadcaster; a real bus slots in behind <see cref="IOutboxTransport"/>.
+/// asynchronously afterwards — an event exists if and only if its operation committed. Its job is
+/// the durable event consumers (plugin subscribers and outbound integrations); live SSE refresh is
+/// the inline publish through <see cref="IEffectBackplane"/>, so the outbox no longer re-broadcasts
+/// (that was a duplicate send — every event went out twice).
 /// </summary>
-public interface IOutboxTransport
-{
-    Task Dispatch(OutboxRecord record, CancellationToken ct);
-}
-
-/// <summary>Demo transport: outbox events fan out on the same SSE channel grids listen to.</summary>
-public sealed class BroadcasterOutboxTransport(EffectBroadcaster broadcaster) : IOutboxTransport
-{
-    public Task Dispatch(OutboxRecord record, CancellationToken ct)
-    {
-        broadcaster.Publish(record.TenantId, record.OperationId,
-            [new EventPublished(record.EventType, record.PayloadJson)]);
-        return Task.CompletedTask;
-    }
-}
-
 public sealed class OutboxDispatcher(
     IServiceScopeFactory scopes,
     Func<IServiceProvider, DbContext> dbResolver,
-    IOutboxTransport transport,
     TamModel? model = null) : BackgroundService
 {
     /// <summary>How long a claimed row is reserved to this instance before the lease lapses and
@@ -88,7 +73,6 @@ public sealed class OutboxDispatcher(
 
             try
             {
-                await transport.Dispatch(record, ct);
                 await InvokeSubscribers(record, scope.ServiceProvider, db, activations, ct);
                 record.DispatchedAtIso = DateTimeOffset.UtcNow.ToString("O");
                 record.ClaimedUntilIso = null;

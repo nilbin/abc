@@ -14,12 +14,16 @@ public sealed class EffectBroadcaster
 {
     private readonly ConcurrentDictionary<Guid, (string TenantId, Channel<string> Channel)> subscribers = new();
 
-    public void Publish(string tenantId, string operationId, IReadOnlyList<object> effects)
+    /// <summary>The SSE wire payload for a set of effects (also what a backplane transports).</summary>
+    public static string Payload(string tenantId, string operationId, IReadOnlyList<object> effects) =>
+        JsonSerializer.Serialize(new { tenantId, operationId, effects }, TamJson.Options);
+
+    /// <summary>Fans a pre-built payload out to THIS instance's tenant-matched subscribers. The
+    /// backplane calls this both for locally-published effects and for effects that arrived from
+    /// another instance (Postgres NOTIFY), so cross-instance delivery is just "Deliver on receipt".</summary>
+    public void Deliver(string tenantId, string payload)
     {
-        if (subscribers.IsEmpty || effects.Count == 0) return;
-        var payload = JsonSerializer.Serialize(
-            new { tenantId, operationId, effects }, TamJson.Options);
-        // Tenant-scoped delivery: a listener only ever receives its own tenant's effects.
+        if (subscribers.IsEmpty) return;
         foreach (var (subscriberTenant, channel) in subscribers.Values)
             if (subscriberTenant == tenantId)
                 channel.Writer.TryWrite(payload);

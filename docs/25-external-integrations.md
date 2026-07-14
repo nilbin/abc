@@ -100,7 +100,7 @@ The second review pass found the outbound side had no retry at all and the **out
 
 - **At-least-once, handler-idempotent.** Event and schedule runs can repeat (a redelivery, a lapsed lease); handlers must tolerate it, as the docs/10 inbound side already requires. A per-run idempotency token is a natural extension.
 - **Backoff is deterministic (no jitter).** Fine at this scale; jitter to avoid a thundering herd at 100× tenants sharing a spec is a later addition.
-- **SSE is single-instance.** The event *bus* is behind `IOutboxTransport` (swappable for a real broker), but the SSE edge clients connect to has no cross-instance backplane yet — behind a load balancer, a grid open on instance B won't refresh from a commit on instance A. A Redis/Postgres `LISTEN` backplane is the fix.
+- **SSE cross-instance (done).** Live refresh now fans out through `IEffectBackplane`: in-process for single-node/SQLite, and a Postgres `LISTEN/NOTIFY` adapter (`AddTamPostgresBackplane`) for multi-node — a grid open on instance B refreshes from a commit on instance A, no new infrastructure. Verified: a second `LISTEN`er received the app's `NOTIFY` on commit. Payloads over ~8 KB fall back to local-only delivery (NOTIFY's cap); a Redis backplane is the same seam if ever needed.
 - **Secrets rotation** relies on the Data-Protection key ring; a rotated-away key makes a secret undecryptable (treated as "not configured") rather than silently wrong — re-set the secret. The ring is DB-persisted so it survives restarts and is shared across instances.
 - **No secret versioning / audit of secret *access*** — only of integration runs.
 

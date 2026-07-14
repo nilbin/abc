@@ -185,6 +185,9 @@ builder.Services.AddTam<ErpDbContext>(model, integrations =>
 // client credentials for agents) + claims-based actor resolution. Any external IdP plugs in
 // through ClaimsActorProvider instead; a custom IActorProvider replaces the whole seam.
 builder.Services.AddTamOpenIddict<ErpDbContext>();
+// On Postgres, cross-instance SSE via LISTEN/NOTIFY (docs/12); SQLite dev keeps the in-process default.
+if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddTamPostgresBackplane(connectionString);
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
