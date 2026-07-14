@@ -147,4 +147,49 @@ public class PluginTests
         var export = ManifestBuilder.Build(model, overlay, revision: 0);
         Assert.Contains("demo.things.create", export.Operations.Keys);
     }
+
+    [TamPlugin("dup")]
+    private sealed class DuplicateFieldPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin)
+        {
+            plugin.LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["plugins.dup.title"] = "Dup",
+                ["ext.dup.x"] = "X",
+            });
+            plugin.ExtensionField("thing", "x", "integer");
+            plugin.ExtensionField("thing", "x", "integer");   // same key twice → PLG004
+        }
+    }
+
+    [Fact]
+    public void PLG004_rejects_duplicate_packaged_field_keys_in_one_plugin()
+    {
+        var builder = new TamModelBuilder()
+            .LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["operations.host.things.close.title"] = "Close",
+                ["labels.name"] = "Name",
+            })
+            .AddOperationType(typeof(CloseThing))
+            .AddPlugin<DuplicateFieldPlugin>();
+        var error = Assert.Throws<InvalidOperationException>(() => builder.Build());
+        Assert.Contains("PLG004", error.Message);
+    }
+
+    [Fact]
+    public void Plugin_id_must_match_the_wire_prefix_grammar()
+    {
+        // A bad id would produce nonsense namespace prefixes — rejected at AddPlugin.
+        var error = Assert.Throws<InvalidOperationException>(
+            () => new TamModelBuilder().AddPlugin<BadIdPlugin>());
+        Assert.Contains("PLG000", error.Message);
+    }
+
+    [TamPlugin("Bad.Id")]
+    private sealed class BadIdPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) { }
+    }
 }
