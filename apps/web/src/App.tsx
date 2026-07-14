@@ -110,6 +110,15 @@ function PluginsPage() {
   return <ViewGrid grid="web.plugins" onAction={() => void refreshManifest()} />;
 }
 
+function PackagesPage() {
+  const { refreshManifest } = useTam();
+  return <ViewGrid grid="web.packages" onAction={() => void refreshManifest()} />;
+}
+
+function RulesPage() {
+  return <ViewGrid grid="web.rules" />;
+}
+
 /** Generic page for an ACTIVE plugin: renders every grid the plugin contributed.
  *  Nothing here knows what "inspect" is — the manifest is the only source. */
 function PluginPage(props: { plugin: string }) {
@@ -138,6 +147,8 @@ function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
     extensions: <ExtensionsPage />,
     audit: <AuditPage />,
     plugins: <PluginsPage />,
+    packages: <PackagesPage />,
+    rules: <RulesPage />,
     ...Object.fromEntries(activePlugins.map(id =>
       [`plugin:${id}`, <PluginPage key={id} plugin={id} />])),
   }) as Record<string, ReactNode>, [activePlugins.join(',')]);
@@ -189,6 +200,12 @@ function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
         )}
         {can('plugins.manage') && (
           <NavLink label={t('nav.plugins')} active={page === 'plugins'} onClick={() => setPage('plugins')} />
+        )}
+        {can('packages.manage') && (
+          <NavLink label={t('nav.packages')} active={page === 'packages'} onClick={() => setPage('packages')} />
+        )}
+        {can('rules.manage') && (
+          <NavLink label={t('nav.rules')} active={page === 'rules'} onClick={() => setPage('rules')} />
         )}
         {can('audit.read') && (
           <NavLink label={t('nav.audit')} active={page === 'audit'} onClick={() => setPage('audit')} />

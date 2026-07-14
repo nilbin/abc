@@ -213,9 +213,10 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     Roslyn analyzer diagnostics; subscriber delivery is at-most-once (no retry/inbox for
     plugin subscribers yet); field-level audit shows the extensions column as one change, not
     per extension key; package uninstall leaves package-defined roles in place (they may be
-    granted to real users); no admin UI pages for packages/rules yet (API/MCP only); client-
-    side portable evaluation of tenant rules (offline parity) needs the rule conditions
-    merged into the manifest, which is not done yet.
+    granted to real users); client-side portable evaluation of tenant rules (offline parity)
+    needs the rule conditions merged into the manifest, which is not done yet. Packages and
+    rules now have admin UI pages (grids + forms; the rule condition is authored as raw Px
+    JSON in a textarea — a visual rule builder remains future work).
 
 ## The one-night verdict
 

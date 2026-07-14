@@ -32,6 +32,21 @@ export function rendererFor(field: ManifestField): FieldRenderer {
     ?? DefaultRenderer;
 }
 
+/** Built-in: forms opt fields into a textarea with .Renderer("multiline"). */
+registerRenderer('multiline', (p) => (
+  <Textarea
+    label={p.label}
+    required={p.required}
+    error={p.error}
+    description={p.warning}
+    autosize
+    minRows={4}
+    styles={{ input: { fontFamily: 'monospace' } }}
+    value={p.value === null || p.value === undefined ? '' : String(p.value)}
+    onChange={e => p.onChange(e.currentTarget.value || null)}
+  />
+));
+
 export const DefaultRenderer: FieldRenderer = (p) => {
   const common = {
     label: p.label,

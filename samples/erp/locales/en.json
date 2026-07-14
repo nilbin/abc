@@ -44,5 +44,7 @@
   "labels.id": "Id",
   "labels.name": "Name",
   "labels.type": "Type",
-  "nav.plugins": "Plugins"
+  "nav.plugins": "Plugins",
+  "nav.packages": "Packages",
+  "nav.rules": "Rules"
 }

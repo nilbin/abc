@@ -108,6 +108,39 @@ var model = new TamModelBuilder()
         grid.RowAction("plugins.deactivate");
     })
 
+    .Form<InstallPackage.Input>("web.packages.install", "packages.install", form =>
+    {
+        form.Field(x => x.Document).Renderer("multiline");
+        form.Field(x => x.DryRun);
+    })
+
+    .Grid<PackageList.Result>("web.packages", "packages.list", grid =>
+    {
+        grid.Column(x => x.Package);
+        grid.Column(x => x.Version);
+        grid.Column(x => x.InstalledAt);
+        grid.ToolbarAction("packages.install");
+        grid.RowAction("packages.uninstall");
+    })
+
+    .Form<DefineAutomationRule.Input>("web.rules.define", "rules.define", form =>
+    {
+        form.Field(x => x.Name);
+        form.Field(x => x.OnOperation);
+        form.Field(x => x.Condition).Renderer("multiline");
+        form.Field(x => x.Messages).Renderer("culture-text");
+        form.Field(x => x.TargetField);
+    })
+
+    .Grid<RuleList.Result>("web.rules", "rules.list", grid =>
+    {
+        grid.Column(x => x.Name);
+        grid.Column(x => x.OnOperation);
+        grid.Column(x => x.Retired);
+        grid.ToolbarAction("rules.define");
+        grid.RowAction("rules.retire");
+    })
+
     .Build();
 
 // Manifest export mode (D4): `dotnet run -- manifest [path]` writes the compiled model's manifest

@@ -44,5 +44,7 @@
   "labels.id": "Id",
   "labels.name": "Namn",
   "labels.type": "Typ",
-  "nav.plugins": "Tillägg"
+  "nav.plugins": "Tillägg",
+  "nav.packages": "Paket",
+  "nav.rules": "Regler"
 }

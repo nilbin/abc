@@ -140,7 +140,9 @@
       "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
       "customers.duplicate-name": "Det finns redan en kund med det namnet.",
       "nav.audit": "Historik",
-      "nav.plugins": "Till\u00E4gg"
+      "nav.plugins": "Till\u00E4gg",
+      "nav.packages": "Paket",
+      "nav.rules": "Regler"
     },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
@@ -280,7 +282,9 @@
       "customers.credit-blocked": "The customer is credit blocked.",
       "customers.duplicate-name": "A customer with that name already exists.",
       "nav.audit": "History",
-      "nav.plugins": "Plugins"
+      "nav.plugins": "Plugins",
+      "nav.packages": "Packages",
+      "nav.rules": "Rules"
     }
   },
   "operations": {
@@ -2142,6 +2146,86 @@
       ],
       "includeExtensions": false,
       "serverDependencies": []
+    },
+    "web.packages.install": {
+      "operation": "packages.install",
+      "fields": [
+        {
+          "name": "document",
+          "labelKey": "labels.package-document",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "multiline"
+        },
+        {
+          "name": "dryRun",
+          "labelKey": "labels.dry-run",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.rules.define": {
+      "operation": "rules.define",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.rule",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "onOperation",
+          "labelKey": "labels.on-operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "condition",
+          "labelKey": "labels.condition",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "multiline"
+        },
+        {
+          "name": "messages",
+          "labelKey": "labels.messages",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "culture-text"
+        },
+        {
+          "name": "targetField",
+          "labelKey": "labels.target-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
     }
   },
   "grids": {
@@ -2234,6 +2318,36 @@
         "plugins.deactivate"
       ],
       "toolbarActions": [],
+      "includeExtensions": false
+    },
+    "web.packages": {
+      "view": "packages.list",
+      "columns": [
+        "package",
+        "version",
+        "installedAt"
+      ],
+      "rowActions": [
+        "packages.uninstall"
+      ],
+      "toolbarActions": [
+        "packages.install"
+      ],
+      "includeExtensions": false
+    },
+    "web.rules": {
+      "view": "rules.list",
+      "columns": [
+        "name",
+        "onOperation",
+        "retired"
+      ],
+      "rowActions": [
+        "rules.retire"
+      ],
+      "toolbarActions": [
+        "rules.define"
+      ],
       "includeExtensions": false
     }
   },
