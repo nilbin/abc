@@ -63,8 +63,9 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   live, including tenant field labels and finding messages with args.
 - **MCP**: 15 tools generated from the model; `*_resolve` preflight returns missing/required/options/
   warnings for partial input — agents hit the identical pipeline.
-- **Build-time diagnostics**: the analyzer turns a missing [Authorize], missing Execute, or a
-  label key absent from sv.json into compiler errors (verified with a negative-test operation).
+- **Build-time diagnostics**: the analyzer turns a missing [Authorize], missing Execute, a
+  label key absent from sv.json, or an enum exposed via Change<T> (EDIT001 — state transitions
+  belong to intent operations) into compiler errors (all verified with negative-test operations).
 - **Authorization (D1, first layer)**: role-based actors (admin/dispatcher/viewer via X-Demo-Role),
   pipeline 403s with localized findings, actor permissions in the manifest overlay, and the UI
   hides ungranted actions (verified: viewer sees no create/complete/custom-fields surfaces).
@@ -95,9 +96,9 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
 ## Gaps vs. the design docs (deliberate, in rough priority order)
 
-1. **Compiler package is analyzer-only so far.** TAM001-003 + L10N001 are build errors; the
-   manifest is still built by reflection at startup (no compile-time manifest emission), and
-   L10N000, DB001, EDIT001/002, impact reports, and the D4 manifest baseline check remain.
+1. **Compiler package is analyzer-only so far.** TAM001-003, L10N001 and EDIT001 are build
+   errors; the manifest is still built by reflection at startup (no compile-time manifest
+   emission), and L10N000, DB001, EDIT002 and impact reports remain.
 2. **View result records are init-property, not positional** — EF cannot compose sort over
    positional-record ctor projections; the compiler phase should rewrite sort into the projection
    source so the tutorial's positional style works.

@@ -37,8 +37,13 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         "L10N001", "Missing locale key",
         "Key '{0}' is missing in default culture '{1}' (referenced by {2})");
 
+    public static readonly DiagnosticDescriptor Edit001 = new(
+        "EDIT001", "Consequential state exposed via change-set",
+        "Operation '{0}' exposes enum member '{1}' as Change<T> — state transitions belong to an intent-specific operation (docs/03)",
+        "Tam", DiagnosticSeverity.Error, isEnabledByDefault: true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [Tam001, Tam002, Tam003, L10n001];
+        [Tam001, Tam002, Tam003, L10n001, Edit001];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -96,6 +101,27 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
                 .Any(m => m.IsStatic && m.DeclaredAccessibility == Accessibility.Public);
             if (!hasExecute)
                 context.ReportDiagnostic(Diagnostic.Create(Tam003, location, id));
+
+            // EDIT001: enums are state machines; a Change<SomeEnum> input lets callers patch
+            // a state transition — the descriptive/intent line the whole design defends.
+            if (input is not null)
+            {
+                var ctor = input.InstanceConstructors
+                    .Where(c => c.DeclaredAccessibility == Accessibility.Public)
+                    .OrderByDescending(c => c.Parameters.Length)
+                    .FirstOrDefault();
+                foreach (var parameter in ctor?.Parameters ?? ImmutableArray<IParameterSymbol>.Empty)
+                {
+                    if (parameter.Type is not INamedTypeSymbol { Name: "Change", TypeArguments.Length: 1 } change)
+                        continue;
+                    var inner = Unwrap(change.TypeArguments[0]);
+                    if (inner is { TypeKind: TypeKind.Enum })
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(
+                            Edit001, parameter.Locations.FirstOrDefault() ?? location, id, parameter.Name));
+                    }
+                }
+            }
         }
 
         if (viewId is not null && catalog is not null)
