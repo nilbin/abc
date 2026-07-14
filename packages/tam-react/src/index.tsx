@@ -12,3 +12,5 @@ export { ViewGrid } from './ViewGrid';
 export type { ViewGridProps } from './ViewGrid';
 export { LookupSelect } from './LookupSelect';
 export type { LookupSelectProps } from './LookupSelect';
+export { useTamAuth } from './auth';
+export type { TamAuthState, TamAuthStatus } from './auth';

@@ -58,6 +58,15 @@ axis, applied to authorization. A "region admin" role granted at the region casc
 already carries its permission set; hierarchy only changes *where the grant was attached* and
 whether it flows down.
 
+**Grants flow down, never up (by construction).** Access to a tenant exists only where a membership
+row exists, so a membership attached at a *child* node grants that child and nothing above it: **full
+custom access to a sub-level with no access to the parent is the default**, not a special case (a
+consultant on `acme.eu.sales` sees exactly that subtree and never `acme.eu` or `acme`). Cascade is the
+opt-in that widens a *parent* membership **downward** into descendants (the `subtree` read scope,
+[docs/27](27-authorization-model.md)); there is no mechanism that widens a child membership upward.
+This asymmetry — downward roll-up is opt-in, upward is impossible — is exactly what makes leaf-scoped
+and roll-up roles both expressible on one hierarchy.
+
 ## Part B — Who owns the account (the fork)
 
 Three shapes. This is the decision that changes the most code, so it's stated plainly.

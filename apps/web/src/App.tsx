@@ -1,52 +1,15 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   AppShell, Button, Center, Group, Loader, Modal, NavLink, SegmentedControl, Stack, Text,
   TextInput, Title,
 } from '@mantine/core';
 import { TamClient } from '@tam/core';
 import {
-  FieldRendererProps, LookupSelect, OperationForm, TamProvider, ViewGrid, registerRenderer, useTam,
+  FieldRendererProps, LookupSelect, OperationForm, TamProvider, ViewGrid, registerRenderer,
+  useTam, useTamAuth,
 } from '@tam/react';
 
 const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
-
-// ---- Authorization Code + PKCE (docs/26): the framework renders the login + tenant picker; the
-// SPA is a public client that only starts the redirect and redeems the code. No password ever
-// touches the SPA. ----
-const AUTH = { clientId: 'tam-spa', redirectUri: `${window.location.origin}/callback` };
-
-function b64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-async function beginLogin() {
-  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
-  const state = b64url(crypto.getRandomValues(new Uint8Array(16)));
-  sessionStorage.setItem('tam-pkce-verifier', verifier);
-  sessionStorage.setItem('tam-pkce-state', state);
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-  const params = new URLSearchParams({
-    client_id: AUTH.clientId, response_type: 'code', redirect_uri: AUTH.redirectUri,
-    code_challenge: b64url(new Uint8Array(digest)), code_challenge_method: 'S256', state,
-  });
-  window.location.href = `${client.baseUrl}/connect/authorize?${params}`;
-}
-
-async function completeLogin(code: string, state: string): Promise<{ token: string; name: string }> {
-  if (state !== sessionStorage.getItem('tam-pkce-state')) throw new Error('state mismatch');
-  const verifier = sessionStorage.getItem('tam-pkce-verifier') ?? '';
-  const response = await fetch(`${client.baseUrl}/connect/token`, {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code', code, redirect_uri: AUTH.redirectUri,
-      client_id: AUTH.clientId, code_verifier: verifier,
-    }),
-  });
-  const data = await response.json();
-  if (!data.access_token) throw new Error('token exchange failed');
-  const payload = JSON.parse(atob(data.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-  return { token: data.access_token, name: payload.name ?? payload.sub ?? 'User' };
-}
 
 // ---- App-owned renderers: the framework owns semantics, the app owns pixels (docs/13) ----
 
@@ -247,10 +210,10 @@ function Shell(props: { userName: string; onLogout: () => void }) {
   );
 }
 
-function LoginPage() {
+function LoginPage(p: { onSignIn: () => void }) {
   const { t } = useTam();
-  // The credential form and tenant picker are the framework's (server-rendered, localized); the SPA
-  // only starts the redirect. This keeps passwords out of the SPA entirely (PKCE public client).
+  // The credential form and tenant picker are the framework's (server-rendered, localized); this page
+  // only offers to start the redirect. PKCE lives in useTamAuth, not here.
   return (
     <Group justify="center" pt={120}>
       <Stack w={320} gap="md" align="center">
@@ -258,55 +221,25 @@ function LoginPage() {
           <Text fw={700} size="lg" c="indigo">◆</Text>
           <Title order={3}>{t('app.title')}</Title>
         </Group>
-        <Button fullWidth onClick={() => void beginLogin()}>{t('auth.sign-in')}</Button>
+        <Button fullWidth onClick={p.onSignIn}>{t('auth.sign-in')}</Button>
       </Stack>
     </Group>
   );
 }
 
 export function App() {
-  const [token, setToken] = useState<string | null>(sessionStorage.getItem('tam-token'));
-  const [userName, setUserName] = useState<string | null>(sessionStorage.getItem('tam-user'));
-  const [busy, setBusy] = useState(window.location.pathname === '/callback');
+  // All the auth mechanics (PKCE redirect, /callback code exchange, token storage, bearer wiring)
+  // live in the framework hook — the app just reacts to the session state.
+  const auth = useTamAuth(client, { clientId: 'tam-spa' });
 
-  // PKCE callback: the framework redirected back with ?code=…; redeem it for a token, then clean the
-  // URL. State is checked inside completeLogin to defeat CSRF on the code.
-  useEffect(() => {
-    if (window.location.pathname !== '/callback') return;
-    const query = new URLSearchParams(window.location.search);
-    const code = query.get('code');
-    const state = query.get('state');
-    const finish = () => { window.history.replaceState({}, '', '/'); setBusy(false); };
-    if (!code || !state) { finish(); return; }
-    completeLogin(code, state)
-      .then(({ token: next, name }) => {
-        sessionStorage.setItem('tam-token', next);
-        sessionStorage.setItem('tam-user', name);
-        setToken(next);
-        setUserName(name);
-        finish();
-      })
-      .catch(finish);
-  }, []);
-
-  if (token) client.headers['Authorization'] = `Bearer ${token}`;
-  else delete client.headers['Authorization'];
-
-  const logout = () => {
-    sessionStorage.removeItem('tam-token');
-    sessionStorage.removeItem('tam-user');
-    setToken(null);
-    setUserName(null);
-  };
+  if (auth.status === 'loading') return <Center pt={160}><Loader /></Center>;
 
   // Remount the provider on identity change: new actor → new effective manifest.
   return (
-    <TamProvider key={userName ?? 'anonymous'} client={client} initialCulture="sv">
-      {busy
-        ? <Center pt={160}><Loader /></Center>
-        : token && userName
-          ? <Shell userName={userName} onLogout={logout} />
-          : <LoginPage />}
+    <TamProvider key={auth.user?.sub ?? 'anonymous'} client={client} initialCulture="sv">
+      {auth.status === 'authenticated'
+        ? <Shell userName={auth.user!.name} onLogout={auth.signOut} />
+        : <LoginPage onSignIn={auth.signIn} />}
     </TamProvider>
   );
 }
