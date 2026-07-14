@@ -35,7 +35,8 @@ public static class CreateCustomer
 [Authorize("customers.read")]
 public static class CustomerList
 {
-    public sealed record Query(string? Search = null, bool? ActiveOnly = null);
+    // IsActive filtering is mechanical (declared Filterable); only Search is authored logic.
+    public sealed record Query(string? Search = null);
 
     // Init-property record: EF composes sort/paging over member-init projections (see STATUS.md).
     public sealed record Result
@@ -51,7 +52,6 @@ public static class CustomerList
     public static IQueryable<Result> Execute(Query query, ErpDbContext db)
     {
         var customers = db.Customers.AsQueryable();
-        if (query.ActiveOnly == true) customers = customers.Where(x => x.IsActive);
         if (!string.IsNullOrWhiteSpace(query.Search))
             customers = customers.Where(x => ((string)(object)x.Name).Contains(query.Search!));
 

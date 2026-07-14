@@ -99,3 +99,15 @@ If a future compliance requirement demands tamper-*evidence* (not just tamper-re
 **Consequences.** `Finding` carries `Args` and a boundary-resolved `Message`. `Tam.Compiler` gains catalog merging and the `L10N###` rules; the registry gains `EXT006`. Locale files are reviewable product surface in every application repository.
 
 **Revisit when.** Never, realistically — the rule only gets more valuable as surfaces multiply.
+
+---
+
+## D7 — Filtering is declared, not implemented per view
+
+**Decision.** `Capabilities.Filterable(field)` is the *single* authored fact for standard filtering: the framework composes typed equality predicates over the view's result projection (EF pushes them into SQL through the projection), grids render filter controls from the same declaration, and tenant extension fields filter mechanically via `ext.{key}` parameters. Query records carry only authored query logic the framework cannot derive — free-text search, cross-entity predicates — and shrink accordingly.
+
+**Why.** The previous shape authored one decision twice: the capability declaration *and* a Query-record member plus hand-written `Where`. Worse, it structurally excluded tenant custom fields from filtering, since runtime-defined fields cannot appear in a compiled record. Mechanical read-side filtering over an authored projection, bounded by declared capabilities, is not the "generic CRUD" the non-goals forbid — the projection and the capability list are still the developer's authored decisions.
+
+**Consequences.** Standard filters cost one declaration. Range/contains operators extend the same mechanism (via the portable Px AST if a richer filter language is ever needed — never a string-parsed expression DSL; user input must only ever become constants, not expression structure). Extension-field filtering currently matches string-typed fields via canonical-JSON containment; promoted expression indexes remain the performance path, and numeric extension filters await real JSON translation.
+
+**Revisit when.** A view needs a filter the mechanism can't express — which is precisely what the Query record remains for.

@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
@@ -23,14 +24,25 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             return (null, PipelineFindings.NotAuthorized.With(("permission", view.Permission)));
 
         object queryRecord;
+        List<(PropertyInfo Property, object? Value)> fieldFilters;
         try
         {
             queryRecord = BindQuery(view, query);
+            fieldFilters = BindFilters(view, query);
         }
         catch (Exception e) when (e is FormatException or ArgumentException or NotSupportedException or OverflowException)
         {
             return (null, PipelineFindings.InvalidInput.Create());
         }
+
+        // Tenant extension fields filter by "ext.{key}" params — necessarily mechanical:
+        // runtime-defined fields can never appear in a compiled Query record (docs/15).
+        var extensionFilters = view.ExtensibleEntity is null
+            ? []
+            : query.Where(kv => kv.Key.StartsWith("ext.", StringComparison.Ordinal)
+                    && !string.IsNullOrEmpty(kv.Value))
+                .Select(kv => (Key: kv.Key["ext.".Length..], Value: kv.Value!))
+                .ToList();
         var args = view.Execute.GetParameters().Select(p =>
         {
             if (p.Position == 0) return queryRecord;
@@ -54,34 +66,60 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             ? Math.Clamp(p2, 1, 200) : 25;
 
         var run = RunMethod.MakeGenericMethod(view.ResultType);
-        var task = (Task<ViewResponse>)run.Invoke(null, [queryable, sort, descending, page, pageSize, ct])!;
+        var task = (Task<ViewResponse>)run.Invoke(
+            null, [queryable, sort, descending, page, pageSize, fieldFilters, extensionFilters, ct])!;
         return (await task, null);
     }
 
     private static readonly MethodInfo RunMethod =
         typeof(ViewExecutor).GetMethod(nameof(Run), BindingFlags.NonPublic | BindingFlags.Static)!;
 
+    /// <summary>Declared filterable fields present in the query string → typed equality values.</summary>
+    private static List<(PropertyInfo Property, object? Value)> BindFilters(
+        ViewDefinition view, IReadOnlyDictionary<string, string?> query)
+    {
+        var filters = new List<(PropertyInfo, object?)>();
+        foreach (var field in view.Capabilities.Filterable)
+        {
+            var raw = query.GetValueOrDefault(field);
+            if (string.IsNullOrEmpty(raw)) continue;
+            var property = view.ResultType.GetProperties()
+                .FirstOrDefault(p => Naming.Camel(p.Name) == field);
+            if (property is null) continue;
+            filters.Add((property, ParseValue(property.PropertyType, raw)));
+        }
+        return filters;
+    }
+
     private static async Task<ViewResponse> Run<T>(
-        object queryable, string? sort, bool descending, int page, int pageSize, CancellationToken ct)
+        object queryable, string? sort, bool descending, int page, int pageSize,
+        List<(PropertyInfo Property, object? Value)> fieldFilters,
+        List<(string Key, string Value)> extensionFilters,
+        CancellationToken ct)
     {
         var source = (IQueryable<T>)queryable;
 
+        // Declared filters compose over the authored projection — the capability IS the filter
+        // (docs/04): no per-view Where code, and EF pushes it into SQL through the projection.
+        foreach (var (property, value) in fieldFilters)
+            source = TamExpressions.WhereEqual(source, property, value);
+
+        // Extension filters need SQL translation of the converted JSON column, so they apply
+        // only on EF-backed queries (in-memory sources would crash on the converted cast).
+        if (extensionFilters.Count > 0
+            && typeof(T).GetProperty("Extensions") is { } extensionsProperty
+            && source.Provider is Microsoft.EntityFrameworkCore.Query.IAsyncQueryProvider)
+        {
+            foreach (var (key, value) in extensionFilters)
+                source = TamExpressions.WhereExtensionEquals(source, extensionsProperty, key, value);
+        }
+
         if (sort is not null)
         {
-            var parameter = Expression.Parameter(typeof(T), "x");
             var member = typeof(T).GetProperties().FirstOrDefault(
                 p => Naming.Camel(p.Name) == sort);
             if (member is not null)
-            {
-                // Keep the key strongly typed — an (object) cast would defeat EF's
-                // constructor-projection member matching and fail translation (VIEW001 territory).
-                var lambda = Expression.Lambda(Expression.Property(parameter, member), parameter);
-                var method = typeof(Queryable).GetMethods()
-                    .First(m => m.Name == (descending ? "OrderByDescending" : "OrderBy")
-                        && m.GetParameters().Length == 2)
-                    .MakeGenericMethod(typeof(T), member.PropertyType);
-                source = (IQueryable<T>)method.Invoke(null, [source, lambda])!;
-            }
+                source = TamExpressions.OrderByProperty(source, member, descending);
         }
 
         int total;

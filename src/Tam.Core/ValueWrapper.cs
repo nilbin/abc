@@ -16,6 +16,9 @@ public static class ValueWrapper
     public static PropertyInfo? ValueProperty(Type type)
         => Cache.GetOrAdd(type, static t =>
         {
+            // Nullable<T> has a single "value" ctor parameter too — it is not a semantic wrapper;
+            // serializers unwrap it first and then hit the underlying wrapper converter.
+            if (Nullable.GetUnderlyingType(t) is not null) return null;
             if (!t.IsValueType && t != typeof(string) && !t.IsClass) return null;
             var ctor = t.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == 1
                 && string.Equals(c.GetParameters()[0].Name, "Value", StringComparison.OrdinalIgnoreCase));

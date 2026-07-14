@@ -350,10 +350,9 @@ The generic runtime reads the effective manifest: it renders fields in declared 
 [Authorize("orders.read")]
 public static partial class OrderList
 {
-    public sealed record Query(
-        OrderStatus? Status = null,
-        CustomerId? CustomerId = null,
-        SearchText? Search = null);
+    // Status/Type filtering is mechanical — declared below, composed by the framework (D7).
+    // The Query record carries only authored logic the framework cannot derive.
+    public sealed record Query(SearchText? Search = null);
 
     public sealed record Result(
         OrderId Id,
@@ -366,11 +365,7 @@ public static partial class OrderList
 
     public static IQueryable<Result> Execute(Query query, AppDbContext db)
     {
-        var orders = db.Orders.AsQueryable();
-        if (query.Status is { } s)      orders = orders.Where(x => x.Status == s);
-        if (query.CustomerId is { } c)  orders = orders.Where(x => x.CustomerId == c);
-
-        return orders
+        return db.Orders.AsQueryable()
             .Join(db.Customers, o => o.CustomerId, c => c.Id, (o, c) => new Result(
                 o.Id, o.Number, c.Name, o.Type, o.Status, o.RequestedDate, o.Version))
             .SearchOn(query.Search, x => x.Number, x => x.CustomerName);
@@ -385,7 +380,7 @@ public static partial class OrderList
 }
 ```
 
-Declared capabilities are the contract: a binding sorting on an undeclared field is `VIEW001` at build time, and `Tam.Testing` executes every declared capability against real PostgreSQL in CI — untranslatable LINQ becomes a red test, not a production 500.
+Declared capabilities are the contract — and the implementation: `Filterable(Status)` makes the framework compose the SQL predicate and the grid render the filter control, with no further code (D7). A binding sorting on an undeclared field is `VIEW001` at build time, and `Tam.Testing` executes every declared capability against real PostgreSQL in CI — untranslatable LINQ becomes a red test, not a production 500. Tenant custom fields filter the same way (`?ext.machineSerialNumber=…`) — necessarily mechanically, since a runtime-defined field can never appear in a compiled Query record.
 
 ```csharp
 // Product.Application/Orders/List/Bindings.cs

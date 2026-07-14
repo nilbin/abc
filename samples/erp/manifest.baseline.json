@@ -601,15 +601,6 @@
           "required": false,
           "changeSet": false,
           "extension": false
-        },
-        {
-          "name": "activeOnly",
-          "labelKey": "labels.active-only",
-          "type": "boolean",
-          "wireKind": "boolean",
-          "required": false,
-          "changeSet": false,
-          "extension": false
         }
       ],
       "resultFields": [
@@ -862,29 +853,6 @@
     "orders.list": {
       "permission": "orders.read",
       "queryFields": [
-        {
-          "name": "status",
-          "labelKey": "labels.status",
-          "type": "selection",
-          "wireKind": "string",
-          "required": false,
-          "options": [
-            "Open",
-            "Completed",
-            "Cancelled"
-          ],
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "customerId",
-          "labelKey": "labels.customer-id",
-          "type": "reference",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        },
         {
           "name": "search",
           "labelKey": "labels.search",

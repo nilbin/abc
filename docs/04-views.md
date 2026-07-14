@@ -61,6 +61,8 @@ Operation input
 
 Views declare which result fields support sorting, filtering, and searching, so bindings cannot promise capabilities the underlying query cannot deliver (see `VIEW001` in [12-compiler-and-manifest.md](12-compiler-and-manifest.md), and the refinement note on runtime translatability in [review-notes.md](review-notes.md)).
 
+**A declared filter IS the filter** (decision D7 in [19-decisions.md](19-decisions.md)): the framework composes equality predicates over the view's result projection mechanically — no per-view `Where` code, no Query-record member per filter. The Query record carries only *authored* query logic the framework cannot derive (free-text search, cross-entity predicates). This is also what makes tenant custom fields filterable: a runtime-defined field can never appear in a compiled Query record, but it can always be filtered mechanically (`?ext.machineSerialNumber=…`).
+
 ## Extension fields in views
 
 Views over tenant-extensible entities may opt in to carrying extension data (`view.Extensions(...)`), which makes active tenant-defined fields available to grid/report/export bindings without any per-field code. See [15-extensibility.md](15-extensibility.md).

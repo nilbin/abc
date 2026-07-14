@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Badge, Button, Group, Loader, Modal, Pagination, Stack, Table, Text, Title, UnstyledButton,
+  Badge, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text, TextInput,
+  Title, UnstyledButton,
 } from '@mantine/core';
-import { ManifestField, enumLabel } from '@tam/core';
+import { ManifestField, enumLabel, toWireEnum } from '@tam/core';
 import { useTam } from './context';
 import { OperationForm } from './OperationForm';
 
@@ -48,18 +49,37 @@ export function ViewGrid(props: ViewGridProps) {
   const [loading, setLoading] = useState(true);
   const [modalAction, setModalAction] = useState<string | null>(null);
   const [localRefresh, setLocalRefresh] = useState(0);
+  const [filters, setFilters] = useState<Record<string, string>>({});
   const pageSize = props.pageSize ?? 15;
+
+  // Declared-filterable fields render controls mechanically; extension string fields filter
+  // via "ext.{key}" — possible precisely because filtering is not baked into a Query record.
+  const filterFields = view.filterable
+    .map(f => view.resultFields.find(r => r.name === f))
+    .filter((f): f is ManifestField => f !== undefined);
+  const extensionFilterFields = extensionColumns.filter(f => f.wireKind === 'string');
+
+  const setFilter = (key: string, value: string | null) => {
+    setPage(1);
+    setFilters(prev => {
+      const next = { ...prev };
+      if (value === null || value === '') delete next[key];
+      else next[key] = value;
+      return next;
+    });
+  };
 
   // Stable dependency for the caller-supplied filter object (key order normalized).
   const queryKey = useMemo(
-    () => JSON.stringify(Object.entries(props.query ?? {}).sort(([a], [b]) => a.localeCompare(b))),
-    [props.query]);
+    () => JSON.stringify(Object.entries({ ...props.query, ...filters })
+      .sort(([a], [b]) => a.localeCompare(b))),
+    [props.query, filters]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     client.view(gridDef.view, {
-      ...props.query, page, pageSize, sort, dir: desc ? 'desc' : 'asc',
+      ...props.query, ...filters, page, pageSize, sort, dir: desc ? 'desc' : 'asc',
     }).then(result => {
       if (!cancelled) { setRows(result.rows); setTotal(result.total); }
     }).finally(() => { if (!cancelled) setLoading(false); });
@@ -125,12 +145,50 @@ export function ViewGrid(props: ViewGridProps) {
 
   return (
     <Stack gap="sm">
-      <Group justify="flex-end">
-        {toolbarActions.map(action => (
-          <Button key={action} size="sm" onClick={() => setModalAction(action)}>
-            {t(`operations.${action}.title`)}
-          </Button>
-        ))}
+      <Group justify="space-between" align="flex-end">
+        <Group gap="xs">
+          {filterFields.map(field => field.options ? (
+            <Select
+              key={field.name}
+              size="xs"
+              w={150}
+              placeholder={t(field.labelKey)}
+              data={field.options.map(o => ({
+                value: toWireEnum(o),
+                label: enumLabel(manifest, culture, o),
+              }))}
+              value={filters[field.name] ?? null}
+              onChange={v => setFilter(field.name, v)}
+              clearable
+            />
+          ) : (
+            <TextInput
+              key={field.name}
+              size="xs"
+              w={150}
+              placeholder={t(field.labelKey)}
+              value={filters[field.name] ?? ''}
+              onChange={e => setFilter(field.name, e.currentTarget.value)}
+            />
+          ))}
+          {extensionFilterFields.map(field => (
+            <TextInput
+              key={field.name}
+              size="xs"
+              w={170}
+              placeholder={t(`ext.${field.name}`)}
+              value={filters[`ext.${field.name}`] ?? ''}
+              onChange={e => setFilter(`ext.${field.name}`, e.currentTarget.value)}
+            />
+          ))}
+        </Group>
+        <Group>
+          {toolbarActions.map(action => (
+            <Button key={action} size="sm" onClick={() => setModalAction(action)}>
+              {t(`operations.${action}.title`)}
+            </Button>
+          ))}
+        </Group>
       </Group>
 
       <Table.ScrollContainer minWidth={720}>

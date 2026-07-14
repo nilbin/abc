@@ -99,7 +99,6 @@ export interface CustomersListRow {
 
 export interface CustomersListQuery {
   search?: string;
-  activeOnly?: boolean;
 }
 
 export interface CustomersLookupRow {
@@ -143,8 +142,6 @@ export interface OrdersListRow {
 }
 
 export interface OrdersListQuery {
-  status?: "open" | "completed" | "cancelled";
-  customerId?: string;
   search?: string;
 }
 

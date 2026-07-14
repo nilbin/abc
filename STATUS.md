@@ -94,6 +94,10 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 - **Audit as a read model (D3)**: `audit.entries` view + History page (admin-only nav) showing the
   field-level trail — timestamp, operation, actor, entity.field, old → new — straight from the
   same-transaction audit tables.
+- **Mechanical filtering (D7)**: `Filterable(field)` composes typed SQL predicates over the
+  projection and renders grid filter controls — no Query-record members, no per-view Where.
+  Tenant extension fields filter via `ext.{key}` (canonical-JSON containment over the converted
+  column, verified on SQLite and PostgreSQL jsonb); Query records now carry only Search.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -125,9 +129,10 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
    per-tenant and include extension fields with admin-authored descriptions.
 10. **PostgreSQL supported and CI-smoked**: connection-string switch (Host=… → Npgsql), real
-    `jsonb` extensions column, full wire regression verified on PG 16 including a native
-    `extensions->>'key'` query. SQLite remains the zero-setup dev default. Expression-index
-    promotion and extension filter/sort translation remain.
+    `jsonb` extensions column, full wire regression verified on PG 16. SQLite remains the
+    zero-setup dev default. Extension filtering covers string-typed fields (containment over the
+    canonical JSON); numeric extension filters, extension sorting, and expression-index
+    promotion remain.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
 

@@ -175,10 +175,8 @@ public static class CompleteOrder
 [AcceptsExtensions(typeof(Order))]
 public static class OrderList
 {
-    public sealed record Query(
-        OrderStatus? Status = null,
-        CustomerId? CustomerId = null,
-        string? Search = null);
+    // Status/Type filtering is mechanical (declared Filterable); only Search is authored logic.
+    public sealed record Query(string? Search = null);
 
     public sealed record Result
     {
@@ -197,8 +195,6 @@ public static class OrderList
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
         var orders = db.Orders.ScopedTo(context, "orders.read", x => x.AssignedToActorId);
-        if (query.Status is { } status) orders = orders.Where(x => x.Status == status);
-        if (query.CustomerId is { } customer) orders = orders.Where(x => x.CustomerId == customer);
         if (!string.IsNullOrWhiteSpace(query.Search))
             orders = orders.Where(x =>
                 ((string)(object)x.Number).Contains(query.Search!) ||
