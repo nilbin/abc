@@ -11,6 +11,7 @@ public static class OutboundFindings
     public static readonly FindingFactory Unknown = Finding.Error("integrations.unknown");
     public static readonly FindingFactory NotScheduled = Finding.Error("integrations.not-schedulable");
     public static readonly FindingFactory InvalidSpec = Finding.Error("integrations.invalid-spec");
+    public static readonly FindingFactory NotFound = Finding.Error("integrations.dead-letter-not-found");
 }
 
 /// <summary>The concrete run context handed to an outbound handler (docs/25).</summary>
@@ -174,11 +175,15 @@ public sealed class IntegrationScheduler(
                 System.Globalization.DateTimeStyles.RoundtripKind, out var n) && n <= now)
             .ToList();
 
+        // One activation lookup per tenant per tick, not per due schedule (review N+1).
+        var activations = new Dictionary<string, IReadOnlySet<string>>();
+
         foreach (var schedule in due)
         {
             if (!model.OutboundIntegrations.TryGetValue(schedule.IntegrationId, out var integration))
                 continue;
-            var active = await PluginActivations.ActiveAsync(db, schedule.TenantId, ct);
+            if (!activations.TryGetValue(schedule.TenantId, out var active))
+                activations[schedule.TenantId] = active = await PluginActivations.ActiveAsync(db, schedule.TenantId, ct);
             if (!active.Contains(integration.PluginId)) continue;
 
             // Claim first: roll NextRunIso forward and commit under the concurrency token BEFORE
@@ -213,6 +218,10 @@ public sealed class IntegrationScheduler(
             }
 
             schedule.LastStatus = result.Ok ? "ok" : "failed";
+            if (!result.Ok)
+                await OutboundRetryQueue.EnqueueFailureAsync(
+                    db, RetryPolicy.Resolve(scope.ServiceProvider),
+                    schedule.TenantId, schedule.IntegrationId, "schedule", null, result.Detail, ct);
             await db.SaveChangesAsync(ct);
         }
     }

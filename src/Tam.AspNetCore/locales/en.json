@@ -110,6 +110,7 @@
   "operations.secrets.set.title": "Set secret",
   "operations.integrations.schedule.title": "Schedule integration",
   "operations.integrations.run.title": "Run integration",
+  "operations.integrations.requeue.title": "Requeue dead-lettered item",
   "labels.value": "Value",
   "labels.secret-set": "Set",
   "labels.integration": "Integration",
@@ -117,8 +118,13 @@
   "labels.enabled": "Enabled",
   "labels.trigger": "Trigger",
   "labels.detail": "Detail",
+  "labels.direction": "Direction",
+  "labels.reference": "Reference",
+  "labels.attempts": "Attempts",
   "vault.invalid-key": "Invalid key.",
   "integrations.unknown": "Unknown integration: {integration}.",
   "integrations.not-schedulable": "The integration {integration} cannot be scheduled.",
-  "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00)."
+  "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00).",
+  "integrations.dead-letter-not-found": "No dead-lettered item with that id.",
+  "integrations.malformed-payload": "The integration payload is not valid JSON."
 }

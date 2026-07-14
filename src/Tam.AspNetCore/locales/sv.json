@@ -110,6 +110,7 @@
   "operations.secrets.set.title": "Ange hemlighet",
   "operations.integrations.schedule.title": "Schemalägg integration",
   "operations.integrations.run.title": "Kör integration",
+  "operations.integrations.requeue.title": "Köa död post igen",
   "labels.value": "Värde",
   "labels.secret-set": "Angiven",
   "labels.integration": "Integration",
@@ -117,8 +118,13 @@
   "labels.enabled": "Aktiverad",
   "labels.trigger": "Utlösare",
   "labels.detail": "Detalj",
+  "labels.direction": "Riktning",
+  "labels.reference": "Referens",
+  "labels.attempts": "Försök",
   "vault.invalid-key": "Ogiltig nyckel.",
   "integrations.unknown": "Okänd integration: {integration}.",
   "integrations.not-schedulable": "Integrationen {integration} kan inte schemaläggas.",
-  "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00)."
+  "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
+  "integrations.dead-letter-not-found": "Ingen köad post med det id:t.",
+  "integrations.malformed-payload": "Integrationens data är inte giltig JSON."
 }

@@ -124,3 +124,100 @@ public static class IntegrationRunList
         .Filterable(nameof(Result.IntegrationId), nameof(Result.Status))
         .DefaultSort(nameof(Result.RanAt), descending: true);
 }
+
+/// <summary>
+/// The unified dead-letter queue (docs/25): rows the retry machinery gave up on — inbound rows
+/// that failed their operation past the cap, and outbound pushes that failed past the cap — so an
+/// operator can see what needs a fix and requeue it once the root cause is resolved.
+/// </summary>
+[View("integrations.dead-letter")]
+[Authorize("integrations.manage")]
+public static class DeadLetterList
+{
+    public sealed record Query(string? Kind = null);
+
+    public sealed record Result
+    {
+        public Guid Id { get; init; }
+        [LabelKey("labels.direction")]
+        public string Kind { get; init; } = "";        // inbound | outbound
+        [LabelKey("labels.integration")]
+        public string IntegrationId { get; init; } = "";
+        [LabelKey("labels.reference")]
+        public string Reference { get; init; } = "";    // inbound: idempotency key; outbound: trigger
+        [LabelKey("labels.attempts")]
+        public int Attempts { get; init; }
+        [LabelKey("labels.detail")]
+        public string? LastError { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
+    {
+        var tenant = context.TenantId.Value;
+        var inbound = query.Kind == "outbound" ? [] : tam.Db.Set<InboxRecord>()
+            .Where(x => x.TenantId == tenant && x.Status == InboxStatus.Dead)
+            .Select(x => new Result
+            {
+                Id = x.Id, Kind = "inbound", IntegrationId = x.IntegrationId,
+                Reference = x.Key, Attempts = x.Attempts, LastError = x.LastError,
+            }).ToList();
+        var outbound = query.Kind == "inbound" ? [] : tam.Db.Set<OutboundTaskEntity>()
+            .Where(x => x.TenantId == tenant && x.Status == InboxStatus.Dead)
+            .Select(x => new Result
+            {
+                Id = x.Id, Kind = "outbound", IntegrationId = x.IntegrationId,
+                Reference = x.Trigger, Attempts = x.Attempts, LastError = x.LastError,
+            }).ToList();
+        return inbound.Concat(outbound).AsQueryable();
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+        .Sortable(nameof(Result.IntegrationId), nameof(Result.Attempts))
+        .Filterable(nameof(Result.Kind), nameof(Result.IntegrationId))
+        .DefaultSort(nameof(Result.IntegrationId));
+}
+
+/// <summary>
+/// Requeues a dead-lettered item (docs/25) once its root cause is fixed: attempts reset to zero and
+/// it becomes retryable. An outbound task is picked up by the retry driver within its interval; an
+/// inbound row is re-driven on the next inbound call for that integration (the inbox drains under
+/// the caller's actor, so it has no background driver of its own).
+/// </summary>
+[Operation("integrations.requeue")]
+[Authorize("integrations.manage")]
+public static class RequeueDeadLetter
+{
+    public sealed record Input([property: LabelKey("labels.id")] Guid Id);
+
+    public sealed record Output(Guid Id, string Kind);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, CancellationToken ct)
+    {
+        var tenant = context.TenantId.Value;
+
+        var inbox = await tam.Db.Set<InboxRecord>().SingleOrDefaultAsync(
+            x => x.Id == input.Id && x.TenantId == tenant, ct);
+        if (inbox is not null)
+        {
+            inbox.Status = InboxStatus.Pending;
+            inbox.Attempts = 0;
+            inbox.NextAttemptIso = null;
+            inbox.LastError = null;
+            return new Output(input.Id, "inbound");
+        }
+
+        var task = await tam.Db.Set<OutboundTaskEntity>().SingleOrDefaultAsync(
+            x => x.Id == input.Id && x.TenantId == tenant, ct);
+        if (task is not null)
+        {
+            task.Status = InboxStatus.Failed;
+            task.Attempts = 0;
+            task.NextAttemptIso = DateTimeOffset.UtcNow.ToString("O");   // due immediately
+            task.LastError = null;
+            return new Output(input.Id, "outbound");
+        }
+
+        return OutboundFindings.NotFound.At(nameof(Input.Id));
+    }
+}

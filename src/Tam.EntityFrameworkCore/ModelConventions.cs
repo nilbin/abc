@@ -55,7 +55,19 @@ public static class TamModelConventions
         {
             b.ToTable("outbox");
             b.HasKey(x => x.Id);
-            b.HasIndex(x => x.DispatchedAtIso);
+            // The dispatcher polls undispatched, un-dead rows oldest-first; the composite index
+            // supports both the filter and the ordering as history accumulates.
+            b.HasIndex(x => new { x.DispatchedAtIso, x.DeadAtIso, x.CreatedAtIso });
+            b.Property(x => x.ClaimedUntilIso).IsConcurrencyToken();
+        });
+        modelBuilder.Entity<OutboundTaskEntity>(b =>
+        {
+            b.ToTable("outbound_tasks");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.Status, x.NextAttemptIso });
+            b.HasIndex(x => new { x.TenantId, x.IntegrationId });
+            // NextAttemptIso is the retry driver's lease, exactly like the scheduler's NextRunIso.
+            b.Property(x => x.NextAttemptIso).IsConcurrencyToken();
         });
         modelBuilder.Entity<PluginActivationEntity>(b =>
         {
@@ -184,6 +196,31 @@ public sealed class InboxRecord
     public string? LastError { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }
     public DateTimeOffset? ProcessedAt { get; set; }
+
+    // Exponential-backoff gate (docs/10 + docs/25): a failed row is not re-driven before this
+    // instant, so a rapid re-POST can't hammer a failing row — the same RetryPolicy the outbound
+    // queue uses. Null/empty means "process immediately" (a never-attempted Pending row).
+    public string? NextAttemptIso { get; set; }
+}
+
+/// <summary>
+/// Outbound retry queue (docs/25): a failed event/schedule push is enqueued here and re-driven by
+/// the IntegrationRetryDriver with the same attempts/backoff/dead-letter semantics as the inbound
+/// inbox. The event payload is stored so a retry replays the exact push without the source event.
+/// </summary>
+public sealed class OutboundTaskEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string IntegrationId { get; set; } = "";
+    public string Trigger { get; set; } = "";           // event | schedule
+    public string? PayloadJson { get; set; }             // event payload to replay (null for schedule)
+    public InboxStatus Status { get; set; } = InboxStatus.Failed;   // Failed (awaiting) | Processed | Dead
+    public int Attempts { get; set; }
+    public string? LastError { get; set; }
+    public string NextAttemptIso { get; set; } = "";     // due time AND optimistic-concurrency lease
+    public string CreatedAtIso { get; set; } = "";
+    public string? CompletedAtIso { get; set; }
 }
 
 /// <summary>Outbox row: an explicit event effect, persisted in the operation's transaction (docs/09).</summary>
@@ -196,6 +233,17 @@ public sealed class OutboxRecord
     public string PayloadJson { get; set; } = "";
     public string CreatedAtIso { get; set; } = "";
     public string? DispatchedAtIso { get; set; }
+
+    // Multi-instance safety (review-round-3): the dispatcher takes a time-boxed lease before
+    // dispatching so only one instance delivers a given row; ClaimedUntilIso doubles as the
+    // optimistic-concurrency token that makes the claim atomic. A crash mid-dispatch lets the
+    // lease lapse and another instance re-delivers (at-least-once preserved).
+    public string? ClaimedUntilIso { get; set; }
+    // Poison-message dead-letter, mirroring the inbox: a row that keeps throwing is parked after
+    // a cap instead of blocking every newer event behind it forever.
+    public int Attempts { get; set; }
+    public string? DeadAtIso { get; set; }
+    public string? LastError { get; set; }
 }
 
 /// <summary>

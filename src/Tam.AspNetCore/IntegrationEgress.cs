@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace Tam.AspNetCore;
 
-/// <summary>Tuning for the outbound integration HTTP client (docs/25).</summary>
+/// <summary>Tuning for the outbound integration HTTP client and retry queue (docs/25).</summary>
 public sealed class TamIntegrationOptions
 {
     /// <summary>
@@ -14,6 +14,28 @@ public sealed class TamIntegrationOptions
     /// deployment whose real targets are on the private network opts in explicitly.
     /// </summary>
     public bool AllowPrivateNetwork { get; set; }
+
+    /// <summary>First-retry delay; each further attempt doubles it up to <see cref="RetryMaxDelay"/>.</summary>
+    public TimeSpan RetryBaseDelay { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>Backoff ceiling.</summary>
+    public TimeSpan RetryMaxDelay { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>Attempts before a unit is dead-lettered (inbound inbox and outbound queue alike).</summary>
+    public int MaxAttempts { get; set; } = 3;
+
+    /// <summary>How often the outbound retry driver drains due tasks.</summary>
+    public TimeSpan RetryDriverInterval { get; set; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>Trim completed transient history (dispatched outbox, processed inbox/tasks, old runs
+    /// and idempotency records) older than this. Audit is never auto-trimmed — that's a compliance
+    /// decision, not a housekeeping one.</summary>
+    public TimeSpan RetentionPeriod { get; set; } = TimeSpan.FromDays(30);
+
+    /// <summary>How often the retention janitor runs. Set <see cref="RetentionEnabled"/> false to skip it.</summary>
+    public TimeSpan RetentionInterval { get; set; } = TimeSpan.FromHours(6);
+
+    public bool RetentionEnabled { get; set; } = true;
 }
 
 /// <summary>Raised when the egress guard refuses a destination. Surfaces as a failed run, not a crash.</summary>

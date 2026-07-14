@@ -107,6 +107,23 @@ public static class TamAspNetCore
                 ConnectCallback = IntegrationEgress.Guard(integrationOptions),
             });
 
+        // One retry policy shared by the inbound inbox and the outbound queue (docs/25): same
+        // backoff, same dead-letter cap. The outbound retry driver drains failed pushes on its own
+        // cadence; the inbox drains on the next inbound call but honours the same backoff gate.
+        var retryPolicy = new RetryPolicy(
+            integrationOptions.RetryBaseDelay, integrationOptions.RetryMaxDelay, integrationOptions.MaxAttempts);
+        services.AddSingleton(retryPolicy);
+        services.AddHostedService(sp => new IntegrationRetryDriver(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            s => s.GetRequiredService<TDbContext>(),
+            model, retryPolicy, integrationOptions.RetryDriverInterval));
+
+        // Housekeeping: trim completed transient history so the hot loops don't scan unbounded tables.
+        services.AddHostedService(sp => new RetentionJanitor(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            s => s.GetRequiredService<TDbContext>(),
+            integrationOptions));
+
         // Scheduler for outbound integrations (docs/25): one lightweight loop, no external deps.
         services.AddHostedService(sp => new IntegrationScheduler(
             sp.GetRequiredService<IServiceScopeFactory>(),
@@ -170,13 +187,26 @@ public static class TamAspNetCore
             var context = BuildContext(http, model);
             var overlay = await registry.All(context.TenantId, ct);
             var activePlugins = await ActivationCache.ForAsync(http.RequestServices, tam.Db, context.TenantId.Value, ct);
-            var manifest = ManifestBuilder.Build(
-                model, overlay, revision: OverlayRevision(overlay, activePlugins), activePlugins);
+            var revision = OverlayRevision(overlay, activePlugins);
+
+            // The manifest is a pure function of (model, overlay, activePlugins, actor permissions).
+            // The overlay+activation queries are cheap; the reflection rebuild + serialization are
+            // not — so serve a content ETag and answer 304 when the client already has this version,
+            // skipping the build entirely (review-round-3 #5).
+            var etag = ManifestETag(revision, context.Actor.Permissions);
+            if (http.Request.Headers.IfNoneMatch.ToString() == etag)
+            {
+                http.Response.Headers["ETag"] = etag;
+                return Results.StatusCode(StatusCodes.Status304NotModified);
+            }
+
+            var manifest = ManifestBuilder.Build(model, overlay, revision: revision, activePlugins);
             manifest = manifest with
             {
                 Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model),
                 ActorPermissions = context.Actor.Permissions.ToList(),
             };
+            http.Response.Headers["ETag"] = etag;
             return Results.Json(manifest, TamJson.Options);
         });
 
@@ -273,6 +303,16 @@ public static class TamAspNetCore
             + "||" + string.Join(",", (activePlugins ?? new HashSet<string>()).Order());
         return BitConverter.ToInt64(
             System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fingerprint)), 0) & long.MaxValue;
+    }
+
+    /// <summary>ETag over the content revision AND the actor's permissions (which the manifest
+    /// embeds), so two actors with different grants never share a cached manifest.</summary>
+    private static string ManifestETag(long revision, IReadOnlySet<string> permissions)
+    {
+        var perms = string.Join(",", permissions.Order());
+        var hash = System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(perms));
+        return $"\"{revision:x}-{Convert.ToHexString(hash.AsSpan(0, 8))}\"";
     }
 
     /// <summary>Tenant field labels/descriptions merge into the catalogs under "ext.{key}" (docs/15, docs/21).</summary>

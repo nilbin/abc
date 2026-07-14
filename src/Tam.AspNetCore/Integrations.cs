@@ -70,6 +70,10 @@ public static class IntegrationRunner
 {
     public const int MaxAttempts = 3;
 
+    /// <summary>Cap on rows re-driven in a single inbound call: a large failed backlog drains a
+    /// batch at a time across calls instead of reprocessing thousands inside one partner request.</summary>
+    public const int BatchSize = 100;
+
     /// <summary>
     /// Inbox-backed processing (docs/10): incoming rows are persisted first, then every
     /// pending/failed row for this integration — including ones from earlier runs — is
@@ -110,13 +114,20 @@ public static class IntegrationRunner
         }
         await db.SaveChangesAsync(ct);
 
-        // 2. Process everything retryable, oldest first.
+        // 2. Process the due backlog, oldest first: never-tried Pending rows, plus Failed rows
+        //    whose backoff has elapsed. Not-yet-due failures aren't even fetched, and the batch is
+        //    bounded so a large failed backlog drains over several calls, not all in this request.
+        var policy = RetryPolicy.Resolve(context.Services);
+        var nowIso = DateTimeOffset.UtcNow.ToString("O");
         var retryable = (await inbox
             .Where(x => x.TenantId == context.TenantId.Value
                 && x.IntegrationId == integration.Id
-                && (x.Status == InboxStatus.Pending || x.Status == InboxStatus.Failed))
+                && (x.Status == InboxStatus.Pending
+                    || (x.Status == InboxStatus.Failed
+                        && (x.NextAttemptIso == null || string.Compare(x.NextAttemptIso, nowIso) <= 0))))
             .ToListAsync(ct))
             .OrderBy(x => x.ReceivedAt)   // client-side: SQLite can't ORDER BY DateTimeOffset
+            .Take(IntegrationRunner.BatchSize)
             .ToList();
 
         var results = new List<IntegrationRowResult>();
@@ -147,15 +158,19 @@ public static class IntegrationRunner
             if (failed)
             {
                 record.Attempts++;
-                record.Status = record.Attempts >= MaxAttempts ? InboxStatus.Dead : InboxStatus.Failed;
+                record.Status = policy.IsExhausted(record.Attempts) ? InboxStatus.Dead : InboxStatus.Failed;
                 record.LastError = string.Join(", ", response.Findings
                     .Where(f => f.Severity == FindingSeverity.Error).Select(f => f.Code).Distinct());
+                record.NextAttemptIso = record.Status == InboxStatus.Failed
+                    ? policy.NextAttempt(record.Attempts, DateTimeOffset.UtcNow).ToString("O")
+                    : null;
             }
             else
             {
                 record.Status = InboxStatus.Processed;
                 record.ProcessedAt = DateTimeOffset.UtcNow;
                 record.LastError = null;
+                record.NextAttemptIso = null;
             }
 
             results.Add(new IntegrationRowResult(
@@ -215,13 +230,19 @@ public static class PluginIntegrationRunner
             await db.SaveChangesAsync(ct);
         }
 
-        // 2. Process everything retryable, oldest first — re-mapping each from its stored source.
+        // 2. Process the due backlog, oldest first — re-mapping each from its stored source. Same
+        //    backoff gate and batch bound as the authored runner.
+        var policy = RetryPolicy.Resolve(context.Services);
+        var nowIso = DateTimeOffset.UtcNow.ToString("O");
         var retryable = (await inbox
             .Where(x => x.TenantId == context.TenantId.Value
                 && x.IntegrationId == integration.Id
-                && (x.Status == InboxStatus.Pending || x.Status == InboxStatus.Failed))
+                && (x.Status == InboxStatus.Pending
+                    || (x.Status == InboxStatus.Failed
+                        && (x.NextAttemptIso == null || string.Compare(x.NextAttemptIso, nowIso) <= 0))))
             .ToListAsync(ct))
             .OrderBy(x => x.ReceivedAt)
+            .Take(IntegrationRunner.BatchSize)
             .ToList();
 
         var results = new List<IntegrationRowResult>();
@@ -249,15 +270,19 @@ public static class PluginIntegrationRunner
             if (failed)
             {
                 record.Attempts++;
-                record.Status = record.Attempts >= IntegrationRunner.MaxAttempts ? InboxStatus.Dead : InboxStatus.Failed;
+                record.Status = policy.IsExhausted(record.Attempts) ? InboxStatus.Dead : InboxStatus.Failed;
                 record.LastError = string.Join(", ", response.Findings
                     .Where(f => f.Severity == FindingSeverity.Error).Select(f => f.Code).Distinct());
+                record.NextAttemptIso = record.Status == InboxStatus.Failed
+                    ? policy.NextAttempt(record.Attempts, DateTimeOffset.UtcNow).ToString("O")
+                    : null;
             }
             else
             {
                 record.Status = InboxStatus.Processed;
                 record.ProcessedAt = DateTimeOffset.UtcNow;
                 record.LastError = null;
+                record.NextAttemptIso = null;
             }
 
             results.Add(new IntegrationRowResult(

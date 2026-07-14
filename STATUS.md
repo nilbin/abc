@@ -27,7 +27,7 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              64 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              74 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy
 ```
@@ -222,6 +222,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   overflowing schedule specs return invalid instead of throwing. **Per-tenant secret binding** and a
   request-scoped **`ActivationCache`** (one query for the 3–4 per-request activation reads). 17 new
   tests (64 total); manifest baseline still additive-only.
+
+- **Durable messaging — review-round-3 (docs/25)**: the outbound side and the outbox now share the
+  inbox's proven retry primitive. A shared `RetryPolicy` (exponential backoff, dead-letter cap)
+  drives a new `outbound_tasks` queue + `IntegrationRetryDriver`: a failed event/schedule push
+  retries with backoff and dead-letters after the cap — verified end to end (broken API key →
+  `event failed` → `retry failed` → `retry failed` → dead-letter, then fix-secret + `integrations.requeue`
+  → `retry ok`). The **outbox** got a claim-lease (optimistic-concurrency token, so N instances stop
+  double-delivering webhooks/emails) and a poison dead-letter (one bad payload no longer wedges the
+  stream); event pushes are per-run time-boxed; activations are looked up once per tenant per tick.
+  A unified `integrations.dead-letter` view + `integrations.requeue` op, a retention janitor (trims
+  dispatched outbox / processed inbox+tasks / old runs / expired idempotency past 30d; audit and
+  dead-letters kept), and a manifest `ETag`/`304` (verified) round it out. 74 tests; baseline additive.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 

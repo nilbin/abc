@@ -56,3 +56,46 @@ public class ScheduleSpecTests
         Assert.False(ScheduleSpec.TryNext(spec, Base, out _));
     }
 }
+
+public class RetryPolicyTests
+{
+    private static readonly DateTimeOffset T0 = new(2026, 1, 15, 10, 0, 0, TimeSpan.Zero);
+    private static readonly RetryPolicy Policy =
+        new(TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5), maxAttempts: 3);
+
+    [Fact]
+    public void First_backoff_is_exactly_the_base_delay()
+    {
+        // attempts == 1 (the first try just failed) → base delay, no doubling yet.
+        Assert.Equal(T0.AddSeconds(10), Policy.NextAttempt(1, T0));
+    }
+
+    [Theory]
+    [InlineData(1, 10)]
+    [InlineData(2, 20)]
+    [InlineData(3, 40)]
+    [InlineData(4, 80)]
+    public void Backoff_doubles_each_attempt(int attempts, int expectedSeconds) =>
+        Assert.Equal(T0.AddSeconds(expectedSeconds), Policy.NextAttempt(attempts, T0));
+
+    [Fact]
+    public void Backoff_is_capped_at_the_maximum()
+    {
+        // 10s·2^19 would be ~60 days; the 5-minute cap holds.
+        Assert.Equal(T0.AddMinutes(5), Policy.NextAttempt(20, T0));
+    }
+
+    [Fact]
+    public void Absurd_attempt_counts_do_not_overflow()
+    {
+        var next = Policy.NextAttempt(100000, T0);   // must not throw
+        Assert.Equal(T0.AddMinutes(5), next);
+    }
+
+    [Theory]
+    [InlineData(2, false)]
+    [InlineData(3, true)]
+    [InlineData(4, true)]
+    public void Exhaustion_is_at_the_attempt_cap(int attempts, bool exhausted) =>
+        Assert.Equal(exhausted, Policy.IsExhausted(attempts));
+}

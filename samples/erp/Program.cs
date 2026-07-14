@@ -168,10 +168,16 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
     else
         options.UseSqlite(connectionString);
 });
-builder.Services.AddTam<ErpDbContext>(model,
+builder.Services.AddTam<ErpDbContext>(model, integrations =>
+{
     // The demo's Fortnox base URL is this app's own localhost mock, so it opts into private-network
     // egress. A real deployment leaves this off and the SSRF guard blocks internal destinations.
-    integrations => integrations.AllowPrivateNetwork = true);
+    integrations.AllowPrivateNetwork = true;
+    // Short retry timings so the outbound retry → backoff → dead-letter loop is observable in the
+    // demo. Production keeps the 30s/1h defaults.
+    integrations.RetryBaseDelay = TimeSpan.FromSeconds(2);
+    integrations.RetryDriverInterval = TimeSpan.FromSeconds(2);
+});
 // Real authentication: the framework's embedded OpenIddict server (password grant for humans,
 // client credentials for agents) + claims-based actor resolution. Any external IdP plugs in
 // through ClaimsActorProvider instead; a custom IActorProvider replaces the whole seam.
