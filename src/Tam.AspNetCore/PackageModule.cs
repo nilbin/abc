@@ -254,8 +254,7 @@ public static class PackageList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var installed = tam.Db.Set<PackageInstallationEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value);
+        var installed = tam.Db.Set<PackageInstallationEntity>().AsQueryable();
         if (!string.IsNullOrWhiteSpace(query.Search))
             installed = installed.Where(x => x.Package.Contains(query.Search!));
         return installed.Select(x => new Result

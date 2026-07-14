@@ -91,7 +91,7 @@ public static class DefineExtensionField
             return ValidationFindings.InvalidValue.At(nameof(Input.Key));
 
         var collision = await tam.Db.Set<ExtensionFieldEntity>().AnyAsync(
-            x => x.TenantId == context.TenantId.Value && x.Entity == input.Entity && x.Key == input.Key, ct);
+            x => x.Entity == input.Entity && x.Key == input.Key, ct);
         if (collision)
             return ExtensionFindings.KeyConflict.At(nameof(Input.Key));       // EXT005
 
@@ -131,7 +131,7 @@ public static class RetireExtensionField
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
         var field = await tam.Db.Set<ExtensionFieldEntity>().SingleOrDefaultAsync(
-            x => x.Id == input.FieldId && x.TenantId == context.TenantId.Value, ct);
+            x => x.Id == input.FieldId, ct);
         if (field is null) return PipelineFindings.NotFound.Create();
 
         field.State = ExtensionFieldState.Retired;   // data preserved, key reserved forever
@@ -157,8 +157,7 @@ public static class ExtensionFieldList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var fields = tam.Db.Set<ExtensionFieldEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value);
+        var fields = tam.Db.Set<ExtensionFieldEntity>().AsQueryable();
         if (query.Entity is { Length: > 0 }) fields = fields.Where(x => x.Entity == query.Entity);
         return fields.Select(x => new Result
         {
@@ -229,7 +228,7 @@ public static class DefineRole
         if (invalid.Count > 0) return new Result<Output> { Findings = [.. invalid] };
 
         var role = await tam.Db.Set<RoleEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.Name == input.Name, ct);
+            x => x.Name == input.Name, ct);
         if (role is null)
         {
             role = new RoleEntity
@@ -261,7 +260,6 @@ public static class RoleList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
         tam.Db.Set<RoleEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value)
             .Select(x => new Result
             {
                 Id = x.Id, Name = x.Name, Permissions = x.PermissionsJson,
@@ -307,7 +305,7 @@ public static class AuditLog
 
         // Entries carry the tenant; joining through them scopes the change rows.
         return changes
-            .Join(tam.Db.Set<AuditEntry>().Where(e => e.TenantId == context.TenantId.Value),
+            .Join(tam.Db.Set<AuditEntry>(),
                 c => c.EntryId, e => e.Id, (c, e) => new Result
             {
                 Id = c.Id,

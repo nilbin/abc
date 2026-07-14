@@ -9,7 +9,7 @@ public sealed class EfExtensionRegistry(DbContext db) : IExtensionRegistry
         TenantId tenant, string entityKey, CancellationToken ct)
     {
         var rows = await db.Set<ExtensionFieldEntity>()
-            .Where(x => x.TenantId == tenant.Value && x.Entity == entityKey)
+            .Where(x => x.Entity == entityKey)
             .ToListAsync(ct);
         return rows.Select(r => r.ToSpec()).ToList();
     }
@@ -18,7 +18,6 @@ public sealed class EfExtensionRegistry(DbContext db) : IExtensionRegistry
         TenantId tenant, CancellationToken ct)
     {
         var rows = await db.Set<ExtensionFieldEntity>()
-            .Where(x => x.TenantId == tenant.Value)
             .ToListAsync(ct);
         return rows.GroupBy(r => r.Entity).ToDictionary(
             g => g.Key,

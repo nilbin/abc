@@ -73,13 +73,13 @@ public sealed class ClaimsActorProvider : IActorProvider
         var db = http.RequestServices.GetRequiredService<ITamDb>().Db;
 
         var user = db.Set<TamUserEntity>().FirstOrDefault(
-            x => x.TenantId == tenant.Value && x.UserName == userName && x.Active);
+            x => x.UserName == userName && x.Active);
         if (user is null)
             return new Actor(userName, userName, new HashSet<string>());
 
         var roleNames = user.Roles();
         var grants = db.Set<RoleEntity>()
-            .Where(x => x.TenantId == tenant.Value && roleNames.Contains(x.Name))
+            .Where(x => roleNames.Contains(x.Name))
             .AsEnumerable()
             .SelectMany(x => x.Permissions())
             .ToHashSet();
@@ -108,7 +108,6 @@ public static class DefineUser
             return UserFindings.InvalidName.At(nameof(Input.UserName));
 
         var knownRoles = await tam.Db.Set<RoleEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value)
             .Select(x => x.Name)
             .ToListAsync(ct);
         var unknown = input.Roles.Where(r => !knownRoles.Contains(r)).ToList();
@@ -122,14 +121,14 @@ public static class DefineUser
         }
 
         var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.UserName == input.UserName, ct);
+            x => x.UserName == input.UserName, ct);
         if (user is null)
         {
             // Seat gate (docs/24): a NEW active user consumes a seat; reactivating or editing
             // an existing one does not. Over the plan's ceiling → a localized upsell.
             var subscription = await Subscriptions.ForAsync(tam.Db, context.TenantId.Value, ct);
             var activeUsers = await tam.Db.Set<TamUserEntity>()
-                .CountAsync(x => x.TenantId == context.TenantId.Value && x.Active, ct);
+                .CountAsync(x => x.Active, ct);
             if (activeUsers >= subscription.Seats)
                 return SubscriptionFindings.SeatLimit
                     .With(("seats", subscription.Seats)).At(nameof(Input.UserName));
@@ -164,7 +163,7 @@ public static class DeactivateUser
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
         var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.UserName == input.UserName, ct);
+            x => x.UserName == input.UserName, ct);
         if (user is null) return PipelineFindings.NotFound.Create();
 
         user.Active = false;   // deactivate, never delete — the audit trail references the actor
@@ -193,8 +192,7 @@ public static class UserList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var users = tam.Db.Set<TamUserEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value);
+        var users = tam.Db.Set<TamUserEntity>().AsQueryable();
         if (!string.IsNullOrWhiteSpace(query.Search))
             users = users.Where(x => x.UserName.Contains(query.Search!));
         return users.Select(x => new Result

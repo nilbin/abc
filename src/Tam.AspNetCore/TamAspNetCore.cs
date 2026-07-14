@@ -45,7 +45,7 @@ public class RoleActorProvider(
         var db = http.RequestServices.GetRequiredService<ITamDb>().Db;
 
         var role = db.Set<RoleEntity>().FirstOrDefault(
-            x => x.TenantId == tenant.Value && x.Name == name);
+            x => x.Name == name);
 
         return new Actor(
             name,

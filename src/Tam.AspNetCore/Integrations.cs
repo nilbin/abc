@@ -97,8 +97,7 @@ public static class IntegrationRunner
             var key = $"{integration.Id}:{integration.IdempotencyKey(row)}";
             var existing = inbox.Local.FirstOrDefault(x => x.Key == key)
                 ?? await inbox.FirstOrDefaultAsync(
-                    x => x.TenantId == context.TenantId.Value
-                        && x.IntegrationId == integration.Id && x.Key == key, ct);
+                    x => x.IntegrationId == integration.Id && x.Key == key, ct);
             if (existing is null)
             {
                 inbox.Add(new InboxRecord
@@ -120,8 +119,7 @@ public static class IntegrationRunner
         var policy = RetryPolicy.Resolve(context.Services);
         var nowIso = DateTimeOffset.UtcNow.ToString("O");
         var retryable = (await inbox
-            .Where(x => x.TenantId == context.TenantId.Value
-                && x.IntegrationId == integration.Id
+            .Where(x => x.IntegrationId == integration.Id
                 && (x.Status == InboxStatus.Pending
                     || (x.Status == InboxStatus.Failed
                         && (x.NextAttemptIso == null || string.Compare(x.NextAttemptIso, nowIso) <= 0))))
@@ -212,8 +210,7 @@ public static class PluginIntegrationRunner
             {
                 var key = $"{integration.Id}:{integration.Key(element)}";
                 var seen = inbox.Local.Any(x => x.Key == key)
-                    || await inbox.AnyAsync(x => x.TenantId == context.TenantId.Value
-                        && x.IntegrationId == integration.Id && x.Key == key, ct);
+                    || await inbox.AnyAsync(x => x.IntegrationId == integration.Id && x.Key == key, ct);
                 if (!seen)
                 {
                     inbox.Add(new InboxRecord
@@ -235,8 +232,7 @@ public static class PluginIntegrationRunner
         var policy = RetryPolicy.Resolve(context.Services);
         var nowIso = DateTimeOffset.UtcNow.ToString("O");
         var retryable = (await inbox
-            .Where(x => x.TenantId == context.TenantId.Value
-                && x.IntegrationId == integration.Id
+            .Where(x => x.IntegrationId == integration.Id
                 && (x.Status == InboxStatus.Pending
                     || (x.Status == InboxStatus.Failed
                         && (x.NextAttemptIso == null || string.Compare(x.NextAttemptIso, nowIso) <= 0))))

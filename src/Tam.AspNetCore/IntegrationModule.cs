@@ -33,7 +33,7 @@ public static class ScheduleIntegration
             return OutboundFindings.InvalidSpec.At(nameof(Input.Spec));
 
         var schedule = await tam.Db.Set<IntegrationScheduleEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.IntegrationId == input.IntegrationId, ct);
+            x => x.IntegrationId == input.IntegrationId, ct);
         if (schedule is null)
         {
             schedule = new IntegrationScheduleEntity
@@ -78,7 +78,7 @@ public static class RunIntegration
             integration, "manual", context, context.Services!, null, tam.Db, ct);
 
         var last = await tam.Db.Set<IntegrationRunEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value && x.IntegrationId == input.IntegrationId)
+            .Where(x => x.IntegrationId == input.IntegrationId)
             .OrderByDescending(x => x.RanAtIso).FirstOrDefaultAsync(ct);
         return new Output(input.IntegrationId, last?.Status ?? "ok");
     }
@@ -108,8 +108,7 @@ public static class IntegrationRunList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var runs = tam.Db.Set<IntegrationRunEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value);
+        var runs = tam.Db.Set<IntegrationRunEntity>().AsQueryable();
         if (query.IntegrationId is { Length: > 0 } id)
             runs = runs.Where(x => x.IntegrationId == id);
         return runs.Select(x => new Result

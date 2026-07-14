@@ -124,7 +124,7 @@ public static class ActivatePlugin
             return SubscriptionFindings.NotEntitled.With(("plugin", input.PluginId)).At(nameof(Input.PluginId));
 
         var existing = await tam.Db.Set<PluginActivationEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.PluginId == input.PluginId, ct);
+            x => x.PluginId == input.PluginId, ct);
         if (existing is null)
         {
             tam.Db.Add(new PluginActivationEntity
@@ -153,7 +153,7 @@ public static class DeactivatePlugin
             return PluginFindings.Unknown.With(("plugin", input.PluginId)).At(nameof(Input.PluginId));
 
         var existing = await tam.Db.Set<PluginActivationEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.PluginId == input.PluginId, ct);
+            x => x.PluginId == input.PluginId, ct);
         if (existing is not null) tam.Db.Remove(existing);
 
         // Deactivation hides, never deletes: the plugin's data outlives the switch, exactly
@@ -183,7 +183,6 @@ public static class PluginList
         // The compiled plugin list is model data; only the activation state lives in the
         // database. Small by construction, so an in-memory source is the honest shape here.
         var active = tam.Db.Set<PluginActivationEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value)
             .Select(x => x.PluginId)
             .ToHashSet();
 

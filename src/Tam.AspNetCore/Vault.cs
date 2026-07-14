@@ -76,7 +76,7 @@ public static class SetSetting
     {
         if (!IsKey(input.Key)) return VaultFindings.InvalidKey.At(nameof(Input.Key));
         var entity = await tam.Db.Set<TenantSettingEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.Key == input.Key, ct);
+            x => x.Key == input.Key, ct);
         if (entity is null)
         {
             entity = new TenantSettingEntity
@@ -109,7 +109,6 @@ public static class SettingList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
         tam.Db.Set<TenantSettingEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value)
             .Select(x => new Result { Key = x.Key, Value = x.Value });
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>
@@ -158,7 +157,6 @@ public static class SecretList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
         tam.Db.Set<TenantSecretEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value)
             .Select(x => new Result { Key = x.Key, IsSet = true });   // value never leaves the vault
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>

@@ -31,8 +31,7 @@ public static class RuleEvaluator
         string defaultCulture, CancellationToken ct)
     {
         var rules = await db.Set<AutomationRuleEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value
-                && x.OnOperation == operationId && !x.Retired)
+            .Where(x => x.OnOperation == operationId && !x.Retired)
             .ToListAsync(ct);
         if (rules.Count == 0) return [];
 
@@ -185,7 +184,7 @@ public static class DefineAutomationRule
             return RuleFindings.MissingMessage.At(nameof(Input.Messages));
 
         var rule = await tam.Db.Set<AutomationRuleEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.Name == input.Name, ct);
+            x => x.Name == input.Name, ct);
         if (rule is null)
         {
             rule = new AutomationRuleEntity
@@ -228,7 +227,7 @@ public static class RetireRule
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
         var rule = await tam.Db.Set<AutomationRuleEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == context.TenantId.Value && x.Name == input.Name, ct);
+            x => x.Name == input.Name, ct);
         if (rule is null) return PipelineFindings.NotFound.Create();
 
         rule.Retired = true;
@@ -255,8 +254,7 @@ public static class RuleList
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var rules = tam.Db.Set<AutomationRuleEntity>()
-            .Where(x => x.TenantId == context.TenantId.Value);
+        var rules = tam.Db.Set<AutomationRuleEntity>().AsQueryable();
         if (!string.IsNullOrWhiteSpace(query.Search))
             rules = rules.Where(x => x.Name.Contains(query.Search!));
         return rules.Select(x => new Result

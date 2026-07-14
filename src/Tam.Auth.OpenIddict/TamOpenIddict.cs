@@ -81,7 +81,7 @@ public static class TamOpenIddict
         if (request.IsPasswordGrantType())
         {
             var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-                x => x.TenantId == tenant.Value && x.UserName == request.Username && x.Active);
+                x => x.UserName == request.Username && x.Active);
             if (user is null || request.Password is null
                 || !TamPasswords.Verify(request.Password, user.PasswordHash))
                 return Deny();
@@ -95,7 +95,7 @@ public static class TamOpenIddict
             // Convention: a machine client acts as the SAME-NAMED framework user, so agents
             // and integrations get roles, permissions and an audit identity like any human.
             var user = await tam.Db.Set<TamUserEntity>().SingleOrDefaultAsync(
-                x => x.TenantId == tenant.Value && x.UserName == request.ClientId && x.Active);
+                x => x.UserName == request.ClientId && x.Active);
             if (user is null) return Deny();
 
             return SignIn(user.UserName, user.DisplayName, tenant.Value, request);
