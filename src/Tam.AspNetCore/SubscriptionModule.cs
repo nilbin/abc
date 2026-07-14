@@ -84,7 +84,7 @@ public static class CurrentSubscription
         var tenant = context.TenantId.Value;
         var subscription = tam.Db.Set<SubscriptionEntity>().Find(tenant)
             ?? new SubscriptionEntity { TenantId = tenant };
-        var used = tam.Db.Set<TamUserEntity>().Count(x => x.TenantId == tenant && x.Active);
+        var used = tam.Db.Set<TamUserEntity>().Count(x => x.Active);
 
         return new[]
         {

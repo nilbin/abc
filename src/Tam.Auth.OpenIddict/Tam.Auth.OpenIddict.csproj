@@ -4,6 +4,7 @@
     <ProjectReference Include="..\Tam.Core\Tam.Core.csproj" />
     <ProjectReference Include="..\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Tam.AspNetCore\Tam.AspNetCore.csproj" />
+    <ProjectReference Include="..\Tam.Compiler\Tam.Compiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <PropertyGroup>

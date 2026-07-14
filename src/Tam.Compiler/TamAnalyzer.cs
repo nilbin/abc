@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Tam.Compiler;
 
@@ -42,8 +43,12 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         "Operation '{0}' exposes enum member '{1}' as Change<T> — state transitions belong to an intent-specific operation (docs/03)",
         "Tam", DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+    public static readonly DiagnosticDescriptor Tam004 = Rule(
+        "TAM004", "Redundant tenant filter",
+        "Tenant scoping is automatic for ITenantScoped entities via the global query filter — remove this 'TenantId ==' predicate. For a deliberate cross-tenant read (a background job), chain .IgnoreQueryFilters() and this warning goes away.");
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [Tam001, Tam002, Tam003, L10n001, Edit001];
+        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -65,8 +70,40 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
             start.RegisterSymbolAction(
                 ctx => AnalyzeType(ctx, catalog, defaultCulture),
                 SymbolKind.NamedType);
+
+            // TAM004: a manual x.TenantId == … predicate is redundant now that isolation is a
+            // global query filter, and a forgotten one used to be the leak. Flag every copy so the
+            // DRY win can't regress; a deliberate cross-tenant read declares .IgnoreQueryFilters().
+            start.RegisterOperationAction(AnalyzeTenantFilter, OperationKind.Binary);
         });
     }
+
+    private static void AnalyzeTenantFilter(OperationAnalysisContext context)
+    {
+        var binary = (IBinaryOperation)context.Operation;
+        if (binary.OperatorKind != BinaryOperatorKind.Equals) return;
+
+        var prop = TenantIdProperty(binary.LeftOperand) ?? TenantIdProperty(binary.RightOperand);
+        if (prop is null) return;
+        if (!prop.ContainingType.AllInterfaces.Any(i =>
+                i.ToDisplayString() == "Tam.EntityFrameworkCore.ITenantScoped"))
+            return;
+
+        var syntax = binary.Syntax;
+        // Only a query predicate (inside a lambda) — never a plain business comparison.
+        if (!syntax.Ancestors().Any(a => a is Microsoft.CodeAnalysis.CSharp.Syntax.LambdaExpressionSyntax))
+            return;
+        // A deliberate cross-tenant read opts out with .IgnoreQueryFilters() somewhere in the chain.
+        if (syntax.Ancestors()
+            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax>()
+            .Any(inv => inv.ToString().Contains("IgnoreQueryFilters")))
+            return;
+
+        context.ReportDiagnostic(Diagnostic.Create(Tam004, syntax.GetLocation()));
+    }
+
+    private static IPropertySymbol? TenantIdProperty(IOperation operation) =>
+        operation is IPropertyReferenceOperation { Property.Name: "TenantId" } p ? p.Property : null;
 
     private static void AnalyzeType(
         SymbolAnalysisContext context, HashSet<string>? catalog, string defaultCulture)

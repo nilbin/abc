@@ -81,7 +81,7 @@ public static class SetSetting
         {
             entity = new TenantSettingEntity
             {
-                Id = Guid.NewGuid(), TenantId = context.TenantId.Value, Key = input.Key,
+                Id = Guid.NewGuid(), Key = input.Key,
             };
             tam.Db.Add(entity);
         }

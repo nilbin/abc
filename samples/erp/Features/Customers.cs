@@ -19,8 +19,7 @@ public static class CreateCustomer
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
-        var exists = await db.Customers.AnyAsync(
-            x => x.Name == input.Name && x.TenantId == context.TenantId.Value, ct);
+        var exists = await db.Customers.AnyAsync(x => x.Name == input.Name, ct);
         if (exists)
             return Finding.Error("customers.duplicate-name").At(nameof(Input.Name));
 

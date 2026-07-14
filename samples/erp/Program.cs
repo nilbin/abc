@@ -167,6 +167,9 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
         options.UseNpgsql(connectionString);
     else
         options.UseSqlite(connectionString);
+    // Auto-stamp TenantId on inserted ITenantScoped rows from the ambient tenant (write-side mirror
+    // of the global read filter) — so operation code never assigns TenantId by hand.
+    options.AddInterceptors(new Tam.EntityFrameworkCore.TenantStampInterceptor());
 });
 builder.Services.AddTam<ErpDbContext>(model, integrations =>
 {

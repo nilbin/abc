@@ -190,7 +190,6 @@ public static class DefineAutomationRule
             rule = new AutomationRuleEntity
             {
                 Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,
                 Name = input.Name,
             };
             tam.Db.Add(rule);

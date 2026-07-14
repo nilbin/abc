@@ -136,7 +136,6 @@ public static class DefineUser
             user = new TamUserEntity
             {
                 Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,
                 UserName = input.UserName,
             };
             tam.Db.Add(user);

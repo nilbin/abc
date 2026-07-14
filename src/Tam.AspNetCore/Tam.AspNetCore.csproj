@@ -3,6 +3,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Tam.Core\Tam.Core.csproj" />
     <ProjectReference Include="..\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
+    <!-- The framework dogfoods its own analyzer: TAM004 guards the tenant-filter DRY rule here too. -->
+    <ProjectReference Include="..\Tam.Compiler\Tam.Compiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <PropertyGroup>

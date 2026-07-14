@@ -103,7 +103,6 @@ public static class IntegrationRunner
                 inbox.Add(new InboxRecord
                 {
                     Id = Guid.NewGuid(),
-                    TenantId = context.TenantId.Value,
                     IntegrationId = integration.Id,
                     Key = key,
                     PayloadJson = JsonSerializer.Serialize(row, TamJson.Options),
@@ -216,7 +215,6 @@ public static class PluginIntegrationRunner
                     inbox.Add(new InboxRecord
                     {
                         Id = Guid.NewGuid(),
-                        TenantId = context.TenantId.Value,
                         IntegrationId = integration.Id,
                         Key = key,
                         PayloadJson = element.GetRawText(),

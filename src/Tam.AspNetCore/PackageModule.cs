@@ -70,7 +70,7 @@ public static class InstallPackage
 
         var tenant = context.TenantId.Value;
         var installed = await tam.Db.Set<PackageInstallationEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == tenant && x.Package == document.Package, ct);
+            x => x.Package == document.Package, ct);
         if (installed is not null && document.Version < installed.Version)
             return PackageFindings.OlderVersion
                 .With(("installed", installed.Version), ("offered", document.Version))
@@ -79,7 +79,6 @@ public static class InstallPackage
         // ---- validate everything first: all findings or all applied, never halfway ----
         var findings = new List<Finding>();
         var existingFields = await tam.Db.Set<ExtensionFieldEntity>()
-            .Where(x => x.TenantId == tenant)
             .ToListAsync(ct);
         var toAdd = new List<ExtensionFieldEntity>();
 
@@ -149,7 +148,6 @@ public static class InstallPackage
 
         var roleSpecs = document.Roles ?? [];
         var existingRoles = await tam.Db.Set<RoleEntity>()
-            .Where(x => x.TenantId == tenant)
             .ToListAsync(ct);
         foreach (var role in roleSpecs)
         {
@@ -175,7 +173,7 @@ public static class InstallPackage
         foreach (var role in roleSpecs)
         {
             var entity = await tam.Db.Set<RoleEntity>().SingleOrDefaultAsync(
-                x => x.TenantId == tenant && x.Name == role.Name, ct);
+                x => x.Name == role.Name, ct);
             if (entity is null)
             {
                 entity = new RoleEntity { Id = Guid.NewGuid(), TenantId = tenant, Name = role.Name };
@@ -220,12 +218,12 @@ public static class UninstallPackage
     {
         var tenant = context.TenantId.Value;
         var installed = await tam.Db.Set<PackageInstallationEntity>().SingleOrDefaultAsync(
-            x => x.TenantId == tenant && x.Package == input.Package, ct);
+            x => x.Package == input.Package, ct);
         if (installed is null)
             return PackageFindings.NotInstalled.With(("package", input.Package)).At(nameof(Input.Package));
 
         var fields = await tam.Db.Set<ExtensionFieldEntity>()
-            .Where(x => x.TenantId == tenant && x.Package == input.Package
+            .Where(x => x.Package == input.Package
                 && x.State != ExtensionFieldState.Retired)
             .ToListAsync(ct);
         foreach (var field in fields) field.State = ExtensionFieldState.Retired;

@@ -39,7 +39,6 @@ public static class ScheduleIntegration
             schedule = new IntegrationScheduleEntity
             {
                 Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,
                 IntegrationId = input.IntegrationId,
             };
             tam.Db.Add(schedule);
@@ -154,14 +153,14 @@ public static class DeadLetterList
     {
         var tenant = context.TenantId.Value;
         var inbound = query.Kind == "outbound" ? [] : tam.Db.Set<InboxRecord>()
-            .Where(x => x.TenantId == tenant && x.Status == InboxStatus.Dead)
+            .Where(x => x.Status == InboxStatus.Dead)
             .Select(x => new Result
             {
                 Id = x.Id, Kind = "inbound", IntegrationId = x.IntegrationId,
                 Reference = x.Key, Attempts = x.Attempts, LastError = x.LastError,
             }).ToList();
         var outbound = query.Kind == "inbound" ? [] : tam.Db.Set<OutboundTaskEntity>()
-            .Where(x => x.TenantId == tenant && x.Status == InboxStatus.Dead)
+            .Where(x => x.Status == InboxStatus.Dead)
             .Select(x => new Result
             {
                 Id = x.Id, Kind = "outbound", IntegrationId = x.IntegrationId,
@@ -196,7 +195,7 @@ public static class RequeueDeadLetter
         var tenant = context.TenantId.Value;
 
         var inbox = await tam.Db.Set<InboxRecord>().SingleOrDefaultAsync(
-            x => x.Id == input.Id && x.TenantId == tenant, ct);
+            x => x.Id == input.Id, ct);
         if (inbox is not null)
         {
             inbox.Status = InboxStatus.Pending;
@@ -207,7 +206,7 @@ public static class RequeueDeadLetter
         }
 
         var task = await tam.Db.Set<OutboundTaskEntity>().SingleOrDefaultAsync(
-            x => x.Id == input.Id && x.TenantId == tenant, ct);
+            x => x.Id == input.Id, ct);
         if (task is not null)
         {
             task.Status = InboxStatus.Failed;

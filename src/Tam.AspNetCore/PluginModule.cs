@@ -130,7 +130,6 @@ public static class ActivatePlugin
             tam.Db.Add(new PluginActivationEntity
             {
                 Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,
                 PluginId = input.PluginId,
             });
         }

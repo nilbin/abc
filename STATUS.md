@@ -27,7 +27,7 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              81 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              82 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy
 ```
@@ -73,8 +73,13 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 - **MCP**: 15 tools generated from the model; `*_resolve` preflight returns missing/required/options/
   warnings for partial input — agents hit the identical pipeline.
 - **Build-time diagnostics**: the analyzer turns a missing [Authorize], missing Execute, a
-  label key absent from sv.json, or an enum exposed via Change<T> (EDIT001 — state transitions
-  belong to intent operations) into compiler errors (all verified with negative-test operations).
+  label key absent from sv.json, an enum exposed via Change<T> (EDIT001 — state transitions
+  belong to intent operations), or a manual `TenantId ==` filter (TAM004 — tenant scoping is the
+  global query filter's job; use `IgnoreQueryFilters()` for a deliberate cross-tenant read) into
+  compiler errors. TAM004 immediately caught a real straggler the regex sweep missed, and the
+  framework projects dogfood it. Tenant assignment is likewise automatic — a `SaveChanges`
+  interceptor stamps `TenantId` on inserted `ITenantScoped` rows from the ambient tenant, so
+  operations never write it by hand (verified on the wire for framework and domain entities).
 - **Authorization (D1, first layer)**: role-based actors (admin/dispatcher/viewer via X-Demo-Role),
   pipeline 403s with localized findings, actor permissions in the manifest overlay, and the UI
   hides ungranted actions (verified: viewer sees no create/complete/custom-fields surfaces).

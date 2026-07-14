@@ -22,7 +22,10 @@ public class TenantIsolationTests : IDisposable
     {
         _conn = new SqliteConnection("DataSource=:memory:");
         _conn.Open();
-        _options = new DbContextOptionsBuilder<ErpDbContext>().UseSqlite(_conn).Options;
+        _options = new DbContextOptionsBuilder<ErpDbContext>()
+            .UseSqlite(_conn)
+            .AddInterceptors(new TenantStampInterceptor())
+            .Options;
 
         // Seed rows for two tenants (Add is never filtered).
         var scope = new TenantScope();
@@ -64,6 +67,23 @@ public class TenantIsolationTests : IDisposable
         Assert.Empty(none.Customers.ToList());
         Assert.Equal(3, none.Customers.IgnoreQueryFilters().Count());   // background/janitor path
     }
+
+    [Fact]
+    public void TenantId_is_auto_stamped_on_insert_from_the_ambient_scope()
+    {
+        using (var a = For("a"))
+        {
+            a.Customers.Add(BlankTenant("Stamp Me AB"));   // no TenantId set on the new row
+            a.SaveChanges();
+        }
+        using var read = For("a");
+        var stamped = read.Customers.AsEnumerable().Single(c => c.Name.Value == "Stamp Me AB");
+        Assert.Equal("a", stamped.TenantId);   // filled by the interceptor, not the caller
+    }
+
+    // A customer built with a blank tenant — the interceptor must fill it at save time.
+    private static Customer BlankTenant(string name) =>
+        Customer.Create("", new(name), new("Road"), null, null);
 
     public void Dispose() => _conn.Dispose();
 }

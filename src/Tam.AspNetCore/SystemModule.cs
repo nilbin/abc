@@ -101,7 +101,6 @@ public static class DefineExtensionField
         var entity = new ExtensionFieldEntity
         {
             Id = Guid.NewGuid(),
-            TenantId = context.TenantId.Value,
             Entity = input.Entity,
             Key = input.Key,
             Type = input.Type,
@@ -234,7 +233,6 @@ public static class DefineRole
             role = new RoleEntity
             {
                 Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,
                 Name = input.Name,
             };
             tam.Db.Add(role);
