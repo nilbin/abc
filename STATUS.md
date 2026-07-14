@@ -176,6 +176,17 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   Verified: entitled activation succeeds, free plan blocks it, seats=5 blocks the 6th user,
   raising seats admits it, non-admin cannot set-plan (403).
 
+- **Plugin-shipped integration (docs/10 + docs/22)**: the Fortnox order import moved out of the
+  sample into its own `fortnox` plugin — proving a plugin ships integrations, not just fields
+  and gates. `PluginBuilder.Integration(id, operationId, key, map)`: the framework maps
+  `POST /api/integrations/fortnox.orders.import`, gated by activation + entitlement; each array
+  element is stored in the inbox under its document number and mapped to `orders.create` wire
+  input, re-run per retry. The mapper resolves the vendor customer name through the host's
+  `customers.lookup` VIEW as the actor — never a host table, no host CLR types. Verified: 404
+  while inactive, a two-row batch (one known customer created, one unknown failed), then
+  creating the missing customer recovers the failed row from the inbox with no re-send, and
+  reposting is idempotent (no duplicate orders).
+
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
 ## Gaps vs. the design docs (deliberate, in rough priority order)

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Tam.Core\Tam.Core.csproj" />
+    <ProjectReference Include="..\..\src\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Tam.AspNetCore\Tam.AspNetCore.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TamDefaultCulture>sv</TamDefaultCulture>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="locales/*.json" />
+    <AdditionalFiles Include="locales/**/*.json" />
+    <CompilerVisibleProperty Include="TamDefaultCulture" />
+  </ItemGroup>
+
+</Project>

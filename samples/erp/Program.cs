@@ -13,6 +13,7 @@ var model = new TamModelBuilder()
     .AddDiscovered()   // compile-time discovery from Tam.Compiler — no runtime assembly scan
     .AddTamSystem()    // framework operations/views: custom fields, roles, audit, plugins
     .AddPlugin<Inspect.InspectionPlugin>()   // compiled in; each tenant activates at runtime (docs/22)
+    .AddPlugin<Fortnox.FortnoxPlugin>()      // a plugin that ships an inbound integration (docs/10 + docs/22)
 
     .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
     {
@@ -181,7 +182,6 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapTamAuth();
 app.MapTam();
-Erp.Integrations.ImportFortnoxOrders.Map(app, model);
 app.MapFallbackToFile("index.html");
 
 using (var scope = app.Services.CreateScope())

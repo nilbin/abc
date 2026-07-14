@@ -170,3 +170,103 @@ public static class IntegrationRunner
         return results;
     }
 }
+
+/// <summary>
+/// Runs a plugin-shipped integration (docs/22): the handler maps the raw payload to wire rows,
+/// which are persisted to the same inbox and processed through the target operation with the
+/// identical idempotency/retry/dead-letter semantics as authored integrations. Wire-only —
+/// the framework never sees the plugin's vendor types.
+/// </summary>
+public static class PluginIntegrationRunner
+{
+    public static async Task<IReadOnlyList<IntegrationRowResult>> RunAsync(
+        PluginIntegrationDefinition integration,
+        System.Text.Json.JsonElement payload,
+        OperationExecutor executor,
+        OperationContext context,
+        Microsoft.EntityFrameworkCore.DbContext db,
+        CancellationToken ct)
+    {
+        var inbox = db.Set<InboxRecord>();
+
+        // 1. Receive: persist each unseen SOURCE row under its key. Storing the source (not the
+        //    mapped input) is what lets step 2 re-map on retry and recover late-fixed rows.
+        if (payload.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var element in payload.EnumerateArray())
+            {
+                var key = $"{integration.Id}:{integration.Key(element)}";
+                var seen = inbox.Local.Any(x => x.Key == key)
+                    || await inbox.AnyAsync(x => x.TenantId == context.TenantId.Value
+                        && x.IntegrationId == integration.Id && x.Key == key, ct);
+                if (!seen)
+                {
+                    inbox.Add(new InboxRecord
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantId = context.TenantId.Value,
+                        IntegrationId = integration.Id,
+                        Key = key,
+                        PayloadJson = element.GetRawText(),
+                        ReceivedAt = DateTimeOffset.UtcNow,
+                    });
+                }
+            }
+            await db.SaveChangesAsync(ct);
+        }
+
+        // 2. Process everything retryable, oldest first — re-mapping each from its stored source.
+        var retryable = (await inbox
+            .Where(x => x.TenantId == context.TenantId.Value
+                && x.IntegrationId == integration.Id
+                && (x.Status == InboxStatus.Pending || x.Status == InboxStatus.Failed))
+            .ToListAsync(ct))
+            .OrderBy(x => x.ReceivedAt)
+            .ToList();
+
+        var results = new List<IntegrationRowResult>();
+        foreach (var record in retryable)
+        {
+            var sourceRow = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(record.PayloadJson);
+            var input = await integration.Map(sourceRow, context.Services, context, ct);
+            var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
+
+            var rowContext = new OperationContext
+            {
+                Actor = context.Actor,
+                TenantId = context.TenantId,
+                Source = InvocationSource.Integration,
+                Culture = context.Culture,
+                IdempotencyKey = record.Key,
+                CorrelationId = context.CorrelationId,
+                Services = context.Services,
+            };
+
+            var response = await executor.ExecuteAsync(integration.OperationId, body, rowContext, ct);
+            var failed = response.Findings.Any(f => f.Severity == FindingSeverity.Error);
+            var replayed = response.Findings.Any(f => f.Code == PipelineFindings.IdempotentReplay.Code);
+
+            if (failed)
+            {
+                record.Attempts++;
+                record.Status = record.Attempts >= IntegrationRunner.MaxAttempts ? InboxStatus.Dead : InboxStatus.Failed;
+                record.LastError = string.Join(", ", response.Findings
+                    .Where(f => f.Severity == FindingSeverity.Error).Select(f => f.Code).Distinct());
+            }
+            else
+            {
+                record.Status = InboxStatus.Processed;
+                record.ProcessedAt = DateTimeOffset.UtcNow;
+                record.LastError = null;
+            }
+
+            results.Add(new IntegrationRowResult(
+                record.Key,
+                record.Status == InboxStatus.Dead ? "dead" : failed ? "failed"
+                    : replayed ? "replayed" : "created",
+                response.Findings));
+        }
+        await db.SaveChangesAsync(ct);
+        return results;
+    }
+}

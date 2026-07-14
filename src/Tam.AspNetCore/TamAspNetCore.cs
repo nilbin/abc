@@ -131,6 +131,24 @@ public static class TamAspNetCore
             return Results.Json(manifest, TamJson.Options);
         });
 
+        // Plugin-shipped inbound integrations (docs/22): activation-gated, inbox-idempotent.
+        app.MapPost("/api/integrations/{integrationId}", async (
+            string integrationId, HttpContext http, OperationExecutor executor,
+            ITamDb tam, CancellationToken ct) =>
+        {
+            if (!model.Integrations.TryGetValue(integrationId, out var integration))
+                return Results.NotFound();
+
+            var context = BuildContext(http, model);
+            var active = await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct);
+            if (!active.Contains(integration.PluginId))
+                return Results.NotFound();   // inactive plugin → the integration does not exist
+
+            var payload = await JsonSerializer.DeserializeAsync<JsonElement>(http.Request.Body, TamJson.Options, ct);
+            var results = await PluginIntegrationRunner.RunAsync(integration, payload, executor, context, tam.Db, ct);
+            return Results.Json(new { results }, TamJson.Options);
+        });
+
         app.MapPost("/api/mcp", McpEndpoint.Handle);
 
         app.MapGet("/api/events", (HttpContext http, EffectBroadcaster broadcaster, CancellationToken ct) =>

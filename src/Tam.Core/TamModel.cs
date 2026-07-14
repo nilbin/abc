@@ -41,6 +41,10 @@ public sealed class TamModel
     /// <summary>Plugin effect subscribers by event type (docs/22 P2).</summary>
     public IReadOnlyList<SubscriberDefinition> Subscribers { get; init; } = [];
 
+    /// <summary>Plugin-shipped inbound integrations by id (docs/10 + docs/22).</summary>
+    public IReadOnlyDictionary<string, PluginIntegrationDefinition> Integrations { get; init; } =
+        new Dictionary<string, PluginIntegrationDefinition>();
+
     public IReadOnlyList<string> Permissions =>
         Operations.Values.Select(o => o.Permission)
             .Concat(Views.Values.Select(v => v.Permission))
@@ -64,6 +68,7 @@ public sealed class TamModelBuilder
     private readonly List<(string EntityKey, string Key, string Type, bool Required, int? MaxLength, IReadOnlyList<string>? Options, string Plugin)> packagedFields = [];
     private readonly List<GateDefinition> gates = [];
     private readonly List<SubscriberDefinition> subscribers = [];
+    private readonly List<(string Id, string OperationId, IntegrationKeySelector Key, IntegrationRowMapper Map, string Plugin)> integrations = [];
     private readonly LocaleCatalogsBuilder locales = new();
     private string defaultCulture = "en";
     private string? currentPlugin;
@@ -175,6 +180,14 @@ public sealed class TamModelBuilder
         subscribers.Add(new SubscriberDefinition(eventType, currentPlugin, handler));
     }
 
+    internal void Integration(
+        string id, string operationId, IntegrationKeySelector key, IntegrationRowMapper map)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: integrations can only be declared by a plugin.");
+        integrations.Add((id, operationId, key, map, currentPlugin));
+    }
+
     public TamModelBuilder Form<TInput>(string id, string operationId, Action<FormBuilder<TInput>> configure)
     {
         var builder = new FormBuilder<TInput>();
@@ -270,6 +283,15 @@ public sealed class TamModelBuilder
             if (!operations.ContainsKey(gate.OperationId))
                 throw new InvalidOperationException(
                     $"PLG002: plugin '{gate.PluginId}' gates unknown operation '{gate.OperationId}'.");
+        foreach (var integration in integrations)
+        {
+            if (!operations.ContainsKey(integration.OperationId))
+                throw new InvalidOperationException(
+                    $"INT002: integration '{integration.Id}' targets unknown operation '{integration.OperationId}'.");
+            if (!integration.Id.StartsWith(integration.Plugin + ".", StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"PLG001: integration '{integration.Id}' is not under '{integration.Plugin}.'.");
+        }
         var duplicateGate = gates.GroupBy(g => (g.OperationId, g.PluginId))
             .FirstOrDefault(g => g.Count() > 1);
         if (duplicateGate is not null)
@@ -291,6 +313,9 @@ public sealed class TamModelBuilder
             Gates = gates.GroupBy(g => g.OperationId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<GateDefinition>)g.ToList()),
             Subscribers = subscribers,
+            Integrations = integrations.ToDictionary(
+                i => i.Id,
+                i => new PluginIntegrationDefinition(i.Id, i.Plugin, i.OperationId, i.Key, i.Map)),
         };
 
         VerifyPluginNamespaces(model);

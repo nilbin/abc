@@ -3,6 +3,7 @@
   <Folder Name="/samples/erp/">
     <Project Path="samples/erp/Erp.csproj" />
     <Project Path="samples/inspect/Inspect.csproj" />
+    <Project Path="samples/fortnox/Fortnox.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Tam.AspNetCore/Tam.AspNetCore.csproj" />

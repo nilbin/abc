@@ -59,6 +59,30 @@ public delegate Task EffectSubscriber(EffectEvent effect, IServiceProvider servi
 /// outbox after the operation's transaction, never by patching host handlers.</summary>
 public sealed record SubscriberDefinition(string EventType, string PluginId, EffectSubscriber Handler);
 
+/// <summary>The stable idempotency key of one source row (e.g. the vendor's document number).
+/// Cheap and pure over the source — computed at receive time to dedupe.</summary>
+public delegate string IntegrationKeySelector(System.Text.Json.JsonElement sourceRow);
+
+/// <summary>
+/// Maps one external source row to the target operation's wire input (member wire names →
+/// values). Re-run on every retry with fresh services, so external-identity resolution against
+/// host VIEWS (the actor's permissions) is re-evaluated — a row that failed because a customer
+/// didn't exist yet recovers once it does, with no re-send. No host CLR types.
+/// </summary>
+public delegate Task<IReadOnlyDictionary<string, object?>> IntegrationRowMapper(
+    System.Text.Json.JsonElement sourceRow, IServiceProvider services, OperationContext context, CancellationToken ct);
+
+/// <summary>
+/// A plugin-shipped inbound integration (docs/10 + docs/22): an external system posts a JSON
+/// array to <c>/api/integrations/{id}</c>; each element is stored in the inbox under its key,
+/// then mapped and run through the target host operation with idempotency + retry + dead-letter
+/// — activation-gated like every plugin surface. The SOURCE is stored and the mapper re-runs on
+/// retry, so a fixed root cause (a customer created later) recovers automatically.
+/// </summary>
+public sealed record PluginIntegrationDefinition(
+    string Id, string PluginId, string OperationId,
+    IntegrationKeySelector Key, IntegrationRowMapper Map);
+
 /// <summary>
 /// The plugin's registration surface. <see cref="Model"/> is the host's model builder in
 /// plugin scope: everything registered through it is tagged with the plugin id, so the
@@ -112,6 +136,18 @@ public sealed class PluginBuilder
     public PluginBuilder OnEffect(string eventType, EffectSubscriber handler)
     {
         Model.OnEffect(eventType, handler);
+        return this;
+    }
+
+    /// <summary>
+    /// Ships an inbound integration (docs/10) targeting a host operation. Mapped to
+    /// <c>POST /api/integrations/{Id}.{id}</c>, activation-gated, inbox-idempotent. The id is
+    /// namespaced under the plugin (PLG001); the target operation is a host wire id.
+    /// </summary>
+    public PluginBuilder Integration(
+        string id, string operationId, IntegrationKeySelector key, IntegrationRowMapper map)
+    {
+        Model.Integration($"{Id}.{id}", operationId, key, map);
         return this;
     }
 }

@@ -119,6 +119,7 @@
       "inspect.labels.checklist-id": "Checklista",
       "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
       "inspect.checklist-incomplete": "Ordern har en checklista som inte \u00E4r godk\u00E4nd.",
+      "plugins.fortnox.title": "Fortnox",
       "app.title": "Norrservice ERP",
       "nav.orders": "Ordrar",
       "nav.customers": "Kunder",
@@ -283,6 +284,7 @@
       "inspect.labels.checklist-id": "Checklist",
       "ext.inspect.requiresInspection": "Requires inspection",
       "inspect.checklist-incomplete": "The order has an unpassed checklist.",
+      "plugins.fortnox.title": "Fortnox",
       "app.title": "Norrservice ERP",
       "nav.orders": "Orders",
       "nav.customers": "Customers",
@@ -2692,6 +2694,7 @@
   "revision": 0,
   "actorPermissions": [],
   "plugins": [
+    "fortnox",
     "inspect"
   ]
 }
