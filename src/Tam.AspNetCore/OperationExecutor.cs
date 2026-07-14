@@ -116,6 +116,21 @@ public sealed class OperationExecutor(
                 conflicts.Count > 0 ? conflicts : null);
         }
 
+        // Outbox (docs/09): explicit event effects persist in this same transaction —
+        // the event exists if and only if the operation committed.
+        foreach (var effect in result.Effects.OfType<EventPublished>())
+        {
+            db.Add(new OutboxRecord
+            {
+                Id = Guid.NewGuid(),
+                TenantId = context.TenantId.Value,
+                OperationId = operationId,
+                EventType = effect.Event,
+                PayloadJson = JsonSerializer.Serialize(effect.Payload, TamJson.Options),
+                CreatedAtIso = DateTimeOffset.UtcNow.ToString("O"),
+            });
+        }
+
         var audit = TamAudit.Capture(db, context, operationId);
         await db.SaveChangesAsync(ct);
 

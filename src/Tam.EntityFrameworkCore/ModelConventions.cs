@@ -50,6 +50,12 @@ public static class TamModelConventions
             b.HasIndex(x => new { x.TenantId, x.IntegrationId, x.Key }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.Status });
         });
+        modelBuilder.Entity<OutboxRecord>(b =>
+        {
+            b.ToTable("outbox");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.DispatchedAtIso);
+        });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes().ToList())
         {
@@ -117,6 +123,18 @@ public sealed class InboxRecord
     public string? LastError { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }
     public DateTimeOffset? ProcessedAt { get; set; }
+}
+
+/// <summary>Outbox row: an explicit event effect, persisted in the operation's transaction (docs/09).</summary>
+public sealed class OutboxRecord
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string OperationId { get; set; } = "";
+    public string EventType { get; set; } = "";
+    public string PayloadJson { get; set; } = "";
+    public string CreatedAtIso { get; set; } = "";
+    public string? DispatchedAtIso { get; set; }
 }
 
 /// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>

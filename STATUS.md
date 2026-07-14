@@ -116,7 +116,9 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 8. **Integrations**: mapping binding (INT001 validation), idempotent runner, and a persisted
    inbox with retry + dead-letter (3 attempts) exist — failed-sync recovery verified: a row that
    failed on a missing customer processed automatically after the customer was created, with no
-   re-send. Outbox dispatch and reconciliation remain. Also not started: offline/mobile.
+   re-send. Outbox implemented: explicit event effects persist in the operation transaction and a
+   background dispatcher delivers them (SSE transport in the demo; IOutboxTransport for a real
+   bus). Reconciliation remains. Also not started: offline/mobile.
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
    per-tenant and include extension fields with admin-authored descriptions.
 10. **PostgreSQL supported and CI-smoked**: connection-string switch (Host=… → Npgsql), real

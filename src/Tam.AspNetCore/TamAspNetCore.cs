@@ -41,6 +41,12 @@ public static class TamAspNetCore
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
         services.AddSingleton<EffectBroadcaster>();
+        services.AddSingleton<IOutboxTransport>(sp =>
+            new BroadcasterOutboxTransport(sp.GetRequiredService<EffectBroadcaster>()));
+        services.AddHostedService(sp => new OutboxDispatcher(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            s => s.GetRequiredService<TDbContext>(),
+            sp.GetRequiredService<IOutboxTransport>()));
         return services;
     }
 
