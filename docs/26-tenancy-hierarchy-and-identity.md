@@ -132,10 +132,17 @@ node; roll-up is the Part-A inherited scope).
 - **Analyzer:** `Account` is deliberately *not* `ITenantScoped`, so TAM004 won't (and shouldn't)
   flag identity lookups; membership lookups stay scoped.
 
-## Open decisions
+## Decisions (settled)
 
-- **D-H1** default hierarchy scope: strict vs inherited — *recommend strict, inherited opt-in.*
-- **D-H2** account ownership: Option 1 / 2 / 3 — *recommend Option 1 (platform-global + memberships).*
-- **D-H3** active-tenant selection mechanism (subdomain / path / in-app switcher) — deferred until
-  D-H2 lands; the PKCE flow will surface it (a login can land on a tenant picker when the account has
-  several memberships).
+- **D-H1 — default hierarchy scope: INHERITED.** A request scoped to a tenant sees its own rows and
+  its descendants' by default; a resource/view opts into strict. Note the exposure caveat: inherited
+  default means a parent-node membership rolls up unless narrowed — which the row-scope model
+  ([docs/27](27-authorization-model.md)) makes explicit as the `subtree` scope, so a sensitive
+  resource can carry `own`/`all`-strict while the default stays inherited.
+- **D-H2 — account ownership: Option 1 (platform-global `Account` + `TenantMembership`).** Global
+  identity, access via memberships; the only model that supports a user across unrelated tenants.
+- **D-H3** active-tenant selection (subdomain / path / in-app switcher) — deferred; the PKCE flow
+  surfaces it (login lands on a tenant picker when the account has several memberships).
+
+The membership row carries **both** authorization axes — capability (roles) and data scope (access
+policies) — designed in [docs/27](27-authorization-model.md).
