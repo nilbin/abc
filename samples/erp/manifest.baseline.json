@@ -101,6 +101,15 @@
       "extensions.unknown-entity": "Ok\u00E4nd entitet: {entity}.",
       "packages.role-conflict": "Rollen {role} finns redan med andra beh\u00F6righeter.",
       "rules.evaluation-failed": "Regeln {rule} kunde inte utv\u00E4rderas och hoppades \u00F6ver.",
+      "operations.subscriptions.set-plan.title": "Ange abonnemang",
+      "labels.plan": "Abonnemang",
+      "labels.seats": "Platser",
+      "labels.seats-used": "Anv\u00E4nda platser",
+      "labels.status": "Status",
+      "labels.entitlements": "R\u00E4ttigheter",
+      "subscriptions.not-entitled": "Ditt abonnemang omfattar inte till\u00E4gget {plugin}. Uppgradera f\u00F6r att aktivera det.",
+      "subscriptions.seat-limit": "Platsgr\u00E4nsen ({seats}) \u00E4r n\u00E5dd. Uppgradera f\u00F6r fler platser.",
+      "labels.renews-at": "F\u00F6rnyas",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -131,7 +140,6 @@
       "labels.estimated-total": "Uppskattat belopp",
       "labels.order-id": "Order",
       "labels.number": "Ordernummer",
-      "labels.status": "Status",
       "labels.extensions": "Anpassade f\u00E4lt",
       "labels.active-only": "Endast aktiva",
       "enums.service": "Service",
@@ -257,6 +265,15 @@
       "extensions.unknown-entity": "Unknown entity: {entity}.",
       "packages.role-conflict": "The role {role} already exists with different permissions.",
       "rules.evaluation-failed": "The rule {rule} could not be evaluated and was skipped.",
+      "operations.subscriptions.set-plan.title": "Set subscription",
+      "labels.plan": "Plan",
+      "labels.seats": "Seats",
+      "labels.seats-used": "Seats used",
+      "labels.status": "Status",
+      "labels.entitlements": "Entitlements",
+      "subscriptions.not-entitled": "Your plan does not include the {plugin} plugin. Upgrade to enable it.",
+      "subscriptions.seat-limit": "The seat limit ({seats}) is reached. Upgrade for more seats.",
+      "labels.renews-at": "Renews",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -287,7 +304,6 @@
       "labels.estimated-total": "Estimated total",
       "labels.order-id": "Order",
       "labels.number": "Order number",
-      "labels.status": "Status",
       "labels.extensions": "Custom fields",
       "labels.active-only": "Active only",
       "enums.service": "Service",
@@ -1068,6 +1084,78 @@
       ],
       "gatedBy": []
     },
+    "subscriptions.set-plan": {
+      "permission": "subscriptions.manage",
+      "titleKey": "operations.subscriptions.set-plan.title",
+      "fields": [
+        {
+          "name": "plan",
+          "labelKey": "labels.plan",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "seats",
+          "labelKey": "labels.seats",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "entitlements",
+          "labelKey": "labels.entitlements",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "renewsAtIso",
+          "labelKey": "labels.renews-at",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "plan",
+          "labelKey": "labels.plan",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "seats",
+          "labelKey": "labels.seats",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
     "inspect.checklists.create": {
       "permission": "inspect.checklists.manage",
       "titleKey": "operations.inspect.checklists.create.title",
@@ -1581,6 +1669,60 @@
       ],
       "filterable": [],
       "defaultSort": "userName",
+      "defaultSortDescending": false
+    },
+    "subscriptions.current": {
+      "permission": "subscriptions.read",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "plan",
+          "labelKey": "labels.plan",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "seats",
+          "labelKey": "labels.seats",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "seatsUsed",
+          "labelKey": "labels.seats-used",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "entitlements",
+          "labelKey": "labels.entitlements",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
       "defaultSortDescending": false
     },
     "extensions.fields": {
@@ -2543,6 +2685,8 @@
     "plugins.manage",
     "roles.manage",
     "rules.manage",
+    "subscriptions.manage",
+    "subscriptions.read",
     "users.manage"
   ],
   "revision": 0,

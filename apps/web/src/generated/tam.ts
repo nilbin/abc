@@ -167,6 +167,19 @@ export interface UsersDeactivateOutput {
   userName: string;
 }
 
+export interface SubscriptionsSetPlanInput {
+  plan: string;
+  seats: number;
+  entitlements: Record<string, unknown>;
+  status?: string;
+  renewsAtIso?: string;
+}
+
+export interface SubscriptionsSetPlanOutput {
+  plan: string;
+  seats: number;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
@@ -251,6 +264,18 @@ export interface UsersListRow {
 
 export interface UsersListQuery {
   search?: string;
+}
+
+export interface SubscriptionsCurrentRow {
+  plan: string;
+  seats: number;
+  seatsUsed: number;
+  status: string;
+  entitlements: string;
+}
+
+export interface SubscriptionsCurrentQuery {
+
 }
 
 export interface ExtensionsFieldsRow {
@@ -412,6 +437,11 @@ export class TypedTamClient {
     return this.client.operation("users.deactivate", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<UsersDeactivateOutput>>;
   }
 
+  /** subscriptions.set-plan (requires subscriptions.manage) */
+  subscriptionsSetPlan(input: SubscriptionsSetPlanInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<SubscriptionsSetPlanOutput>> {
+    return this.client.operation("subscriptions.set-plan", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<SubscriptionsSetPlanOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
@@ -445,6 +475,11 @@ export class TypedTamClient {
   /** view users.list (requires users.manage) */
   usersList(query?: UsersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }> {
     return this.client.view("users.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }>;
+  }
+
+  /** view subscriptions.current (requires subscriptions.read) */
+  subscriptionsCurrent(query?: SubscriptionsCurrentQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: SubscriptionsCurrentRow[] }> {
+    return this.client.view("subscriptions.current", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: SubscriptionsCurrentRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

@@ -113,6 +113,15 @@ public static class DefineUser
             x => x.TenantId == context.TenantId.Value && x.UserName == input.UserName, ct);
         if (user is null)
         {
+            // Seat gate (docs/24): a NEW active user consumes a seat; reactivating or editing
+            // an existing one does not. Over the plan's ceiling → a localized upsell.
+            var subscription = await Subscriptions.ForAsync(tam.Db, context.TenantId.Value, ct);
+            var activeUsers = await tam.Db.Set<TamUserEntity>()
+                .CountAsync(x => x.TenantId == context.TenantId.Value && x.Active, ct);
+            if (activeUsers >= subscription.Seats)
+                return SubscriptionFindings.SeatLimit
+                    .With(("seats", subscription.Seats)).At(nameof(Input.UserName));
+
             user = new TamUserEntity
             {
                 Id = Guid.NewGuid(),

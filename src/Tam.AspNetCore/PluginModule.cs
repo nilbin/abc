@@ -86,6 +86,12 @@ public static class ActivatePlugin
         if (!model.Plugins.ContainsKey(input.PluginId))
             return PluginFindings.Unknown.With(("plugin", input.PluginId)).At(nameof(Input.PluginId));
 
+        // Entitlement gate (docs/24): the plan must include this plugin. A localized upsell,
+        // not a crash — and a tenant with no subscription is the free plan (no entitlements).
+        var subscription = await Subscriptions.ForAsync(tam.Db, context.TenantId.Value, ct);
+        if (!subscription.Entitles(input.PluginId))
+            return SubscriptionFindings.NotEntitled.With(("plugin", input.PluginId)).At(nameof(Input.PluginId));
+
         var existing = await tam.Db.Set<PluginActivationEntity>().SingleOrDefaultAsync(
             x => x.TenantId == context.TenantId.Value && x.PluginId == input.PluginId, ct);
         if (existing is null)

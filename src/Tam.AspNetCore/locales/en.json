@@ -96,5 +96,14 @@
   "users.invalid-name": "Invalid user name (lowercase letters, digits, dot and hyphen).",
   "extensions.unknown-entity": "Unknown entity: {entity}.",
   "packages.role-conflict": "The role {role} already exists with different permissions.",
-  "rules.evaluation-failed": "The rule {rule} could not be evaluated and was skipped."
+  "rules.evaluation-failed": "The rule {rule} could not be evaluated and was skipped.",
+  "operations.subscriptions.set-plan.title": "Set subscription",
+  "labels.plan": "Plan",
+  "labels.seats": "Seats",
+  "labels.seats-used": "Seats used",
+  "labels.status": "Status",
+  "labels.entitlements": "Entitlements",
+  "subscriptions.not-entitled": "Your plan does not include the {plugin} plugin. Upgrade to enable it.",
+  "subscriptions.seat-limit": "The seat limit ({seats}) is reached. Upgrade for more seats.",
+  "labels.renews-at": "Renews"
 }

@@ -75,6 +75,11 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.UserName }).IsUnique();
         });
+        modelBuilder.Entity<SubscriptionEntity>(b =>
+        {
+            b.ToTable("subscriptions");
+            b.HasKey(x => x.TenantId);
+        });
         modelBuilder.Entity<AutomationRuleEntity>(b =>
         {
             b.ToTable("automation_rules");
@@ -161,6 +166,30 @@ public sealed class OutboxRecord
     public string PayloadJson { get; set; } = "";
     public string CreatedAtIso { get; set; } = "";
     public string? DispatchedAtIso { get; set; }
+}
+
+/// <summary>
+/// A tenant's subscription (docs/24): the plan, seat ceiling and plugin entitlements a billing
+/// provider drives through subscriptions.set-plan. One row per tenant; its absence means the
+/// free default, so the framework is fully usable without any billing system wired up.
+/// </summary>
+public sealed class SubscriptionEntity
+{
+    public string TenantId { get; set; } = "";
+    public string Plan { get; set; } = "free";
+    public int Seats { get; set; } = 2;
+    public string EntitlementsJson { get; set; } = "[]";
+    public string Status { get; set; } = "active";
+    public string? RenewsAtIso { get; set; }
+
+    public IReadOnlyList<string> Entitlements() =>
+        System.Text.Json.JsonSerializer.Deserialize<List<string>>(EntitlementsJson) ?? [];
+
+    public bool Entitles(string pluginId)
+    {
+        var entitlements = Entitlements();
+        return entitlements.Contains("*") || entitlements.Contains(pluginId);
+    }
 }
 
 /// <summary>

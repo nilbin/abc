@@ -112,6 +112,17 @@ public static class Seed
         User("vera", "Vera Lund", "viewer");
         User("mcp-agent", "MCP Agent", "dispatcher");
 
+        // The tenant's subscription (docs/24): a "standard" plan, 10 seats, entitled to the
+        // inspect plugin. A billing provider would drive this via subscriptions.set-plan.
+        db.Add(new SubscriptionEntity
+        {
+            TenantId = Tenant,
+            Plan = "standard",
+            Seats = 10,
+            EntitlementsJson = """["inspect"]""",
+            Status = "active",
+        });
+
         orders[3].AssignTo("tekla");
         orders[4].AssignTo("tekla");
 

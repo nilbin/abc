@@ -96,5 +96,14 @@
   "users.invalid-name": "Ogiltigt användarnamn (små bokstäver, siffror, punkt och bindestreck).",
   "extensions.unknown-entity": "Okänd entitet: {entity}.",
   "packages.role-conflict": "Rollen {role} finns redan med andra behörigheter.",
-  "rules.evaluation-failed": "Regeln {rule} kunde inte utvärderas och hoppades över."
+  "rules.evaluation-failed": "Regeln {rule} kunde inte utvärderas och hoppades över.",
+  "operations.subscriptions.set-plan.title": "Ange abonnemang",
+  "labels.plan": "Abonnemang",
+  "labels.seats": "Platser",
+  "labels.seats-used": "Använda platser",
+  "labels.status": "Status",
+  "labels.entitlements": "Rättigheter",
+  "subscriptions.not-entitled": "Ditt abonnemang omfattar inte tillägget {plugin}. Uppgradera för att aktivera det.",
+  "subscriptions.seat-limit": "Platsgränsen ({seats}) är nådd. Uppgradera för fler platser.",
+  "labels.renews-at": "Förnyas"
 }

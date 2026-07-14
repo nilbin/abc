@@ -164,6 +164,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   extension fields by wire kind. Verified on SQLite AND PostgreSQL, including the
   `from=1000`-excludes-380 text-compare trap, malformed numbers → 422, undeclared keys ignored.
 
+- **Auth (Tam.Auth.OpenIddict)**: embedded OpenIddict token server (password + client
+  credentials, /connect/token), framework user store (users.define/deactivate + users.list,
+  PBKDF2 hashing), ClaimsActorProvider resolving grants fresh from the user's roles per request.
+  IActorProvider stays the seam for any external IdP. Verified: password grant, client
+  credentials, anonymous 403, tekla's :own scope and audit through real tokens, login/logout UI.
+- **Subscriptions & seats (docs/24)**: subscription registry (plan, seats, plugin entitlements,
+  status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
+  view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —
+  both localized upsell findings, both degrading to a free-plan default when no row exists.
+  Verified: entitled activation succeeds, free plan blocks it, seats=5 blocks the 6th user,
+  raising seats admits it, non-admin cannot set-plan (403).
+
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
 ## Gaps vs. the design docs (deliberate, in rough priority order)
