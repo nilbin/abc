@@ -85,5 +85,13 @@
   "rules.unknown-operation": "Okänd operation: {operation}.",
   "rules.unknown-field": "Okänt fält i villkoret: {field}.",
   "rules.missing-message": "Meddelande saknas för standardspråket.",
-  "rules.invalid-condition": "Ogiltigt villkor."
+  "rules.invalid-condition": "Ogiltigt villkor.",
+  "operations.users.define.title": "Definiera användare",
+  "operations.users.deactivate.title": "Inaktivera användare",
+  "labels.user-name": "Användarnamn",
+  "labels.display-name": "Visningsnamn",
+  "labels.password": "Lösenord",
+  "labels.roles": "Roller",
+  "users.unknown-role": "Okänd roll: {role}.",
+  "users.invalid-name": "Ogiltigt användarnamn (små bokstäver, siffror, punkt och bindestreck)."
 }

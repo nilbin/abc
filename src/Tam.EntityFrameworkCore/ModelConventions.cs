@@ -69,6 +69,12 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.Package }).IsUnique();
         });
+        modelBuilder.Entity<TamUserEntity>(b =>
+        {
+            b.ToTable("users");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.UserName }).IsUnique();
+        });
         modelBuilder.Entity<AutomationRuleEntity>(b =>
         {
             b.ToTable("automation_rules");
@@ -155,6 +161,25 @@ public sealed class OutboxRecord
     public string PayloadJson { get; set; } = "";
     public string CreatedAtIso { get; set; } = "";
     public string? DispatchedAtIso { get; set; }
+}
+
+/// <summary>
+/// Framework user record: identity is data like roles are (D1). Which authentication mechanism
+/// proves the identity (the built-in OpenIddict server, an external IdP, a header in dev) is an
+/// application decision behind IActorProvider — the user store is mechanism-agnostic.
+/// </summary>
+public sealed class TamUserEntity
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string UserName { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string PasswordHash { get; set; } = "";
+    public string RolesJson { get; set; } = "[]";
+    public bool Active { get; set; } = true;
+
+    public IReadOnlyList<string> Roles() =>
+        System.Text.Json.JsonSerializer.Deserialize<List<string>>(RolesJson) ?? [];
 }
 
 /// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import {
-  AppShell, Group, Modal, NavLink, SegmentedControl, Select, Stack, Text, TextInput, Title,
+  AppShell, Button, Group, Modal, NavLink, SegmentedControl, Stack, Text, TextInput, Title,
 } from '@mantine/core';
 import { TamClient } from '@tam/core';
 import {
@@ -133,7 +133,7 @@ function PluginPage(props: { plugin: string }) {
   );
 }
 
-function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
+function Shell(props: { userName: string; onLogout: () => void }) {
   const { t, culture, setCulture, can, manifest } = useTam();
   const [page, setPage] = useState<string>('orders');
 
@@ -164,18 +164,10 @@ function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
             <Title order={4}>{t('app.title')}</Title>
           </Group>
           <Group gap="sm">
-            <Select
-              size="xs"
-              w={170}
-              value={props.role}
-              onChange={v => v && props.onRoleChange(v)}
-              data={[
-                { value: 'admin', label: 'Alva Andersson (admin)' },
-                { value: 'dispatcher', label: 'Didrik Berg (dispatcher)' },
-                { value: 'technician', label: 'Tekla Nilsson (technician)' },
-                { value: 'viewer', label: 'Vera Lund (viewer)' },
-              ]}
-            />
+            <Text size="sm" c="dimmed">{props.userName}</Text>
+            <Button size="compact-xs" variant="subtle" onClick={props.onLogout}>
+              {t('auth.sign-out')}
+            </Button>
             <SegmentedControl
               size="xs"
               value={culture}
@@ -216,14 +208,72 @@ function Shell(props: { role: string; onRoleChange: (role: string) => void }) {
   );
 }
 
-export function App() {
-  const [role, setRole] = useState('admin');
-  client.headers['X-Demo-Role'] = role;
+function LoginPage(p: { onLogin: (token: string, user: string) => void }) {
+  const { t } = useTam();
+  const [user, setUser] = useState('alva');
+  const [password, setPassword] = useState('demo123');
+  const [error, setError] = useState<string | null>(null);
 
-  // Remount the provider on role change: new actor → new effective manifest (permissions overlay).
+  const submit = async (u: string, pw: string) => {
+    setError(null);
+    const response = await fetch(`${client.baseUrl}/connect/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'password', username: u, password: pw }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.access_token) { setError(t('auth.failed')); return; }
+    p.onLogin(data.access_token, u);
+  };
+
   return (
-    <TamProvider key={role} client={client} initialCulture="sv">
-      <Shell role={role} onRoleChange={setRole} />
+    <Group justify="center" pt={120}>
+      <Stack w={340} gap="sm">
+        <Group gap="xs" justify="center">
+          <Text fw={700} size="lg" c="indigo">◆</Text>
+          <Title order={3}>{t('app.title')}</Title>
+        </Group>
+        <TextInput label={t('labels.user-name')} value={user}
+          onChange={e => setUser(e.currentTarget.value)} />
+        <TextInput label={t('labels.password')} type="password" value={password} error={error}
+          onChange={e => setPassword(e.currentTarget.value)}
+          onKeyDown={e => { if (e.key === 'Enter') void submit(user, password); }} />
+        <Button onClick={() => void submit(user, password)}>{t('auth.sign-in')}</Button>
+        <Group gap={6} justify="center">
+          {['alva', 'didrik', 'tekla', 'vera'].map(u => (
+            <Button key={u} size="compact-xs" variant="light"
+              onClick={() => void submit(u, 'demo123')}>{u}</Button>
+          ))}
+        </Group>
+      </Stack>
+    </Group>
+  );
+}
+
+export function App() {
+  const [token, setToken] = useState<string | null>(sessionStorage.getItem('tam-token'));
+  const [userName, setUserName] = useState<string | null>(sessionStorage.getItem('tam-user'));
+
+  if (token) client.headers['Authorization'] = `Bearer ${token}`;
+  else delete client.headers['Authorization'];
+
+  const login = (nextToken: string, user: string) => {
+    sessionStorage.setItem('tam-token', nextToken);
+    sessionStorage.setItem('tam-user', user);
+    setToken(nextToken);
+    setUserName(user);
+  };
+  const logout = () => {
+    sessionStorage.removeItem('tam-token');
+    sessionStorage.removeItem('tam-user');
+    setToken(null);
+    setUserName(null);
+  };
+
+  // Remount the provider on identity change: new actor → new effective manifest.
+  return (
+    <TamProvider key={userName ?? 'anonymous'} client={client} initialCulture="sv">
+      {token && userName ? <Shell userName={userName} onLogout={logout} /> : <LoginPage onLogin={login} />}
     </TamProvider>
   );
 }

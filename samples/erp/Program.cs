@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.AspNetCore;
 using Tam.AspNetCore.SystemOps;
+using Tam.Auth;
 using Tam.Generated;
 
 var model = new TamModelBuilder()
@@ -167,7 +168,10 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
         options.UseSqlite(connectionString);
 });
 builder.Services.AddTam<ErpDbContext>(model);
-builder.Services.AddSingleton<Tam.AspNetCore.IActorProvider, DemoActorProvider>();
+// Real authentication: the framework's embedded OpenIddict server (password grant for humans,
+// client credentials for agents) + claims-based actor resolution. Any external IdP plugs in
+// through ClaimsActorProvider instead; a custom IActorProvider replaces the whole seam.
+builder.Services.AddTamOpenIddict<ErpDbContext>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
@@ -175,6 +179,7 @@ var app = builder.Build();
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.MapTamAuth();
 app.MapTam();
 Erp.Integrations.ImportFortnoxOrders.Map(app, model);
 app.MapFallbackToFile("index.html");
@@ -182,6 +187,9 @@ app.MapFallbackToFile("index.html");
 using (var scope = app.Services.CreateScope())
 {
     Seed.Run(scope.ServiceProvider.GetRequiredService<ErpDbContext>());
+    // Machine client for agents/integrations: authenticates with client credentials and acts
+    // as the same-named framework user (seeded with the dispatcher role) — audited like anyone.
+    await Tam.Auth.TamOpenIddict.EnsureClientAsync(scope.ServiceProvider, "mcp-agent", "agent-secret");
 }
 
 app.Run();

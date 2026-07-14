@@ -90,6 +90,14 @@
       "rules.unknown-field": "Ok\u00E4nt f\u00E4lt i villkoret: {field}.",
       "rules.missing-message": "Meddelande saknas f\u00F6r standardspr\u00E5ket.",
       "rules.invalid-condition": "Ogiltigt villkor.",
+      "operations.users.define.title": "Definiera anv\u00E4ndare",
+      "operations.users.deactivate.title": "Inaktivera anv\u00E4ndare",
+      "labels.user-name": "Anv\u00E4ndarnamn",
+      "labels.display-name": "Visningsnamn",
+      "labels.password": "L\u00F6senord",
+      "labels.roles": "Roller",
+      "users.unknown-role": "Ok\u00E4nd roll: {role}.",
+      "users.invalid-name": "Ogiltigt anv\u00E4ndarnamn (sm\u00E5 bokst\u00E4ver, siffror, punkt och bindestreck).",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -142,7 +150,10 @@
       "nav.audit": "Historik",
       "nav.plugins": "Till\u00E4gg",
       "nav.packages": "Paket",
-      "nav.rules": "Regler"
+      "nav.rules": "Regler",
+      "auth.sign-in": "Logga in",
+      "auth.sign-out": "Logga ut",
+      "auth.failed": "Fel anv\u00E4ndarnamn eller l\u00F6senord."
     },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
@@ -232,6 +243,14 @@
       "rules.unknown-field": "Unknown field in condition: {field}.",
       "rules.missing-message": "A message for the default culture is missing.",
       "rules.invalid-condition": "Invalid condition.",
+      "operations.users.define.title": "Define user",
+      "operations.users.deactivate.title": "Deactivate user",
+      "labels.user-name": "User name",
+      "labels.display-name": "Display name",
+      "labels.password": "Password",
+      "labels.roles": "Roles",
+      "users.unknown-role": "Unknown role: {role}.",
+      "users.invalid-name": "Invalid user name (lowercase letters, digits, dot and hyphen).",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -284,7 +303,10 @@
       "nav.audit": "History",
       "nav.plugins": "Plugins",
       "nav.packages": "Packages",
-      "nav.rules": "Rules"
+      "nav.rules": "Rules",
+      "auth.sign-in": "Sign in",
+      "auth.sign-out": "Sign out",
+      "auth.failed": "Wrong username or password."
     }
   },
   "operations": {
@@ -959,6 +981,87 @@
       ],
       "gatedBy": []
     },
+    "users.define": {
+      "permission": "users.manage",
+      "titleKey": "operations.users.define.title",
+      "fields": [
+        {
+          "name": "userName",
+          "labelKey": "labels.user-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "password",
+          "labelKey": "labels.password",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "roles",
+          "labelKey": "labels.roles",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "userId",
+          "labelKey": "labels.user-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "users.deactivate": {
+      "permission": "users.manage",
+      "titleKey": "operations.users.deactivate.title",
+      "fields": [
+        {
+          "name": "userName",
+          "labelKey": "labels.user-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "userName",
+          "labelKey": "labels.user-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
     "inspect.checklists.create": {
       "permission": "inspect.checklists.manage",
       "titleKey": "operations.inspect.checklists.create.title",
@@ -1406,6 +1509,73 @@
       "defaultSort": "number",
       "defaultSortDescending": true,
       "extensibleEntity": "order"
+    },
+    "users.list": {
+      "permission": "users.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "userName",
+          "labelKey": "labels.user-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "roles",
+          "labelKey": "labels.roles",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "active",
+          "labelKey": "labels.active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "userName"
+      ],
+      "filterable": [],
+      "defaultSort": "userName",
+      "defaultSortDescending": false
     },
     "extensions.fields": {
       "permission": "extensions.manage",
@@ -2366,7 +2536,8 @@
     "packages.manage",
     "plugins.manage",
     "roles.manage",
-    "rules.manage"
+    "rules.manage",
+    "users.manage"
   ],
   "revision": 0,
   "actorPermissions": [],

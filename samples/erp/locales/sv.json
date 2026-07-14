@@ -46,5 +46,8 @@
   "labels.type": "Typ",
   "nav.plugins": "Tillägg",
   "nav.packages": "Paket",
-  "nav.rules": "Regler"
+  "nav.rules": "Regler",
+  "auth.sign-in": "Logga in",
+  "auth.sign-out": "Logga ut",
+  "auth.failed": "Fel användarnamn eller lösenord."
 }

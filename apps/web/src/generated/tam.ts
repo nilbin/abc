@@ -148,6 +148,25 @@ export interface RulesRetireOutput {
   name: string;
 }
 
+export interface UsersDefineInput {
+  userName: string;
+  displayName: string;
+  password?: string;
+  roles: Record<string, unknown>;
+}
+
+export interface UsersDefineOutput {
+  userId: string;
+}
+
+export interface UsersDeactivateInput {
+  userName: string;
+}
+
+export interface UsersDeactivateOutput {
+  userName: string;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
@@ -219,6 +238,18 @@ export interface OrdersListRow {
 }
 
 export interface OrdersListQuery {
+  search?: string;
+}
+
+export interface UsersListRow {
+  id: string;
+  userName: string;
+  displayName: string;
+  roles: string;
+  active: boolean;
+}
+
+export interface UsersListQuery {
   search?: string;
 }
 
@@ -371,6 +402,16 @@ export class TypedTamClient {
     return this.client.operation("rules.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RulesRetireOutput>>;
   }
 
+  /** users.define (requires users.manage) */
+  usersDefine(input: UsersDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<UsersDefineOutput>> {
+    return this.client.operation("users.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<UsersDefineOutput>>;
+  }
+
+  /** users.deactivate (requires users.manage) */
+  usersDeactivate(input: UsersDeactivateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<UsersDeactivateOutput>> {
+    return this.client.operation("users.deactivate", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<UsersDeactivateOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
@@ -399,6 +440,11 @@ export class TypedTamClient {
   /** view orders.list (requires orders.read) */
   ordersList(query?: OrdersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersListRow[] }> {
     return this.client.view("orders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersListRow[] }>;
+  }
+
+  /** view users.list (requires users.manage) */
+  usersList(query?: UsersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }> {
+    return this.client.view("users.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Tam;
+using Tam.AspNetCore;
+using Tam.Auth;
 using Tam.EntityFrameworkCore;
 
 namespace Erp;
@@ -30,6 +32,7 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options) : DbCon
         Inspect.InspectionPlugin.AddInspect(modelBuilder);
 
         modelBuilder.UseTam(Database.ProviderName);
+        modelBuilder.UseTamOpenIddict();   // token/client storage for the embedded auth server
     }
 }
 
@@ -91,8 +94,26 @@ public static class Seed
         Role("technician",
             "orders.read:own", "orders.edit:own", "orders.complete:own", "customers.read");
 
-        orders[3].AssignTo("technician");
-        orders[4].AssignTo("technician");
+        // Users are tenant data (D1); identity is proven by the embedded OpenIddict server.
+        // Everyone's demo password: "demo123". "mcp-agent" is the machine client's user —
+        // agents authenticate with client credentials and act as it, fully audited.
+        void User(string name, string display, params string[] roles) => db.Add(new TamUserEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            UserName = name,
+            DisplayName = display,
+            PasswordHash = TamPasswords.Hash("demo123"),
+            RolesJson = System.Text.Json.JsonSerializer.Serialize(roles),
+        });
+        User("alva", "Alva Andersson", "admin");
+        User("didrik", "Didrik Berg", "dispatcher");
+        User("tekla", "Tekla Nilsson", "technician");
+        User("vera", "Vera Lund", "viewer");
+        User("mcp-agent", "MCP Agent", "dispatcher");
+
+        orders[3].AssignTo("tekla");
+        orders[4].AssignTo("tekla");
 
         // A tenant-defined custom field, exactly as an admin would create it at runtime (docs/15).
         db.Add(new ExtensionFieldEntity

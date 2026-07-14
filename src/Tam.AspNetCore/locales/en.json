@@ -85,5 +85,13 @@
   "rules.unknown-operation": "Unknown operation: {operation}.",
   "rules.unknown-field": "Unknown field in condition: {field}.",
   "rules.missing-message": "A message for the default culture is missing.",
-  "rules.invalid-condition": "Invalid condition."
+  "rules.invalid-condition": "Invalid condition.",
+  "operations.users.define.title": "Define user",
+  "operations.users.deactivate.title": "Deactivate user",
+  "labels.user-name": "User name",
+  "labels.display-name": "Display name",
+  "labels.password": "Password",
+  "labels.roles": "Roles",
+  "users.unknown-role": "Unknown role: {role}.",
+  "users.invalid-name": "Invalid user name (lowercase letters, digits, dot and hyphen)."
 }
