@@ -50,5 +50,11 @@
   "extensions.invalid-option": "The value is not among the allowed options.",
   "roles.unknown-permission": "Unknown permission: {permission}.",
   "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens).",
-  "pipeline.unknown-form": "Unknown form: {form}."
+  "pipeline.unknown-form": "Unknown form: {form}.",
+  "grid.total": "{count} records",
+  "filters.from": "from",
+  "filters.to": "to",
+  "common.yes": "Yes",
+  "common.no": "No",
+  "common.no-matches": "No matches"
 }

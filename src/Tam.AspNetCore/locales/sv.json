@@ -50,5 +50,11 @@
   "extensions.invalid-option": "Värdet finns inte bland alternativen.",
   "roles.unknown-permission": "Okänd behörighet: {permission}.",
   "roles.invalid-name": "Ogiltigt rollnamn (små bokstäver, siffror och bindestreck).",
-  "pipeline.unknown-form": "Okänt formulär: {form}."
+  "pipeline.unknown-form": "Okänt formulär: {form}.",
+  "grid.total": "{count} träffar",
+  "filters.from": "från",
+  "filters.to": "till",
+  "common.yes": "Ja",
+  "common.no": "Nej",
+  "common.no-matches": "Inga träffar"
 }

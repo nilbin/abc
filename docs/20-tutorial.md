@@ -678,6 +678,43 @@ Two red lines, both at compile/CI time: the Fortnox mapping must be extended, an
 
 ---
 
+## Step 13 — A partner ships a plugin *(design stage — [22-plugins.md](22-plugins.md), decision D8)*
+
+Norrservice's certification partner sells an inspection-checklist capability. It arrives as a NuGet package, and the host application adds one line:
+
+```csharp
+model.AddPlugin<InspectionPlugin>();
+```
+
+Inside the package, the same five concepts as everywhere else — a `ChecklistTemplate` entity, `inspect.checklists.*` operations and views, forms and grids, embedded sv/en locales. Three things make it a *plugin* rather than a copy of the host's patterns:
+
+```csharp
+[TamPlugin("inspect")]                                  // permanent namespace; PLG001 enforces it
+public sealed class InspectionPlugin : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.RequiresHostEntity<Order>();
+
+        // A packaged field on the HOST's entity — same channel as tenant custom fields,
+        // compiled origin, collision-proof key: "inspect.requiresInspection".
+        plugin.ExtensionField<Order>("requiresInspection", SemanticType.Flag);
+
+        // A typed precondition on the HOST's operation — visible in manifest + impact report.
+        plugin.Gate<CompleteOrder>(async (input, context, db, ct) =>
+            await db.OpenChecklistsFor(input.OrderId, ct)
+                ? InspectFindings.ChecklistIncomplete           // finding code = message key, as always
+                : Result.Success());
+    }
+}
+```
+
+Because the packaged field rides the extension channel, it is already in every grid, form, audit trail, MCP schema, and D7 filter — none of that is plugin code. Because the gate is declared, `orders.complete` in the manifest now reads "gated by inspect", and the Step-12 impact report shows it when anyone touches `CompleteOrder`.
+
+The tenant admin flips it on — `plugins.activate("inspect")` — an audited framework operation like any other. For tenants that haven't, the manifest simply omits everything: no nav entry, no MCP tools, no packaged field, HTTP 404 on `inspect.*`. Installing code was the vendor's deploy; enabling it was the tenant's click. And the trust line holds: the partner wrote C# through a compiler and a review; the *tenant* still authors only data — fields, roles, packages, and (later) custom objects and Px-bounded automation rules, per D8.
+
+---
+
 ## The tally
 
 **Written by hand** (the only independently maintained facts):

@@ -211,7 +211,8 @@ public static class OrderList
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Number), nameof(Result.CustomerName), nameof(Result.RequestedDate))
-        .Filterable(nameof(Result.Status), nameof(Result.Type))
+        .Filterable(nameof(Result.Status), nameof(Result.Type), nameof(Result.CustomerName),
+            nameof(Result.RequestedDate), nameof(Result.EstimatedTotal))
         .DefaultSort(nameof(Result.Number), descending: true);
 }
 

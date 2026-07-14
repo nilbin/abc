@@ -10,3 +10,5 @@ export { OperationForm } from './OperationForm';
 export type { OperationFormProps } from './OperationForm';
 export { ViewGrid } from './ViewGrid';
 export type { ViewGridProps } from './ViewGrid';
+export { LookupSelect } from './LookupSelect';
+export type { LookupSelectProps } from './LookupSelect';

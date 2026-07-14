@@ -108,6 +108,21 @@ If a future compliance requirement demands tamper-*evidence* (not just tamper-re
 
 **Why.** The previous shape authored one decision twice: the capability declaration *and* a Query-record member plus hand-written `Where`. Worse, it structurally excluded tenant custom fields from filtering, since runtime-defined fields cannot appear in a compiled record. Mechanical read-side filtering over an authored projection, bounded by declared capabilities, is not the "generic CRUD" the non-goals forbid — the projection and the capability list are still the developer's authored decisions.
 
-**Consequences.** Standard filters cost one declaration. Range/contains operators extend the same mechanism (via the portable Px AST if a richer filter language is ever needed — never a string-parsed expression DSL; user input must only ever become constants, not expression structure). Extension-field filtering currently matches string-typed fields via canonical-JSON containment; promoted expression indexes remain the performance path, and numeric extension filters await real JSON translation.
+**Consequences.** Standard filters cost one declaration, and the declaration now yields every operator the field's type supports: equality everywhere, inclusive `from`/`to` ranges for dates, numbers and ordinal strings, `contains` for strings (see the operator table in [04-views.md](04-views.md)). Grid controls derive from the same wire kinds the server derives operators from. Anything richer extends the portable Px AST — never a string-parsed expression DSL; user input must only ever become constants, not expression structure. Extension-field filtering currently matches string-typed fields via canonical-JSON containment; promoted expression indexes remain the performance path, and numeric extension filters await real JSON translation.
 
 **Revisit when.** A view needs a filter the mechanism can't express — which is precisely what the Query record remains for.
+
+---
+
+## D8 — Packaged extensibility: compiled plugins + declarative tenant channel, never tenant code
+
+**Decision.** Extensibility beyond single custom fields comes in two packaged forms with an explicit trust boundary between them ([22-plugins.md](22-plugins.md)):
+
+1. **Plugins are compiled, namespaced modules** (`[TamPlugin("inspect")]`) built by the product team or vetted partners, bound at host build time, and **activated per tenant as runtime data**. They contribute entities, operations, views, bindings, packaged extension fields on host entities, gates (typed preconditions) on host operations, effect subscribers, locales, and permissions — all through the same public seams the host uses, all namespace-prefixed (`PLG###` diagnostics), all D4-baseline-checked. The effective manifest omits inactive plugins' contributions entirely.
+2. **Everything a tenant authors is data, never code**: tenant packages (bundled fields/roles/rules installed atomically with registry validation and dry-run), later custom objects (registry-defined entities with generated standard operations flowing through the real pipeline), and automation rules (Px-AST conditions + a closed action catalog). No tenant-uploaded scripts, no sandbox, no per-tenant compilation.
+
+**Why.** The Salesforce comparison decomposes into pillars, and each pillar has a cheap seat on machinery Tam already has: managed packages → assemblies + the source generator + manifest overlay; custom fields at scale → the registry serialized; custom objects → the JSONB channel generalized to a document; validation rules/flows → the Px AST plus effects. The one pillar that does not transfer cheaply is Apex, and cloning it would cost the properties the framework exists for — static analyzability, the L10N/D4 gates, a manifest you can trust. The graduation path already answers "the tenant outgrew declarative."
+
+**Consequences.** The extension overlay gains origins (compiled / plugin / tenant) with key prefixes; the pipeline gains a gate stage and per-tenant activation checks; the registry compiler grows package/object/rule validation (`RUL###`). Custom objects wait on typed JSON predicates, index promotion, and D2's RLS.
+
+**Revisit when.** A partner ecosystem genuinely needs to ship logic without a host redeploy — the answer would be out-of-process plugins over the integration channel (webhooks/outbox), still not in-process tenant code.

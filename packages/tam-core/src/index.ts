@@ -168,10 +168,14 @@ export interface ViewResponse {
 // ---- Localization (docs/21): resolve locally from catalogs; server message is the fallback ----
 
 export function translate(
-  manifest: Manifest, culture: string, key: string): string {
-  const c = manifest.catalogs[culture]?.[key]
-    ?? manifest.catalogs[manifest.defaultCulture]?.[key];
-  return c ?? key;
+  manifest: Manifest, culture: string, key: string,
+  args?: Record<string, unknown>): string {
+  const template = manifest.catalogs[culture]?.[key]
+    ?? manifest.catalogs[manifest.defaultCulture]?.[key]
+    ?? key;
+  if (!args) return template;
+  return template.replace(/\{(\w+)\}/g, (_, k) =>
+    args[k] !== undefined ? String(args[k]) : `{${k}}`);
 }
 
 export function findingMessage(

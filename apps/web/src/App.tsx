@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AppShell, Group, Modal, NavLink, SegmentedControl, Select, Stack, Text, TextInput, Title,
 } from '@mantine/core';
 import { TamClient } from '@tam/core';
-import { TypedTamClient } from './generated/tam';
 import {
-  FieldRendererProps, OperationForm, TamProvider, ViewGrid, registerRenderer, useTam,
+  FieldRendererProps, LookupSelect, OperationForm, TamProvider, ViewGrid, registerRenderer, useTam,
 } from '@tam/react';
 
 const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
@@ -13,23 +12,15 @@ const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
 // ---- App-owned renderers: the framework owns semantics, the app owns pixels (docs/13) ----
 
 function CustomerPicker(p: FieldRendererProps) {
-  const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
-  useEffect(() => {
-    const typed = new TypedTamClient(p.tam.client);
-    void typed.customersLookup({ pageSize: 100 }).then(r =>
-      setOptions(r.rows.map(row => ({ value: row.id, label: row.name }))));
-  }, [p.tam.client, p.tam.culture]);
   return (
-    <Select
+    <LookupSelect
+      view="customers.lookup"
       label={p.label}
       required={p.required}
       error={p.error}
       description={p.warning}
-      data={options}
-      value={p.value ? String(p.value) : null}
+      value={p.value}
       onChange={v => p.onChange(v)}
-      searchable
-      nothingFoundMessage="—"
     />
   );
 }

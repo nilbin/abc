@@ -24,7 +24,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             return (null, PipelineFindings.NotAuthorized.With(("permission", view.Permission)));
 
         object queryRecord;
-        List<(PropertyInfo Property, object? Value)> fieldFilters;
+        List<FieldFilter> fieldFilters;
         try
         {
             queryRecord = BindQuery(view, query);
@@ -74,26 +74,56 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
     private static readonly MethodInfo RunMethod =
         typeof(ViewExecutor).GetMethod(nameof(Run), BindingFlags.NonPublic | BindingFlags.Static)!;
 
-    /// <summary>Declared filterable fields present in the query string → typed equality values.</summary>
-    private static List<(PropertyInfo Property, object? Value)> BindFilters(
+    internal enum FilterOperator { Equal, From, To, Contains }
+
+    internal sealed record FieldFilter(PropertyInfo Property, FilterOperator Op, object? Value);
+
+    /// <summary>
+    /// Declared filterable fields → typed predicates. One declaration yields the operators the
+    /// field's type supports mechanically: `field=` equality for everything, `field.from=` /
+    /// `field.to=` inclusive ranges for dates, numbers and ordinal strings, `field.contains=`
+    /// substring for strings. Values are parsed into constants — never expression structure.
+    /// </summary>
+    private static List<FieldFilter> BindFilters(
         ViewDefinition view, IReadOnlyDictionary<string, string?> query)
     {
-        var filters = new List<(PropertyInfo, object?)>();
+        var filters = new List<FieldFilter>();
         foreach (var field in view.Capabilities.Filterable)
         {
-            var raw = query.GetValueOrDefault(field);
-            if (string.IsNullOrEmpty(raw)) continue;
             var property = view.ResultType.GetProperties()
                 .FirstOrDefault(p => Naming.Camel(p.Name) == field);
             if (property is null) continue;
-            filters.Add((property, ParseValue(property.PropertyType, raw)));
+            var comparable = ComparableType(property.PropertyType);
+
+            if (query.GetValueOrDefault(field) is { Length: > 0 } equal)
+                filters.Add(new(property, FilterOperator.Equal, ParseValue(property.PropertyType, equal)));
+            if (comparable == typeof(string)
+                && query.GetValueOrDefault($"{field}.contains") is { Length: > 0 } substring)
+                filters.Add(new(property, FilterOperator.Contains, substring));
+            if (Rangeable.Contains(comparable))
+            {
+                if (query.GetValueOrDefault($"{field}.from") is { Length: > 0 } from)
+                    filters.Add(new(property, FilterOperator.From, ParseValue(comparable, from)));
+                if (query.GetValueOrDefault($"{field}.to") is { Length: > 0 } to)
+                    filters.Add(new(property, FilterOperator.To, ParseValue(comparable, to)));
+            }
         }
         return filters;
     }
 
+    /// <summary>The type range/contains operators reason about: Nullable and semantic wrappers unwrapped.</summary>
+    private static Type ComparableType(Type propertyType)
+    {
+        var nonNullable = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+        return ValueWrapper.UnderlyingType(nonNullable) ?? nonNullable;
+    }
+
+    private static readonly HashSet<Type> Rangeable =
+        [typeof(string), typeof(int), typeof(long), typeof(decimal), typeof(DateOnly), typeof(DateTimeOffset)];
+
     private static async Task<ViewResponse> Run<T>(
         object queryable, string? sort, bool descending, int page, int pageSize,
-        List<(PropertyInfo Property, object? Value)> fieldFilters,
+        List<FieldFilter> fieldFilters,
         List<(string Key, string Value)> extensionFilters,
         CancellationToken ct)
     {
@@ -101,8 +131,17 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
 
         // Declared filters compose over the authored projection — the capability IS the filter
         // (docs/04): no per-view Where code, and EF pushes it into SQL through the projection.
-        foreach (var (property, value) in fieldFilters)
-            source = TamExpressions.WhereEqual(source, property, value);
+        foreach (var filter in fieldFilters)
+            source = filter.Op switch
+            {
+                FilterOperator.Contains =>
+                    TamExpressions.WhereContains(source, filter.Property, (string)filter.Value!),
+                FilterOperator.From =>
+                    TamExpressions.WhereCompare(source, filter.Property, filter.Value, greaterOrEqual: true),
+                FilterOperator.To =>
+                    TamExpressions.WhereCompare(source, filter.Property, filter.Value, greaterOrEqual: false),
+                _ => TamExpressions.WhereEqual(source, filter.Property, filter.Value),
+            };
 
         // Extension filters need SQL translation of the converted JSON column, so they apply
         // only on EF-backed queries (in-memory sources would crash on the converted cast).

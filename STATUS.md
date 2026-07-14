@@ -96,8 +96,20 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   same-transaction audit tables.
 - **Mechanical filtering (D7)**: `Filterable(field)` composes typed SQL predicates over the
   projection and renders grid filter controls — no Query-record members, no per-view Where.
-  Tenant extension fields filter via `ext.{key}` (canonical-JSON containment over the converted
-  column, verified on SQLite and PostgreSQL jsonb); Query records now carry only Search.
+  One declaration yields every operator the field's type supports: equality, `field.from`/
+  `field.to` inclusive ranges (dates, numbers, ordinal strings — lifted comparisons, so null
+  cells fall outside every range; `string.Compare` for string-backed wrappers), and
+  `field.contains` substring. Grid controls derive from the same wire kinds (date/number range
+  pairs, contains inputs, yes/no selects); all operators verified on the wire on SQLite AND
+  PostgreSQL, malformed values → 422. Tenant extension fields filter via `ext.{key}`
+  (canonical-JSON containment over the converted column); Query records carry only Search.
+- **Async reference lookup**: `LookupSelect` in tam-react — typed text becomes a debounced
+  server-side search against a lookup view (`customers.lookup?search=…` verified on the wire);
+  the option list never preloads the table, and the current selection stays visible. The app's
+  CustomerPicker is now three lines of wiring.
+- **Grid totals**: the record count is rendered from the localized `grid.total` catalog entry
+  ("{count} träffar" / "{count} records") — `translate()` now resolves args like finding
+  messages do.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -135,6 +147,11 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     promotion remain.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
+12. **Plugin system is designed, not built** ([docs/22-plugins.md](docs/22-plugins.md), decision
+    D8, tutorial step 13): compiled namespaced plugins with per-tenant activation, packaged
+    fields on host entities, operation gates, tenant packages, custom objects, Px-bounded
+    automation rules. Phases P1–P5 defined; P4 (custom objects) additionally waits on typed
+    JSON predicates + index promotion + RLS.
 
 ## The one-night verdict
 

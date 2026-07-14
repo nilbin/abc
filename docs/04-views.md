@@ -61,7 +61,17 @@ Operation input
 
 Views declare which result fields support sorting, filtering, and searching, so bindings cannot promise capabilities the underlying query cannot deliver (see `VIEW001` in [12-compiler-and-manifest.md](12-compiler-and-manifest.md), and the refinement note on runtime translatability in [review-notes.md](review-notes.md)).
 
-**A declared filter IS the filter** (decision D7 in [19-decisions.md](19-decisions.md)): the framework composes equality predicates over the view's result projection mechanically — no per-view `Where` code, no Query-record member per filter. The Query record carries only *authored* query logic the framework cannot derive (free-text search, cross-entity predicates). This is also what makes tenant custom fields filterable: a runtime-defined field can never appear in a compiled Query record, but it can always be filtered mechanically (`?ext.machineSerialNumber=…`).
+**A declared filter IS the filter** (decision D7 in [19-decisions.md](19-decisions.md)): the framework composes typed predicates over the view's result projection mechanically — no per-view `Where` code, no Query-record member per filter. The Query record carries only *authored* query logic the framework cannot derive (free-text search, cross-entity predicates). This is also what makes tenant custom fields filterable: a runtime-defined field can never appear in a compiled Query record, but it can always be filtered mechanically (`?ext.machineSerialNumber=…`).
+
+One `Filterable(field)` declaration yields every operator the field's type supports, on the wire and in the grid — the client derives the control set from the same wire kind the server derives the operators from:
+
+| Field type | Operators | Wire form |
+| --- | --- | --- |
+| enum, boolean, id | equality | `status=open` |
+| date, number | equality + inclusive range | `requestedDate.from=2026-02-01&requestedDate.to=2026-02-28` |
+| string (incl. semantic wrappers) | equality + substring + ordinal range | `customerName.contains=Nord`, `number.from=2026-01400` |
+
+Range bounds use the lifted comparison — a row whose cell is null is outside every range. Operator values are parsed into expression *constants*, never expression *structure*: the filter language can grow (via the portable Px AST) but a string-parsed expression DSL is banned (see D7's consequences).
 
 ## Extension fields in views
 

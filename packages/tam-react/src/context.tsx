@@ -10,7 +10,7 @@ export interface TamContextValue {
   culture: string;
   setCulture: (culture: string) => void;
   refreshManifest: () => Promise<void>;
-  t: (key: string) => string;
+  t: (key: string, args?: Record<string, unknown>) => string;
   /** Effective-permission check from the manifest's actor overlay (decision D1). */
   can: (permission: string) => boolean;
   /** Subscribe to committed-operation effects over SSE (decision D5); returns unsubscribe.
@@ -63,7 +63,7 @@ export function TamProvider(props: {
     culture,
     setCulture,
     refreshManifest,
-    t: (key: string) => translate(manifest, culture, key),
+    t: (key: string, args?: Record<string, unknown>) => translate(manifest, culture, key, args),
     can: (permission: string) => {
       const granted = manifest.actorPermissions ?? ['*'];
       return granted.includes('*')

@@ -22,6 +22,60 @@ internal static class TamExpressions
     }
 
     /// <summary>
+    /// Inclusive range bound: x => x.Property >= value (or &lt;=). Dates and numbers use the
+    /// lifted comparison operator (a null cell is outside every range); strings — including
+    /// string-backed semantic wrappers like OrderNumber — compare ordinally via string.Compare,
+    /// which EF translates on every relational provider.
+    /// </summary>
+    public static IQueryable<T> WhereCompare<T>(
+        IQueryable<T> source, PropertyInfo property, object? value, bool greaterOrEqual)
+    {
+        var parameter = Expression.Parameter(typeof(T), "x");
+        Expression member = Expression.Property(parameter, property);
+        var nonNullable = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+        // Semantic wrappers compare as their store type: the (underlying)(object) double-cast is
+        // erased by EF against the value-converted column (same pattern as extension containment).
+        if (ValueWrapper.UnderlyingType(nonNullable) is { } underlying)
+        {
+            member = Expression.Convert(Expression.Convert(member, typeof(object)), underlying);
+            nonNullable = underlying;
+        }
+
+        Expression body;
+        if (nonNullable == typeof(string))
+        {
+            var compare = typeof(string).GetMethod(
+                nameof(string.Compare), [typeof(string), typeof(string)])!;
+            var comparison = Expression.Call(compare, member, Expression.Constant(value, typeof(string)));
+            body = greaterOrEqual
+                ? Expression.GreaterThanOrEqual(comparison, Expression.Constant(0))
+                : Expression.LessThanOrEqual(comparison, Expression.Constant(0));
+        }
+        else
+        {
+            var constant = Expression.Constant(value, member.Type);
+            body = greaterOrEqual
+                ? Expression.GreaterThanOrEqual(member, constant)
+                : Expression.LessThanOrEqual(member, constant);
+        }
+        return source.Where(Expression.Lambda<Func<T, bool>>(body, parameter));
+    }
+
+    /// <summary>x => x.Property.Contains(value) for string fields and string-backed wrappers.</summary>
+    public static IQueryable<T> WhereContains<T>(IQueryable<T> source, PropertyInfo property, string value)
+    {
+        var parameter = Expression.Parameter(typeof(T), "x");
+        Expression member = Expression.Property(parameter, property);
+        var nonNullable = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+        if (ValueWrapper.UnderlyingType(nonNullable) == typeof(string))
+            member = Expression.Convert(Expression.Convert(member, typeof(object)), typeof(string));
+        var contains = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
+        var body = Expression.Call(member, contains, Expression.Constant(value));
+        return source.Where(Expression.Lambda<Func<T, bool>>(body, parameter));
+    }
+
+    /// <summary>
     /// x => ((string)(object)x.Extensions).Contains("\"key\":\"value\"") — the ExtensionData
     /// column converts to its canonical JSON string, so quoted containment is an exact match for
     /// string-typed custom fields on every relational provider. Promoted expression indexes are
