@@ -1,39 +1,22 @@
 using Microsoft.AspNetCore.Http;
-using Tam;
 using Tam.AspNetCore;
-using Tam.EntityFrameworkCore;
 
 namespace Erp;
 
 /// <summary>
-/// Decision D1's role layer, resolved from tenant data: the X-Demo-Role header stands in for
-/// real authentication and names a role stored in the roles registry (see Features/Roles.cs).
-/// Enforcement is the real path — Actor.Can in the pipeline; only the identity source is demo.
+/// Demo identity: the X-Demo-Role header stands in for authentication. Grant resolution is the
+/// framework's registry-backed <see cref="RoleActorProvider"/>; only the identity source and
+/// the demo persona names live here.
 /// </summary>
-public sealed class DbRoleActorProvider : IActorProvider
+public sealed class DemoActorProvider() : RoleActorProvider(
+    http => http.Request.Headers["X-Demo-Role"].FirstOrDefault() ?? "admin",
+    role => Names.GetValueOrDefault(role, role))
 {
-    private static readonly Dictionary<string, string> DisplayNames = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> Names = new(StringComparer.OrdinalIgnoreCase)
     {
         ["admin"] = "Alva Andersson",
         ["dispatcher"] = "Didrik Berg",
         ["viewer"] = "Vera Lund",
         ["technician"] = "Tekla Nilsson",
     };
-
-    public Actor GetActor(HttpContext http)
-    {
-        var roleName = http.Request.Headers["X-Demo-Role"].FirstOrDefault() ?? "admin";
-        var db = http.RequestServices.GetRequiredService<ErpDbContext>();
-
-        var role = db.Set<RoleEntity>().FirstOrDefault(
-            x => x.TenantId == Seed.Tenant && x.Name == roleName);
-
-        var permissions = role?.Permissions()
-            ?? (roleName == "admin" ? new HashSet<string> { "*" } : []);
-
-        return new Actor(
-            roleName,
-            DisplayNames.GetValueOrDefault(roleName, roleName),
-            permissions);
-    }
 }

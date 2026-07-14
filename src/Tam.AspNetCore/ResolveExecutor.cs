@@ -15,7 +15,7 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
         string formId, ResolveRequest request, OperationContext context, CancellationToken ct)
     {
         if (!model.Forms.TryGetValue(formId, out var form))
-            return (null, PipelineFindings.UnknownView.With(("view", formId)));
+            return (null, PipelineFindings.UnknownForm.With(("form", formId)));
         var operation = model.Operations[form.OperationId];
         if (!context.Actor.Can(operation.Permission))
             return (null, PipelineFindings.NotAuthorized.With(("permission", operation.Permission)));

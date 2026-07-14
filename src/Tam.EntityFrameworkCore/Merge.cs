@@ -13,6 +13,7 @@ public sealed record MergeResult(
         Findings = Conflicts
             .Select(c => ConcurrencyFindings.FieldConflict.At(c.Field))
             .ToList(),
+        Conflicts = Conflicts,
     };
 }
 

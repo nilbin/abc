@@ -63,8 +63,8 @@ for (const [id, view] of Object.entries(manifest.views)) {
   parts.push(emitInterface(`${name}Query`, view.queryFields.map(f => ({ ...f, required: false })), false));
   clientMethods.push(
     `  /** view ${id} (requires ${view.permission}) */\n` +
-    `  ${camel(id)}(query?: ${name}Query & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<ViewResponse & { rows: ${name}Row[] }> {\n` +
-    `    return this.client.view(${JSON.stringify(id)}, query as unknown as Record<string, unknown>) as Promise<ViewResponse & { rows: ${name}Row[] }>;\n  }`);
+    `  ${camel(id)}(query?: ${name}Query & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ${name}Row[] }> {\n` +
+    `    return this.client.view(${JSON.stringify(id)}, query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ${name}Row[] }>;\n  }`);
 }
 
 parts.push(`export class TypedTamClient {

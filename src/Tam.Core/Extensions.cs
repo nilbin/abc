@@ -114,15 +114,7 @@ public sealed record ExtensionFieldSpec(
         get
         {
             var semantic = SemanticTypes.ByKey.GetValueOrDefault(Type, SemanticTypes.Text);
-            if (MaxLength is not { } max) return semantic;
-            var prior = semantic.Validate;
-            return semantic with
-            {
-                MaxLength = max,
-                Validate = v => v is string s && s.Length > max
-                    ? ValidationFindings.TooLong.With(("max", max))
-                    : prior(v),
-            };
+            return MaxLength is { } max ? semantic.WithMaxLength(max) : semantic;
         }
     }
 }

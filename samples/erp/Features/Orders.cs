@@ -139,16 +139,7 @@ public static class EditOrderDetails
         if (order.Status != OrderStatus.Open) return OrderErrors.NotEditable;
 
         var merge = TamMerge.Apply(order, input);
-        if (merge.HasConflicts)
-        {
-            return new Result<Output>
-            {
-                Findings = merge.Conflicts
-                    .Select(c => ConcurrencyFindings.FieldConflict.At(c.Field))
-                    .ToList(),
-                Conflicts = merge.Conflicts,
-            };
-        }
+        if (merge.HasConflicts) return merge.ToConflictResult<Output>();
 
         return new Output(order.Version + 1);
     }

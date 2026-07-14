@@ -3,12 +3,14 @@ using Erp.Features;
 using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.AspNetCore;
+using Tam.AspNetCore.SystemOps;
 using Tam.Generated;
 
 var model = new TamModelBuilder()
     .DefaultCulture("sv")
     .Locales(Path.Combine(AppContext.BaseDirectory, "locales"))
     .AddDiscovered()   // compile-time discovery from Tam.Compiler — no runtime assembly scan
+    .AddTamSystem()    // framework operations/views: custom fields, roles, audit
 
     .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
     {
@@ -123,7 +125,7 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
         options.UseSqlite(connectionString);
 });
 builder.Services.AddTam<ErpDbContext>(model);
-builder.Services.AddSingleton<Tam.AspNetCore.IActorProvider, DbRoleActorProvider>();
+builder.Services.AddSingleton<Tam.AspNetCore.IActorProvider, DemoActorProvider>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 

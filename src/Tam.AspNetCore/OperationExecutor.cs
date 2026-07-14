@@ -158,7 +158,27 @@ public sealed class OperationExecutor(
                 ResponseJson = JsonSerializer.Serialize(response, TamJson.Options),
                 Timestamp = DateTimeOffset.UtcNow,
             });
-            await db.SaveChangesAsync(ct);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException)
+            {
+                // Concurrent identical request won the unique-key race: this attempt rolls
+                // back entirely and the stored outcome is replayed (or rejected on mismatch).
+                await transaction.RollbackAsync(ct);
+                db.ChangeTracker.Clear();
+                var winner = await db.Set<IdempotencyRecord>().FindAsync(
+                    [context.TenantId.Value, operationId, storeKey], ct);
+                if (winner is null || winner.PayloadHash != payloadHash)
+                    return Fail(context, Finding.Error("pipeline.idempotency-mismatch").Create());
+                var stored = JsonSerializer.Deserialize<OperationResponse>(winner.ResponseJson, TamJson.Options)!;
+                return stored with
+                {
+                    Findings = [.. stored.Findings,
+                        model.Locales.Resolve(PipelineFindings.IdempotentReplay.Create(), context.Culture)],
+                };
+            }
         }
 
         await transaction.CommitAsync(ct);
@@ -213,11 +233,15 @@ public sealed class OperationExecutor(
         OperationDefinition operation, object input, OperationContext context, CancellationToken ct)
     {
         var args = BindParameters(operation.Execute, input, context, ct);
-        var invocation = operation.Execute.Invoke(null, args)!;
+        var invocation = operation.Execute.Invoke(null, args)
+            ?? throw new InvalidOperationException(
+                $"TAM004: {operation.Id} Execute returned null — expected Task<Result<...>>.");
         var task = (Task)invocation;
         await task;
-        var resultValue = task.GetType().GetProperty("Result")!.GetValue(task)!;
-        return (Result)resultValue;
+        var resultProperty = task.GetType().GetProperty("Result")
+            ?? throw new InvalidOperationException(
+                $"TAM004: {operation.Id} Execute must return Task<Result> or Task<Result<T>>, not a plain Task.");
+        return (Result)resultProperty.GetValue(task)!;
     }
 
     internal object?[] BindParameters(

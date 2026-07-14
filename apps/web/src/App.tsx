@@ -3,6 +3,7 @@ import {
   AppShell, Group, Modal, NavLink, SegmentedControl, Select, Stack, Text, TextInput, Title,
 } from '@mantine/core';
 import { TamClient } from '@tam/core';
+import { TypedTamClient } from './generated/tam';
 import {
   FieldRendererProps, OperationForm, TamProvider, ViewGrid, registerRenderer, useTam,
 } from '@tam/react';
@@ -14,8 +15,9 @@ const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
 function CustomerPicker(p: FieldRendererProps) {
   const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
   useEffect(() => {
-    void p.tam.client.view('customers.lookup', { pageSize: 100 }).then(r =>
-      setOptions(r.rows.map(row => ({ value: String(row.id), label: String(row.name) }))));
+    const typed = new TypedTamClient(p.tam.client);
+    void typed.customersLookup({ pageSize: 100 }).then(r =>
+      setOptions(r.rows.map(row => ({ value: row.id, label: row.name }))));
   }, [p.tam.client, p.tam.culture]);
   return (
     <Select

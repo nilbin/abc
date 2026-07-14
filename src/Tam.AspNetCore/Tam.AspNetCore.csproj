@@ -15,4 +15,8 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="locales/*.json" />
+  </ItemGroup>
+
 </Project>

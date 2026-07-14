@@ -204,14 +204,7 @@ public static class OpenApiEndpoint
 
     private static object FieldSchema(FieldModel field, string? description = null)
     {
-        var type = field.Semantic.WireKind switch
-        {
-            "number" => "number",
-            "integer" => "integer",
-            "boolean" => "boolean",
-            "object" => "object",
-            _ => "string",
-        };
+        var type = SemanticType.JsonType(field.Semantic.WireKind);
         if (field.IsChangeSet)
         {
             return new

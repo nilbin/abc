@@ -182,10 +182,15 @@ export function findingMessage(
     finding.args?.[k] !== undefined ? String(finding.args[k]) : `{${k}}`);
 }
 
+/** PascalCase enum name → camelCase wire value (single shared conversion). */
+export function toWireEnum(name: string): string {
+  return name.charAt(0).toLowerCase() + name.slice(1);
+}
+
 export function enumLabel(manifest: Manifest, culture: string, value: unknown): string {
   if (value === null || value === undefined) return '';
   const s = String(value);
-  const kebab = (s.charAt(0).toLowerCase() + s.slice(1)).replace(/[A-Z]/g, m => '-' + m.toLowerCase());
+  const kebab = toWireEnum(s).replace(/[A-Z]/g, m => '-' + m.toLowerCase());
   const key = `enums.${kebab}`;
   const hit = manifest.catalogs[culture]?.[key] ?? manifest.catalogs[manifest.defaultCulture]?.[key];
   return hit ?? s;
@@ -211,6 +216,7 @@ export class TamClient {
 
   async manifest(): Promise<Manifest> {
     const response = await fetch(this.url('/api/manifest'), { headers: this.headers });
+    if (!response.ok) throw new Error(`manifest: ${response.status}`);
     return await response.json();
   }
 
@@ -234,6 +240,7 @@ export class TamClient {
       },
       body: JSON.stringify(body),
     });
+    // Deliberately no response.ok check: 403/409/422 carry the findings envelope as the body.
     return await response.json();
   }
 

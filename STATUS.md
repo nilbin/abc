@@ -13,10 +13,13 @@ src/Tam.Compiler             Roslyn analyzer: TAM001-003 model-shape checks and 
                              coverage as build errors (locales via AdditionalFiles)
 src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effects, idempotency,
                              ExtensionData JSON column, tenant field registry storage
-src/Tam.AspNetCore           execution pipeline, view executor (sort/page over declared
-                             capabilities), batched resolve, manifest endpoint, minimal MCP server
+src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
+                             OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, and the
+                             system module (custom fields, roles, audit view as framework
+                             operations with embedded sv/en locale defaults)
 packages/tam-core            manifest types, portable AST evaluator, localization, HTTP client
-packages/tam-react           OperationForm + ViewGrid + renderer registry, Mantine renderer pack
+packages/tam-react           context/renderers/OperationForm/ViewGrid modules + renderer
+                             registry, Mantine renderer pack
 samples/erp                  Customers/Projects/Orders + extension admin, sv+en locales, seed
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
 tests/Tam.Tests              17 tests: merge, extension applier, Change<T> JSON, portable AST,

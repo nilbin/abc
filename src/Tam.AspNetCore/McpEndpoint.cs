@@ -156,10 +156,11 @@ public static class McpEndpoint
         var properties = new Dictionary<string, object>();
         foreach (var field in fields)
         {
-            var schemaType = SchemaType(field.Semantic.WireKind);
+            var schemaType = SemanticType.JsonType(field.Semantic.WireKind);
             properties[field.WireName] = field.EnumOptions is { Count: > 0 } options
-                ? new { type = schemaType, description = label(field.LabelKey), @enum = options }
-                : new { type = schemaType, description = label(field.LabelKey) };
+                // Wire enums are camelCase (TamJson): advertise values the deserializer accepts.
+                ? new { type = schemaType, description = label(field.LabelKey), @enum = options.Select(Naming.Camel).ToArray() }
+                : (object)new { type = schemaType, description = label(field.LabelKey) };
         }
 
         if (extensions is { Count: > 0 })
@@ -176,8 +177,8 @@ public static class McpEndpoint
                     description = description is null ? text : $"{text}. {description}",
                     properties = new
                     {
-                        original = new { type = SchemaType(spec.Semantic.WireKind) },
-                        value = new { type = SchemaType(spec.Semantic.WireKind) },
+                        original = new { type = SemanticType.JsonType(spec.Semantic.WireKind) },
+                        value = new { type = SemanticType.JsonType(spec.Semantic.WireKind) },
                     },
                 };
             }
@@ -199,14 +200,7 @@ public static class McpEndpoint
         };
     }
 
-    private static string SchemaType(string wireKind) => wireKind switch
-    {
-        "number" => "number",
-        "integer" => "integer",
-        "boolean" => "boolean",
-        "object" => "object",
-        _ => "string",
-    };
+
 
     // MCP tool names allow [a-zA-Z0-9_-]; operation ids use dots + kebab, so the reverse
     // mapping is a lookup against known ids, never string surgery.

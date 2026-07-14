@@ -57,6 +57,14 @@ public sealed class TamModelBuilder
         return this;
     }
 
+    /// <summary>Programmatic catalog entries (framework defaults from embedded resources).
+    /// Applied before directories, so application locale files override them.</summary>
+    public TamModelBuilder LocaleDefaults(string culture, IReadOnlyDictionary<string, string> entries)
+    {
+        locales.Defaults.Add((culture, entries));
+        return this;
+    }
+
     /// <summary>Explicit registration, inspectable: scans one assembly for [Operation]/[View]/[ServerDerivation].
     /// Prefer the generated <c>AddDiscovered()</c> (Tam.Compiler source generator) — same result, no runtime scan.</summary>
     public TamModelBuilder AddAssembly(Assembly assembly)
@@ -112,6 +120,7 @@ public sealed class TamModelBuilder
     public TamModel Build()
     {
         var catalogs = new LocaleCatalogs(defaultCulture);
+        foreach (var (culture, entries) in locales.Defaults) catalogs.Add(culture, entries);
         foreach (var dir in locales.Directories) catalogs.AddFromDirectory(dir);
 
         var operations = operationTypes.Select(OperationDefinition.From).ToDictionary(o => o.Id);
@@ -183,5 +192,7 @@ public sealed class TamModelBuilder
     private sealed class LocaleCatalogsBuilder
     {
         public List<string> Directories { get; } = [];
+
+        public List<(string Culture, IReadOnlyDictionary<string, string> Entries)> Defaults { get; } = [];
     }
 }

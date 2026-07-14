@@ -22,7 +22,15 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         if (!context.Actor.Can(view.Permission))
             return (null, PipelineFindings.NotAuthorized.With(("permission", view.Permission)));
 
-        var queryRecord = BindQuery(view, query);
+        object queryRecord;
+        try
+        {
+            queryRecord = BindQuery(view, query);
+        }
+        catch (Exception e) when (e is FormatException or ArgumentException or NotSupportedException or OverflowException)
+        {
+            return (null, PipelineFindings.InvalidInput.Create());
+        }
         var args = view.Execute.GetParameters().Select(p =>
         {
             if (p.Position == 0) return queryRecord;

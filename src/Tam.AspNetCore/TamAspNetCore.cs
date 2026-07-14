@@ -28,6 +28,30 @@ public sealed class FixedTenantProvider(string tenant) : ITenantProvider
     public TenantId GetTenant(HttpContext http) => new(tenant);
 }
 
+/// <summary>
+/// Registry-backed actor resolution (decision D1): grants come from the roles table; only the
+/// role-name source (header, JWT claim, session) and display naming are application decisions.
+/// </summary>
+public class RoleActorProvider(
+    Func<HttpContext, string> roleName,
+    Func<string, string>? displayName = null) : IActorProvider
+{
+    public Actor GetActor(HttpContext http)
+    {
+        var name = roleName(http);
+        var tenant = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http);
+        var db = http.RequestServices.GetRequiredService<SystemOps.ITamDb>().Db;
+
+        var role = db.Set<RoleEntity>().FirstOrDefault(
+            x => x.TenantId == tenant.Value && x.Name == name);
+
+        return new Actor(
+            name,
+            displayName?.Invoke(name) ?? name,
+            role?.Permissions() ?? new HashSet<string>());
+    }
+}
+
 public static class TamAspNetCore
 {
     public static IServiceCollection AddTam<TDbContext>(this IServiceCollection services, TamModel model)
@@ -38,6 +62,7 @@ public static class TamAspNetCore
         services.AddScoped(sp => new ViewExecutor(model, sp));
         services.AddScoped(sp => new ResolveExecutor(model, sp.GetRequiredService<OperationExecutor>()));
         services.AddScoped<IExtensionRegistry>(sp => new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()));
+        services.AddScoped<SystemOps.ITamDb>(sp => new SystemOps.TamDb(sp.GetRequiredService<TDbContext>()));
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
         services.AddSingleton<EffectBroadcaster>();
@@ -154,9 +179,16 @@ public static class TamAspNetCore
         : error.Code == PipelineFindings.UnknownView.Code ? StatusCodes.Status404NotFound
         : StatusCodes.Status422UnprocessableEntity;
 
+    /// <summary>Content-derived revision: any overlay change (add, retire, relabel) moves it.</summary>
     private static long OverlayRevision(
-        IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>> overlay) =>
-        overlay.Sum(kv => kv.Value.Count);
+        IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>> overlay)
+    {
+        var fingerprint = string.Join("|", overlay
+            .OrderBy(kv => kv.Key)
+            .SelectMany(kv => kv.Value.Select(s => $"{kv.Key}/{s.Key}/{s.Type}/{s.State}/{s.Required}/{s.MaxLength}")));
+        return BitConverter.ToInt64(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fingerprint)), 0) & long.MaxValue;
+    }
 
     /// <summary>Tenant field labels/descriptions merge into the catalogs under "ext.{key}" (docs/15, docs/21).</summary>
     private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> MergeExtensionLabels(

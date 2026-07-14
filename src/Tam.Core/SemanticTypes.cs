@@ -36,6 +36,29 @@ public sealed record SemanticType(
     string? Format = null,    // "email" | "phone" | "url" | "multiline" | "money" | "reference:<entity>" | null
     int? MaxLength = null)
 {
+    /// <summary>Adds an intrinsic max length, stacking on any existing validation.</summary>
+    public SemanticType WithMaxLength(int max)
+    {
+        var prior = Validate;
+        return this with
+        {
+            MaxLength = max,
+            Validate = v => v is string s && s.Length > max
+                ? ValidationFindings.TooLong.With(("max", max))
+                : prior(v),
+        };
+    }
+
+    /// <summary>JSON Schema type for a wire kind — single mapping for OpenAPI and MCP.</summary>
+    public static string JsonType(string wireKind) => wireKind switch
+    {
+        "number" => "number",
+        "integer" => "integer",
+        "boolean" => "boolean",
+        "object" => "object",
+        _ => "string",
+    };
+
     public Func<object?, object?> Normalize { get; init; } = v => v;
 
     /// <summary>Semantic equality on normalized values — drives dirty tracking and the three-way merge.</summary>
@@ -80,7 +103,6 @@ public static class SemanticTypes
         Normalize = v => v is string s
             ? new string(s.Where(c => char.IsDigit(c) || c == '+').ToArray())
             : v,
-        SemanticEquals = (a, b) => Equals(a, b),
     };
 
     public static readonly SemanticType Number = new("number", "number");
@@ -141,18 +163,6 @@ public static class SemanticTypes
             _ => Complex,
         };
 
-        if (maxLength is { } max)
-        {
-            var prior = baseType.Validate;
-            baseType = baseType with
-            {
-                MaxLength = max,
-                Validate = v => v is string s && s.Length > max
-                    ? ValidationFindings.TooLong.With(("max", max))
-                    : prior(v),
-            };
-        }
-
-        return baseType;
+        return maxLength is { } max ? baseType.WithMaxLength(max) : baseType;
     }
 }
