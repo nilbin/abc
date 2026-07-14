@@ -52,8 +52,10 @@ public sealed class OutboxDispatcher(
                     await transport.Dispatch(record, ct);
                     await InvokeSubscribers(record, scope.ServiceProvider, db, ct);
                     record.DispatchedAtIso = DateTimeOffset.UtcNow.ToString("O");
+                    // Persist per record: a crash mid-batch must not redeliver what already
+                    // went out. Delivery remains at-least-once; subscribers stay idempotent.
+                    await db.SaveChangesAsync(ct);
                 }
-                if (pending.Count > 0) await db.SaveChangesAsync(ct);
             }
             catch (OperationCanceledException)
             {

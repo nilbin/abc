@@ -49,7 +49,7 @@ public static class ExtensionApplier
         var findings = new List<Finding>();
         var conflicts = new List<FieldConflict>();
         var applied = new List<string>();
-        var byKey = specs.ToDictionary(s => s.Key, StringComparer.OrdinalIgnoreCase);
+        var byKey = specs.ToDictionary(s => s.Key, StringComparer.Ordinal);
 
         foreach (var (key, change) in changes)
         {

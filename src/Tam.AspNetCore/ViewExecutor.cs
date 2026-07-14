@@ -62,6 +62,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             {
                 var specs = (await registry.For(
                         context.TenantId, TamModel.EntityKey(extensibleEntity), ct))
+                    .Where(s => s.State is ExtensionFieldState.Active or ExtensionFieldState.Deprecated)
                     .ToDictionary(s => s.Key, StringComparer.Ordinal);
                 foreach (var (param, value) in raw)
                 {
@@ -120,7 +121,8 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             if (view.ExtensibleEntity is { } sortEntity
                 && services.GetService(typeof(IExtensionRegistry)) is IExtensionRegistry sortRegistry
                 && (await sortRegistry.For(context.TenantId, TamModel.EntityKey(sortEntity), ct))
-                    .FirstOrDefault(x => x.Key == key) is { } spec)
+                    .FirstOrDefault(x => x.Key == key
+                        && x.State is ExtensionFieldState.Active or ExtensionFieldState.Deprecated) is { } spec)
             {
                 extensionSort = new ExtensionFilter(key, spec.Semantic.WireKind, FilterOperator.Equal, "");
                 sort = null;
@@ -295,8 +297,11 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         if (target == typeof(long)) return long.Parse(raw);
         if (target == typeof(bool)) return bool.Parse(raw);
         if (target == typeof(decimal)) return decimal.Parse(raw, System.Globalization.CultureInfo.InvariantCulture);
-        if (target == typeof(DateOnly)) return DateOnly.Parse(raw);
-        if (target == typeof(DateTimeOffset)) return DateTimeOffset.Parse(raw);
+        if (target == typeof(DateOnly))
+            return DateOnly.Parse(raw, System.Globalization.CultureInfo.InvariantCulture);
+        if (target == typeof(DateTimeOffset))
+            return DateTimeOffset.Parse(raw, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind);
         throw new NotSupportedException($"Query binding for {target.Name} is not supported.");
     }
 }

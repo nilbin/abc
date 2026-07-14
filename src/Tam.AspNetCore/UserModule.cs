@@ -170,12 +170,18 @@ public static class UserList
         public bool Active { get; init; }
     }
 
-    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
-        tam.Db.Set<TamUserEntity>().Select(x => new Result
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
+    {
+        var users = tam.Db.Set<TamUserEntity>()
+            .Where(x => x.TenantId == context.TenantId.Value);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            users = users.Where(x => x.UserName.Contains(query.Search!));
+        return users.Select(x => new Result
         {
             Id = x.Id, UserName = x.UserName, DisplayName = x.DisplayName,
             Roles = x.RolesJson, Active = x.Active,
         });
+    }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>
         caps.Sortable(nameof(Result.UserName)).DefaultSort(nameof(Result.UserName));

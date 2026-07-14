@@ -12,25 +12,31 @@ namespace Tam.AspNetCore;
 /// </summary>
 public sealed class EffectBroadcaster
 {
-    private readonly ConcurrentDictionary<Guid, Channel<string>> subscribers = new();
+    private readonly ConcurrentDictionary<Guid, (string TenantId, Channel<string> Channel)> subscribers = new();
 
     public void Publish(string tenantId, string operationId, IReadOnlyList<object> effects)
     {
         if (subscribers.IsEmpty || effects.Count == 0) return;
         var payload = JsonSerializer.Serialize(
             new { tenantId, operationId, effects }, TamJson.Options);
-        foreach (var channel in subscribers.Values)
-            channel.Writer.TryWrite(payload);
+        // Tenant-scoped delivery: a listener only ever receives its own tenant's effects.
+        foreach (var (subscriberTenant, channel) in subscribers.Values)
+            if (subscriberTenant == tenantId)
+                channel.Writer.TryWrite(payload);
     }
 
     public async Task Stream(HttpContext http, CancellationToken ct)
     {
+        var tenant = http.RequestServices
+            .GetService(typeof(ITenantProvider)) is ITenantProvider tenants
+            ? tenants.GetTenant(http).Value
+            : "";
         var id = Guid.NewGuid();
         var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(64)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
         });
-        subscribers[id] = channel;
+        subscribers[id] = (tenant, channel);
 
         http.Response.Headers.ContentType = "text/event-stream";
         http.Response.Headers.CacheControl = "no-cache";

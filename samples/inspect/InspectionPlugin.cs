@@ -77,6 +77,10 @@ public sealed class InspectionPlugin : ITamPlugin
                 && idElement.TryGetGuid(out var id) ? id : (Guid?)null;
 
             var db = ((ITamDb)services.GetService(typeof(ITamDb))!).Db;
+            // Outbox delivery is at-least-once — the subscriber must be idempotent.
+            var exists = orderId is { } linked && await db.Set<Checklist>().AnyAsync(
+                x => x.TenantId == effect.TenantId && x.OrderId == linked && x.Title == number, ct);
+            if (exists) return;
             db.Add(Checklist.Create(effect.TenantId, number, orderId));
             await db.SaveChangesAsync(ct);
         });

@@ -93,5 +93,8 @@
   "labels.password": "Password",
   "labels.roles": "Roles",
   "users.unknown-role": "Unknown role: {role}.",
-  "users.invalid-name": "Invalid user name (lowercase letters, digits, dot and hyphen)."
+  "users.invalid-name": "Invalid user name (lowercase letters, digits, dot and hyphen).",
+  "extensions.unknown-entity": "Unknown entity: {entity}.",
+  "packages.role-conflict": "The role {role} already exists with different permissions.",
+  "rules.evaluation-failed": "The rule {rule} could not be evaluated and was skipped."
 }

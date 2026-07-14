@@ -27,7 +27,8 @@ public static class RuleEvaluator
     /// tenant-authored text in the request culture (code = "rules.{name}", D6 as data).
     /// </summary>
     public static async Task<List<Finding>> EvaluateAsync(
-        DbContext db, string operationId, JsonElement body, OperationContext context, CancellationToken ct)
+        DbContext db, string operationId, JsonElement body, OperationContext context,
+        string defaultCulture, CancellationToken ct)
     {
         var rules = await db.Set<AutomationRuleEntity>()
             .Where(x => x.TenantId == context.TenantId.Value
@@ -38,22 +39,30 @@ public static class RuleEvaluator
         var findings = new List<Finding>();
         foreach (var rule in rules)
         {
-            Px condition;
+            bool fired;
             try
             {
-                condition = JsonSerializer.Deserialize<Px>(rule.ConditionJson, TamJson.Options)!;
+                var condition = JsonSerializer.Deserialize<Px>(rule.ConditionJson, TamJson.Options)!;
+                fired = PxBinary.Truthy(condition.Evaluate(name => FieldValue(body, name)));
             }
-            catch (JsonException)
+            catch (Exception e) when (e is JsonException or NotSupportedException
+                or ArgumentException or FormatException or InvalidOperationException)
             {
-                continue;   // definition-time validation should make this unreachable
+                // A rule that cannot evaluate must never brick the operation (fail-open would
+                // silently skip validation; fail-closed would block the tenant) — surface a
+                // non-blocking warning naming the rule so the admin can fix it.
+                findings.Add(Finding.Warning("rules.evaluation-failed")
+                    .With(("rule", rule.Name)));
+                continue;
             }
-
-            if (!PxBinary.Truthy(condition.Evaluate(name => FieldValue(body, name)))) continue;
+            if (!fired) continue;
 
             var messages = JsonSerializer.Deserialize<Dictionary<string, string>>(rule.MessagesJson) ?? [];
             var finding = Finding.Error($"rules.{rule.Name}").Create() with
             {
+                // culture -> default culture -> anything: RUL003 guarantees the middle one exists.
                 Message = messages.GetValueOrDefault(context.Culture)
+                    ?? messages.GetValueOrDefault(defaultCulture)
                     ?? messages.Values.FirstOrDefault(),
                 Targets = rule.TargetField is { Length: > 0 } target
                     ? [target.StartsWith("ext.", StringComparison.Ordinal)
@@ -87,10 +96,16 @@ public static class RuleEvaluator
             return null;
         }
 
+        // Compiled Change<T> members arrive as {original, value} envelopes exactly like
+        // extension change-sets — unwrap them so edit-operation rules see the new value.
+        if (element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty("value", out var inner))
+            element = inner;
+
         return element.ValueKind switch
         {
             JsonValueKind.String => element.GetString(),
-            JsonValueKind.Number => element.GetDecimal(),
+            JsonValueKind.Number => element.TryGetDecimal(out var number) ? number : null,
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             _ => null,
@@ -118,10 +133,18 @@ public static class DefineAutomationRule
         if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
             return ValidationFindings.InvalidValue.At(nameof(Input.Name));
 
-        // RUL001: the trigger must be a compiled operation.
+        // RUL001: the trigger must be a compiled operation — and an inactive plugin's
+        // operations do not exist for this tenant, exactly as the pipeline's 404 says.
         if (!model.Operations.TryGetValue(input.OnOperation, out var operation))
             return RuleFindings.UnknownOperation.With(("operation", input.OnOperation))
                 .At(nameof(Input.OnOperation));
+        if (operation.Plugin is { } plugin)
+        {
+            var active = await PluginActivations.ActiveAsync(tam.Db, context.TenantId.Value, ct);
+            if (!active.Contains(plugin))
+                return RuleFindings.UnknownOperation.With(("operation", input.OnOperation))
+                    .At(nameof(Input.OnOperation));
+        }
 
         // The condition is structured Px, stored as authored — a parse failure is a finding,
         // and user data only ever lands in const nodes.
@@ -134,7 +157,7 @@ public static class DefineAutomationRule
         {
             condition = null;
         }
-        if (condition is null)
+        if (condition is null || !OperatorsSupported(condition))
             return RuleFindings.InvalidCondition.At(nameof(Input.Condition));
 
         // RUL002: every field the condition references must exist on the operation's input —
@@ -181,6 +204,16 @@ public static class DefineAutomationRule
 
         return new Output(rule.Id);
     }
+
+    /// <summary>The closed operator set — a stored rule must never throw at evaluation time.</summary>
+    private static bool OperatorsSupported(Px px) => px switch
+    {
+        PxConst or PxField => true,
+        PxUnary u => u.Op is "not" or "isNull" or "isNotNull" && OperatorsSupported(u.X),
+        PxBinary b => b.Op is "eq" or "ne" or "gt" or "ge" or "lt" or "le" or "and" or "or"
+            && OperatorsSupported(b.L) && OperatorsSupported(b.R),
+        _ => false,
+    };
 }
 
 [Operation("rules.retire")]
@@ -220,11 +253,17 @@ public static class RuleList
         public bool Retired { get; init; }
     }
 
-    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
-        tam.Db.Set<AutomationRuleEntity>().Select(x => new Result
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
+    {
+        var rules = tam.Db.Set<AutomationRuleEntity>()
+            .Where(x => x.TenantId == context.TenantId.Value);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            rules = rules.Where(x => x.Name.Contains(query.Search!));
+        return rules.Select(x => new Result
         {
             Id = x.Id, Name = x.Name, OnOperation = x.OnOperation, Retired = x.Retired,
         });
+    }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>
         caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));

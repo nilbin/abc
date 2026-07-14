@@ -70,9 +70,19 @@ public sealed class OperationExecutor(
         if (structural.Any(f => f.Severity == FindingSeverity.Error))
             return Fail(context, [.. structural]);
 
-        // Plugin gates (docs/22 P2): declared preconditions on this operation, run only for
-        // tenants with the owning plugin active — after validation, before the handler. The
-        // gate reads the wire input, never host CLR types; its findings fail like any other.
+        // Tenant automation rules (docs/22 P5): declarative Px conditions over the wire input,
+        // firing tenant-authored blocking findings — validation as data, evaluated in-pipeline.
+        // (Pure over the input, so safe outside the transaction.)
+        var ruleFindings = await RuleEvaluator.EvaluateAsync(
+            db, operationId, body, context, model.DefaultCulture, ct);
+        if (ruleFindings.Any(f => f.Severity == FindingSeverity.Error))
+            return Fail(context, [.. ruleFindings]);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+        // Plugin gates (docs/22 P2): declared preconditions, run only for tenants with the
+        // owning plugin active — INSIDE the transaction, so the state a gate checked cannot
+        // change underneath the handler it guards. Wire input only, never host CLR types.
         if (model.Gates.TryGetValue(operationId, out var gates))
         {
             var activePlugins = await PluginActivations.ActiveAsync(db, context.TenantId.Value, ct);
@@ -82,14 +92,6 @@ public sealed class OperationExecutor(
                 if (gateResult.IsError) return Fail(context, [.. gateResult.Findings]);
             }
         }
-
-        // Tenant automation rules (docs/22 P5): declarative Px conditions over the wire input,
-        // firing tenant-authored blocking findings — validation as data, evaluated in-pipeline.
-        var ruleFindings = await RuleEvaluator.EvaluateAsync(db, operationId, body, context, ct);
-        if (ruleFindings.Count > 0)
-            return Fail(context, [.. ruleFindings]);
-
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
         Result result;
         try
@@ -102,6 +104,7 @@ public sealed class OperationExecutor(
         }
 
         var findings = new List<Finding>(structural.Where(f => f.Severity != FindingSeverity.Error));
+        findings.AddRange(ruleFindings.Where(f => f.Severity != FindingSeverity.Error));
         findings.AddRange(result.Findings);
         var conflicts = new List<FieldConflict>(result.Conflicts ?? []);
 
@@ -163,7 +166,18 @@ public sealed class OperationExecutor(
         }
 
         var audit = TamAudit.Capture(db, context, operationId);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (ct.IsCancellationRequested is false)
+        {
+            // A check-then-insert race lost to a unique index (two concurrent installs,
+            // activations, definitions). The serial path would have produced a duplicate
+            // finding; surface the same conflict shape instead of a 500.
+            await transaction.RollbackAsync(ct);
+            return Fail(context, ConcurrencyFindings.VersionConflict.Create());
+        }
 
         var effects = result.Effects.Concat(TamAudit.InferEffects(audit)).ToList();
         var version = db.ChangeTracker.Entries()

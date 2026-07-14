@@ -151,6 +151,7 @@ public static class PluginList
             .ToHashSet();
 
         return model.Plugins.Keys.Order()
+            .Where(id => string.IsNullOrWhiteSpace(query.Search) || id.Contains(query.Search!))
             .Select(id => new Result { PluginId = id, Active = active.Contains(id) })
             .AsQueryable();
     }

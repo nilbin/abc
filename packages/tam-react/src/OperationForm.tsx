@@ -50,6 +50,10 @@ export function OperationForm(props: OperationFormProps) {
   const seq = useRef(0);                       // local request sequence: stale-response rejection
   const lastChanged = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>();
+  // Read through a ref inside async continuations: the closure's `touched` may predate the
+  // user touching a field while a resolve was in flight — the ref never lies.
+  const touchedRef = useRef(touched);
+  touchedRef.current = touched;
 
   const getWire = useCallback(
     (name: string) => values[name] ?? values[`ext:${name}`] ?? null,
@@ -75,14 +79,18 @@ export function OperationForm(props: OperationFormProps) {
           // Suggestions apply to untouched fields only: RecomputeIfUntouched (docs/05).
           for (const [name, state] of Object.entries(resolved.fields)) {
             if (state.suggestedValue !== undefined && state.suggestedValue !== null
-                && !touched.has(name)) {
-              setValues(prev => ({ ...prev, [name]: state.suggestedValue }));
+                && !touchedRef.current.has(name)) {
+              // Skip identical values: an unconditional set re-triggers the resolve effect
+              // and would loop suggestion -> resolve -> suggestion forever.
+              setValues(prev => prev[name] === state.suggestedValue
+                ? prev
+                : { ...prev, [name]: state.suggestedValue });
             }
           }
         }
       } catch { /* resolve is advisory; submit re-validates authoritatively */ }
     }, 350);
-  }, [client, formDef, props.form, values, touched, manifest.revision]);
+  }, [client, formDef, props.form, values, manifest.revision]);
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current = key;

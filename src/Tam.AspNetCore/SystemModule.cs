@@ -71,6 +71,8 @@ public static class DefineExtensionField
         Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
     {
         // Registry-time diagnostics: the runtime twin of the compiler's rule set.
+        if (!model.ExtensibleEntityKeys.Contains(input.Entity))
+            return ExtensionFindings.UnknownEntity.With(("entity", input.Entity)).At(nameof(Input.Entity));   // EXT007
         if (!SemanticTypes.ByKey.ContainsKey(input.Type))
             return ExtensionFindings.UnknownType.At(nameof(Input.Type));
 
@@ -142,9 +144,10 @@ public static class ExtensionFieldList
         public ExtensionFieldState State { get; init; }
     }
 
-    public static IQueryable<Result> Execute(Query query, ITamDb tam)
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var fields = tam.Db.Set<ExtensionFieldEntity>().AsQueryable();
+        var fields = tam.Db.Set<ExtensionFieldEntity>()
+            .Where(x => x.TenantId == context.TenantId.Value);
         if (query.Entity is { Length: > 0 }) fields = fields.Where(x => x.Entity == query.Entity);
         return fields.Select(x => new Result
         {
@@ -230,11 +233,13 @@ public static class RoleList
         public string Permissions { get; init; } = "";
     }
 
-    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
-        tam.Db.Set<RoleEntity>().Select(x => new Result
-        {
-            Id = x.Id, Name = x.Name, Permissions = x.PermissionsJson,
-        });
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
+        tam.Db.Set<RoleEntity>()
+            .Where(x => x.TenantId == context.TenantId.Value)
+            .Select(x => new Result
+            {
+                Id = x.Id, Name = x.Name, Permissions = x.PermissionsJson,
+            });
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>
         caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
@@ -268,14 +273,16 @@ public static class AuditLog
         public string? NewValue { get; init; }
     }
 
-    public static IQueryable<Result> Execute(Query query, ITamDb tam)
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
         var changes = tam.Db.Set<AuditChange>().AsQueryable();
         if (query.Entity is { Length: > 0 }) changes = changes.Where(x => x.Entity == query.Entity);
         if (query.EntityId is { Length: > 0 }) changes = changes.Where(x => x.EntityId == query.EntityId);
 
+        // Entries carry the tenant; joining through them scopes the change rows.
         return changes
-            .Join(tam.Db.Set<AuditEntry>(), c => c.EntryId, e => e.Id, (c, e) => new Result
+            .Join(tam.Db.Set<AuditEntry>().Where(e => e.TenantId == context.TenantId.Value),
+                c => c.EntryId, e => e.Id, (c, e) => new Result
             {
                 Id = c.Id,
                 // ISO string column: sortable/formattable on every provider (SQLite incl.)

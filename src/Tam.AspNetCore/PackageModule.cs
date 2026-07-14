@@ -11,6 +11,7 @@ public static class PackageFindings
     public static readonly FindingFactory FieldConflict = Finding.Error("packages.field-conflict");
     public static readonly FindingFactory OlderVersion = Finding.Error("packages.older-version");
     public static readonly FindingFactory NotInstalled = Finding.Error("packages.not-installed");
+    public static readonly FindingFactory RoleConflict = Finding.Error("packages.role-conflict");
 }
 
 /// <summary>
@@ -85,6 +86,11 @@ public static class InstallPackage
         foreach (var field in document.Fields ?? [])
         {
             var path = FieldPath.Extension(field.Key);
+            if (!model.ExtensibleEntityKeys.Contains(field.Entity))
+            {
+                findings.Add(ExtensionFindings.UnknownEntity.With(("entity", field.Entity)).At(path));
+                continue;
+            }
             if (!SemanticTypes.ByKey.ContainsKey(field.Type))
             {
                 findings.Add(ExtensionFindings.UnknownType.At(path));
@@ -104,10 +110,23 @@ public static class InstallPackage
                 x => x.Entity == field.Entity && x.Key == field.Key);
             if (existing is not null)
             {
-                // Re-install/upgrade: an identical live field is a no-op; a different one is a
-                // conflict the author must resolve — silent redefinition would corrupt data.
-                if (existing.Type == field.Type && existing.State == ExtensionFieldState.Active)
+                // Re-install/upgrade against a live or previously-retired field of the SAME
+                // package: identical spec → no-op; identical after uninstall → resurrect
+                // (uninstall retires, reinstall un-retires — reversible by design). Anything
+                // else is a conflict — silent redefinition would corrupt data.
+                var identical = existing.Type == field.Type
+                    && existing.Required == field.Required
+                    && existing.MaxLength == field.MaxLength
+                    && existing.LabelsJson == JsonSerializer.Serialize(field.Labels)
+                    && existing.OptionsJson == (field.Options is null ? null : JsonSerializer.Serialize(field.Options));
+                if (identical && existing.State == ExtensionFieldState.Active)
                     continue;
+                if (identical && existing.State == ExtensionFieldState.Retired
+                    && existing.Package == document.Package)
+                {
+                    if (!input.DryRun) existing.State = ExtensionFieldState.Active;
+                    continue;
+                }
                 findings.Add(PackageFindings.FieldConflict.With(("key", field.Key)).At(path));
                 continue;
             }
@@ -129,6 +148,9 @@ public static class InstallPackage
         }
 
         var roleSpecs = document.Roles ?? [];
+        var existingRoles = await tam.Db.Set<RoleEntity>()
+            .Where(x => x.TenantId == tenant)
+            .ToListAsync(ct);
         foreach (var role in roleSpecs)
         {
             if (!System.Text.RegularExpressions.Regex.IsMatch(role.Name, "^[a-z][a-z0-9-]*$"))
@@ -136,6 +158,12 @@ public static class InstallPackage
             findings.AddRange(role.Permissions
                 .Where(p => p != "*" && !model.Permissions.Contains(TrimScope(p)))
                 .Select(p => RoleFindings.UnknownPermission.With(("permission", p)).At(nameof(Input.Document))));
+            // A role is a PERMISSION grant — never silently overwrite one the tenant already
+            // authored differently. Identical → no-op; different → explicit conflict.
+            var existingRole = existingRoles.FirstOrDefault(x => x.Name == role.Name);
+            if (existingRole is not null
+                && existingRole.PermissionsJson != JsonSerializer.Serialize(role.Permissions))
+                findings.Add(PackageFindings.RoleConflict.With(("role", role.Name)).At(nameof(Input.Document)));
         }
 
         if (findings.Count > 0)
@@ -229,14 +257,20 @@ public static class PackageList
         public string InstalledAt { get; init; } = "";
     }
 
-    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
-        tam.Db.Set<PackageInstallationEntity>().Select(x => new Result
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
+    {
+        var installed = tam.Db.Set<PackageInstallationEntity>()
+            .Where(x => x.TenantId == context.TenantId.Value);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            installed = installed.Where(x => x.Package.Contains(query.Search!));
+        return installed.Select(x => new Result
         {
             Id = x.Id,
             Package = x.Package,
             Version = x.Version,
             InstalledAt = x.InstalledAtIso.Substring(0, 16).Replace("T", " "),
         });
+    }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>
         caps.Sortable(nameof(Result.Package)).DefaultSort(nameof(Result.Package));

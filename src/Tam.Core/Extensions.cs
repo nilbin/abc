@@ -121,6 +121,7 @@ public sealed record ExtensionFieldSpec(
 
 public static class ExtensionFindings
 {
+    public static readonly FindingFactory UnknownEntity = Finding.Error("extensions.unknown-entity");   // EXT007
     public static readonly FindingFactory UnknownField = Finding.Error("extensions.unknown-field");
     public static readonly FindingFactory RetiredField = Finding.Error("extensions.retired-field");
     public static readonly FindingFactory DeprecatedField = Finding.Warning("extensions.deprecated-field");

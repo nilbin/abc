@@ -69,6 +69,13 @@ public static class TamDbFunctions
     /// which an unquoted path would misread as nesting.</summary>
     private static SqlExpression SqlitePath(SqlExpression key) =>
         key is SqlConstantExpression { Value: string k } constant
-            ? new SqlConstantExpression($"$.\"{k}\"", constant.TypeMapping)
+            ? new SqlConstantExpression($"$.\"{Validated(k)}\"", constant.TypeMapping)
             : key;
+
+    /// <summary>Every authoring channel constrains keys to [a-zA-Z0-9.]; enforce it HERE too,
+    /// so the quoting above can never be broken by a channel added later.</summary>
+    private static string Validated(string key) =>
+        key.All(c => char.IsAsciiLetterOrDigit(c) || c == '.')
+            ? key
+            : throw new InvalidOperationException($"Extension key '{key}' contains illegal characters.");
 }

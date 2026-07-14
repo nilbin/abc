@@ -30,6 +30,10 @@ public sealed class TamModel
     /// <summary>Plugin-packaged extension fields on host entities, by entity key (docs/22 P2).</summary>
     public IReadOnlyList<PackagedFieldDefinition> PackagedFields { get; init; } = [];
 
+    /// <summary>Wire keys of entities that accept extensions — the registry validates
+    /// tenant/package field definitions against this set (EXT007).</summary>
+    public IReadOnlySet<string> ExtensibleEntityKeys { get; init; } = new HashSet<string>();
+
     /// <summary>Plugin gates by target operation id (docs/22 P2).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<GateDefinition>> Gates { get; init; } =
         new Dictionary<string, IReadOnlyList<GateDefinition>>();
@@ -112,6 +116,9 @@ public sealed class TamModelBuilder
         var attribute = typeof(TPlugin).GetCustomAttribute<TamPluginAttribute>()
             ?? throw new InvalidOperationException(
                 $"PLG000: plugin type '{typeof(TPlugin).Name}' lacks [TamPlugin(\"id\")].");
+        if (!System.Text.RegularExpressions.Regex.IsMatch(attribute.Id, "^[a-z][a-z0-9]*$"))
+            throw new InvalidOperationException(
+                $"PLG000: plugin id '{attribute.Id}' must match ^[a-z][a-z0-9]*$ — it is a permanent wire prefix.");
         if (plugins.ContainsKey(attribute.Id))
             throw new InvalidOperationException($"PLG003: plugin id '{attribute.Id}' registered twice.");
 
@@ -234,6 +241,11 @@ public sealed class TamModelBuilder
         var extensibleKeys = operations.Values.Select(o => o.ExtensibleEntity)
             .Concat(views.Values.Select(v => v.ExtensibleEntity))
             .Where(t => t is not null).Select(t => TamModel.EntityKey(t!)).ToHashSet();
+        var duplicatePackaged = packagedFields.GroupBy(r => (r.EntityKey, r.Key))
+            .FirstOrDefault(g => g.Count() > 1);
+        if (duplicatePackaged is not null)
+            throw new InvalidOperationException(
+                $"PLG004: packaged field '{duplicatePackaged.Key.Key}' on '{duplicatePackaged.Key.EntityKey}' is declared more than once.");
         var packaged = packagedFields.Select(r =>
         {
             if (!extensibleKeys.Contains(r.EntityKey))
@@ -258,6 +270,11 @@ public sealed class TamModelBuilder
             if (!operations.ContainsKey(gate.OperationId))
                 throw new InvalidOperationException(
                     $"PLG002: plugin '{gate.PluginId}' gates unknown operation '{gate.OperationId}'.");
+        var duplicateGate = gates.GroupBy(g => (g.OperationId, g.PluginId))
+            .FirstOrDefault(g => g.Count() > 1);
+        if (duplicateGate is not null)
+            throw new InvalidOperationException(
+                $"PLG002: plugin '{duplicateGate.Key.PluginId}' gates '{duplicateGate.Key.OperationId}' more than once.");
 
         var model = new TamModel
         {
@@ -270,6 +287,7 @@ public sealed class TamModelBuilder
             Grids = gridDefs,
             Plugins = plugins,
             PackagedFields = packaged,
+            ExtensibleEntityKeys = extensibleKeys,
             Gates = gates.GroupBy(g => g.OperationId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<GateDefinition>)g.ToList()),
             Subscribers = subscribers,

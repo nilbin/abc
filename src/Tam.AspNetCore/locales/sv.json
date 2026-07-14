@@ -93,5 +93,8 @@
   "labels.password": "Lösenord",
   "labels.roles": "Roller",
   "users.unknown-role": "Okänd roll: {role}.",
-  "users.invalid-name": "Ogiltigt användarnamn (små bokstäver, siffror, punkt och bindestreck)."
+  "users.invalid-name": "Ogiltigt användarnamn (små bokstäver, siffror, punkt och bindestreck).",
+  "extensions.unknown-entity": "Okänd entitet: {entity}.",
+  "packages.role-conflict": "Rollen {role} finns redan med andra behörigheter.",
+  "rules.evaluation-failed": "Regeln {rule} kunde inte utvärderas och hoppades över."
 }
