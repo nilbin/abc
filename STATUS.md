@@ -199,8 +199,10 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
     list): exact equality + contains + ordinal ranges for strings/dates, numeric equality +
     ranges for numbers, on both providers. Extension SORTING now works the same
     way (`sort=ext.weightKg` — numeric via JsonNumber, ordinal via JsonValue; grid headers on
-    extension columns are clickable; null placement follows the provider). Still open: boolean
-    extension filters (JSON boolean forms diverge per provider) and expression-index promotion.
+    extension columns are clickable; null placement follows the provider). Boolean extension filters now work too
+    (provider-aware: json_extract's 1/0 on SQLite, ->> text on PostgreSQL), and SQLite JSONPaths
+    quote the key so plugin-packaged dotted keys ("inspect.requiresInspection") resolve. The
+    remaining performance item is expression-index promotion.
 11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
     (review-notes risk #4) not implemented.
 12. **Plugin system: P1–P3 and P5-v1 built and verified**; remaining design-only

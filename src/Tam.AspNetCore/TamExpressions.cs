@@ -86,7 +86,7 @@ internal static class TamExpressions
     /// </summary>
     public static IQueryable<T> WhereExtension<T>(
         IQueryable<T> source, PropertyInfo extensionsProperty, string key, string wireKind,
-        ViewExecutor.FilterOperator op, string raw)
+        ViewExecutor.FilterOperator op, string raw, bool isNpgsql)
     {
         var parameter = Expression.Parameter(typeof(T), "x");
         var asString = Expression.Convert(
@@ -95,7 +95,27 @@ internal static class TamExpressions
         var keyConstant = Expression.Constant(key);
 
         Expression body;
-        if (wireKind is "number" or "integer")
+        if (wireKind == "boolean")
+        {
+            // The one provider-divergent case: SQLite's json_extract yields 1/0 for JSON
+            // booleans, PostgreSQL's ->> yields 'true'/'false' text.
+            var wanted = string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
+            if (isNpgsql)
+            {
+                var member = Expression.Call(
+                    typeof(TamDbFunctions).GetMethod(nameof(TamDbFunctions.JsonValue))!,
+                    asString, keyConstant);
+                body = Expression.Equal(member, Expression.Constant(wanted ? "true" : "false"));
+            }
+            else
+            {
+                var member = Expression.Call(
+                    typeof(TamDbFunctions).GetMethod(nameof(TamDbFunctions.JsonNumber))!,
+                    asString, keyConstant);
+                body = Expression.Equal(member, Expression.Constant((double?)(wanted ? 1 : 0), typeof(double?)));
+            }
+        }
+        else if (wireKind is "number" or "integer")
         {
             var member = Expression.Call(
                 typeof(TamDbFunctions).GetMethod(nameof(TamDbFunctions.JsonNumber))!,

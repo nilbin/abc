@@ -64,9 +64,11 @@ public static class TamDbFunctions
             ? Unwrap(convert.Operand)
             : expression;
 
-    /// <summary>SQLite addresses members by JSONPath — rewrite the constant key to "$.key".</summary>
+    /// <summary>SQLite addresses members by JSONPath — rewrite the constant key to a QUOTED
+    /// path ("$.\"key\""): plugin-packaged keys contain dots ("inspect.requiresInspection")
+    /// which an unquoted path would misread as nesting.</summary>
     private static SqlExpression SqlitePath(SqlExpression key) =>
         key is SqlConstantExpression { Value: string k } constant
-            ? new SqlConstantExpression($"$.{k}", constant.TypeMapping)
+            ? new SqlConstantExpression($"$.\"{k}\"", constant.TypeMapping)
             : key;
 }

@@ -62,7 +62,7 @@ export function ViewGrid(props: ViewGridProps) {
     .map(f => view.resultFields.find(r => r.name === f))
     .filter((f): f is ManifestField => f !== undefined);
   const extensionFilterFields = extensionColumns.filter(f =>
-    ['string', 'number', 'integer', 'date'].includes(f.wireKind));
+    ['string', 'number', 'integer', 'date', 'boolean'].includes(f.wireKind));
 
   const setFilter = (key: string, value: string | null) => {
     setPage(1);

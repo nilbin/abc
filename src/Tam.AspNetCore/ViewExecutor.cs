@@ -82,12 +82,14 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
                         FilterOperator.Contains => kind == "string",
                         FilterOperator.From or FilterOperator.To =>
                             kind is "string" or "number" or "integer" or "date",
-                        _ => kind != "boolean",   // boolean JSON extraction differs per provider
+                        _ => true,
                     };
                     if (!legal) continue;
                     if (kind is "number" or "integer"
                         && !decimal.TryParse(value, System.Globalization.NumberStyles.Number,
                             System.Globalization.CultureInfo.InvariantCulture, out _))
+                        return (null, PipelineFindings.InvalidInput.Create());
+                    if (kind == "boolean" && value is not ("true" or "false"))
                         return (null, PipelineFindings.InvalidInput.Create());
                     extensionFilters.Add(new ExtensionFilter(key, kind, op, value!));
                 }
@@ -137,9 +139,12 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         var pageSize = int.TryParse(query.GetValueOrDefault("pageSize"), out var p2)
             ? Math.Clamp(p2, 1, 200) : 25;
 
+        var isNpgsql = (services.GetService(typeof(ITamDb)) as ITamDb)?
+            .Db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+
         var run = RunMethod.MakeGenericMethod(view.ResultType);
         var task = (Task<ViewResponse>)run.Invoke(
-            null, [queryable, sort, descending, page, pageSize, fieldFilters, extensionFilters, extensionSort, ct])!;
+            null, [queryable, sort, descending, page, pageSize, fieldFilters, extensionFilters, extensionSort, isNpgsql, ct])!;
         return (await task, null);
     }
 
@@ -200,6 +205,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         List<FieldFilter> fieldFilters,
         List<ExtensionFilter> extensionFilters,
         ExtensionFilter? extensionSort,
+        bool isNpgsql,
         CancellationToken ct)
     {
         var source = (IQueryable<T>)queryable;
@@ -226,7 +232,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         {
             foreach (var filter in extensionFilters)
                 source = TamExpressions.WhereExtension(
-                    source, extensionsProperty, filter.Key, filter.WireKind, filter.Op, filter.Value);
+                    source, extensionsProperty, filter.Key, filter.WireKind, filter.Op, filter.Value, isNpgsql);
         }
 
         if (extensionSort is not null
