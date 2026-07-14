@@ -6,7 +6,13 @@ The system lets developers define business behavior once and derive all predicta
 
 > **Write typed business behavior and read models once. Use derivations to resolve reactive interaction state. Bind operations and views to each boundary. Persist only explicit changes. Derive every mechanical representation and reject contradictions at compile time.**
 
-**Status: design phase.** This repository contains the architecture and design documentation. Implementation follows the phases in [docs/17-implementation-phases.md](docs/17-implementation-phases.md).
+**Status: working vertical implementation.** The framework packages (`src/Tam.*`), the TypeScript/React runtime (`packages/`), and a demo ERP (`samples/erp` + `apps/web`) run end to end — reactive forms, conflict-safe edits, runtime tenant custom fields, localization, and MCP included. See [STATUS.md](STATUS.md) for what's verified and the honest gap list against the design, and [docs/screenshots/](docs/screenshots/) for the app.
+
+```bash
+cd samples/erp && dotnet run     # API + web app on http://localhost:5100
+dotnet test                      # framework tests
+npm install && npm run dev:web   # frontend dev loop
+```
 
 ## The five concepts
 
