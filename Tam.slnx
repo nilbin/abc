@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/samples/" />
+  <Folder Name="/samples/erp/">
+    <Project Path="samples/erp/Erp.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Tam.AspNetCore/Tam.AspNetCore.csproj" />
+    <Project Path="src/Tam.Core/Tam.Core.csproj" />
+    <Project Path="src/Tam.EntityFrameworkCore/Tam.EntityFrameworkCore.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tam.Tests/Tam.Tests.csproj" />
+  </Folder>
+</Solution>
