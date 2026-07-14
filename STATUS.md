@@ -197,6 +197,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   a working rotated token, SPA stores + renews it, cross-tenant switch (demo → 5 orders/5 customers as
   admin; demo2 → 0 orders/2 customers as viewer), client credentials (mcp-agent), anonymous/insufficient
   → 403, tekla's :own scope through real tokens, reload keeps the session, login/logout UI.
+- **Hierarchy capability cascade (docs/26 D-H5 + docs/27)**: role assignments on a membership carry a
+  per-role `cascade` flag (`[{"name","cascade"}]`; legacy flat `["name"]` reads as cascade: false).
+  `ClaimsActorProvider` walks the active node's ancestor chain (materialized `Path`): the active
+  node's membership contributes all assignments, ancestors only cascading ones, and each membership's
+  role names resolve against **its own node's** role definitions (cross-level resolution, unfiltered
+  load) — still collapsing to one flat permission set, so `Actor.Can`/manifest/UI gating are
+  untouched. The authorize endpoint accepts standing at any **descendant of a cascading membership**
+  (segment-safe path-prefix test — "demo" is not an ancestor of "demo2"). Verified on the wire: Alva
+  (cascading admin at demo, NO membership at child "nord") mints a nord token and has admin grants
+  there while seeing ONLY nord's data (1 order/1 customer, no demo bleed; demo shows 5 orders, no
+  roll-up — reads stay strict by default); tekla (non-cascading) requesting nord falls back to demo;
+  legacy flat roles unchanged. Grants fan out, data stays per-node.
 - **Subscriptions & seats (docs/24)**: subscription registry (plan, seats, plugin entitlements,
   status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
   view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —

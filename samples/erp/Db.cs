@@ -124,7 +124,7 @@ public static class Seed
         // keep working). Everyone's demo password: "demo123". "mcp-agent" is the machine client's
         // account — agents authenticate with client credentials and act as it, fully audited.
         var accountIds = new Dictionary<string, Guid>();
-        void User(string handle, string display, params string[] roles)
+        TenantMembershipEntity User(string handle, string display, params string[] roles)
         {
             var accountId = Guid.NewGuid();
             accountIds[handle] = accountId;
@@ -135,19 +135,39 @@ public static class Seed
                 DisplayName = display,
                 PasswordHash = TamPasswords.Hash("demo123"),
             });
-            db.Add(new TenantMembershipEntity
+            var membership = new TenantMembershipEntity
             {
                 Id = Guid.NewGuid(),
                 TenantId = Tenant,
                 AccountId = accountId,
                 RolesJson = System.Text.Json.JsonSerializer.Serialize(roles),
-            });
+            };
+            db.Add(membership);
+            return membership;
         }
-        User("alva", "Alva Andersson", "admin");
+        // Alva's admin CASCADES (D-H5 shape): one membership at "demo" reaches every descendant node.
+        // The others keep the legacy flat shape (reads as cascade: false) — exercising back-compat.
+        User("alva", "Alva Andersson", "admin").RolesJson = """[{"name":"admin","cascade":true}]""";
         User("didrik", "Didrik Berg", "dispatcher");
         User("tekla", "Tekla Nilsson", "technician");
         User("vera", "Vera Lund", "viewer");
         User("mcp-agent", "MCP Agent", "dispatcher");
+
+        // A CHILD tenant under "demo" (docs/26): its Path extends the parent's, so subtree membership
+        // is a prefix test. Deliberately NO membership rows here — Alva stands at "nord" purely through
+        // her cascading admin on "demo" (grants fan out), while its DATA stays strictly its own (the
+        // global filter is per-node): the demo of "capability cascades, data does not".
+        const string TenantNord = "nord";
+        db.Add(new TenantEntity
+        {
+            Id = TenantNord, ParentId = Tenant, Path = Tenant + "." + TenantNord,
+            DisplayName = "Norrservice Nord AB",
+        });
+        var fjallvarme = Customer.Create(TenantNord, new("Fjällvärme AB"), new("Bruksvägen 2, Kiruna"),
+            new("info@fjallvarme.se"), new("+46 980 12 345"));
+        db.Customers.Add(fjallvarme);
+        db.Orders.Add(Order.Create(TenantNord, new("2026-09001"), fjallvarme.Id, OrderType.Service, null,
+            fjallvarme.VisitAddress, new("Service av värmepump"), new DateOnly(2026, 8, 15), 12500m));
 
         // A SECOND, unrelated tenant (docs/26): proves platform-global identity — Alva is one account
         // with memberships in two tenants that are NOT in the same hierarchy. At login she gets a

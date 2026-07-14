@@ -40,12 +40,14 @@ public static class TamPasswords
 }
 
 /// <summary>
-/// Actor resolution (docs/26 + docs/27): the "tam:account" claim names the global account; access
-/// to THIS request's tenant is its <see cref="TenantMembershipEntity"/>, and grants resolve fresh
-/// from that membership's roles each request (a revoked role takes effect immediately). An account
-/// with no membership in the active tenant gets no grants — this is the cross-tenant guard: a token
-/// for account X speaks for tenant Y only if X is a member of Y. Replace IActorProvider for any
-/// other authentication mechanism.
+/// Actor resolution (docs/26 + docs/27): the "tam:account" claim names the global account; grants at
+/// the ACTIVE node are the union up its ancestor chain — the active node's own membership contributes
+/// every role assignment, ancestor memberships contribute only the CASCADING ones (D-H5), and each
+/// membership's role names resolve against its OWN node's role definitions, never the active node's
+/// (docs/27 — cross-level role resolution). Everything is re-read per request, so a revoked role or
+/// cascade takes effect immediately. No membership on the chain ⇒ no grants — the cross-tenant guard:
+/// a token for account X speaks for tenant Y only if X is a member of Y or of a cascading ancestor.
+/// Grants never flow up. Replace IActorProvider for any other authentication mechanism.
 /// </summary>
 public sealed class ClaimsActorProvider : IActorProvider
 {
@@ -70,18 +72,39 @@ public sealed class ClaimsActorProvider : IActorProvider
         var account = db.Set<AccountEntity>().FirstOrDefault(a => a.Id == accountId && a.Active);
         if (account is null) return Anonymous;
 
-        // Membership in the ACTIVE tenant — the global filter already scopes this to the request's
-        // tenant. No membership here ⇒ the account has no access to this tenant ⇒ no grants.
-        var membership = db.Set<TenantMembershipEntity>()
-            .FirstOrDefault(m => m.AccountId == accountId && m.Active);
-        if (membership is null)
+        // The active node and its ancestor chain, from the materialized path. An active node with no
+        // TenantEntity row degrades to single-node behavior (the pre-hierarchy shape).
+        var activeId = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http).Value;
+        var activeNode = db.Set<TenantEntity>().FirstOrDefault(t => t.Id == activeId);
+        var chainIds = (activeNode?.AncestorIds() ?? [activeId]).ToArray();
+
+        // Memberships along the chain are cross-tenant by nature — deliberate filter opt-out.
+        var memberships = db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+            .Where(m => m.AccountId == accountId && m.Active && chainIds.Contains(m.TenantId))
+            .ToList();
+
+        // Active node's membership contributes ALL assignments; ancestors only cascading ones (D-H5).
+        var wanted = new List<(string TenantId, string Role)>();
+        foreach (var membership in memberships)
+        {
+            var atActiveNode = membership.TenantId == activeId;
+            foreach (var assignment in membership.Roles())
+                if (atActiveNode || assignment.Cascade)
+                    wanted.Add((membership.TenantId, assignment.Name));
+        }
+        if (wanted.Count == 0)
             return new Actor(account.Id.ToString(), account.DisplayName, new HashSet<string>());
 
-        var roleNames = membership.Roles();
-        var grants = db.Set<RoleEntity>()
-            .Where(x => roleNames.Contains(x.Name))
-            .AsEnumerable()
-            .SelectMany(x => x.Permissions())
+        // Role names bind to the MEMBERSHIP's node definitions (docs/27): load the chain's role rows
+        // unfiltered once, then match per (tenant, name) — names never merge across levels.
+        var roleRows = db.Set<RoleEntity>().IgnoreQueryFilters()
+            .Where(r => chainIds.Contains(r.TenantId))
+            .ToList();
+        var byNodeAndName = roleRows.ToDictionary(r => (r.TenantId, r.Name));
+        var grants = wanted
+            .Select(w => byNodeAndName.GetValueOrDefault((w.TenantId, w.Role)))
+            .Where(role => role is not null)
+            .SelectMany(role => role!.Permissions())
             .ToHashSet();
 
         return new Actor(account.Id.ToString(), account.DisplayName, grants);

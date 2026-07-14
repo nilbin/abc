@@ -145,9 +145,31 @@ public static class TamOpenIddict
 
         var memberTenantIds = memberships.Select(m => m.TenantId).ToHashSet();
         var requested = request.GetParameter("tenant")?.Value?.ToString();
-        var chosen = requested is { Length: > 0 } && memberTenantIds.Contains(requested)
-            ? requested
-            : memberships.Count == 1 ? memberships[0].TenantId : null;
+
+        // A standable node is a membership node OR any descendant of a membership carrying at least
+        // one CASCADING role (docs/26 D-H3/D-H5): the region admin may stand at a sub-company without
+        // a membership row there — the resolver unions the cascading ancestor grants per request.
+        string? chosen = null;
+        if (requested is { Length: > 0 })
+        {
+            if (memberTenantIds.Contains(requested))
+                chosen = requested;
+            else if (await tam.Db.Set<TenantEntity>()
+                .FirstOrDefaultAsync(t => t.Id == requested) is { } requestedNode)
+            {
+                var cascadingRoots = memberships
+                    .Where(m => m.Roles().Any(a => a.Cascade))
+                    .Select(m => m.TenantId)
+                    .ToHashSet();
+                var rootPaths = await tam.Db.Set<TenantEntity>()
+                    .Where(t => cascadingRoots.Contains(t.Id))
+                    .Select(t => t.Path)
+                    .ToListAsync();
+                if (rootPaths.Any(p => TenantEntity.IsSelfOrDescendant(p, requestedNode.Path)))
+                    chosen = requested;
+            }
+        }
+        chosen ??= memberships.Count == 1 ? memberships[0].TenantId : null;
 
         if (chosen is null)
         {

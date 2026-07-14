@@ -302,11 +302,17 @@ public sealed class AccountEntity
     public bool Active { get; set; } = true;
 }
 
+/// <summary>A role assigned on a membership. <see cref="Cascade"/> (docs/26 D-H5) extends the role
+/// to every descendant of the membership's node — per assignment, so one membership can cascade
+/// "orders-manager" while "users-admin" stays node-local. Names bind to the role definitions of the
+/// MEMBERSHIP's node, never the active node's (docs/27 — cross-level role resolution).</summary>
+public sealed record RoleAssignment(string Name, bool Cascade);
+
 /// <summary>
 /// An account's access to one tenant (docs/26 + docs/27): the join that carries authorization. Its
 /// <see cref="RolesJson"/> is the capability axis (docs/27); the data-scope axis (access policies)
-/// lands in Stage 3. Tenant-scoped, so the global filter already limits a tenant's membership list
-/// to that tenant. The same account has independent memberships in other tenants.
+/// lands with the scope work. Tenant-scoped, so the global filter already limits a tenant's
+/// membership list to that tenant. The same account has independent memberships in other tenants.
 /// </summary>
 public sealed class TenantMembershipEntity : ITenantScoped
 {
@@ -316,14 +322,32 @@ public sealed class TenantMembershipEntity : ITenantScoped
     public string RolesJson { get; set; } = "[]";
     public bool Active { get; set; } = true;
 
-    public IReadOnlyList<string> Roles() =>
-        System.Text.Json.JsonSerializer.Deserialize<List<string>>(RolesJson) ?? [];
+    /// <summary>Role assignments; accepts both shapes — `["admin"]` (legacy flat, cascade: false)
+    /// and `[{"name":"admin","cascade":true}]` (D-H5) — so existing rows keep working.</summary>
+    public IReadOnlyList<RoleAssignment> Roles()
+    {
+        var parsed = System.Text.Json.JsonSerializer.Deserialize<List<System.Text.Json.JsonElement>>(
+            RolesJson) ?? [];
+        var assignments = new List<RoleAssignment>(parsed.Count);
+        foreach (var element in parsed)
+        {
+            if (element.ValueKind == System.Text.Json.JsonValueKind.String)
+                assignments.Add(new RoleAssignment(element.GetString() ?? "", false));
+            else if (element.ValueKind == System.Text.Json.JsonValueKind.Object
+                && element.TryGetProperty("name", out var name))
+                assignments.Add(new RoleAssignment(
+                    name.GetString() ?? "",
+                    element.TryGetProperty("cascade", out var cascade) && cascade.GetBoolean()));
+        }
+        return assignments;
+    }
 }
 
 /// <summary>
 /// A tenant node and its place in the hierarchy (docs/26): <see cref="Path"/> is the ancestor chain
-/// including self ("acme.eu.sales"), so "in my subtree" is a path-prefix test — one indexed range
-/// scan, not a recursive query. The registry of tenants itself; not tenant-scoped.
+/// of ids including self ("acme.eu.sales"), so "in my subtree" is a path-prefix test — one indexed
+/// range scan, not a recursive query. Ids must not contain '.', the path separator. The registry of
+/// tenants itself; not tenant-scoped.
 /// </summary>
 public sealed class TenantEntity
 {
@@ -331,6 +355,14 @@ public sealed class TenantEntity
     public string? ParentId { get; set; }
     public string Path { get; set; } = "";
     public string DisplayName { get; set; } = "";
+
+    /// <summary>The ancestor chain including self, from the path segments (segment = tenant id).</summary>
+    public IReadOnlyList<string> AncestorIds() => Path.Split('.');
+
+    /// <summary>True when <paramref name="other"/> is this node or a descendant of it. Segment-safe:
+    /// "demo" is not an ancestor of "demo2" — the prefix must end at a separator.</summary>
+    public static bool IsSelfOrDescendant(string ancestorPath, string otherPath) =>
+        otherPath == ancestorPath || otherPath.StartsWith(ancestorPath + ".", StringComparison.Ordinal);
 }
 
 /// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>
