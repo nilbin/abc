@@ -87,3 +87,15 @@ If a future compliance requirement demands tamper-*evidence* (not just tamper-re
 **Consequences.** One realtime transport enters the stack (SSE preferred over WebSockets for simplicity; SignalR acceptable if mobile needs it). Effects gain a `Notify` fan-out consumer in Phase 4–5. Nothing in the form runtime assumes liveness — offline/mobile still works.
 
 **Revisit when.** A concrete workflow shows sustained same-record contention (e.g. dispatcher teams hammering one planning board). Even then, the answer is likely per-feature (a purpose-built board view) rather than generic co-editing.
+
+---
+
+## D6 — Localization: no display text in code, ever
+
+**Decision.** All human-readable text — labels, finding messages, descriptions, enum display names — is authored in per-culture resource files and referenced from code by key; an analyzer (`L10N000`) makes a hardcoded display string a build error. Keys are derived by convention (author-once: entity members and semantic types own their label keys; inputs, columns, and forms inherit them). Finding factories carry a stable code plus structured args; the code is the message key. Catalogs compile into the manifest per culture: the server resolves messages in the request culture for headless callers (agents, integrations), and clients re-render locally from code + args — required for offline and client-side portable derivations. Default-culture coverage is a build gate (`L10N001`); other cultures produce CI completeness reports (`L10N002`). English is not special — the default culture is configuration. Full design: [21-localization.md](21-localization.md).
+
+**Why.** Retrofitting localization is the classic framework regret: it changes the shape of `Finding`, the label model, and every generated schema. Deciding it before Phase 1 costs a design doc; deciding it after Phase 3 costs a rewrite. The multi-culture requirement is real from day one for a Nordic-market product.
+
+**Consequences.** `Finding` carries `Args` and a boundary-resolved `Message`. `Tam.Compiler` gains catalog merging and the `L10N###` rules; the registry gains `EXT006`. Locale files are reviewable product surface in every application repository.
+
+**Revisit when.** Never, realistically — the rule only gets more valuable as surfaces multiply.

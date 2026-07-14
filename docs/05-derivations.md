@@ -58,8 +58,7 @@ public static async Task<DerivationResult> DeriveCustomerState(
     {
         return DerivationResult.FieldError(
             nameof(input.CustomerId),
-            "customers.not-found",
-            "The selected customer no longer exists.");
+            CustomerFindings.NotFound);
     }
 
     var result = DerivationResult.Empty;
@@ -68,15 +67,12 @@ public static async Task<DerivationResult> DeriveCustomerState(
     {
         result = result.AddFieldError(
             nameof(input.CustomerId),
-            "customers.inactive",
-            "The selected customer is inactive.");
+            CustomerFindings.Inactive);
     }
 
     if (customer.CreditBlocked)
     {
-        result = result.AddWarning(
-            "customers.credit-blocked",
-            "The customer is currently credit blocked.");
+        result = result.AddWarning(CustomerFindings.CreditBlocked);
     }
 
     return result.Suggest(
@@ -106,10 +102,13 @@ A finding should be structured:
 public sealed record Finding(
     string Code,
     FindingSeverity Severity,
-    string Message,
+    IReadOnlyDictionary<string, object?> Args,
     IReadOnlyList<FieldPath> Targets,
-    bool BlocksSubmission);
+    bool BlocksSubmission,
+    string? Message);   // resolved at the boundary in the request culture — never authored in code
 ```
+
+Findings are created through **finding factories** (`CustomerFindings.Inactive = Finding.Error("customers.inactive")`) that carry a stable code plus structured args; message text lives in per-culture resources and is resolved at the boundary ([21-localization.md](21-localization.md)).
 
 Supported severities:
 

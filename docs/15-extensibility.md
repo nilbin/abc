@@ -106,6 +106,7 @@ EXT002: Visibility rule creates a dependency cycle with "warrantyClass".
 EXT003: Option set change orphans values present on 1,240 orders.
 EXT004: Integration "fortnox.orders.export" maps retired field "oldRef".
 EXT005: Field key conflicts with a compiled field or reserved retired key.
+EXT006: Field lacks a label for enabled culture "en".  (L10N001's registry twin)
 ```
 
 A definition that fails its diagnostics is rejected, exactly as code that fails analyzers does not compile.

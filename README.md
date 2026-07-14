@@ -44,6 +44,7 @@ A sixth cross-cutting concern, **tenant extensibility** (runtime custom fields d
 | [18 Success criteria](docs/18-success-criteria.md) | What developers write vs never maintain by hand |
 | [19 Decisions](docs/19-decisions.md) | Decided: authorization, tenancy topology, audit, operation evolution, real-time scope |
 | [20 Tutorial](docs/20-tutorial.md) | **A complete feature end to end** — every line written, everything derived |
+| [21 Localization](docs/21-localization.md) | No display text in code: keys, per-culture catalogs, build-enforced coverage |
 | [Review notes](docs/review-notes.md) | Design risks, refinements, and open questions |
 
 ## Reading order

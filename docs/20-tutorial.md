@@ -14,21 +14,20 @@ Product.Application/Orders/
   Complete/     Operation.cs  Tests.cs
   List/         View.cs       Bindings.cs     Tests.cs
 Product.Integrations/Fortnox/ImportFortnoxOrder.cs
+Product.Application/locales/  sv.json  en.json
 ```
 
 ---
 
 ## Step 1 — Domain state
 
-Plain C#. Semantic value types carry intrinsic meaning once; everything downstream reuses it.
+Plain C#. Semantic value types carry intrinsic meaning once; everything downstream reuses it. Note what is *absent*: no display text anywhere — labels and messages resolve by key from the locale files ([21-localization.md](21-localization.md)), and a hardcoded string in a display position is build error `L10N000`.
 
 ```csharp
 // Product.Domain/Orders/Order.cs
 
-[Label("Order number")]
 public readonly record struct OrderNumber(string Value);
 
-[Label("Order description")]
 [Multiline, MaxLength(1000)]
 public readonly record struct OrderDescription(string Value);
 
@@ -72,19 +71,34 @@ public sealed class Order : IExtensible
 }
 ```
 
-Domain errors are **finding factories** — one definition serves domain results, operation findings, and localization:
+Domain errors are **finding factories** — a stable code, no prose; the code doubles as the message key:
 
 ```csharp
 public static class OrderErrors
 {
     public static readonly FindingFactory AlreadyCompleted =
-        Finding.Error("orders.already-completed", "The order is already completed.");
+        Finding.Error("orders.already-completed");
     public static readonly FindingFactory CannotCompleteCancelled =
-        Finding.Error("orders.cannot-complete-cancelled", "A cancelled order cannot be completed.");
+        Finding.Error("orders.cannot-complete-cancelled");
     public static readonly FindingFactory InvalidCustomer =
-        Finding.Error("orders.invalid-customer", "The selected customer cannot receive orders.");
+        Finding.Error("orders.invalid-customer");
 }
 ```
+
+Every word a human will read lives in the locale files, per culture, reviewed like code:
+
+```jsonc
+// locales/sv.json
+{
+  "orders.order.number": "Ordernummer",
+  "orders.order.description": "Arbetsbeskrivning",
+  "orders.already-completed": "Ordern är redan slutförd.",
+  "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar."
+}
+// locales/en.json — same keys; gaps are CI warnings with a completeness report
+```
+
+Operation inputs, view columns, and forms all inherit these keys by convention — `CreateOrder.Input.Description` displays `orders.order.description`'s text with zero authoring.
 
 EF Core mapping is ordinary EF Core; `Tam.EntityFrameworkCore` conventions handle semantic value conversions, and the JSONB `Extensions` column comes from `IExtensible`:
 
@@ -257,8 +271,7 @@ public static partial class CreateOrderDerivations
 
         var result = DerivationResult.Empty;
         if (customer.CreditBlocked)
-            result = result.AddWarning("customers.credit-blocked",
-                "The customer is currently credit blocked.");
+            result = result.AddWarning(CustomerFindings.CreditBlocked);
 
         return result.Suggest(nameof(CreateOrder.Input.WorkAddress), customer.VisitAddress);
     }
@@ -538,7 +551,7 @@ const result = await client.orders.create({
 ← { "output": { "orderId": "ord_a112", "number": "2026-01416" }, "auditReference": "aud_79c02" }
 ```
 
-The agent hit the same derivations, the same validation, the same audit trail as the web form — `resolve` is the form runtime's endpoint wearing a tool schema. There is no agent-specific business logic anywhere in the feature.
+The agent hit the same derivations, the same validation, the same audit trail as the web form — `resolve` is the form runtime's endpoint wearing a tool schema. The `message` text arrived resolved in the connection's culture from the same locale catalogs the web form uses; the `code` is what the agent branches on. There is no agent-specific business logic anywhere in the feature.
 
 ---
 
@@ -553,7 +566,10 @@ POST /api/operations/extensions.define-field
   "key": "machineSerialNumber",
   "type": "text",
   "labels": { "sv": "Maskinserienummer", "en": "Machine serial number" },
-  "description": "Serial number of the serviced machine, from the type plate.",
+  "descriptions": {
+    "sv": "Serienummer för den servade maskinen, från typskylten.",
+    "en": "Serial number of the serviced machine, from the type plate."
+  },
   "constraints": { "maxLength": 40 },
   "placement": { "after": "description", "bindingClasses": ["web", "mobile"] },
   "permissions": { "write": ["dispatcher", "technician"] }
@@ -681,6 +697,7 @@ Two red lines, both at compile/CI time: the Fortnox mapping must be extended, an
 | `Complete/Operation.cs` | ~25 | the intent and its effect |
 | `List/View.cs` + `Bindings.cs` | ~65 | the query, capabilities, columns, actions |
 | `Fortnox/ImportFortnoxOrder.cs` | ~20 | external mapping, idempotency |
+| `locales/sv.json` + `locales/en.json` | ~30 | every word a human reads, per culture |
 | Tests | ~150 | the contract |
 
 **Derived, and therefore never drifting:** four HTTP endpoints and their OpenAPI, JSON Schemas, a typed TypeScript client, web + mobile create/edit forms with reactive behavior, a grid with paging/sorting/filtering/search and gated actions, three-way merge and structured conflicts, field-level audit, idempotency, outbox events, four MCP tools plus a resolve/elicitation surface, integration inbox/retry/replay, per-tenant custom-field participation across every one of those boundaries, and a compile-time report of what any change touches.

@@ -44,13 +44,18 @@ public sealed class Order
 Value types should carry intrinsic meaning where appropriate:
 
 ```csharp
-[Label("Email")]
 [Format("email")]
 public readonly record struct EmailAddress(string Value);
 
-[Label("Order description")]
 [Multiline]
 public readonly record struct OrderDescription(string Value);
+```
+
+Display text is never authored in code ([21-localization.md](21-localization.md)): labels resolve by convention key (`types.email-address`, `types.order-description`) from per-culture resource files, and the build fails if a key is missing in the default culture.
+
+```jsonc
+// locales/sv.json
+{ "types.email-address": "E-post", "types.order-description": "Arbetsbeskrivning" }
 ```
 
 Semantic value types are the single authority for:
@@ -58,6 +63,6 @@ Semantic value types are the single authority for:
 - Intrinsic shape validation (email format, max intrinsic length, money precision)
 - Normalization (email casing, phone number formats, decimal scale)
 - Semantic equality (used by dirty tracking and three-way merge — see [07-partial-edits.md](07-partial-edits.md))
-- Default labels and formatting hints
+- Default label *keys* and formatting hints (label text lives in per-culture resources — [21-localization.md](21-localization.md))
 
 The same semantic type vocabulary is reused by runtime-defined tenant fields ([15-extensibility.md](15-extensibility.md)), so a tenant-defined "email" field validates, normalizes, and compares exactly like a compiled `EmailAddress`.
