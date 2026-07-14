@@ -85,6 +85,8 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 - **Typed TS client**: `scripts/generate-types.mjs` emits per-operation input/output interfaces,
   view row/query types, and a `TypedTamClient` from the manifest (outputs now in the manifest);
   CI fails if the committed generated file drifts from the baseline.
+- **OpenAPI 3.1** at `/openapi.json`, derived from the model: localized summaries, required from
+  nullability, enum values, change-set schemas, 403/409/422 finding responses.
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
@@ -109,8 +111,8 @@ Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 8. **Integrations**: mapping binding (INT001 validation), idempotent runner, and a persisted
    inbox with retry + dead-letter (3 attempts) exist — failed-sync recovery verified: a row that
    failed on a missing customer processed automatically after the customer was created, with no
-   re-send. Outbox dispatch and reconciliation remain. Also not started: OpenAPI emission,
-   offline/mobile, audit read views/UI.
+   re-send. Outbox dispatch and reconciliation remain. Also not started: offline/mobile,
+   audit read views/UI.
 9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
    per-tenant and include extension fields with admin-authored descriptions.
 10. **SQLite** backs the demo (JSON column as TEXT); Postgres/JSONB + expression-index promotion

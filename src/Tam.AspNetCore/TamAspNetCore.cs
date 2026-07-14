@@ -101,6 +101,8 @@ public static class TamAspNetCore
         app.MapGet("/api/events", (HttpContext http, EffectBroadcaster broadcaster, CancellationToken ct) =>
             broadcaster.Stream(http, ct));
 
+        app.MapGet("/openapi.json", (HttpContext http) => OpenApiEndpoint.Handle(http, model));
+
         return app;
     }
 
