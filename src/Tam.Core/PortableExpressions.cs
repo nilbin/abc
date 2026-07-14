@@ -119,20 +119,24 @@ public sealed record PxBinary(string Op, Px L, Px R) : Px
 /// </summary>
 public static class PortableExpression
 {
-    public static Px Lower<TInput>(Expression<Func<TInput, bool>> rule) => LowerNode(rule.Body, rule.Parameters[0]);
+    public static Px Lower<TInput>(Expression<Func<TInput, bool>> rule) =>
+        LowerNode(rule.Body, rule.Parameters[0], null);
 
-    private static Px LowerNode(Expression node, ParameterExpression input)
+    private static Px LowerNode(Expression node, ParameterExpression input, Type? enumHint)
     {
         switch (node)
         {
             case BinaryExpression b when Map(b.NodeType) is { } op:
-                return new PxBinary(op, LowerNode(b.Left, input), LowerNode(b.Right, input));
+                // Enum comparisons arrive as int-converted operands; carry the enum type across
+                // so constants lower to the enum *name*, matching the field's wire value.
+                var hint = EnumTypeOf(b.Left) ?? EnumTypeOf(b.Right);
+                return new PxBinary(op, LowerNode(b.Left, input, hint), LowerNode(b.Right, input, hint));
 
             case UnaryExpression { NodeType: ExpressionType.Not } u:
-                return new PxUnary("not", LowerNode(u.Operand, input));
+                return new PxUnary("not", LowerNode(u.Operand, input, enumHint));
 
             case UnaryExpression { NodeType: ExpressionType.Convert } c:
-                return LowerNode(c.Operand, input);
+                return LowerNode(c.Operand, input, enumHint ?? EnumTypeOf(c));
 
             case MemberExpression m when IsInputMember(m, input, out var path):
                 return new PxField(path);
@@ -142,10 +146,10 @@ public static class PortableExpression
                 return new PxUnary("isNotNull", new PxField(innerPath));
 
             case ConstantExpression c:
-                return Const(c.Value);
+                return Const(c.Value, enumHint);
 
             case MemberExpression closure:
-                return Const(Expression.Lambda(closure).Compile().DynamicInvoke());
+                return Const(Expression.Lambda(closure).Compile().DynamicInvoke(), enumHint);
 
             default:
                 throw new NotSupportedException(
@@ -154,10 +158,18 @@ public static class PortableExpression
         }
     }
 
-    private static Px Const(object? value)
+    private static Type? EnumTypeOf(Expression e) =>
+        e is UnaryExpression { NodeType: ExpressionType.Convert } u && u.Operand.Type is { IsEnum: true } t
+            ? t
+            : (Nullable.GetUnderlyingType(e.Type) ?? e.Type) is { IsEnum: true } et ? et : null;
+
+    private static Px Const(object? value, Type? enumHint)
     {
         value = ValueWrapper.Unwrap(value);
-        return new PxConst(value is Enum e ? e.ToString() : value);
+        if (value is Enum e) return new PxConst(e.ToString());
+        if (enumHint is not null && value is int or long or byte or short)
+            return new PxConst(Enum.ToObject(enumHint, value).ToString());
+        return new PxConst(value);
     }
 
     private static bool IsInputMember(MemberExpression m, ParameterExpression input, out string path)

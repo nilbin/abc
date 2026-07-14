@@ -25,7 +25,10 @@ public sealed record FieldModel(
             && Nullable.GetUnderlyingType(effective) is null
             && (effective.IsValueType || nullability.Create(parameter).WriteState == NullabilityState.NotNull);
 
+        // Record positional params surface [property:]-targeted attributes on the generated property.
+        var property = parameter.Member.DeclaringType?.GetProperty(parameter.Name!);
         var labelKey = parameter.GetCustomAttribute<LabelKeyAttribute>()?.Key
+            ?? property?.GetCustomAttribute<LabelKeyAttribute>()?.Key
             ?? nonNullable.GetCustomAttribute<LabelKeyAttribute>()?.Key
             ?? $"labels.{Naming.Kebab(parameter.Name!)}";
 
@@ -41,12 +44,43 @@ public sealed record FieldModel(
             nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null);
     }
 
+    public static FieldModel From(PropertyInfo property, NullabilityInfoContext nullability)
+    {
+        var clr = property.PropertyType;
+        var isChange = clr.IsGenericType && clr.GetGenericTypeDefinition() == typeof(Change<>);
+        var effective = isChange ? clr.GetGenericArguments()[0] : clr;
+        var nonNullable = Nullable.GetUnderlyingType(effective) ?? effective;
+
+        var required = !isChange
+            && Nullable.GetUnderlyingType(effective) is null
+            && (effective.IsValueType || nullability.Create(property).WriteState == NullabilityState.NotNull);
+
+        var labelKey = property.GetCustomAttribute<LabelKeyAttribute>()?.Key
+            ?? nonNullable.GetCustomAttribute<LabelKeyAttribute>()?.Key
+            ?? $"labels.{Naming.Kebab(property.Name)}";
+
+        return new FieldModel(
+            property.Name,
+            Naming.Camel(property.Name),
+            clr,
+            effective,
+            isChange,
+            required,
+            SemanticTypes.For(nonNullable),
+            labelKey,
+            nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null);
+    }
+
+    /// <summary>Positional records use the ctor; init-property records (EF projection DTOs) use properties.</summary>
     public static IReadOnlyList<FieldModel> FromRecord(Type recordType)
     {
-        var ctor = recordType.GetConstructors().MaxBy(c => c.GetParameters().Length)
-            ?? throw new InvalidOperationException($"{recordType.Name} has no public constructor.");
         var nullability = new NullabilityInfoContext();
-        return ctor.GetParameters().Select(p => From(p, nullability)).ToList();
+        var ctor = recordType.GetConstructors().MaxBy(c => c.GetParameters().Length);
+        if (ctor is { } c && c.GetParameters().Length > 0)
+            return c.GetParameters().Select(p => From(p, nullability)).ToList();
+        return recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanWrite || p.GetSetMethod(true) is not null)
+            .Select(p => From(p, nullability)).ToList();
     }
 }
 

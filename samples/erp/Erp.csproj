@@ -16,4 +16,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Update="locales/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

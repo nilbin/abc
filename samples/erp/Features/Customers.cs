@@ -1,0 +1,95 @@
+using Microsoft.EntityFrameworkCore;
+using Tam;
+using Tam.AspNetCore;
+
+namespace Erp.Features;
+
+[Operation("customers.create")]
+[Authorize("customers.create")]
+public static class CreateCustomer
+{
+    public sealed record Input(
+        CustomerName Name,
+        Address VisitAddress,
+        EmailAddress? Email = null,
+        PhoneNumber? Phone = null);
+
+    public sealed record Output(CustomerId CustomerId);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var exists = await db.Customers.AnyAsync(
+            x => x.Name == input.Name && x.TenantId == context.TenantId.Value, ct);
+        if (exists)
+            return Finding.Error("customers.duplicate-name").At(nameof(Input.Name));
+
+        var customer = Customer.Create(
+            context.TenantId.Value, input.Name, input.VisitAddress, input.Email, input.Phone);
+        db.Customers.Add(customer);
+        return new Output(customer.Id);
+    }
+}
+
+[View("customers.list")]
+[Authorize("customers.read")]
+public static class CustomerList
+{
+    public sealed record Query(string? Search = null, bool? ActiveOnly = null);
+
+    // Init-property record: EF composes sort/paging over member-init projections (see STATUS.md).
+    public sealed record Result
+    {
+        public CustomerId Id { get; init; }
+        public CustomerName Name { get; init; }
+        public EmailAddress? Email { get; init; }
+        public PhoneNumber? Phone { get; init; }
+        public Address VisitAddress { get; init; }
+        public bool IsActive { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db)
+    {
+        var customers = db.Customers.AsQueryable();
+        if (query.ActiveOnly == true) customers = customers.Where(x => x.IsActive);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            customers = customers.Where(x => ((string)(object)x.Name).Contains(query.Search!));
+
+        return customers.Select(x => new Result
+        {
+            Id = x.Id, Name = x.Name, Email = x.Email, Phone = x.Phone,
+            VisitAddress = x.VisitAddress, IsActive = x.IsActive,
+        });
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+        .Sortable(nameof(Result.Name), nameof(Result.IsActive))
+        .Filterable(nameof(Result.IsActive))
+        .DefaultSort(nameof(Result.Name));
+}
+
+/// <summary>Lookup view backing customer pickers and agent option resolution.</summary>
+[View("customers.lookup")]
+[Authorize("customers.read")]
+public static class CustomerLookup
+{
+    public sealed record Query(string? Search = null);
+
+    public sealed record Result
+    {
+        public CustomerId Id { get; init; }
+        public CustomerName Name { get; init; }
+        public bool IsActive { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db)
+    {
+        var customers = db.Customers.Where(x => x.IsActive);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            customers = customers.Where(x => ((string)(object)x.Name).Contains(query.Search!));
+        return customers.Select(x => new Result { Id = x.Id, Name = x.Name, IsActive = x.IsActive });
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) =>
+        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
+}

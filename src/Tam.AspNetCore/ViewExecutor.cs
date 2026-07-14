@@ -65,9 +65,14 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
                 p => Naming.Camel(p.Name) == sort);
             if (member is not null)
             {
-                var body = Expression.Convert(Expression.Property(parameter, member), typeof(object));
-                var lambda = Expression.Lambda<Func<T, object>>(body, parameter);
-                source = descending ? source.OrderByDescending(lambda) : source.OrderBy(lambda);
+                // Keep the key strongly typed — an (object) cast would defeat EF's
+                // constructor-projection member matching and fail translation (VIEW001 territory).
+                var lambda = Expression.Lambda(Expression.Property(parameter, member), parameter);
+                var method = typeof(Queryable).GetMethods()
+                    .First(m => m.Name == (descending ? "OrderByDescending" : "OrderBy")
+                        && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(typeof(T), member.PropertyType);
+                source = (IQueryable<T>)method.Invoke(null, [source, lambda])!;
             }
         }
 

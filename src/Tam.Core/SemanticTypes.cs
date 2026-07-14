@@ -11,6 +11,13 @@ public sealed class FormatAttribute(string format) : Attribute
     public string Format { get; } = format;
 }
 
+/// <summary>Intrinsic maximum length of a semantic text type; verified against persistence (DB001).</summary>
+[AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class | AttributeTargets.Property)]
+public sealed class MaxLengthAttribute(int length) : Attribute
+{
+    public int Length { get; } = length;
+}
+
 /// <summary>Overrides the convention-derived label key. Never carries display text (L10N000).</summary>
 [AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
 public sealed class LabelKeyAttribute(string key) : Attribute
@@ -116,7 +123,7 @@ public static class SemanticTypes
         var inner = ValueWrapper.UnderlyingType(t) ?? t;
         var format = t.GetCustomAttribute<FormatAttribute>()?.Format;
         var multiline = t.GetCustomAttribute<MultilineAttribute>() is not null;
-        var maxLength = t.GetCustomAttribute<System.ComponentModel.DataAnnotations.MaxLengthAttribute>()?.Length;
+        var maxLength = t.GetCustomAttribute<MaxLengthAttribute>()?.Length;
 
         var baseType = format switch
         {
