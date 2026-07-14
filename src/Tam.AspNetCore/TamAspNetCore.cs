@@ -31,6 +31,22 @@ public sealed class FixedTenantProvider(string tenant) : ITenantProvider
 }
 
 /// <summary>
+/// Resolves the request's active tenant from the bearer token's active-tenant claim (docs/26): a
+/// PKCE token names the tenant the account chose at login, and the account's membership in it is
+/// re-checked per request (<see cref="ClaimsActorProvider"/>) — so the claim selects context, it
+/// doesn't grant access. Falls back to <paramref name="fallback"/> for unauthenticated requests
+/// (the interactive login/token endpoints, static files) where no tenant is named yet.
+/// </summary>
+public sealed class ClaimTenantProvider(string fallback) : ITenantProvider
+{
+    public TenantId GetTenant(HttpContext http)
+    {
+        var tenant = http.User.FindFirst(ClaimsActorProvider.ActiveTenantClaim)?.Value;
+        return new TenantId(string.IsNullOrEmpty(tenant) ? fallback : tenant);
+    }
+}
+
+/// <summary>
 /// Registry-backed actor resolution (decision D1): grants come from the roles table; only the
 /// role-name source (header, JWT claim, session) and display naming are application decisions.
 /// </summary>

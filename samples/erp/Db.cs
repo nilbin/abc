@@ -149,6 +149,32 @@ public static class Seed
         User("vera", "Vera Lund", "viewer");
         User("mcp-agent", "MCP Agent", "dispatcher");
 
+        // A SECOND, unrelated tenant (docs/26): proves platform-global identity — Alva is one account
+        // with memberships in two tenants that are NOT in the same hierarchy. At login she gets a
+        // tenant picker; the chosen tenant scopes her data (5 customers in "demo", 2 here). Roles are
+        // tenant-scoped, so "demo2" declares its own.
+        const string Tenant2 = "demo2";
+        db.Add(new TenantEntity { Id = Tenant2, ParentId = null, Path = Tenant2, DisplayName = "Andra Bolaget AB" });
+        db.Add(new RoleEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant2,
+            Name = "viewer",
+            PermissionsJson = System.Text.Json.JsonSerializer.Serialize(new[] { "orders.read", "customers.read" }),
+        });
+        db.Add(new TenantMembershipEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant2,
+            AccountId = accountIds["alva"],
+            RolesJson = System.Text.Json.JsonSerializer.Serialize(new[] { "viewer" }),
+        });
+        db.Customers.AddRange(
+            Customer.Create(Tenant2, new("Berg & Söner Bygg"), new("Verkstadsvägen 3, Borås"),
+                new("info@bergsoner.se"), new("+46 33 10 20 30")),
+            Customer.Create(Tenant2, new("Lidköping Kyl AB"), new("Fabriksgatan 9, Lidköping"),
+                new("kontakt@lidkyl.se"), null));
+
         // The tenant's subscription (docs/24): a "standard" plan, 10 seats, entitled to the
         // inspect plugin. A billing provider would drive this via subscriptions.set-plan.
         db.Add(new SubscriptionEntity

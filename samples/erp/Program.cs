@@ -181,10 +181,12 @@ builder.Services.AddTam<ErpDbContext>(model, integrations =>
     integrations.RetryBaseDelay = TimeSpan.FromSeconds(2);
     integrations.RetryDriverInterval = TimeSpan.FromSeconds(2);
 });
-// Real authentication: the framework's embedded OpenIddict server (password grant for humans,
-// client credentials for agents) + claims-based actor resolution. Any external IdP plugs in
-// through ClaimsActorProvider instead; a custom IActorProvider replaces the whole seam.
-builder.Services.AddTamOpenIddict<ErpDbContext>();
+// Real authentication: the framework's embedded OpenIddict server — Authorization Code + PKCE for
+// humans (framework-rendered login + tenant picker), client credentials for agents — plus
+// claims-based actor and active-tenant resolution. Any external IdP plugs in through
+// ClaimsActorProvider instead; a custom IActorProvider replaces the whole seam. The fallback tenant
+// scopes requests that carry no active-tenant claim yet.
+builder.Services.AddTamOpenIddict<ErpDbContext>(fallbackTenant: Seed.Tenant);
 // On Postgres, cross-instance SSE via LISTEN/NOTIFY (docs/12); SQLite dev keeps the in-process default.
 if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase))
     builder.Services.AddTamPostgresBackplane(connectionString);
@@ -195,9 +197,9 @@ var app = builder.Build();
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
-// Pin the request's tenant before any endpoint touches the DB — token exchange, actor/role
-// resolution and every view already run through the global tenant filter.
-app.UseTamTenantScope();
+// MapTamAuth pins the request's active tenant right after authentication (so the token's
+// active-tenant claim is honored) — the token exchange, actor/role resolution and every view all
+// run through the resulting global tenant filter.
 app.MapTamAuth();
 app.MapTam();
 
@@ -223,6 +225,9 @@ using (var scope = app.Services.CreateScope())
     // Machine client for agents/integrations: authenticates with client credentials and acts
     // as the same-named framework user (seeded with the dispatcher role) — audited like anyone.
     await Tam.Auth.TamOpenIddict.EnsureClientAsync(scope.ServiceProvider, "mcp-agent", "agent-secret");
+    // The SPA is a public client using Authorization Code + PKCE; the code is returned to /callback.
+    await Tam.Auth.TamOpenIddict.EnsureSpaClientAsync(scope.ServiceProvider, "tam-spa",
+        "http://localhost:5100/callback", "http://localhost:5173/callback");
     // Seed the encrypted Fortnox API key through the vault (needs the Data-Protection provider).
     if (!db.Set<Tam.EntityFrameworkCore.TenantSecretEntity>().Any())
     {

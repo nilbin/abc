@@ -52,6 +52,11 @@ public sealed class ClaimsActorProvider : IActorProvider
     /// <summary>The token subject: the global account id (Guid). Set at grant time in SignIn.</summary>
     public const string AccountClaim = "tam:account";
 
+    /// <summary>The account's chosen active tenant for this token (docs/26): names the tenant whose
+    /// data the request sees, read by <see cref="ClaimTenantProvider"/>. Access to it is still proven
+    /// by the account's membership, checked per request — the claim selects context, not access.</summary>
+    public const string ActiveTenantClaim = "tam:tenant";
+
     public Actor GetActor(HttpContext http)
     {
         var accountClaim = http.User.FindFirst(AccountClaim)?.Value

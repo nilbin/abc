@@ -141,8 +141,11 @@ node; roll-up is the Part-A inherited scope).
   resource can carry `own`/`all`-strict while the default stays inherited.
 - **D-H2 — account ownership: Option 1 (platform-global `Account` + `TenantMembership`).** Global
   identity, access via memberships; the only model that supports a user across unrelated tenants.
-- **D-H3** active-tenant selection (subdomain / path / in-app switcher) — deferred; the PKCE flow
-  surfaces it (login lands on a tenant picker when the account has several memberships).
+- **D-H3** active-tenant selection — **implemented via the PKCE flow.** The framework-rendered
+  `/connect/authorize` login lands on a tenant picker when the account has more than one membership
+  (auto-selects the sole one otherwise); the chosen tenant is carried on the token's `tam:tenant`
+  claim and turned into the request's scope by `ClaimTenantProvider`. Switching tenants = re-running
+  the flow and picking another. (Subdomain/path selection remain open alternatives for later.)
 
 The membership row carries **both** authorization axes — capability (roles) and data scope (access
 policies) — designed in [docs/27](27-authorization-model.md).

@@ -127,5 +127,12 @@
   "integrations.not-schedulable": "The integration {integration} cannot be scheduled.",
   "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00).",
   "integrations.dead-letter-not-found": "No dead-lettered item with that id.",
-  "integrations.malformed-payload": "The integration payload is not valid JSON."
+  "integrations.malformed-payload": "The integration payload is not valid JSON.",
+  "auth.sign-in": "Sign in",
+  "auth.sign-out": "Sign out",
+  "auth.email": "Email",
+  "auth.failed": "Incorrect email or password.",
+  "auth.pick-tenant": "Choose an organization to continue.",
+  "auth.continue": "Continue",
+  "auth.no-access": "This account has no access to any organization."
 }

@@ -54,6 +54,7 @@
       "extensions.invalid-option": "V\u00E4rdet finns inte bland alternativen.",
       "roles.unknown-permission": "Ok\u00E4nd beh\u00F6righet: {permission}.",
       "roles.invalid-name": "Ogiltigt rollnamn (sm\u00E5 bokst\u00E4ver, siffror och bindestreck).",
+      "roles.reserved-permission": "Beh\u00F6righeten {permission} kan inte tilldelas via en roll.",
       "pipeline.unknown-form": "Ok\u00E4nt formul\u00E4r: {form}.",
       "grid.total": "{count} tr\u00E4ffar",
       "filters.from": "fr\u00E5n",
@@ -131,6 +132,13 @@
       "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
       "integrations.dead-letter-not-found": "Ingen k\u00F6ad post med det id:t.",
       "integrations.malformed-payload": "Integrationens data \u00E4r inte giltig JSON.",
+      "auth.sign-in": "Logga in",
+      "auth.sign-out": "Logga ut",
+      "auth.email": "E-post",
+      "auth.failed": "Fel e-post eller l\u00F6senord.",
+      "auth.pick-tenant": "V\u00E4lj en organisation f\u00F6r att forts\u00E4tta.",
+      "auth.continue": "Forts\u00E4tt",
+      "auth.no-access": "Detta konto har ingen \u00E5tkomst till n\u00E5gon organisation.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -183,10 +191,7 @@
       "nav.audit": "Historik",
       "nav.plugins": "Till\u00E4gg",
       "nav.packages": "Paket",
-      "nav.rules": "Regler",
-      "auth.sign-in": "Logga in",
-      "auth.sign-out": "Logga ut",
-      "auth.failed": "Fel anv\u00E4ndarnamn eller l\u00F6senord."
+      "nav.rules": "Regler"
     },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
@@ -240,6 +245,7 @@
       "extensions.invalid-option": "The value is not among the allowed options.",
       "roles.unknown-permission": "Unknown permission: {permission}.",
       "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens).",
+      "roles.reserved-permission": "The permission {permission} cannot be granted through a role.",
       "pipeline.unknown-form": "Unknown form: {form}.",
       "grid.total": "{count} records",
       "filters.from": "from",
@@ -317,6 +323,13 @@
       "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00).",
       "integrations.dead-letter-not-found": "No dead-lettered item with that id.",
       "integrations.malformed-payload": "The integration payload is not valid JSON.",
+      "auth.sign-in": "Sign in",
+      "auth.sign-out": "Sign out",
+      "auth.email": "Email",
+      "auth.failed": "Incorrect email or password.",
+      "auth.pick-tenant": "Choose an organization to continue.",
+      "auth.continue": "Continue",
+      "auth.no-access": "This account has no access to any organization.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -369,10 +382,7 @@
       "nav.audit": "History",
       "nav.plugins": "Plugins",
       "nav.packages": "Packages",
-      "nav.rules": "Rules",
-      "auth.sign-in": "Sign in",
-      "auth.sign-out": "Sign out",
-      "auth.failed": "Wrong username or password."
+      "nav.rules": "Rules"
     }
   },
   "operations": {

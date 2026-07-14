@@ -181,11 +181,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   extension fields by wire kind. Verified on SQLite AND PostgreSQL, including the
   `from=1000`-excludes-380 text-compare trap, malformed numbers → 422, undeclared keys ignored.
 
-- **Auth (Tam.Auth.OpenIddict)**: embedded OpenIddict token server (password + client
-  credentials, /connect/token), framework user store (users.define/deactivate + users.list,
-  PBKDF2 hashing), ClaimsActorProvider resolving grants fresh from the user's roles per request.
-  IActorProvider stays the seam for any external IdP. Verified: password grant, client
-  credentials, anonymous 403, tekla's :own scope and audit through real tokens, login/logout UI.
+- **Auth (Tam.Auth.OpenIddict)**: embedded OpenIddict server with **Authorization Code + PKCE**
+  for humans (a framework-rendered, localized login + tenant picker at /connect/authorize) and
+  **client credentials** for machines — no password grant (OAuth 2.1). Platform-global accounts
+  (docs/26): the token subject is the account id; the chosen tenant rides a `tam:tenant` claim that
+  `ClaimTenantProvider` turns into the request's scope, and `ClaimsActorProvider` resolves grants
+  fresh from that tenant's membership each request (an account with no membership there gets none —
+  the cross-tenant guard). Users are account+membership through users.define/deactivate/list; PBKDF2
+  hashing. IActorProvider stays the seam for any external IdP. Verified end-to-end (curl + browser):
+  framework login, tenant picker (Alva a member of two unrelated tenants), PKCE enforced (wrong
+  verifier → 400), cross-tenant switch (demo → 5 orders/5 customers as admin; demo2 → 0 orders/2
+  customers as viewer), client credentials (mcp-agent), anonymous/insufficient → 403, tekla's :own
+  scope through real tokens, SPA redirect + /callback code exchange, login/logout UI.
 - **Subscriptions & seats (docs/24)**: subscription registry (plan, seats, plugin entitlements,
   status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
   view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —
@@ -250,9 +257,11 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   side-stepped and tightened auth. `roles.define` and package install now **reject reserved
   permissions** (`subscriptions.manage`) — verified a `"*"` admin gets `roles.reserved-permission`
   instead of being able to mint a role that carries it and self-entitle (a normal role define still
-  200s; `subscriptions.set-plan` still 403). **Tokens are tenant-bound**: a `tam:tenant` claim is set
-  at grant time and `ClaimsActorProvider` rejects a token whose tenant ≠ the request's, so a token
-  minted at tenant A can't be replayed at tenant B (same-named user); the demo's own auth still works.
+  200s; `subscriptions.set-plan` still 403). **Cross-tenant access is membership-bound**: since the
+  identity/PKCE work (docs/26) the token's `tam:tenant` claim *selects* the active tenant, and
+  `ClaimsActorProvider` grants only what the account's membership in that tenant carries — an account
+  with no membership there gets no grants, so a token can't act in a tenant the account doesn't belong
+  to (superseding the earlier same-name token-equality check).
   **Idempotency is actor-scoped** — verified two actors reusing the same key + payload get independent
   outcomes (no cross-actor replay), while same-actor replay still returns the stored result. The
   refresh-token grant (advertised but never redeemable) was **dropped** (now `unsupported_grant_type`),

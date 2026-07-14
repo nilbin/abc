@@ -49,5 +49,5 @@
   "nav.rules": "Rules",
   "auth.sign-in": "Sign in",
   "auth.sign-out": "Sign out",
-  "auth.failed": "Wrong username or password."
+  "auth.failed": "Incorrect email or password."
 }
