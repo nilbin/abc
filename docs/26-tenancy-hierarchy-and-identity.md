@@ -65,8 +65,8 @@ because silent roll-up is a data-exposure footgun and a view should ask for brea
 ### Permissions across the hierarchy
 
 A grant made at *T* can be declared to **cascade** to descendants or not — the same strict/inherited
-axis, applied to authorization. A "region admin" role granted at the region cascades; a
-"company-local clerk" does not. This rides the existing `Actor` — the actor resolved for a request
+axis, applied to authorization, decided **per role assignment** (D-H5). A "region admin" role granted
+at the region cascades; a "company-local clerk" on the same membership does not. This rides the existing `Actor` — the actor resolved for a request
 already carries its permission set; hierarchy only changes *where the grant was attached* and
 whether it flows down.
 
@@ -194,12 +194,13 @@ node; roll-up is the Part-A inherited scope).
   cascaded descendants, not just list membership rows, or admins can't stand where they're allowed to
   act. Nodes are labeled by path (e.g. "Acme ▸ EU ▸ Sales") and each distinct effective-grant context
   is offered — never collapsed to "the highest".
-- **D-H5 — cascade granularity: OPEN (recommend per-role).** The design so far treats cascade as a
-  per-membership boolean, but a region admin may want `orders.*` to cascade while `users.manage` stays
-  node-local. Recommendation: carry cascade **per role assignment** on the membership (e.g.
-  `roles: [{name, cascade}]`) rather than one flag for the whole membership — same resolver, finer
-  control, and the schema should be born this way rather than migrated later. Decide before
-  `TenantMembershipEntity` grows the column in Stage 3.
+- **D-H5 — cascade granularity: PER-ROLE (settled).** Cascade is carried **per role assignment** on
+  the membership — `roles: [{name, cascade}]` — not one membership-wide boolean. A region admin's
+  `orders-manager` role cascades to descendants while their `users-admin` role stays node-local, on
+  the same membership. The resolver's ancestor walk unions only the *cascading* role assignments of
+  ancestor memberships (each resolved in its own tenant, per docs/27); non-cascading assignments
+  contribute at their attachment node only. `TenantMembershipEntity.RolesJson` is born in this shape
+  in Stage 3 (current flat `["name"]` seeds read as `cascade: false`).
 
 The membership row carries **both** authorization axes — capability (roles) and data scope (access
 policies) — designed in [docs/27](27-authorization-model.md).

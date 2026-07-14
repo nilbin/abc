@@ -162,8 +162,10 @@ must be *bound*; data-scope (a predicate over existing rows) cannot bind it. The
 
 - **Capability across the tree** is the union up the active node's **cascading** ancestor memberships,
   collapsed to **one flat set** at the active node — so `Actor.Can`, the manifest, and the UI gating
-  are unchanged (a bigger flat set, nothing more). Grants never flow up; downward flow is opt-in via a
-  membership's cascade flag (the write-side mirror of `subtree`).
+  are unchanged (a bigger flat set, nothing more). Grants never flow up; downward flow is opt-in
+  **per role assignment** — a membership carries `roles: [{name, cascade}]` (D-H5), so one membership
+  can cascade `orders-manager` to descendants while keeping `users-admin` node-local. The ancestor
+  walk unions only the cascading assignments (the write-side mirror of `subtree`).
 
   **Role names resolve in their own tenant.** A membership's role names bind to the role definitions
   of **that membership's node**, not the active node's. A region membership naming `dispatcher` means
