@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Tam.AspNetCore;
 
-namespace Erp;
+namespace Tam.AspNetCore.Postgres;
 
 /// <summary>
 /// Cross-instance SSE backplane over Postgres LISTEN/NOTIFY (docs/12, review-round-3). Publishing an
@@ -12,9 +12,8 @@ namespace Erp;
 /// receives it and delivers to that instance's subscribers — so a grid open on instance B refreshes
 /// from a commit on instance A, with no new infrastructure beyond the database already in use. The
 /// event bus (subscribers, outbound integrations) stays the outbox's durable job; this is only the
-/// live-refresh edge, so it is deliberately best-effort. A real deployment would lift this file into
-/// a small Tam.AspNetCore.Postgres adapter package; it lives in the sample to keep Npgsql out of the
-/// framework core.
+/// live-refresh edge, so it is deliberately best-effort. Lives in its own package so Npgsql stays out of
+/// the framework core — a host adds one reference and one AddTamPostgresBackplane call.
 /// </summary>
 public sealed class PostgresEffectBackplane(string connectionString, EffectBroadcaster broadcaster)
     : BackgroundService, IEffectBackplane

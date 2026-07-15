@@ -165,5 +165,7 @@
   "pipeline.replay-actor-unavailable": "Den ursprungliga beställarens konto är inte längre tillgängligt; den parkerade begäran kan inte utföras.",
   "subscriptions.entitlement-lost": "Planen som täcker denna enhet omfattar inte längre det aktiva tillägget {plugin} (på {tenant}); det inaktiveras vid nästa avstämning.",
   "subscriptions.seat-overflow": "Platspoolen är över sin gräns ({used} av {seats}); inga nya medlemmar kan läggas till förrän den är under gränsen igen.",
-  "labels.anchor-tenant": "Faktureras på"
+  "labels.anchor-tenant": "Faktureras på",
+  "concurrency.keep-current": "Behåll aktuellt",
+  "concurrency.use-mine": "Använd mitt"
 }

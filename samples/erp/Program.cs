@@ -1,8 +1,11 @@
 using Erp;
+using Fortnox;
 using Erp.Features;
 using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.AspNetCore;
+using Tam.EntityFrameworkCore;
+using Tam.AspNetCore.Postgres;
 using Tam.AspNetCore.SystemOps;
 using Tam.Auth;
 using Tam.Generated;
@@ -86,18 +89,8 @@ var model = new TamModelBuilder()
 
     .Build();
 
-// Manifest export mode (D4): `dotnet run -- manifest [path]` writes the compiled model's manifest
-// for the CI baseline check, then exits. No server, no database.
-if (args is ["manifest", ..])
-{
-    var path = args.Length > 1 ? args[1] : "manifest.baseline.json";
-    var exported = Tam.ManifestBuilder.Build(
-        model, new Dictionary<string, IReadOnlyList<Tam.ExtensionFieldSpec>>(), revision: 0);
-    File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(
-        exported, new System.Text.Json.JsonSerializerOptions(Tam.TamJson.Options) { WriteIndented = true }));
-    Console.WriteLine($"manifest written to {path}");
-    return;
-}
+// Manifest export mode (D4): `dotnet run -- manifest [path]` for the CI baseline check.
+if (TamManifestExport.TryHandle(model, args)) return;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("erp") ?? "Data Source=erp.db";
@@ -108,9 +101,8 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
         options.UseNpgsql(connectionString);
     else
         options.UseSqlite(connectionString);
-    // Auto-stamp TenantId on inserted ITenantScoped rows from the ambient tenant (write-side mirror
-    // of the global read filter) — so operation code never assigns TenantId by hand.
-    options.AddInterceptors(new Tam.EntityFrameworkCore.TenantStampInterceptor());
+    // Framework DbContext conventions (tenant auto-stamp) — one call, never forgotten.
+    options.UseTamConventions();
 });
 builder.Services.AddTam<ErpDbContext>(model, integrations =>
 {
@@ -144,18 +136,8 @@ app.UseStaticFiles();
 app.MapTamAuth();
 app.MapTam();
 
-// A stand-in for Fortnox's accounting API, so the outbound-integration loop (docs/25) is
-// verifiable end to end without a real external system. Records every push it receives.
-var mockVouchers = new System.Collections.Concurrent.ConcurrentBag<string>();
-app.MapPost("/mock/fortnox/vouchers", async (HttpContext http) =>
-{
-    if (http.Request.Headers["Access-Token"] != "seeded-secret-key") return Results.Unauthorized();
-    using var reader = new StreamReader(http.Request.Body);
-    mockVouchers.Add(await reader.ReadToEndAsync());
-    return Results.Ok(new { created = true });
-});
-app.MapGet("/mock/fortnox/vouchers", () => Results.Json(mockVouchers.ToArray()));
-app.MapGet("/mock/fortnox/orders", () => Results.Json(Array.Empty<object>()));   // poll target
+// The Fortnox mock lives with the fortnox sample plugin — the host only opts in for the demo.
+app.MapMockFortnox();
 
 app.MapFallbackToFile("index.html");
 

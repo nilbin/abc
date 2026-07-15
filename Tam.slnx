@@ -8,6 +8,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Tam.AspNetCore/Tam.AspNetCore.csproj" />
+    <Project Path="src/Tam.AspNetCore.Postgres/Tam.AspNetCore.Postgres.csproj" />
     <Project Path="src/Tam.Auth.OpenIddict/Tam.Auth.OpenIddict.csproj" />
     <Project Path="src/Tam.Compiler/Tam.Compiler.csproj" />
     <Project Path="src/Tam.Core/Tam.Core.csproj" />

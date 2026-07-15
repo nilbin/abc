@@ -4,6 +4,7 @@
     <ProjectReference Include="..\..\src\Tam.Core\Tam.Core.csproj" />
     <ProjectReference Include="..\..\src\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Tam.AspNetCore\Tam.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\Tam.AspNetCore.Postgres\Tam.AspNetCore.Postgres.csproj" />
     <ProjectReference Include="..\inspect\Inspect.csproj" />
     <ProjectReference Include="..\approvals\Approvals.csproj" />
     <ProjectReference Include="..\fortnox\Fortnox.csproj" />

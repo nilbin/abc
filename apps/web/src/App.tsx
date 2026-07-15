@@ -5,8 +5,8 @@ import {
 } from '@mantine/core';
 import { TamClient, type StandableInfo } from '@tam/core';
 import {
-  FieldRendererProps, LookupSelect, OperationForm, TamProvider, ViewGrid, registerRenderer,
-  useTam, useTamAuth,
+  FieldRendererProps, LookupSelect, OperationForm, TamProvider, ViewGrid, registerBadgeColors,
+  registerRenderer, useTam, useTamAuth,
 } from '@tam/react';
 
 const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
@@ -27,93 +27,11 @@ function CustomerPicker(p: FieldRendererProps) {
   );
 }
 
-function CultureText(p: FieldRendererProps) {
-  const value = (p.value ?? {}) as Record<string, string>;
-  const set = (culture: string, text: string) =>
-    p.onChange({ ...value, [culture]: text || undefined });
-  return (
-    <Stack gap={4}>
-      <Text size="sm" fw={500}>{p.label}{p.required ? ' *' : ''}</Text>
-      <Group grow>
-        <TextInput placeholder="Svenska" value={value.sv ?? ''}
-          onChange={e => set('sv', e.currentTarget.value)} error={p.error} />
-        <TextInput placeholder="English" value={value.en ?? ''}
-          onChange={e => set('en', e.currentTarget.value)} />
-      </Group>
-    </Stack>
-  );
-}
-
-// Keyed-choice map editor (role levels: resource → view|edit|manage). The framework validates
-// keys and values server-side; this renderer only shapes the map.
-const keyValueMap = (choices: string[]) => function KeyValueMap(p: FieldRendererProps) {
-  const value = (p.value ?? {}) as Record<string, string>;
-  const entries = Object.entries(value);
-  // Spread-update keeps the row's position; only removal rebuilds the map.
-  const update = (resource: string, scope: string) => p.onChange({ ...value, [resource]: scope });
-  const remove = (resource: string) => {
-    const next = { ...value };
-    delete next[resource];
-    p.onChange(Object.keys(next).length ? next : null);
-  };
-  const [draft, setDraft] = useState('');
-  const draftKey = draft.trim();
-  const draftTaken = draftKey in value;
-  return (
-    <Stack gap={4}>
-      <Text size="sm" fw={500}>{p.label}{p.required ? ' *' : ''}</Text>
-      {entries.map(([resource, scope]) => (
-        <Group key={resource} gap="xs">
-          <TextInput value={resource} readOnly style={{ flex: 1 }} />
-          <SegmentedControl size="xs" data={choices} value={scope}
-            onChange={v => update(resource, v)} />
-          <Button size="compact-xs" variant="subtle" color="red"
-            onClick={() => remove(resource)}>✕</Button>
-        </Group>
-      ))}
-      <Group gap="xs">
-        <TextInput placeholder="orders" value={draft} style={{ flex: 1 }} error={p.error}
-          onChange={e => setDraft(e.currentTarget.value)} />
-        <Button size="compact-sm" variant="light" disabled={!draftKey || draftTaken}
-          onClick={() => { update(draftKey, choices[choices.length - 1]); setDraft(''); }}>+</Button>
-      </Group>
-    </Stack>
-  );
-};
-
-function StringList(p: FieldRendererProps) {
-  // Simple repeated-value editor (role names, policy names): rows + add. The server validates
-  // every name against its registry, so this renderer only shapes the array.
-  const value = (p.value ?? []) as string[];
-  const [draft, setDraft] = useState('');
-  const draftKey = draft.trim();
-  const remove = (i: number) => {
-    const next = value.filter((_, j) => j !== i);
-    p.onChange(next.length ? next : null);
-  };
-  return (
-    <Stack gap={4}>
-      <Text size="sm" fw={500}>{p.label}{p.required ? ' *' : ''}</Text>
-      {value.map((item, i) => (
-        <Group key={`${item}-${i}`} gap="xs">
-          <TextInput value={item} readOnly style={{ flex: 1 }} />
-          <Button size="compact-xs" variant="subtle" color="red" onClick={() => remove(i)}>✕</Button>
-        </Group>
-      ))}
-      <Group gap="xs">
-        <TextInput value={draft} style={{ flex: 1 }} error={p.error}
-          onChange={e => setDraft(e.currentTarget.value)} />
-        <Button size="compact-sm" variant="light" disabled={!draftKey || value.includes(draftKey)}
-          onClick={() => { p.onChange([...value, draftKey]); setDraft(''); }}>+</Button>
-      </Group>
-    </Stack>
-  );
-}
-
 registerRenderer('customer-picker', CustomerPicker);
-registerRenderer('culture-text', CultureText);
-registerRenderer('level-map', keyValueMap(['view', 'edit', 'manage']));
-registerRenderer('string-list', StringList);
+// Domain enum colors for grid badges — the framework ships only its own registry states.
+registerBadgeColors({
+  open: 'blue', completed: 'green', cancelled: 'gray', project: 'grape', service: 'cyan',
+});
 
 // ---- Pages: each is a grid + modals, everything else comes from the manifest ----
 

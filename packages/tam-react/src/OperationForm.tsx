@@ -208,11 +208,11 @@ export function OperationForm(props: OperationFormProps) {
                     setField(key, conflict.currentValue);
                     setResponse(null);
                   }}>
-                    {culture === 'sv' ? 'Behåll aktuellt' : 'Keep current'}
+                    {tam.t('concurrency.keep-current')}
                   </Button>
                   <Button size="compact-xs" onClick={() =>
                     void submit(Object.fromEntries(conflicts.map(c => [c.field, c])))}>
-                    {culture === 'sv' ? 'Använd mitt' : 'Use mine'}
+                    {tam.t('concurrency.use-mine')}
                   </Button>
                 </Group>
               </Group>

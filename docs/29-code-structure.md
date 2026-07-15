@@ -106,6 +106,10 @@ Done:
 - [x] Packages/ co-location (11 files), infra extraction (PluginActivation, Entitlements,
       SecretVault), InboundIntegrations rename — `dbdb9d8`.
 
+- [x] Framework renderers into tam-react; badge-color registry; conflict-dialog locale keys;
+      Tam.AspNetCore.Postgres extraction; MockFortnox to samples/fortnox; UseTamConventions +
+      TamManifestExport host helpers; erp locale dedupe.
+
 Open, in priority order:
 - [ ] Split `Tam.EntityFrameworkCore/ModelConventions.cs` (532 lines): conventions vs
       `FrameworkEntities.cs`.

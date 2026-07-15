@@ -4,11 +4,11 @@
 
 export { TamProvider, useTam } from './context';
 export type { TamContextValue } from './context';
-export { registerRenderer, DefaultRenderer } from './renderers';
+export { registerRenderer, DefaultRenderer, cultureText, keyValueMap } from './renderers';
 export type { FieldRenderer, FieldRendererProps } from './renderers';
 export { OperationForm } from './OperationForm';
 export type { OperationFormProps } from './OperationForm';
-export { ViewGrid } from './ViewGrid';
+export { ViewGrid, registerBadgeColors } from './ViewGrid';
 export type { ViewGridProps } from './ViewGrid';
 export { LookupSelect } from './LookupSelect';
 export type { LookupSelectProps } from './LookupSelect';

@@ -165,5 +165,7 @@
   "pipeline.replay-actor-unavailable": "The original requester's account is no longer available; the parked request cannot be executed.",
   "subscriptions.entitlement-lost": "The plan covering this location no longer includes the active add-on {plugin} (at {tenant}); it will be deactivated at the next reconciliation.",
   "subscriptions.seat-overflow": "The seat pool is over its limit ({used} of {seats}); no new members can be added until it is back under.",
-  "labels.anchor-tenant": "Billed at"
+  "labels.anchor-tenant": "Billed at",
+  "concurrency.keep-current": "Keep current",
+  "concurrency.use-mine": "Use mine"
 }

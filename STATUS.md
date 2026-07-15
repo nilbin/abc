@@ -18,6 +18,8 @@ src/Tam.AspNetCore           execution pipeline, view executor, batched resolve,
                              system, and the framework admin surface as ELEVEN always-active
                              [TamPackage] modules (users/roles/audit/tenancy/rules/... with
                              their forms, grids and embedded sv/en locales)
+src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane as a real package
+                             (was sample code — multi-node live refresh is one reference now)
 src/Tam.Auth.OpenIddict      embedded OpenIddict token server + ClaimsActorProvider (the
                              framework's own auth, behind the IActorProvider seam)
 packages/tam-core            manifest types, portable AST evaluator, localization, HTTP client
@@ -300,6 +302,16 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
   audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
   redelivery. Six pipeline-level tests prove all of it on SQLite.
+- **The sample-app/framework boundary is clean** (audit-driven): the three renderers framework
+  packages reference (`culture-text`, `level-map`, `string-list`) moved into tam-react's default
+  pack — framework admin forms no longer depend on app code in any host — plus a `money` form
+  renderer and grid honoring; grid badge colors are a registerable map (domain enum colors left
+  the library); the conflict dialog's hardcoded sv/en strings became locale keys; the Postgres
+  backplane is `Tam.AspNetCore.Postgres`; the Fortnox mock lives with the fortnox sample
+  (`MapMockFortnox`); host boilerplate absorbed (`UseTamConventions` for the tenant-stamp
+  interceptor, `TamManifestExport.TryHandle` for the D4 export CLI); 16 erp locale keys that
+  shadowed identical framework defaults deleted. Verified: web bundle builds, outbox → outbound
+  → moved mock receives the voucher push end to end, full wire matrix green.
 - **Subscriptions understand the tenant tree — the ANCHOR model** (docs/24 hierarchy, D-S1..6):
   a subscription row covers its subtree; the nearest ancestor-or-self anchor governs
   (`Subscriptions.CoveringAsync`, the grants chain walk applied to money); an anchor-less tree
