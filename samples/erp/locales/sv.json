@@ -54,5 +54,6 @@
   "nav.overview": "Koncernöversikt",
   "nav.tenants": "Bolag",
   "nav.policies": "Åtkomstpolicyer",
-  "nav.users": "Användare"
+  "nav.users": "Användare",
+  "nav.roles": "Roller"
 }

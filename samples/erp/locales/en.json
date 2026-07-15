@@ -54,5 +54,6 @@
   "nav.overview": "Group overview",
   "nav.tenants": "Companies",
   "nav.policies": "Access policies",
-  "nav.users": "Users"
+  "nav.users": "Users",
+  "nav.roles": "Roles"
 }

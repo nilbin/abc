@@ -229,7 +229,8 @@
       "nav.overview": "Koncern\u00F6versikt",
       "nav.tenants": "Bolag",
       "nav.policies": "\u00C5tkomstpolicyer",
-      "nav.users": "Anv\u00E4ndare"
+      "nav.users": "Anv\u00E4ndare",
+      "nav.roles": "Roller"
     },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
@@ -458,7 +459,8 @@
       "nav.overview": "Group overview",
       "nav.tenants": "Companies",
       "nav.policies": "Access policies",
-      "nav.users": "Users"
+      "nav.users": "Users",
+      "nav.roles": "Roles"
     }
   },
   "operations": {
@@ -847,7 +849,7 @@
           "labelKey": "labels.permissions",
           "type": "object",
           "wireKind": "object",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false
         },
@@ -3641,6 +3643,42 @@
       "includeExtensions": false,
       "serverDependencies": []
     },
+    "web.roles.define": {
+      "operation": "roles.define",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "levels",
+          "labelKey": "labels.levels",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "level-map"
+        },
+        {
+          "name": "permissions",
+          "labelKey": "labels.permissions",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "string-list"
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
     "web.users.invite": {
       "operation": "users.invite",
       "fields": [
@@ -3862,6 +3900,19 @@
         "tenants.create",
         "tenants.move",
         "tenants.rename"
+      ],
+      "includeExtensions": false
+    },
+    "web.roles": {
+      "view": "roles.list",
+      "columns": [
+        "name",
+        "levels",
+        "permissions"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "roles.define"
       ],
       "includeExtensions": false
     },

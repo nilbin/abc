@@ -81,7 +81,7 @@ export interface ExtensionsRetireFieldOutput {
 
 export interface RolesDefineInput {
   name: string;
-  permissions: Record<string, unknown>;
+  permissions?: Record<string, unknown>;
   levels?: Record<string, unknown>;
 }
 

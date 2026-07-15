@@ -254,6 +254,12 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   Access-policies page (web.policies grid; the define form authors the resource→scope map with an
   app-owned "scope-map" renderer — rows of resource + all|own toggle). Verified headless: both pages
   render, the create form submits and the grid live-refreshes with `demo.syd`.
+- **Roles admin page**: web.roles grid with the define form on the toolbar — access levels
+  authored through a "level-map" renderer (resource + view|edit|manage; the same generalized
+  keyed-choice editor as scope-map) and explicit atoms through string-list. DefineRole.Permissions
+  is now optional, so a levels-only role is authorable (docs/27 D-A1: levels AND/OR atoms).
+  Verified headless: a levels-only role ({"orders":"edit"}) defined through the UI lands in the
+  grid.
 - **Users admin page**: web.users grid (username, display name, roles, active; deactivate as a
   row action) with the invite form on the toolbar — roles/policies authored through an app-owned
   "string-list" renderer. Verified headless: an invite submitted through the UI lands and the

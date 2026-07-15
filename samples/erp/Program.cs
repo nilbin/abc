@@ -183,6 +183,21 @@ var model = new TamModelBuilder()
         grid.ToolbarAction("tenants.rename");
     })
 
+    .Form<DefineRole.Input>("web.roles.define", "roles.define", form =>
+    {
+        form.Field(x => x.Name);
+        form.Field(x => x.Levels).Renderer("level-map");
+        form.Field(x => x.Permissions).Renderer("string-list");
+    })
+
+    .Grid<RoleList.Result>("web.roles", "roles.list", grid =>
+    {
+        grid.Column(x => x.Name);
+        grid.Column(x => x.Levels);
+        grid.Column(x => x.Permissions);
+        grid.ToolbarAction("roles.define");
+    })
+
     .Form<InviteUser.Input>("web.users.invite", "users.invite", form =>
     {
         form.Field(x => x.Email);

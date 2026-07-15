@@ -316,7 +316,7 @@ public static class DefineRole
     /// explicit permission atoms — the escape hatch when a level is too coarse (docs/27 D-A1).</summary>
     public sealed record Input(
         string Name,
-        List<string> Permissions,
+        List<string>? Permissions = null,
         [property: LabelKey("labels.levels")] Dictionary<string, string>? Levels = null);
 
     public sealed record Output(Guid RoleId);
@@ -325,7 +325,7 @@ public static class DefineRole
         Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
     {
         var invalid = RoleRules.Validate(
-            input.Name, input.Permissions, model, nameof(Input.Permissions), input.Levels);
+            input.Name, input.Permissions ?? [], model, nameof(Input.Permissions), input.Levels);
         if (invalid.Count > 0) return new Result<Output> { Findings = [.. invalid] };
 
         var role = await tam.Db.Set<RoleEntity>().SingleOrDefaultAsync(
@@ -339,7 +339,7 @@ public static class DefineRole
             };
             tam.Db.Add(role);
         }
-        role.PermissionsJson = JsonSerializer.Serialize(input.Permissions);
+        role.PermissionsJson = JsonSerializer.Serialize(input.Permissions ?? []);
         role.LevelsJson = JsonSerializer.Serialize(input.Levels ?? []);
 
         return new Output(role.Id);

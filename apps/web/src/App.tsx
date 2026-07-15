@@ -44,9 +44,9 @@ function CultureText(p: FieldRendererProps) {
   );
 }
 
-function ScopeMap(p: FieldRendererProps) {
-  // Access policy scopes (docs/27 Axis 2): rows of resource → all|own. The framework validates
-  // resources and scope kinds server-side; this renderer only shapes the map.
+// Keyed-choice map editor (policy scopes: resource → all|own; role levels: resource →
+// view|edit|manage). The framework validates keys and values server-side; this only shapes the map.
+const keyValueMap = (choices: string[]) => function KeyValueMap(p: FieldRendererProps) {
   const value = (p.value ?? {}) as Record<string, string>;
   const entries = Object.entries(value);
   // Spread-update keeps the row's position; only removal rebuilds the map.
@@ -65,7 +65,7 @@ function ScopeMap(p: FieldRendererProps) {
       {entries.map(([resource, scope]) => (
         <Group key={resource} gap="xs">
           <TextInput value={resource} readOnly style={{ flex: 1 }} />
-          <SegmentedControl size="xs" data={['all', 'own']} value={scope}
+          <SegmentedControl size="xs" data={choices} value={scope}
             onChange={v => update(resource, v)} />
           <Button size="compact-xs" variant="subtle" color="red"
             onClick={() => remove(resource)}>✕</Button>
@@ -75,11 +75,11 @@ function ScopeMap(p: FieldRendererProps) {
         <TextInput placeholder="orders" value={draft} style={{ flex: 1 }} error={p.error}
           onChange={e => setDraft(e.currentTarget.value)} />
         <Button size="compact-sm" variant="light" disabled={!draftKey || draftTaken}
-          onClick={() => { update(draftKey, 'own'); setDraft(''); }}>+</Button>
+          onClick={() => { update(draftKey, choices[choices.length - 1]); setDraft(''); }}>+</Button>
       </Group>
     </Stack>
   );
-}
+};
 
 function StringList(p: FieldRendererProps) {
   // Simple repeated-value editor (role names, policy names): rows + add. The server validates
@@ -112,7 +112,8 @@ function StringList(p: FieldRendererProps) {
 
 registerRenderer('customer-picker', CustomerPicker);
 registerRenderer('culture-text', CultureText);
-registerRenderer('scope-map', ScopeMap);
+registerRenderer('scope-map', keyValueMap(['all', 'own']));
+registerRenderer('level-map', keyValueMap(['view', 'edit', 'manage']));
 registerRenderer('string-list', StringList);
 
 // ---- Pages: each is a grid + modals, everything else comes from the manifest ----
@@ -208,6 +209,12 @@ function UsersPage() {
   return <ViewGrid grid="web.users" />;
 }
 
+function RolesPage() {
+  const { refreshManifest } = useTam();
+  // Role edits change the actor's effective grants — refresh so nav/buttons follow.
+  return <ViewGrid grid="web.roles" onAction={() => void refreshManifest()} />;
+}
+
 /** Generic page for an ACTIVE plugin: renders every grid the plugin contributed.
  *  Nothing here knows what "inspect" is — the manifest is the only source. */
 function PluginPage(props: { plugin: string }) {
@@ -248,6 +255,7 @@ function Shell(props: {
     tenants: <TenantsPage />,
     policies: <PoliciesPage />,
     users: <UsersPage />,
+    roles: <RolesPage />,
     ...Object.fromEntries(activePlugins.map(id =>
       [`plugin:${id}`, <PluginPage key={id} plugin={id} />])),
   }) as Record<string, ReactNode>, [activePlugins.join(',')]);
@@ -317,6 +325,9 @@ function Shell(props: {
         )}
         {can('tenants.read') && (
           <NavLink label={t('nav.tenants')} active={page === 'tenants'} onClick={() => setPage('tenants')} />
+        )}
+        {can('roles.manage') && (
+          <NavLink label={t('nav.roles')} active={page === 'roles'} onClick={() => setPage('roles')} />
         )}
         {can('roles.manage') && (
           <NavLink label={t('nav.policies')} active={page === 'policies'} onClick={() => setPage('policies')} />
