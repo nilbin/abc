@@ -260,18 +260,32 @@ public sealed class PluginBuilder
     /// </summary>
     public PluginBuilder LocaleDefaults()
     {
-        foreach (var resource in Assembly.GetManifestResourceNames())
+        // Memoized per assembly: the eleven framework packages share one assembly and would
+        // otherwise re-read + re-deserialize the same embedded catalogs eleven times at startup.
+        // Embedded resources are immutable, so a process-lifetime cache is safe.
+        var catalogs = embeddedLocales.GetOrAdd(Assembly, static assembly =>
         {
-            var parts = resource.Split('.');
-            // "{Root}.locales.{culture}.json" — culture is the second-to-last segment.
-            if (parts.Length < 4 || parts[^1] != "json" || parts[^3] != "locales") continue;
-            using var stream = Assembly.GetManifestResourceStream(resource);
-            if (stream is null) continue;
-            Model.LocaleDefaults(parts[^2], System.Text.Json.JsonSerializer
-                .Deserialize<Dictionary<string, string>>(stream) ?? []);
-        }
+            var loaded = new List<(string Culture, IReadOnlyDictionary<string, string> Entries)>();
+            foreach (var resource in assembly.GetManifestResourceNames())
+            {
+                var parts = resource.Split('.');
+                // "{Root}.locales.{culture}.json" — culture is the second-to-last segment.
+                if (parts.Length < 4 || parts[^1] != "json" || parts[^3] != "locales") continue;
+                using var stream = assembly.GetManifestResourceStream(resource);
+                if (stream is null) continue;
+                loaded.Add((parts[^2], System.Text.Json.JsonSerializer
+                    .Deserialize<Dictionary<string, string>>(stream) ?? []));
+            }
+            return loaded;
+        });
+        foreach (var (culture, entries) in catalogs) Model.LocaleDefaults(culture, entries);
         return this;
     }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<
+        System.Reflection.Assembly,
+        IReadOnlyList<(string Culture, IReadOnlyDictionary<string, string> Entries)>>
+        embeddedLocales = new();
 
     /// <summary>Plugin locale defaults (programmatic form); application locale files override them.</summary>
     public PluginBuilder LocaleDefaults(string culture, IReadOnlyDictionary<string, string> entries)

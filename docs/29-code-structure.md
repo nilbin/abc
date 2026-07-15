@@ -117,16 +117,15 @@ Done:
       `Tam.Core/Nav.cs` + `TamModel.MergeNav/VerifyNav`; slot components in
       `packages/tam-react/src/nav.tsx`.
 
-Open, in priority order:
-- [ ] Split `Tam.EntityFrameworkCore/ModelConventions.cs` (532 lines): conventions vs
-      `FrameworkEntities.cs`.
-- [ ] Split `Tam.AspNetCore/TamAspNetCore.cs` (~410 lines): `Providers.cs`, `TamServices.cs`
-      (AddTam), `TamEndpoints.cs` (MapTam).
-- [ ] Split `Tam.Core/TamModel.cs` (~480 lines): model / builder / `ModelVerification.cs`.
-- [ ] `TamPasswords` out of `ClaimsActorProvider.cs` into its own file.
-- [ ] `PipelineFindings` out of `Envelope.cs` into `Findings.cs`.
-- [ ] `packages/tam-core/src/index.ts` (515 lines) → `manifest.ts` / `px.ts` / `i18n.ts` /
-      `client.ts` + re-exporting index.
-- [ ] Memoize/centralize the 11 identical embedded-locale loads (one per package).
-- [ ] `samples/erp/Db.cs` → Db.cs + Seed.cs (exemplar hygiene).
-- [ ] `Tam.Auth.OpenIddict/TamOpenIddict.cs`: invite-accept pages join `AuthPages.cs`.
+- [x] The mechanical-split batch, proven by a byte-identical manifest AND an unchanged web
+      bundle hash: `ModelConventions.cs` → conventions + `FrameworkEntities.cs`;
+      `TamAspNetCore.cs` → `Providers.cs` + `TamServices.cs` (AddTam) + `TamEndpoints.cs`
+      (MapTam, as one partial class — the public name is API); `TamModel.cs` → model +
+      `TamModelBuilder.cs` + `ModelVerification.cs` (partial builder); `TamPasswords.cs` and
+      `PipelineFindings` (→ `Findings.cs`) extracted; `tam-core/src/index.ts` → `manifest.ts` /
+      `px.ts` / `i18n.ts` / `client.ts` + re-exporting index; `erp/Db.cs` → Db + `Seed.cs`;
+      embedded-locale loads memoized per assembly (the 11 packages now deserialize the shared
+      catalogs once). The invite-accept item was already satisfied — the handlers render via
+      `AuthPages` and no inline markup remained.
+
+Open: nothing — new debts get a checkbox here when they appear.

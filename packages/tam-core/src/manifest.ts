@@ -1,0 +1,137 @@
+// @tam/core manifest types — the wire shapes (docs/12).
+
+import type { Px } from './px';
+
+export type Severity = 'information' | 'warning' | 'error';
+
+export interface Finding {
+  code: string;
+  severity: Severity;
+  args: Record<string, unknown>;
+  targets: string[];
+  blocksSubmission: boolean;
+  message?: string;
+}
+
+export interface FieldConflict {
+  field: string;
+  originalValue: unknown;
+  currentValue: unknown;
+  submittedValue: unknown;
+}
+
+
+export interface ManifestField {
+  name: string;
+  labelKey: string;
+  type: string;
+  wireKind: string;
+  format?: string;
+  required: boolean;
+  maxLength?: number;
+  options?: string[];
+  changeSet: boolean;
+  extension?: boolean;
+  visibleWhen?: Px;
+  requiredWhen?: Px;
+  renderer?: string;
+}
+
+export interface Manifest {
+  version: string;
+  defaultCulture: string;
+  catalogs: Record<string, Record<string, string>>;
+  operations: Record<string, {
+    permission: string;
+    titleKey: string;
+    fields: ManifestField[];
+    extensibleEntity?: string;
+    plugin?: string;
+  }>;
+  views: Record<string, {
+    permission: string;
+    queryFields: ManifestField[];
+    resultFields: ManifestField[];
+    sortable: string[];
+    filterable: string[];
+    defaultSort?: string;
+    defaultSortDescending: boolean;
+    extensibleEntity?: string;
+    plugin?: string;
+  }>;
+  forms: Record<string, {
+    operation: string;
+    fields: ManifestField[];
+    includeExtensions: boolean;
+    serverDependencies: string[];
+    plugin?: string;
+  }>;
+  grids: Record<string, {
+    view: string;
+    columns: string[];
+    rowActions: string[];
+    toolbarActions: string[];
+    includeExtensions: boolean;
+    plugin?: string;
+  }>;
+  extensions: Record<string, ManifestField[]>;
+  permissions: string[];
+  actorPermissions?: string[];
+  /** Plugins ACTIVE for this tenant — inactive plugins are absent from every collection. */
+  plugins?: string[];
+  /** Framework packages — always active, enumerable so clients can group admin surfaces. */
+  packages?: string[];
+  /** Declared navigation trees per surface class (docs/30); filter per actor at render. */
+  nav?: Record<string, NavNode[]>;
+  revision: number;
+}
+
+export interface NavTarget {
+  grid?: string;
+  page?: string;
+  /** The generic "every grid this plugin contributed" fallback page. */
+  plugin?: string;
+}
+
+export interface NavNode {
+  id: string;
+  kind: 'mode' | 'section' | 'page';
+  labelKey: string;
+  icon?: string;
+  order?: number;
+  target?: NavTarget;
+  permission?: string;
+  plugin?: string;
+  children: NavNode[];
+}
+
+export interface ResolvedFieldState {
+  visible: boolean;
+  enabled: boolean;
+  required: boolean;
+  suggestedValue?: unknown;
+  options?: { value: unknown; label: string }[];
+  findings: Finding[];
+}
+
+export interface ResolveResponse {
+  fields: Record<string, ResolvedFieldState>;
+  findings: Finding[];
+  revision: number;
+}
+
+export interface OperationResponse {
+  output?: Record<string, unknown>;
+  findings: Finding[];
+  effects: Record<string, unknown>[];
+  newVersion?: number;
+  auditReference?: string;
+  conflicts?: FieldConflict[];
+}
+
+export interface ViewResponse {
+  rows: Record<string, unknown>[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
