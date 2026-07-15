@@ -42,7 +42,7 @@ public sealed record SubscriptionDefaults(string Plan, int Seats, IReadOnlyList<
 public static class Subscriptions
 {
     /// <summary>Host-configurable no-billing baseline; set once at startup, before traffic.</summary>
-    public static SubscriptionDefaults Defaults { get; set; } = new("free", 2, []);
+    public static SubscriptionDefaults Defaults { get; set; } = new("unconfigured", 2, []);
 
     public static async Task<CoveringSubscription> CoveringAsync(
         DbContext db, string tenantId, CancellationToken ct)

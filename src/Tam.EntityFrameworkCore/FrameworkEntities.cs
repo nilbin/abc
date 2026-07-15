@@ -86,7 +86,7 @@ public sealed class OutboxRecord : ITenantScoped
 public sealed class SubscriptionEntity : ITenantScoped, IVersioned
 {
     public string TenantId { get; set; } = "";
-    public string Plan { get; set; } = "free";
+    public string Plan { get; set; } = "unconfigured";
     public int Seats { get; set; } = 2;
     public string EntitlementsJson { get; set; } = "[]";
     public string Status { get; set; } = "active";

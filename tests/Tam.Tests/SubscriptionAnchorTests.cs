@@ -44,7 +44,7 @@ public class SubscriptionAnchorTests
     {
         var covering = Subscriptions.Pick(Subscriptions.Chain(Sales, "sales"), []);
         Assert.Equal("group", covering.AnchorTenantId);   // the ROOT, not the asking node
-        Assert.Equal("free", covering.Subscription.Plan);
+        Assert.Equal("unconfigured", covering.Subscription.Plan);
     }
 
     [Fact]
