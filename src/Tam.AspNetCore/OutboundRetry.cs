@@ -61,22 +61,11 @@ public sealed class IntegrationRetryDriver(
     Func<IServiceProvider, DbContext> dbResolver,
     TamModel model,
     RetryPolicy policy,
-    TimeSpan interval) : BackgroundService
+    TimeSpan interval) : TamBackgroundLoop(interval)
 {
     private const int BatchSize = 50;
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            try { await TickAsync(ct); }
-            catch (OperationCanceledException) { return; }
-            catch { /* a bad tick must not kill the loop */ }
-            await Task.Delay(interval, ct);
-        }
-    }
-
-    private async Task TickAsync(CancellationToken ct)
+    protected override async Task TickAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
@@ -107,15 +96,7 @@ public sealed class IntegrationRetryDriver(
             // Claim under the lease before running: push NextAttemptIso forward for the attempt we
             // are about to make. A racing instance collides on the token and skips.
             task.NextAttemptIso = policy.NextAttempt(task.Attempts + 1, now).ToString("O");
-            try
-            {
-                await db.SaveChangesAsync(ct);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                db.Entry(task).State = EntityState.Detached;
-                continue;
-            }
+            if (!await ClaimLease.TryCommitAsync(db, task, ct)) continue;
 
             JsonElement? payload = task.PayloadJson is { } json
                 ? JsonSerializer.Deserialize<JsonElement>(json)

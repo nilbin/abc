@@ -172,23 +172,9 @@ public static class ScheduleSpec
 public sealed class IntegrationScheduler(
     IServiceScopeFactory scopes,
     Func<IServiceProvider, DbContext> dbResolver,
-    TamModel model) : BackgroundService
+    TamModel model) : TamBackgroundLoop(TimeSpan.FromMinutes(1))
 {
-    protected override async Task ExecuteAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                await TickAsync(ct);
-            }
-            catch (OperationCanceledException) { return; }
-            catch { /* a bad tick must not kill the loop */ }
-            await Task.Delay(TimeSpan.FromMinutes(1), ct);
-        }
-    }
-
-    private async Task TickAsync(CancellationToken ct)
+    protected override async Task TickAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
@@ -224,15 +210,7 @@ public sealed class IntegrationScheduler(
                 ? next.ToString("O")
                 : now.AddYears(100).ToString("O");   // unparseable spec: park it, don't hot-loop
             schedule.LastRunIso = nowIso;
-            try
-            {
-                await db.SaveChangesAsync(ct);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                db.Entry(schedule).State = EntityState.Detached;
-                continue;
-            }
+            if (!await ClaimLease.TryCommitAsync(db, schedule, ct)) continue;
 
             var context = OutboundRunner.SystemContext(schedule.TenantId, scope.ServiceProvider);
             var result = await OutboundRunner.WithDeadline(

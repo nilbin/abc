@@ -16,21 +16,12 @@ namespace Tam.AspNetCore;
 public sealed class RetentionJanitor(
     IServiceScopeFactory scopes,
     Func<IServiceProvider, DbContext> dbResolver,
-    TamIntegrationOptions options) : BackgroundService
+    TamIntegrationOptions options) : TamBackgroundLoop(options.RetentionInterval)
 {
-    protected override async Task ExecuteAsync(CancellationToken ct)
-    {
-        if (!options.RetentionEnabled) return;
-        while (!ct.IsCancellationRequested)
-        {
-            try { await SweepAsync(ct); }
-            catch (OperationCanceledException) { return; }
-            catch { /* a failed sweep must not kill the loop; next interval retries */ }
-            await Task.Delay(options.RetentionInterval, ct);
-        }
-    }
+    protected override Task ExecuteAsync(CancellationToken ct) =>
+        options.RetentionEnabled ? base.ExecuteAsync(ct) : Task.CompletedTask;
 
-    private async Task SweepAsync(CancellationToken ct)
+    protected override async Task TickAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);

@@ -264,6 +264,12 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   row action) with the invite form on the toolbar — roles/policies authored through an app-owned
   "string-list" renderer. Verified headless: an invite submitted through the UI lands and the
   grid live-refreshes with the new member.
+- **One background-loop shape**: the five drivers (outbox dispatcher, integration retry queue,
+  scheduler, retention janitor, token janitor) now share `TamBackgroundLoop` (tick, swallow
+  transient failures, wait, repeat — a bad tick never kills a loop) and the three competing
+  consumers share `ClaimLease.TryCommitAsync` (roll the lease forward, commit under the row's
+  concurrency token, detach-and-skip when another instance won). Verified on the wire: an
+  order-completed event was claimed, dispatched and its lease released through the shared path.
 - **No-BFF token hardening (docs/26 — settled: no BFF)**: the SPA keeps holding its own tokens
   (sessionStorage, tab-scoped); the server enforces the guarantees. Refresh tokens rotate per use;
   a redeemed token replayed after the 30s leeway is rejected and `RefreshReuseGuard` revokes the

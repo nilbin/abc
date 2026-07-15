@@ -16,7 +16,7 @@ namespace Tam.AspNetCore;
 public sealed class OutboxDispatcher(
     IServiceScopeFactory scopes,
     Func<IServiceProvider, DbContext> dbResolver,
-    TamModel? model = null) : BackgroundService
+    TamModel? model = null) : TamBackgroundLoop(TimeSpan.FromSeconds(2))
 {
     /// <summary>How long a claimed row is reserved to this instance before the lease lapses and
     /// another instance may re-deliver (bounds redelivery latency after a crash mid-dispatch).</summary>
@@ -25,18 +25,7 @@ public sealed class OutboxDispatcher(
     /// <summary>Poison cap: a row that keeps throwing is dead-lettered instead of blocking the stream.</summary>
     private const int MaxAttempts = 5;
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            try { await TickAsync(ct); }
-            catch (OperationCanceledException) { return; }
-            catch { /* transient dispatch/db failure: rows stay undispatched and retry next tick */ }
-            await Task.Delay(TimeSpan.FromSeconds(2), ct);
-        }
-    }
-
-    private async Task TickAsync(CancellationToken ct)
+    protected override async Task TickAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
@@ -61,15 +50,7 @@ public sealed class OutboxDispatcher(
             // Claim under the concurrency token before dispatching: only one instance delivers a
             // given row. A racing instance collides on ClaimedUntilIso and skips.
             record.ClaimedUntilIso = now.Add(Lease).ToString("O");
-            try
-            {
-                await db.SaveChangesAsync(ct);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                db.Entry(record).State = EntityState.Detached;
-                continue;
-            }
+            if (!await ClaimLease.TryCommitAsync(db, record, ct)) continue;
 
             try
             {
