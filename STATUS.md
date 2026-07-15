@@ -227,6 +227,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   customers (1 own + 5 inherited) with no upward leak; act-as create from demo lands the order, its
   audit entry and its numbering in nord (demo untouched); tekla/unknown-node act-as → 403; alva's
   picker lists demo, demo▸nord, demo2. 82 tests; baseline + typed client regenerated (orders.overview).
+- **Capability model (docs/27 D-A1 + D-A3)**: roles are authored as ACCESS LEVELS per resource
+  (`{"orders":"manage"}`) alongside explicit atoms — the catalogue is derived mechanically from every
+  [Authorize] permission; levels expand to atoms at LOAD time (a new action flows into existing
+  Manage roles); reserved atoms are never expandable. FIELD MASKING: `[Sensitive("customers.sensitive")]`
+  on a view/input field gates it behind an atom — read masking removes the field from the manifest AND
+  from view rows (the column does not exist for that actor); write masking rejects any input carrying
+  it (pipeline.field-not-authorized). The mask atom joins the catalogue, so Manage grants it while
+  View/Edit don't. Verified on the wire: vera (level-authored viewer) gets customers without
+  email/phone in rows and manifest while alva ("*") sees values; didrik's create WITH email is
+  rejected at the field and passes without it; {customers:manage} grants the atom (stina reads and
+  writes email); {subscriptions:manage} still cannot reach set-plan. 82 tests; baseline + types regen.
+- **Subscriptions & seats (docs/24)**: subscription registry (plan, seats, plugin entitlements,
   status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
   view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —
   both localized upsell findings, both degrading to a free-plan default when no row exists.

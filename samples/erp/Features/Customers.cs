@@ -9,11 +9,13 @@ namespace Erp.Features;
 [Authorize("customers.create")]
 public static class CreateCustomer
 {
+    // Contact details are the sample's SENSITIVE fields (docs/27 D-A3): visible/writable only to
+    // actors holding customers.sensitive (Manage level or "*"); masked for everyone else.
     public sealed record Input(
         CustomerName Name,
         Address VisitAddress,
-        EmailAddress? Email = null,
-        PhoneNumber? Phone = null);
+        [property: Sensitive("customers.sensitive")] EmailAddress? Email = null,
+        [property: Sensitive("customers.sensitive")] PhoneNumber? Phone = null);
 
     public sealed record Output(CustomerId CustomerId);
 
@@ -43,7 +45,9 @@ public static class CustomerList
     {
         public CustomerId Id { get; init; }
         public CustomerName Name { get; init; }
+        [Sensitive("customers.sensitive")]
         public EmailAddress? Email { get; init; }
+        [Sensitive("customers.sensitive")]
         public PhoneNumber? Phone { get; init; }
         public Address VisitAddress { get; init; }
         public bool IsActive { get; init; }

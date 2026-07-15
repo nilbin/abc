@@ -220,7 +220,9 @@ public static class TamAspNetCore
             }
 
             var manifest = ManifestBuilder.Build(model, overlay, revision: revision, activePlugins);
-            manifest = manifest with
+            // Read masking (docs/27 D-A3): sensitive fields the actor may not see are absent from the
+            // manifest entirely. Deterministic in the actor's permission set, so the ETag holds.
+            manifest = ManifestBuilder.MaskSensitive(manifest, context.Actor) with
             {
                 Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model),
                 ActorPermissions = context.Actor.Permissions.ToList(),

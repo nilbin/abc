@@ -147,7 +147,26 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         var run = RunMethod.MakeGenericMethod(view.ResultType);
         var task = (Task<ViewResponse>)run.Invoke(
             null, [queryable, sort, descending, page, pageSize, fieldFilters, extensionFilters, extensionSort, isNpgsql, ct])!;
-        return (await task, null);
+        var response = await task;
+
+        // Read masking (docs/27 D-A3): every sensitive field the actor may not see is REMOVED from
+        // the rows — for that actor the column does not exist, matching the masked manifest. Costs
+        // a node conversion only when the view actually has masked fields for this actor.
+        var masked = view.ResultFields
+            .Where(f => f.SensitivePermission is { } atom && !context.Actor.Can(atom))
+            .Select(f => f.WireName)
+            .ToList();
+        if (masked.Count > 0)
+        {
+            var rows = response.Rows.Select(row =>
+            {
+                var node = System.Text.Json.JsonSerializer.SerializeToNode(row, TamJson.Options)!.AsObject();
+                foreach (var name in masked) node.Remove(name);
+                return (object)node;
+            }).ToList();
+            response = response with { Rows = rows };
+        }
+        return (response, null);
     }
 
     private static readonly MethodInfo RunMethod =

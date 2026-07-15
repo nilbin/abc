@@ -52,6 +52,11 @@ public sealed class TamModel
     public IReadOnlyList<string> Permissions =>
         Operations.Values.Select(o => o.Permission)
             .Concat(Views.Values.Select(v => v.Permission))
+            // Field-mask atoms (docs/27 D-A3) join the catalogue so roles can grant them.
+            .Concat(Operations.Values.SelectMany(o => o.InputFields)
+                .Select(f => f.SensitivePermission).OfType<string>())
+            .Concat(Views.Values.SelectMany(v => v.ResultFields)
+                .Select(f => f.SensitivePermission).OfType<string>())
             .Distinct().Order().ToList();
 
     public IEnumerable<DerivationDefinition> DerivationsFor(Type inputType) =>

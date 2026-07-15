@@ -58,6 +58,14 @@ an optional field mask; a role can grant `Customer: View` while excluding sensit
 masking drops the field from views/manifest; write masking rejects a `Change` to it. Off unless a
 resource opts a field in — most resources never need it, and it's pure overhead until they do.
 
+**Implementation shape (built):** the mask is an **atom**, not a per-grant exclusion list —
+`[Sensitive("customers.sensitive")]` on a field gates it behind that permission, which joins the
+compiled catalogue (so roles grant it; `Manage` includes it, `View`/`Edit` exclude it — exactly
+"View without sensitive fields" from the design, expressed in the existing flat-set substrate).
+Read masking removes the field from the actor's manifest AND from view rows; write masking rejects
+any input carrying the field (`pipeline.field-not-authorized`), checked on the raw body before
+binding. Equivalent power to per-grant masks with zero new grant machinery.
+
 ### Composition
 
 Capability is the **union** across a membership's roles (more roles ⇒ more capability). No deny rules

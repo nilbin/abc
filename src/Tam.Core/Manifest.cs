@@ -38,7 +38,8 @@ public sealed record ManifestField(
     bool Extension = false,
     Px? VisibleWhen = null,
     Px? RequiredWhen = null,
-    string? Renderer = null);
+    string? Renderer = null,
+    string? Sensitive = null);   // docs/27 D-A3: present only for actors holding this atom
 
 public sealed record ManifestOperation(
     string Permission,
@@ -197,6 +198,37 @@ public static class ManifestBuilder
         };
     }
 
+    /// <summary>
+    /// Read masking for the manifest (docs/27 D-A3): every field carrying a Sensitive atom the actor
+    /// does NOT hold is removed from operations, views and forms — for that actor the field does not
+    /// exist (no column, no form control, no filter). Deterministic in the actor's flat permission
+    /// set, so the manifest ETag (keyed on that set) stays coherent.
+    /// </summary>
+    public static ManifestDto MaskSensitive(ManifestDto dto, Actor actor)
+    {
+        bool Visible(ManifestField f) => f.Sensitive is null || actor.Can(f.Sensitive);
+        IReadOnlyList<ManifestField> Keep(IReadOnlyList<ManifestField> fields) =>
+            fields.All(Visible) ? fields : fields.Where(Visible).ToList();
+
+        return dto with
+        {
+            Operations = dto.Operations.ToDictionary(kv => kv.Key, kv => kv.Value with
+            {
+                Fields = Keep(kv.Value.Fields),
+                OutputFields = Keep(kv.Value.OutputFields),
+            }),
+            Views = dto.Views.ToDictionary(kv => kv.Key, kv => kv.Value with
+            {
+                QueryFields = Keep(kv.Value.QueryFields),
+                ResultFields = Keep(kv.Value.ResultFields),
+            }),
+            Forms = dto.Forms.ToDictionary(kv => kv.Key, kv => kv.Value with
+            {
+                Fields = Keep(kv.Value.Fields),
+            }),
+        };
+    }
+
     public static ManifestField ToField(FieldModel f) => new(
         f.WireName,
         f.LabelKey,
@@ -206,7 +238,10 @@ public static class ManifestBuilder
         f.Required,
         f.Semantic.MaxLength,
         f.EnumOptions,
-        f.IsChangeSet);
+        f.IsChangeSet)
+    {
+        Sensitive = f.SensitivePermission,
+    };
 
     public static ManifestField ToField(ExtensionFieldSpec spec) => new(
         spec.Key,

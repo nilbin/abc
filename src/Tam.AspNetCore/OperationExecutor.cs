@@ -33,6 +33,18 @@ public sealed class OperationExecutor(
         if (!context.Actor.Can(operation.Permission))
             return Fail(context, PipelineFindings.NotAuthorized.With(("permission", operation.Permission)));
 
+        // Write masking (docs/27 D-A3): an input that carries a sensitive field the actor may not
+        // touch is rejected outright — the masked manifest never offered the field, so its presence
+        // is either a stale client or a forged request. Checked on the raw body, before binding.
+        var maskedWrites = operation.InputFields
+            .Where(f => f.SensitivePermission is { } atom && !context.Actor.Can(atom))
+            .Where(f => body.ValueKind == JsonValueKind.Object && body.TryGetProperty(f.WireName, out _))
+            .Select(f => PipelineFindings.FieldNotAuthorized
+                .With(("field", f.WireName), ("permission", f.SensitivePermission!)).At(f.MemberName))
+            .ToList();
+        if (maskedWrites.Count > 0)
+            return Fail(context, [.. maskedWrites]);
+
         var db = dbResolver(services);
         var payloadHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(body.GetRawText())));

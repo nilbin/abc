@@ -138,5 +138,6 @@
   "tenants.not-standable": "You do not have access to act in this organization.",
   "roles.unknown-resource": "Unknown resource: {resource}.",
   "roles.unknown-level": "Unknown access level: {level}.",
-  "labels.levels": "Access levels"
+  "labels.levels": "Access levels",
+  "pipeline.field-not-authorized": "You lack permission to set the field {field} ({permission})."
 }

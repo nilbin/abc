@@ -143,6 +143,7 @@
       "roles.unknown-resource": "Ok\u00E4nd resurs: {resource}.",
       "roles.unknown-level": "Ok\u00E4nd beh\u00F6righetsniv\u00E5: {level}.",
       "labels.levels": "Beh\u00F6righetsniv\u00E5er",
+      "pipeline.field-not-authorized": "Du saknar beh\u00F6righet att ange f\u00E4ltet {field} ({permission}).",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -340,6 +341,7 @@
       "roles.unknown-resource": "Unknown resource: {resource}.",
       "roles.unknown-level": "Unknown access level: {level}.",
       "labels.levels": "Access levels",
+      "pipeline.field-not-authorized": "You lack permission to set the field {field} ({permission}).",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -457,7 +459,8 @@
           "format": "email",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "sensitive": "customers.sensitive"
         },
         {
           "name": "phone",
@@ -467,7 +470,8 @@
           "format": "phone",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "sensitive": "customers.sensitive"
         }
       ],
       "outputFields": [
@@ -1536,7 +1540,8 @@
           "format": "email",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "sensitive": "customers.sensitive"
         },
         {
           "name": "phone",
@@ -1546,7 +1551,8 @@
           "format": "phone",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "sensitive": "customers.sensitive"
         },
         {
           "name": "visitAddress",
@@ -3008,7 +3014,8 @@
           "format": "email",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "sensitive": "customers.sensitive"
         },
         {
           "name": "phone",
@@ -3018,7 +3025,8 @@
           "format": "phone",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "sensitive": "customers.sensitive"
         }
       ],
       "includeExtensions": false,
@@ -3310,6 +3318,7 @@
     "audit.read",
     "customers.create",
     "customers.read",
+    "customers.sensitive",
     "extensions.manage",
     "inspect.checklists.manage",
     "inspect.checklists.read",

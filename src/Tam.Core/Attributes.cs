@@ -25,6 +25,18 @@ public sealed class AcceptsExtensionsAttribute(Type entity) : Attribute
     public Type Entity { get; } = entity;
 }
 
+/// <summary>
+/// Field-level masking (docs/27 D-A3): the field is visible/writable only to actors holding the
+/// named permission atom (e.g. "customers.sensitive"). Read masking drops it from views and the
+/// manifest; write masking rejects any input that carries it. The atom joins the compiled permission
+/// catalogue so roles can grant it — Manage level includes it, View/Edit do not.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter)]
+public sealed class SensitiveAttribute(string permission) : Attribute
+{
+    public string Permission { get; } = permission;
+}
+
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class ServerDerivationAttribute(string id) : Attribute
 {

@@ -138,5 +138,6 @@
   "tenants.not-standable": "Du har inte behörighet att agera i denna organisation.",
   "roles.unknown-resource": "Okänd resurs: {resource}.",
   "roles.unknown-level": "Okänd behörighetsnivå: {level}.",
-  "labels.levels": "Behörighetsnivåer"
+  "labels.levels": "Behörighetsnivåer",
+  "pipeline.field-not-authorized": "Du saknar behörighet att ange fältet {field} ({permission})."
 }

@@ -11,7 +11,8 @@ public sealed record FieldModel(
     bool Required,
     SemanticType Semantic,
     string LabelKey,
-    IReadOnlyList<string>? EnumOptions)
+    IReadOnlyList<string>? EnumOptions,
+    string? SensitivePermission = null)   // docs/27 D-A3: field masked behind this atom
 {
     public static FieldModel From(ParameterInfo parameter, NullabilityInfoContext nullability)
     {
@@ -31,6 +32,8 @@ public sealed record FieldModel(
             ?? property?.GetCustomAttribute<LabelKeyAttribute>()?.Key
             ?? nonNullable.GetCustomAttribute<LabelKeyAttribute>()?.Key
             ?? $"labels.{Naming.Kebab(parameter.Name!)}";
+        var sensitive = parameter.GetCustomAttribute<SensitiveAttribute>()?.Permission
+            ?? property?.GetCustomAttribute<SensitiveAttribute>()?.Permission;
 
         return new FieldModel(
             parameter.Name!,
@@ -41,7 +44,8 @@ public sealed record FieldModel(
             required,
             SemanticTypes.For(nonNullable),
             labelKey,
-            nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null);
+            nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null,
+            sensitive);
     }
 
     public static FieldModel From(PropertyInfo property, NullabilityInfoContext nullability)
@@ -68,7 +72,8 @@ public sealed record FieldModel(
             required,
             SemanticTypes.For(nonNullable),
             labelKey,
-            nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null);
+            nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null,
+            property.GetCustomAttribute<SensitiveAttribute>()?.Permission);
     }
 
     /// <summary>Positional records use the ctor; init-property records (EF projection DTOs) use properties.</summary>
