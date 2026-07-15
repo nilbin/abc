@@ -5,6 +5,33 @@ using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
+/// <summary>Tenant packages (docs/22 P3): declarative field/role bundles, install/uninstall.</summary>
+[TamPackage("tam.tenantpackages", "packages", "web.packages")]
+public sealed class TamTenantPackagesPackage : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.LocaleDefaults();
+        plugin.Model
+            .AddOperationType(typeof(InstallPackage))
+            .AddOperationType(typeof(UninstallPackage))
+            .AddViewType(typeof(PackageList))
+            .Form<InstallPackage.Input>("web.packages.install", "packages.install", form =>
+            {
+                form.Field(x => x.Document).Renderer("multiline");
+                form.Field(x => x.DryRun);
+            })
+            .Grid<PackageList.Result>("web.packages", "packages.list", grid =>
+            {
+                grid.Column(x => x.Package);
+                grid.Column(x => x.Version);
+                grid.Column(x => x.InstalledAt);
+                grid.ToolbarAction("packages.install");
+                grid.RowAction("packages.uninstall");
+            });
+    }
+}
+
 public static class PackageFindings
 {
     public static readonly FindingFactory InvalidDocument = Finding.Error("packages.invalid-document");

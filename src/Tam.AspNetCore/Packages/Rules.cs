@@ -5,6 +5,39 @@ using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
+/// <summary>Tenant automation rules (docs/22 P5): declarative Px conditions as data.</summary>
+[TamPackage("tam.rules", "rules", "web.rules")]
+public sealed class TamRulesPackage : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.LocaleDefaults();
+        // The evaluator IS a gate: pure-over-input, pre-transaction, target set = rule rows.
+        // The executor has no rules special case — the P5 feature dogfoods the gate seam.
+        plugin.GateAll<RulesGate>(pure: true);
+        plugin.Model
+            .AddOperationType(typeof(DefineAutomationRule))
+            .AddOperationType(typeof(RetireRule))
+            .AddViewType(typeof(RuleList))
+            .Form<DefineAutomationRule.Input>("web.rules.define", "rules.define", form =>
+            {
+                form.Field(x => x.Name);
+                form.Field(x => x.OnOperation);
+                form.Field(x => x.Condition).Renderer("multiline");
+                form.Field(x => x.Messages).Renderer("culture-text");
+                form.Field(x => x.TargetField);
+            })
+            .Grid<RuleList.Result>("web.rules", "rules.list", grid =>
+            {
+                grid.Column(x => x.Name);
+                grid.Column(x => x.OnOperation);
+                grid.Column(x => x.Retired);
+                grid.ToolbarAction("rules.define");
+                grid.RowAction("rules.retire");
+            });
+    }
+}
+
 public static class RuleFindings
 {
     public static readonly FindingFactory UnknownOperation = Finding.Error("rules.unknown-operation"); // RUL001

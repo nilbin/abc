@@ -3,21 +3,19 @@ using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
-public static class SubscriptionFindings
+/// <summary>Subscription admin (docs/24). The ENFORCEMENT (entitlement gate, seat lease) is
+/// core — a billing check can't live behind the activation it gates; this is only the surface
+/// the billing provider drives.</summary>
+[TamPackage("tam.subscriptions", "subscriptions")]
+public sealed class TamSubscriptionsPackage : ITamPlugin
 {
-    public static readonly FindingFactory NotEntitled = Finding.Error("subscriptions.not-entitled");
-    public static readonly FindingFactory SeatLimit = Finding.Error("subscriptions.seat-limit");
-}
-
-/// <summary>
-/// Reads a tenant's subscription (docs/24). A missing row is the free default — the framework
-/// works fully without a billing system, and enforcement degrades safely to that baseline.
-/// </summary>
-public static class Subscriptions
-{
-    public static async Task<SubscriptionEntity> ForAsync(DbContext db, string tenantId, CancellationToken ct)
-        => await db.Set<SubscriptionEntity>().FindAsync([tenantId], ct)
-            ?? new SubscriptionEntity { TenantId = tenantId };   // free plan default
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.LocaleDefaults();
+        plugin.Model
+            .AddOperationType(typeof(SetPlan))
+            .AddViewType(typeof(CurrentSubscription));
+    }
 }
 
 /// <summary>

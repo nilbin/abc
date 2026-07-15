@@ -3,6 +3,47 @@ using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
+/// <summary>Tenant hierarchy admin (docs/26). The tree itself (paths, cascade, act-as) is core;
+/// these are the structural operations, which enforce subtree/cycle invariants — a
+/// security-sensitive package by review policy.</summary>
+[TamPackage("tam.tenancy", "tenants", "web.tenants")]
+public sealed class TamTenancyPackage : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.LocaleDefaults();
+        plugin.Model
+            .AddOperationType(typeof(CreateTenant))
+            .AddOperationType(typeof(MoveTenant))
+            .AddOperationType(typeof(RenameTenant))
+            .AddViewType(typeof(TenantList))
+            .Form<CreateTenant.Input>("web.tenants.create", "tenants.create", form =>
+            {
+                form.Field(x => x.Id);
+                form.Field(x => x.DisplayName);
+            })
+            .Form<MoveTenant.Input>("web.tenants.move", "tenants.move", form =>
+            {
+                form.Field(x => x.TenantId);
+                form.Field(x => x.NewParentId);
+            })
+            .Form<RenameTenant.Input>("web.tenants.rename", "tenants.rename", form =>
+            {
+                form.Field(x => x.TenantId);
+                form.Field(x => x.DisplayName);
+            })
+            .Grid<TenantList.Result>("web.tenants", "tenants.list", grid =>
+            {
+                grid.Column(x => x.Id);
+                grid.Column(x => x.DisplayName);
+                grid.Column(x => x.Path);
+                grid.ToolbarAction("tenants.create");
+                grid.ToolbarAction("tenants.move");
+                grid.ToolbarAction("tenants.rename");
+            });
+    }
+}
+
 public static class TenantFindings
 {
     public static readonly FindingFactory InvalidId = Finding.Error("tenants.invalid-id");

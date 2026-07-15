@@ -6,6 +6,38 @@ using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
+/// <summary>User & invite admin (docs/26). Auth itself is unaffected by this surface — actor
+/// resolution reads the identity tables directly; the invite ACCEPT page lives with the auth
+/// server (Tam.Auth.OpenIddict).</summary>
+[TamPackage("tam.users", "users", "web.users")]
+public sealed class TamUsersPackage : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.LocaleDefaults();
+        plugin.Model
+            .AddOperationType(typeof(DefineUser))
+            .AddOperationType(typeof(InviteUser))
+            .AddOperationType(typeof(DeactivateUser))
+            .AddViewType(typeof(UserList))
+            .Form<InviteUser.Input>("web.users.invite", "users.invite", form =>
+            {
+                form.Field(x => x.Email);
+                form.Field(x => x.DisplayName);
+                form.Field(x => x.Roles).Renderer("string-list");
+            })
+            .Grid<UserList.Result>("web.users", "users.list", grid =>
+            {
+                grid.Column(x => x.UserName);
+                grid.Column(x => x.DisplayName);
+                grid.Column(x => x.Roles);
+                grid.Column(x => x.Active);
+                grid.ToolbarAction("users.invite");
+                grid.RowAction("users.deactivate");
+            });
+    }
+}
+
 public static class UserFindings
 {
     public static readonly FindingFactory UnknownRole = Finding.Error("users.unknown-role");

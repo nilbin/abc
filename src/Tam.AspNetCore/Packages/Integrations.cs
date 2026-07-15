@@ -3,6 +3,23 @@ using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
 
+/// <summary>Integration operations surface (docs/25): schedules, manual runs, run history,
+/// dead-letter + requeue. The drivers (inbox, retry queue, scheduler, outbox) are core loops.</summary>
+[TamPackage("tam.integrations", "integrations", "web.integrations")]
+public sealed class TamIntegrationsPackage : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.LocaleDefaults();
+        plugin.Model
+            .AddOperationType(typeof(ScheduleIntegration))
+            .AddOperationType(typeof(RunIntegration))
+            .AddOperationType(typeof(RequeueDeadLetter))
+            .AddViewType(typeof(IntegrationRunList))
+            .AddViewType(typeof(DeadLetterList));
+    }
+}
+
 /// <summary>Configures the schedule for an outbound integration (docs/25). Only scheduled-trigger
 /// integrations of an active plugin can be scheduled; the spec is validated.</summary>
 [Operation("integrations.schedule")]
