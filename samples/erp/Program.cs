@@ -155,6 +155,40 @@ var model = new TamModelBuilder()
         grid.RowAction("rules.retire");
     })
 
+    .Form<CreateTenant.Input>("web.tenants.create", "tenants.create", form =>
+    {
+        form.Field(x => x.Id);
+        form.Field(x => x.DisplayName);
+    })
+
+    .Form<MoveTenant.Input>("web.tenants.move", "tenants.move", form =>
+    {
+        form.Field(x => x.TenantId);
+        form.Field(x => x.NewParentId);
+    })
+
+    .Grid<TenantList.Result>("web.tenants", "tenants.list", grid =>
+    {
+        grid.Column(x => x.Id);
+        grid.Column(x => x.DisplayName);
+        grid.Column(x => x.Path);
+        grid.ToolbarAction("tenants.create");
+        grid.ToolbarAction("tenants.move");
+    })
+
+    .Form<DefinePolicy.Input>("web.policies.define", "policies.define", form =>
+    {
+        form.Field(x => x.Name);
+        form.Field(x => x.Scopes).Renderer("scope-map");
+    })
+
+    .Grid<PolicyList.Result>("web.policies", "policies.list", grid =>
+    {
+        grid.Column(x => x.Name);
+        grid.Column(x => x.Scopes);
+        grid.ToolbarAction("policies.define");
+    })
+
     .Build();
 
 // Manifest export mode (D4): `dotnet run -- manifest [path]` writes the compiled model's manifest

@@ -44,8 +44,43 @@ function CultureText(p: FieldRendererProps) {
   );
 }
 
+function ScopeMap(p: FieldRendererProps) {
+  // Access policy scopes (docs/27 Axis 2): rows of resource → all|own. The framework validates
+  // resources and scope kinds server-side; this renderer only shapes the map.
+  const value = (p.value ?? {}) as Record<string, string>;
+  const entries = Object.entries(value);
+  const set = (resource: string, scope: string | null) => {
+    const next = { ...value };
+    delete next[resource];
+    if (scope !== null) next[resource] = scope;
+    p.onChange(Object.keys(next).length ? next : null);
+  };
+  const [draft, setDraft] = useState('');
+  return (
+    <Stack gap={4}>
+      <Text size="sm" fw={500}>{p.label}{p.required ? ' *' : ''}</Text>
+      {entries.map(([resource, scope]) => (
+        <Group key={resource} gap="xs">
+          <TextInput value={resource} readOnly style={{ flex: 1 }} />
+          <SegmentedControl size="xs" data={['all', 'own']} value={scope}
+            onChange={v => set(resource, v)} />
+          <Button size="compact-xs" variant="subtle" color="red"
+            onClick={() => set(resource, null)}>✕</Button>
+        </Group>
+      ))}
+      <Group gap="xs">
+        <TextInput placeholder="orders" value={draft} style={{ flex: 1 }} error={p.error}
+          onChange={e => setDraft(e.currentTarget.value)} />
+        <Button size="compact-sm" variant="light" disabled={!draft.trim()}
+          onClick={() => { set(draft.trim(), 'own'); setDraft(''); }}>+</Button>
+      </Group>
+    </Stack>
+  );
+}
+
 registerRenderer('customer-picker', CustomerPicker);
 registerRenderer('culture-text', CultureText);
+registerRenderer('scope-map', ScopeMap);
 
 // ---- Pages: each is a grid + modals, everything else comes from the manifest ----
 
@@ -126,6 +161,16 @@ function RulesPage() {
   return <ViewGrid grid="web.rules" />;
 }
 
+function TenantsPage() {
+  const { refreshManifest } = useTam();
+  // Creating or moving a node changes the standable set and paths — refresh after actions.
+  return <ViewGrid grid="web.tenants" onAction={() => void refreshManifest()} />;
+}
+
+function PoliciesPage() {
+  return <ViewGrid grid="web.policies" />;
+}
+
 /** Generic page for an ACTIVE plugin: renders every grid the plugin contributed.
  *  Nothing here knows what "inspect" is — the manifest is the only source. */
 function PluginPage(props: { plugin: string }) {
@@ -163,6 +208,8 @@ function Shell(props: {
     plugins: <PluginsPage />,
     packages: <PackagesPage />,
     rules: <RulesPage />,
+    tenants: <TenantsPage />,
+    policies: <PoliciesPage />,
     ...Object.fromEntries(activePlugins.map(id =>
       [`plugin:${id}`, <PluginPage key={id} plugin={id} />])),
   }) as Record<string, ReactNode>, [activePlugins.join(',')]);
@@ -229,6 +276,12 @@ function Shell(props: {
         )}
         {can('rules.manage') && (
           <NavLink label={t('nav.rules')} active={page === 'rules'} onClick={() => setPage('rules')} />
+        )}
+        {can('tenants.read') && (
+          <NavLink label={t('nav.tenants')} active={page === 'tenants'} onClick={() => setPage('tenants')} />
+        )}
+        {can('roles.manage') && (
+          <NavLink label={t('nav.policies')} active={page === 'policies'} onClick={() => setPage('policies')} />
         )}
         {can('audit.read') && (
           <NavLink label={t('nav.audit')} active={page === 'audit'} onClick={() => setPage('audit')} />

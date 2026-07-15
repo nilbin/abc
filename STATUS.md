@@ -249,7 +249,11 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   the wire (11/11): create `syd` under demo → path `demo.syd`, alva's standable set includes it
   live via cascade, act-as syd creates and reads a customer, invalid/duplicate ids rejected, move
   syd under nord → `demo.nord.syd` with data intact, cycle and out-of-subtree moves rejected with
-  localized findings, viewer denied by the capability gate, overview roll-up unaffected.
+  localized findings, viewer denied by the capability gate, overview roll-up unaffected. ADMIN UI:
+  a Companies page (web.tenants grid + create/move toolbar forms, nav gated by tenants.read) and an
+  Access-policies page (web.policies grid; the define form authors the resource→scope map with an
+  app-owned "scope-map" renderer — rows of resource + all|own toggle). Verified headless: both pages
+  render, the create form submits and the grid live-refreshes with `demo.syd`.
 - **Access policies (docs/27 Axis 2, v1 `all`|`own`)**: `AccessPolicyEntity` is a tenant-scoped named
   resource→scope map, managed by `policies.define`/`policies.list` (validated against the same
   resource catalogue as levels; unknown resource/scope → localized findings); a membership lists

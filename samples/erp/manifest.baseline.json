@@ -216,7 +216,9 @@
       "nav.packages": "Paket",
       "nav.rules": "Regler",
       "labels.company": "Bolag",
-      "nav.overview": "Koncern\u00F6versikt"
+      "nav.overview": "Koncern\u00F6versikt",
+      "nav.tenants": "Bolag",
+      "nav.policies": "\u00C5tkomstpolicyer"
     },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
@@ -432,7 +434,9 @@
       "nav.packages": "Packages",
       "nav.rules": "Rules",
       "labels.company": "Company",
-      "nav.overview": "Group overview"
+      "nav.overview": "Group overview",
+      "nav.tenants": "Companies",
+      "nav.policies": "Access policies"
     }
   },
   "operations": {
@@ -3431,6 +3435,82 @@
       ],
       "includeExtensions": false,
       "serverDependencies": []
+    },
+    "web.tenants.create": {
+      "operation": "tenants.create",
+      "fields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.tenants.move": {
+      "operation": "tenants.move",
+      "fields": [
+        {
+          "name": "tenantId",
+          "labelKey": "labels.tenant",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "newParentId",
+          "labelKey": "labels.new-parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.policies.define": {
+      "operation": "policies.define",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "scopes",
+          "labelKey": "labels.scopes",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "scope-map"
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
     }
   },
   "grids": {
@@ -3567,6 +3647,32 @@
       ],
       "toolbarActions": [
         "rules.define"
+      ],
+      "includeExtensions": false
+    },
+    "web.tenants": {
+      "view": "tenants.list",
+      "columns": [
+        "id",
+        "displayName",
+        "path"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "tenants.create",
+        "tenants.move"
+      ],
+      "includeExtensions": false
+    },
+    "web.policies": {
+      "view": "policies.list",
+      "columns": [
+        "name",
+        "scopes"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "policies.define"
       ],
       "includeExtensions": false
     }

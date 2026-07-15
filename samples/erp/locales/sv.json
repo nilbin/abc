@@ -51,5 +51,7 @@
   "auth.sign-out": "Logga ut",
   "auth.failed": "Fel e-post eller lösenord.",
   "labels.company": "Bolag",
-  "nav.overview": "Koncernöversikt"
+  "nav.overview": "Koncernöversikt",
+  "nav.tenants": "Bolag",
+  "nav.policies": "Åtkomstpolicyer"
 }
