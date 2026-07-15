@@ -114,6 +114,8 @@ public static class TamOpenIddict
         app.MapPost("/connect/authorize/login", LoginSubmit);
         app.MapPost("/connect/token", Exchange);
         app.MapGet("/connect/logout", Logout);
+        app.MapGet("/connect/invite", InviteForm);
+        app.MapPost("/connect/invite", InviteSubmit);
         return app;
     }
 
@@ -245,6 +247,52 @@ public static class TamOpenIddict
         }
 
         return Deny();
+    }
+
+    // ── Invite acceptance (docs/26) ───────────────────────────────────────────────────────────
+    // Anonymous by design: the mailed token IS the credential. Lookups match the token's hash and
+    // bypass the tenant filter — an invite is redeemed before any tenant context exists.
+    private static async Task<InviteEntity?> FindPendingInviteAsync(ITamDb tam, string token)
+    {
+        if (token is not { Length: > 0 }) return null;
+        var hash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
+        var invite = await tam.Db.Set<InviteEntity>().IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.TokenHash == hash && i.AcceptedAtIso == null);
+        if (invite is null) return null;
+        return DateTimeOffset.TryParse(invite.ExpiresAtIso, out var expires)
+            && expires > DateTimeOffset.UtcNow ? invite : null;
+    }
+
+    private static async Task<IResult> InviteForm(HttpContext http, ITamDb tam, TamModel model)
+    {
+        var culture = TamAspNetCore.ResolveCulture(http, model);
+        var token = http.Request.Query["token"].ToString();
+        return await FindPendingInviteAsync(tam, token) is null
+            ? Html(AuthPages.Message(model, culture, "auth.invite-invalid"))
+            : Html(AuthPages.InvitePage(model, culture, token, error: false));
+    }
+
+    private static async Task<IResult> InviteSubmit(HttpContext http, ITamDb tam, TamModel model)
+    {
+        var culture = TamAspNetCore.ResolveCulture(http, model);
+        var form = await http.Request.ReadFormAsync();
+        var token = form["token"].ToString();
+        var password = form["password"].ToString();
+
+        var invite = await FindPendingInviteAsync(tam, token);
+        if (invite is null) return Html(AuthPages.Message(model, culture, "auth.invite-invalid"));
+        if (password.Length < 8) return Html(AuthPages.InvitePage(model, culture, token, error: true));
+
+        var account = await tam.Db.Set<AccountEntity>()
+            .FirstOrDefaultAsync(a => a.Id == invite.AccountId);
+        if (account is null) return Html(AuthPages.Message(model, culture, "auth.invite-invalid"));
+
+        account.PasswordHash = TamPasswords.Hash(password);
+        account.Active = true;
+        invite.AcceptedAtIso = DateTimeOffset.UtcNow.ToString("o");
+        await tam.Db.SaveChangesAsync();
+        return Results.Redirect("/");
     }
 
     private static async Task<IResult> Logout(HttpContext http)

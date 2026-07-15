@@ -13,6 +13,49 @@ public static class UserFindings
     public static readonly FindingFactory UnknownPolicy = Finding.Error("users.unknown-policy");
 }
 
+internal static class MembershipRules
+{
+    /// <summary>Seat gate + lease (docs/24), shared by define and invite: turning a non-active
+    /// membership ACTIVE consumes a seat — brand new or reactivated alike. Consuming writes the
+    /// subscription row (IVersioned; the free default is materialized), so two consumers racing
+    /// past the count conflict at SaveChanges instead of both slipping under the ceiling.</summary>
+    public static async Task<Finding?> ConsumeSeatAsync(
+        ITamDb tam, string tenantId, CancellationToken ct)
+    {
+        var subscription = await Subscriptions.ForAsync(tam.Db, tenantId, ct);
+        var activeMembers = await tam.Db.Set<TenantMembershipEntity>()
+            .CountAsync(m => m.Active, ct);
+        if (activeMembers >= subscription.Seats)
+            return SubscriptionFindings.SeatLimit.With(("seats", subscription.Seats));
+
+        if (tam.Db.Entry(subscription).State == EntityState.Detached)
+            tam.Db.Add(subscription);
+        else
+            subscription.Version++;
+        return null;
+    }
+
+    /// <summary>Role and policy names resolve against the ACTIVE tenant's registries — the same
+    /// validation for define and invite. Returns field-targeted findings, empty when valid.</summary>
+    public static async Task<List<Finding>> ValidateAssignmentsAsync(
+        ITamDb tam, List<string> roles, List<string>? policies,
+        string rolesField, string policiesField, CancellationToken ct)
+    {
+        var findings = new List<Finding>();
+        var knownRoles = await tam.Db.Set<RoleEntity>().Select(x => x.Name).ToListAsync(ct);
+        findings.AddRange(roles.Where(r => !knownRoles.Contains(r)).Select(r =>
+            UserFindings.UnknownRole.With(("role", r)).At(rolesField)));
+        if (policies is { Count: > 0 })
+        {
+            var knownPolicies = await tam.Db.Set<AccessPolicyEntity>()
+                .Select(x => x.Name).ToListAsync(ct);
+            findings.AddRange(policies.Where(x => !knownPolicies.Contains(x)).Select(x =>
+                UserFindings.UnknownPolicy.With(("policy", x)).At(policiesField)));
+        }
+        return findings;
+    }
+}
+
 internal static class UserLookup
 {
     /// <summary>The platform-global account by handle plus its membership in the ACTIVE tenant
@@ -50,58 +93,17 @@ public static class DefineUser
         if (!System.Text.RegularExpressions.Regex.IsMatch(input.UserName, "^[a-z][a-z0-9.-]*$"))
             return UserFindings.InvalidName.At(nameof(Input.UserName));
 
-        var knownRoles = await tam.Db.Set<RoleEntity>()
-            .Select(x => x.Name)
-            .ToListAsync(ct);
-        var unknown = input.Roles.Where(r => !knownRoles.Contains(r)).ToList();
-        if (unknown.Count > 0)
-        {
-            return new Result<Output>
-            {
-                Findings = unknown.Select(r =>
-                    UserFindings.UnknownRole.With(("role", r)).At(nameof(Input.Roles))).ToList(),
-            };
-        }
-
-        // Access policies (docs/27 Axis 2) are validated against the registry like roles are.
-        if (input.Policies is { Count: > 0 })
-        {
-            var knownPolicies = await tam.Db.Set<AccessPolicyEntity>()
-                .Select(x => x.Name).ToListAsync(ct);
-            var unknownPolicies = input.Policies.Where(x => !knownPolicies.Contains(x)).ToList();
-            if (unknownPolicies.Count > 0)
-            {
-                return new Result<Output>
-                {
-                    Findings = unknownPolicies.Select(x =>
-                        UserFindings.UnknownPolicy.With(("policy", x)).At(nameof(Input.Policies))).ToList(),
-                };
-            }
-        }
+        var invalid = await MembershipRules.ValidateAssignmentsAsync(
+            tam, input.Roles, input.Policies, nameof(Input.Roles), nameof(Input.Policies), ct);
+        if (invalid.Count > 0) return new Result<Output> { Findings = invalid };
 
         var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
             tam, input.UserName, ct);
 
         if (membership is null || !membership.Active)
         {
-            // Seat gate (docs/24): this define turns a non-active membership ACTIVE — brand new or
-            // reactivated alike — so it consumes a seat; editing an already-active member does not.
-            // (Gating only brand-new rows would let deactivate/reactivate churn breach the ceiling.)
-            // Over the plan's ceiling → a localized upsell.
-            var subscription = await Subscriptions.ForAsync(tam.Db, context.TenantId.Value, ct);
-            var activeMembers = await tam.Db.Set<TenantMembershipEntity>()
-                .CountAsync(m => m.Active, ct);
-            if (activeMembers >= subscription.Seats)
-                return SubscriptionFindings.SeatLimit
-                    .With(("seats", subscription.Seats)).At(nameof(Input.UserName));
-
-            // Seat lease: consuming a seat writes the subscription row, so two defines racing past
-            // the count above conflict at SaveChanges (version token / duplicate key) instead of
-            // both slipping under the ceiling. The free default has no row yet — materialize it.
-            if (tam.Db.Entry(subscription).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
-                tam.Db.Add(subscription);
-            else
-                subscription.Version++;
+            if (await MembershipRules.ConsumeSeatAsync(tam, context.TenantId.Value, ct) is { } over)
+                return over.At(nameof(Input.UserName));
         }
 
         if (account is null)
@@ -129,6 +131,111 @@ public static class DefineUser
         membership.Active = true;
 
         return new Output(account.Id);
+    }
+}
+
+/// <summary>
+/// Invite by email (docs/26): the account and membership are created up front — the seat is
+/// consumed at INVITE time, so the admin's count is predictable — but the account has no password
+/// until the invitee follows the mailed link and sets one. Only the token's hash is stored; the
+/// link is the secret. Inviting an account that already has a password (a member of another
+/// tenant — platform-global identity) just adds the membership and mails a notification; no
+/// token round-trip is needed.
+/// </summary>
+[Operation("users.invite")]
+[Authorize("users.manage")]
+public static class InviteUser
+{
+    public sealed record Input(
+        [property: LabelKey("auth.email")] string Email,
+        [property: LabelKey("labels.display-name")] string DisplayName,
+        [property: LabelKey("labels.roles")] List<string> Roles,
+        [property: LabelKey("labels.policies")] List<string>? Policies = null);
+
+    public sealed record Output(Guid UserId, bool InviteSent);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, TamModel model,
+        ITamEmail email, IHttpContextAccessor http, CancellationToken ct)
+    {
+        // The handle doubles as the mail address here, so '@'/'+' are allowed (users.define's
+        // stricter shape stays for handle-style names).
+        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Email, "^[a-z0-9][a-z0-9.@+-]*$"))
+            return UserFindings.InvalidName.At(nameof(Input.Email));
+
+        var invalid = await MembershipRules.ValidateAssignmentsAsync(
+            tam, input.Roles, input.Policies, nameof(Input.Roles), nameof(Input.Policies), ct);
+        if (invalid.Count > 0) return new Result<Output> { Findings = invalid };
+
+        var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
+            tam, input.Email, ct);
+
+        if (membership is null || !membership.Active)
+        {
+            if (await MembershipRules.ConsumeSeatAsync(tam, context.TenantId.Value, ct) is { } over)
+                return over.At(nameof(Input.Email));
+        }
+
+        if (account is null)
+        {
+            account = new AccountEntity
+            {
+                Id = Guid.NewGuid(), Email = input.Email, DisplayName = input.DisplayName,
+            };
+            tam.Db.Add(account);
+        }
+
+        if (membership is null)
+        {
+            membership = new TenantMembershipEntity
+            {
+                Id = Guid.NewGuid(),
+                TenantId = context.TenantId.Value,
+                AccountId = account.Id,
+            };
+            tam.Db.Add(membership);
+        }
+        membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
+        membership.PoliciesJson = System.Text.Json.JsonSerializer.Serialize(input.Policies ?? []);
+        membership.Active = true;
+
+        string Localize(string key, IReadOnlyDictionary<string, object?> args) =>
+            LocaleCatalogs.Format(
+                model.Locales.Lookup(key, context.Culture) ?? key, args, context.Culture);
+
+        if (account.PasswordHash is { Length: > 0 })
+        {
+            // Existing credentialed account: membership added, nothing to accept.
+            await email.SendAsync(account.Email,
+                Localize("auth.added-subject", new Dictionary<string, object?>()),
+                Localize("auth.added-body", new Dictionary<string, object?>()), ct);
+            return new Output(account.Id, false);
+        }
+
+        // One pending invite per account: re-inviting rotates the token and extends the expiry.
+        var invite = await tam.Db.Set<InviteEntity>()
+            .FirstOrDefaultAsync(i => i.AccountId == account.Id && i.AcceptedAtIso == null, ct);
+        if (invite is null)
+        {
+            invite = new InviteEntity
+            {
+                Id = Guid.NewGuid(), TenantId = context.TenantId.Value, AccountId = account.Id,
+            };
+            tam.Db.Add(invite);
+        }
+        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+        invite.TokenHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
+        invite.ExpiresAtIso = DateTimeOffset.UtcNow.AddDays(7).ToString("o");
+
+        var request = http.HttpContext?.Request;
+        var origin = request is null ? "" : $"{request.Scheme}://{request.Host}";
+        var link = $"{origin}/connect/invite?token={token}";
+        await email.SendAsync(account.Email,
+            Localize("auth.invite-subject", new Dictionary<string, object?>()),
+            Localize("auth.invite-body", new Dictionary<string, object?> { ["link"] = link }), ct);
+        return new Output(account.Id, true);
     }
 }
 

@@ -200,6 +200,18 @@ export interface UsersDefineOutput {
   userId: string;
 }
 
+export interface UsersInviteInput {
+  email: string;
+  displayName: string;
+  roles: Record<string, unknown>;
+  policies?: Record<string, unknown>;
+}
+
+export interface UsersInviteOutput {
+  userId: string;
+  inviteSent: boolean;
+}
+
 export interface UsersDeactivateInput {
   userName: string;
 }
@@ -619,6 +631,11 @@ export class TypedTamClient {
   /** users.define (requires users.manage) */
   usersDefine(input: UsersDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<UsersDefineOutput>> {
     return this.client.operation("users.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<UsersDefineOutput>>;
+  }
+
+  /** users.invite (requires users.manage) */
+  usersInvite(input: UsersInviteInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<UsersInviteOutput>> {
+    return this.client.operation("users.invite", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<UsersInviteOutput>>;
   }
 
   /** users.deactivate (requires users.manage) */

@@ -38,7 +38,13 @@ membership row is written. `tenants.move` re-parents a strict descendant of the 
 the active node or another of its descendants (never the node you stand on, never out of your
 subtree, never into the moved node's own subtree) by rewriting the moved nodes' `Path` values in
 the tenants registry and nothing else — no data row is touched. `tenants.list` shows the active
-node's subtree.
+node's subtree. `users.invite` (BUILT) completes the lifecycle: account + membership are created up
+front (the seat is consumed at invite time, so the admin's count is predictable) but the account
+has no password until the invitee follows the mailed link (`/connect/invite?token=…`, one-shot
+SHA-256-hashed token, 7-day expiry) and sets one on a framework-rendered page. Inviting an account
+that already has a password — a member of another tenant, platform-global identity — just adds the
+membership and mails a notification. Transport is the `ITamEmail` seam; the default logs the
+message (the dev inbox).
 
 ### Three scoping modes, declared per view/operation
 

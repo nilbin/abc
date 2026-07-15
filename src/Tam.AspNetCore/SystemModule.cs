@@ -38,6 +38,7 @@ public static class SystemModule
             .AddOperationType(typeof(MoveTenant))
             .AddOperationType(typeof(RenameTenant))
             .AddOperationType(typeof(DefineUser))
+            .AddOperationType(typeof(InviteUser))
             .AddOperationType(typeof(DeactivateUser))
             .AddOperationType(typeof(SetPlan))
             .AddOperationType(typeof(SetSetting))

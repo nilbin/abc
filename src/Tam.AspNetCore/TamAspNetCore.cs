@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
@@ -90,6 +91,11 @@ public static class TamAspNetCore
         // Request-scoped memoization of plugin activation (read 3-4× per request across existence,
         // gate, overlay and manifest) — collapses those to one query and keeps them coherent.
         services.AddScoped<ActivationCache>();
+
+        // Outbound email seam (invites): TryAdd so a deployment's real transport wins when
+        // registered first; the default logs the message — the dev inbox.
+        services.TryAddSingleton<ITamEmail, LogTamEmail>();
+        services.AddHttpContextAccessor();   // invite links derive their origin from the request
 
         // Secrets vault (docs/25): ASP.NET Data Protection encrypts at rest. The key ring is
         // persisted in the shared database (via the app's DbContext when it implements

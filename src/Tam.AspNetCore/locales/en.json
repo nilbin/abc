@@ -158,5 +158,14 @@
   "tenants.unknown-node": "Unknown company: {id}.",
   "tenants.not-in-subtree": "{id} is outside the active company's subtree.",
   "tenants.cycle": "Cannot move a company under its own subtree ({id}).",
-  "operations.tenants.rename.title": "Rename company"
+  "operations.tenants.rename.title": "Rename company",
+  "operations.users.invite.title": "Invite user",
+  "auth.invite-title": "Set a password to activate your account.",
+  "auth.invite-accept": "Activate account",
+  "auth.invite-invalid": "This invitation link is invalid or has expired.",
+  "auth.invite-weak": "The password must be at least 8 characters.",
+  "auth.invite-subject": "You have been invited",
+  "auth.invite-body": "Follow this link to set your password and activate your account: {link}",
+  "auth.added-subject": "You have been given access to a new organization",
+  "auth.added-body": "Sign in as usual and pick the organization at login."
 }

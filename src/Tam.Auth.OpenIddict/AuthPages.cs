@@ -80,6 +80,27 @@ internal static class AuthPages
         """;
     }
 
+    public static string InvitePage(TamModel model, string culture, string token, bool error)
+    {
+        var err = error
+            ? $"<div class=err>{Enc(T(model, "auth.invite-weak", culture))}</div>"
+            : "";
+        return $"""
+        <!doctype html><html lang="{Enc(culture)}"><head><meta charset=utf-8>
+        <meta name=viewport content="width=device-width,initial-scale=1">
+        <title>{Enc(T(model, "auth.invite-title", culture))}</title><style>{Style}</style></head><body>
+        <form class=card method=post action="/connect/invite">
+          <div class=brand>&#9670; {Enc(T(model, "app.title", culture))}</div>
+          <div style="font-size:14px;color:#40474f">{Enc(T(model, "auth.invite-title", culture))}</div>
+          <input type=hidden name=token value="{Enc(token)}">
+          <label>{Enc(T(model, "labels.password", culture))}</label>
+          <input type=password name=password autofocus autocomplete=new-password>
+          {err}
+          <button type=submit>{Enc(T(model, "auth.invite-accept", culture))}</button>
+        </form></body></html>
+        """;
+    }
+
     public static string Message(TamModel model, string culture, string key) => $"""
         <!doctype html><html lang="{Enc(culture)}"><head><meta charset=utf-8>
         <meta name=viewport content="width=device-width,initial-scale=1">

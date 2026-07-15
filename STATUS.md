@@ -254,6 +254,15 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   Access-policies page (web.policies grid; the define form authors the resource→scope map with an
   app-owned "scope-map" renderer — rows of resource + all|own toggle). Verified headless: both pages
   render, the create form submits and the grid live-refreshes with `demo.syd`.
+- **Invite flow (docs/26)**: `users.invite` creates account + membership up front (same
+  role/policy validation and seat gate + lease as users.define, via shared MembershipRules) and
+  mails a one-shot invite link through the new `ITamEmail` seam (default: `LogTamEmail`, the dev
+  inbox); the token is stored only as its SHA-256, expires in 7 days, and is redeemed on a
+  framework-rendered `/connect/invite` page that sets the password. Inviting an account that
+  already has a password just adds the membership and mails a notification (`inviteSent: false`).
+  Wire-verified (12 checks): invite → link from the log inbox → login refused before accept →
+  weak password re-prompted → accept → token one-shot → login works → listed active with the role
+  live → existing-account path without token → bad token rejected.
 - **Review round on the new surfaces** (two adversarial agents over Axis 2 + lifecycle + UI), all
   findings fixed and wire-verified: (1) HIGH — policy scope values were validated case-insensitively
   but ENFORCED ordinal, so `{"orders":"Own"}` validated and then silently failed OPEN (full access);

@@ -163,6 +163,15 @@
       "tenants.not-in-subtree": "{id} ligger utanf\u00F6r det aktiva bolagets undertr\u00E4d.",
       "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget undertr\u00E4d ({id}).",
       "operations.tenants.rename.title": "Byt namn p\u00E5 bolag",
+      "operations.users.invite.title": "Bjud in anv\u00E4ndare",
+      "auth.invite-title": "V\u00E4lj ett l\u00F6senord f\u00F6r att aktivera ditt konto.",
+      "auth.invite-accept": "Aktivera konto",
+      "auth.invite-invalid": "Inbjudningsl\u00E4nken \u00E4r ogiltig eller har g\u00E5tt ut.",
+      "auth.invite-weak": "L\u00F6senordet m\u00E5ste vara minst 8 tecken.",
+      "auth.invite-subject": "Du har blivit inbjuden",
+      "auth.invite-body": "F\u00F6lj l\u00E4nken f\u00F6r att v\u00E4lja l\u00F6senord och aktivera ditt konto: {link}",
+      "auth.added-subject": "Du har f\u00E5tt tillg\u00E5ng till en ny organisation",
+      "auth.added-body": "Logga in som vanligt och v\u00E4lj organisationen vid inloggning.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -382,6 +391,15 @@
       "tenants.not-in-subtree": "{id} is outside the active company\u0027s subtree.",
       "tenants.cycle": "Cannot move a company under its own subtree ({id}).",
       "operations.tenants.rename.title": "Rename company",
+      "operations.users.invite.title": "Invite user",
+      "auth.invite-title": "Set a password to activate your account.",
+      "auth.invite-accept": "Activate account",
+      "auth.invite-invalid": "This invitation link is invalid or has expired.",
+      "auth.invite-weak": "The password must be at least 8 characters.",
+      "auth.invite-subject": "You have been invited",
+      "auth.invite-body": "Follow this link to set your password and activate your account: {link}",
+      "auth.added-subject": "You have been given access to a new organization",
+      "auth.added-body": "Sign in as usual and pick the organization at login.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -1351,6 +1369,69 @@
           "labelKey": "labels.user-id",
           "type": "reference",
           "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "users.invite": {
+      "permission": "users.manage",
+      "titleKey": "operations.users.invite.title",
+      "fields": [
+        {
+          "name": "email",
+          "labelKey": "auth.email",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "roles",
+          "labelKey": "labels.roles",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "policies",
+          "labelKey": "labels.policies",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "userId",
+          "labelKey": "labels.user-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "inviteSent",
+          "labelKey": "labels.invite-sent",
+          "type": "boolean",
+          "wireKind": "boolean",
           "required": true,
           "changeSet": false,
           "extension": false

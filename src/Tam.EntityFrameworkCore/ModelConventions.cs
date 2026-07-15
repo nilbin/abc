@@ -50,6 +50,13 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
         });
+        modelBuilder.Entity<InviteEntity>(b =>
+        {
+            b.ToTable("invites");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.AccountId });
+        });
         modelBuilder.Entity<InboxRecord>(b =>
         {
             b.ToTable("integration_inbox");
@@ -385,6 +392,19 @@ public sealed class TenantEntity : IVersioned
     /// "demo" is not an ancestor of "demo2" — the prefix must end at a separator.</summary>
     public static bool IsSelfOrDescendant(string ancestorPath, string otherPath) =>
         otherPath == ancestorPath || otherPath.StartsWith(ancestorPath + ".", StringComparison.Ordinal);
+}
+
+/// <summary>A pending invitation (docs/26): the account + membership exist (the seat is consumed at
+/// invite time, so the admin's count is predictable), but the account has no password until the
+/// invitee accepts. Only the token's SHA-256 lands in the database — the mailed link is the secret.</summary>
+public sealed class InviteEntity : ITenantScoped
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public Guid AccountId { get; set; }
+    public string TokenHash { get; set; } = "";
+    public string ExpiresAtIso { get; set; } = "";
+    public string? AcceptedAtIso { get; set; }
 }
 
 /// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.
