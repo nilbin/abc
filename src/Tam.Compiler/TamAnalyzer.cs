@@ -49,12 +49,16 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         "TAM004", "Redundant tenant filter",
         "Tenant scoping is automatic for ITenantScoped entities via the global query filter — remove this 'TenantId ==' predicate. For a deliberate cross-tenant read (a background job), chain .IgnoreQueryFilters() and this warning goes away.");
 
+    public static readonly DiagnosticDescriptor Tam006 = Rule(
+        "TAM006", "Ownership scoping is incomplete",
+        "{0}");
+
     public static readonly DiagnosticDescriptor Tam005 = Rule(
         "TAM005", "Widened query composes an implicitly-filtered source",
         "EF's IgnoreQueryFilters is query-wide: composing a widened source (InSubtree/WithInherited/IgnoreQueryFilters) strips the global tenant filter from EVERY source in this query. Scope this side explicitly — .InNode(tenant) for strict, or its own InSubtree/WithInherited (docs/27, the composition rule).");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005];
+        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -87,7 +91,115 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
             // tenants' rows. Method-syntax compositions only; query-syntax joins are rare here and
             // the sample's are over unscoped registry tables.
             start.RegisterSyntaxNodeAction(AnalyzeQueryComposition, SyntaxKind.InvocationExpression);
+
+            // TAM006: the paired-atom ownership pattern (docs/28 D-AG2) is verified in BOTH
+            // directions, compilation-wide. (a) A ScopedUnless/CheckOwnershipUnless call site must
+            // declare its widening atom via [Widens] on the class — otherwise the atom never
+            // enters the compiled catalogue and no role could ever grant it. (b) Once a widening
+            // atom "R.A-all" is declared ANYWHERE, every view authorized on "R.A" must apply
+            // ScopedUnless with it — the fail-closed guarantee policy-authored scopes never had.
+            var ownership = new OwnershipScopeState();
+            start.RegisterSymbolAction(ctx => ownership.CollectType(ctx), SymbolKind.NamedType);
+            start.RegisterSyntaxNodeAction(
+                ctx => ownership.CollectUnlessCall(ctx), SyntaxKind.InvocationExpression);
+            start.RegisterCompilationEndAction(ctx => ownership.Report(ctx));
         });
+    }
+
+    private sealed class OwnershipScopeState
+    {
+        private readonly System.Collections.Concurrent.ConcurrentBag<string> declaredAtoms = [];
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<
+            INamedTypeSymbol, (string Permission, Location Location)> views =
+            new(SymbolEqualityComparer.Default);
+        private readonly System.Collections.Concurrent.ConcurrentBag<
+            (string Atom, INamedTypeSymbol? Enclosing, Location Location)> unlessCalls = [];
+
+        public void CollectType(SymbolAnalysisContext ctx)
+        {
+            var type = (INamedTypeSymbol)ctx.Symbol;
+            foreach (var attr in type.GetAttributes())
+            {
+                var name = attr.AttributeClass?.ToDisplayString();
+                if (name == "Tam.WidensAttribute"
+                    && attr.ConstructorArguments.Length == 1
+                    && attr.ConstructorArguments[0].Value is string atom)
+                    declaredAtoms.Add(atom);
+            }
+
+            var isView = type.GetAttributes().Any(a =>
+                a.AttributeClass?.ToDisplayString() == "Tam.ViewAttribute");
+            if (!isView) return;
+            var authorize = type.GetAttributes()
+                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "Tam.AuthorizeAttribute");
+            var permission = authorize is not null
+                && authorize.ConstructorArguments.Length == 1
+                && authorize.ConstructorArguments[0].Value is string p ? p : null;
+            if (permission is not null)
+                views[type] = (permission, type.Locations.FirstOrDefault() ?? Location.None);
+        }
+
+        public void CollectUnlessCall(SyntaxNodeAnalysisContext ctx)
+        {
+            var invocation = (Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax)ctx.Node;
+            if (invocation.Expression is not
+                Microsoft.CodeAnalysis.CSharp.Syntax.MemberAccessExpressionSyntax member) return;
+            var methodName = member.Name.Identifier.Text;
+            if (methodName is not ("ScopedUnless" or "CheckOwnershipUnless")) return;
+
+            var atom = invocation.ArgumentList.Arguments
+                .Select(a => a.Expression)
+                .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.LiteralExpressionSyntax>()
+                .FirstOrDefault(l => l.IsKind(SyntaxKind.StringLiteralExpression))
+                ?.Token.ValueText;
+            if (atom is null) return;
+
+            var enclosing = ctx.SemanticModel.GetEnclosingSymbol(
+                invocation.SpanStart, ctx.CancellationToken)?.ContainingType;
+            unlessCalls.Add((atom, enclosing, invocation.GetLocation()));
+        }
+
+        public void Report(CompilationAnalysisContext ctx)
+        {
+            var declared = new HashSet<string>(declaredAtoms, StringComparer.Ordinal);
+            var appliedByType = new Dictionary<INamedTypeSymbol, HashSet<string>>(
+                SymbolEqualityComparer.Default);
+            foreach (var (atom, enclosing, location) in unlessCalls)
+            {
+                if (enclosing is null) continue;
+                if (!appliedByType.TryGetValue(enclosing, out var set))
+                    appliedByType[enclosing] = set = new HashSet<string>(StringComparer.Ordinal);
+                set.Add(atom);
+
+                // (a) The call site's atom must be declared on the enclosing class.
+                var declaredHere = enclosing.GetAttributes().Any(a =>
+                    a.AttributeClass?.ToDisplayString() == "Tam.WidensAttribute"
+                    && a.ConstructorArguments.Length == 1
+                    && a.ConstructorArguments[0].Value is string declaredAtom
+                    && declaredAtom == atom);
+                if (!declaredHere)
+                    ctx.ReportDiagnostic(Diagnostic.Create(Tam006, location,
+                        $"'{enclosing.Name}' applies the widening atom '{atom}' without declaring " +
+                        $"[Widens(\"{atom}\")] — the atom never enters the compiled catalogue, so no " +
+                        "role could grant it and the scope would never widen."));
+            }
+
+            // (b) Every view on a base whose widening atom exists must apply the scope.
+            foreach (var entry in views)
+            {
+                var view = entry.Key;
+                var (permission, location) = entry.Value;
+                var widening = permission + "-all";
+                if (!declared.Contains(widening)) continue;
+                var applied = appliedByType.TryGetValue(view, out var set) && set.Contains(widening);
+                if (!applied)
+                    ctx.ReportDiagnostic(Diagnostic.Create(Tam006, location,
+                        $"View '{view.Name}' is authorized on '{permission}' whose widening atom " +
+                        $"'{widening}' is declared elsewhere, but never applies " +
+                        $"ScopedUnless(context, \"{widening}\", …) — actors without the widening " +
+                        "would silently see every row (fail-open)."));
+            }
+        }
     }
 
     private static void AnalyzeTenantFilter(OperationAnalysisContext context)
