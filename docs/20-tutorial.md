@@ -733,17 +733,31 @@ The tenant admin flips it on — `plugins.activate("inspect")` — an audited fr
 
 Everything above assumed an actor with permissions. Two framework capabilities produce that actor and bound it, and neither is application code.
 
-**Identity is the framework's own** (`Tam.Auth.OpenIddict`, behind the `IActorProvider` seam). The app calls `AddTamOpenIddict<ErpDbContext>()` and gets an embedded OpenIddict token server: humans authenticate with the password grant, agents and integrations with client credentials (a machine client acts as a same-named framework user, so an agent has roles and an audited identity like any human). Users are tenant data — `users.define` / `users.list`, PBKDF2-hashed, roles validated against the tenant's role registry — and grants resolve *fresh from the user's roles on every request*, so revoking a role beats the token's lifetime. Swap in any external IdP by replacing the provider; the rest of the framework never knows.
+**Identity is the framework's own** (`Tam.Auth.OpenIddict`, behind the `IActorProvider` seam). The app calls `AddTamOpenIddict<ErpDbContext>()` and gets an embedded OpenIddict token server: humans sign in with Authorization Code + PKCE on a framework-rendered, localized login page (no password grant — OAuth 2.1), pick their organization when they have more than one, and the SPA renews a 10-minute access token silently with a rotating refresh token. Agents and integrations use client credentials (a machine client acts as a same-named account, so an agent has roles and an audited identity like any human). Accounts are platform-global with per-tenant memberships ([26](26-tenancy-hierarchy-and-identity.md)); grants resolve *fresh from the membership's roles and policies on every request*, so revoking a role beats the token's lifetime. The token machinery is hardened for a public client holding its own tokens: one-time-use rotation with reuse detection (a replayed refresh token revokes its whole family), revocation on sign-out, entry validation so revocation bites immediately, and a pruned token store. Swap in any external IdP by replacing the provider; the rest of the framework never knows.
 
 ```csharp
 builder.Services.AddTam<ErpDbContext>(model);
 builder.Services.AddTamOpenIddict<ErpDbContext>();   // the whole auth story, one line
-app.MapTamAuth();                                    // POST /connect/token
+app.MapTamAuth();                                    // /connect/authorize + /connect/token + login/picker/invite pages
 ```
 
 **Entitlements bound what that actor can reach** (docs/24). A tenant's subscription — plan, seats, plugin entitlements — is data a billing provider drives through `subscriptions.set-plan` (a service-actor operation, not the tenant admin: a Stripe webhook maps to one call). Two mechanical gates, both already the right place: `plugins.activate` refuses a plugin the plan doesn't entitle (a localized upsell finding, not a crash), and `users.define` refuses a new user past the seat ceiling. A tenant with no subscription row is simply the free plan, so the framework runs fully without any billing wired up. This is how the inspect and fortnox plugins of the last two steps become things a tenant *buys*: the marketplace adds the plugin id to `PluginEntitlements`, and activation starts succeeding — the framework never touches money, it reads one boolean.
 
 The whole request now reads top to bottom as data: *the OpenIddict token names a user → the user's roles resolve to grants → the grants pass the operation's `[Authorize]` → the plan entitles the plugin the operation belongs to → the seat/entitlement gates hold → the pipeline runs → the audit row records the human's name.* Every arrow is a row in a table a tenant admin or a billing webhook can change without a deploy.
+
+## Step 15 — Norrservice becomes a group *(implemented — [26](26-tenancy-hierarchy-and-identity.md) + [27](27-authorization-model.md))*
+
+A year in, Norrservice buys a company in Kiruna. Nothing about Orders changes — what changes is *who stands where*.
+
+**The tree is data.** An admin opens the Companies page (or calls `tenants.create`) and adds `nord` under `demo`; the registry stores a materialized path (`demo.nord`), and every data row keeps carrying exactly one `TenantId` — nothing is denormalized, so re-parenting a company later (`tenants.move`) rewrites paths in the tiny tenants table and touches no data row. Renames are `tenants.rename`; the whole lifecycle is operations, so it is authorized, audited and localized like everything else.
+
+**Grants fan out; writes fan in.** Alva's one membership at `demo` carries `admin` with `cascade: true`, so she can *stand at* any descendant — the login picker and the header switcher offer the whole standable set, labeled by path ("Demo AB ▸ Norrservice Nord AB"). Standing at `nord` (an `X-Tam-Tenant` act-as header the client sets), everything she does — creates, audit rows, events, idempotency — lands in `nord`, because the whole request is re-bound to the target node. Reads widen only where a view asks for it: the group overview declares `subtree` (roll-up down the tree), the customer lookup declares `inherited` (group-owned reference data readable from every leaf), and everything else stays strictly node-local. The compiler enforces the sharp edge here: composing a widened source into a query without explicitly scoping the other side is a build error (TAM005), because EF's filter opt-out is query-wide.
+
+**Access is two axes.** A role says what you can *do* (authored as access levels — `{"orders": "manage"}` — expanding to the permission atoms at load time, with `[Sensitive]` fields maskable down to reads *and* writes). An access policy says which *rows* you reach (`{"orders": "own"}`), attached per membership — the same `dispatcher` role means all orders for the agent and only-your-own for Didrik, without forking the role. Both registries are tenant data with admin pages (Roles, Access policies, Users, Companies), both validate against the compiled catalogue at define time, and both re-resolve per request.
+
+**People arrive by invite.** `users.invite` creates the account and membership up front (the seat is consumed immediately, so the count the admin sees is the count that bills), mails a one-shot hashed link through the `ITamEmail` seam (the dev default logs it), and the invitee sets a password on a framework page. Inviting someone who already has an account elsewhere in the platform just adds the membership — one human, many tenants, one login.
+
+The pattern of Steps 1–14 holds: the tree, the memberships, the roles, the policies, the invites are all *data behind operations* — no deploy moves a company, grants a scope, or seats a user.
 
 ---
 

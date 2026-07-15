@@ -8,6 +8,11 @@ Answers to the open questions raised in [review-notes.md](review-notes.md). Each
 
 ## D1 — Authorization: compiled permission catalogue + tenant-defined roles + scoped grants
 
+> **Extended by [27-authorization-model.md](27-authorization-model.md)** (built): roles are now
+> authored as access levels over the same atoms, data scope became a second axis (per-membership
+> access policies), and fields can be masked. D1's substrate — the compiled catalogue and flat
+> grant set — is unchanged underneath.
+
 **Decision.** Three layers, matching the framework's static/dynamic split:
 
 1. **Permissions are compiled facts.** Every operation, view, and binding declares the permission it requires (`[Authorize("orders.create")]`). The compiler emits the full permission catalogue into the manifest and fails the build on an operation without one or a reference to a nonexistent permission.
@@ -25,6 +30,11 @@ Field-level read/write permissions (already designed for extension fields in [15
 ---
 
 ## D2 — Multi-tenancy: single database, shared schema, TenantId discriminator, RLS as backstop
+
+> **Extended by [26-tenancy-hierarchy-and-identity.md](26-tenancy-hierarchy-and-identity.md)**
+> (built): tenants now form trees (materialized paths in the tenants registry; rows still carry
+> exactly one `TenantId`), accounts are platform-global with per-tenant memberships, and the
+> active node is chosen at login / act-as. D2's storage shape is unchanged underneath.
 
 **Decision.** One PostgreSQL database, one schema. Every tenant-owned aggregate carries `TenantId`; EF Core global query filters bind it from the execution envelope; writes stamp it in the pipeline, never in handlers. Tables are either tenant-scoped or explicitly marked `[GlobalData]` — anything unmarked and missing `TenantId` is a compiler error (`DB0xx`).
 
