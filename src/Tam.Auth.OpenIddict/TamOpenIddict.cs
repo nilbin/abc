@@ -275,7 +275,7 @@ public static class TamOpenIddict
         var invite = await tam.Db.Set<InviteEntity>().IgnoreQueryFilters()
             .FirstOrDefaultAsync(i => i.TokenHash == hash && i.AcceptedAtIso == null);
         if (invite is null) return null;
-        return DateTimeOffset.TryParse(invite.ExpiresAtIso, out var expires)
+        return IsoTime.TryParse(invite.ExpiresAtIso, out var expires)
             && expires > DateTimeOffset.UtcNow ? invite : null;
     }
 
@@ -305,7 +305,7 @@ public static class TamOpenIddict
 
         account.PasswordHash = TamPasswords.Hash(password);
         account.Active = true;
-        invite.AcceptedAtIso = DateTimeOffset.UtcNow.ToString("o");
+        invite.AcceptedAtIso = IsoTime.Now();
         await tam.Db.SaveChangesAsync();
         return Results.Redirect("/");
     }

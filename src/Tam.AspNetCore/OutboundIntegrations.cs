@@ -102,7 +102,7 @@ public static class OutboundRunner
             Trigger = trigger,
             Status = result.Ok ? "ok" : "failed",
             Detail = result.Detail,
-            RanAtIso = DateTimeOffset.UtcNow.ToString("O"),
+            RanAtIso = IsoTime.Now(),
         });
         await db.SaveChangesAsync(ct);
         return result;
@@ -179,7 +179,7 @@ public sealed class IntegrationScheduler(
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
         var now = DateTimeOffset.UtcNow;
-        var nowIso = now.ToString("O");
+        var nowIso = IsoTime.From(now);
 
         // Push the ordering into the index; parse-and-filter only the small due set. NextRunIso is
         // ISO-8601 UTC ("O"), so string ordering is chronological ordering.
@@ -188,8 +188,7 @@ public sealed class IntegrationScheduler(
                 .Where(x => x.Enabled && string.Compare(x.NextRunIso, nowIso) <= 0)
                 .OrderBy(x => x.NextRunIso)
                 .ToListAsync(ct))
-            .Where(x => DateTimeOffset.TryParse(x.NextRunIso, null,
-                System.Globalization.DateTimeStyles.RoundtripKind, out var n) && n <= now)
+            .Where(x => IsoTime.TryParse(x.NextRunIso, out var n) && n <= now)
             .ToList();
 
         // One activation lookup per tenant per tick, not per due schedule (review N+1).
@@ -207,8 +206,8 @@ public sealed class IntegrationScheduler(
             // running. If another instance already claimed this tick the token has changed and the
             // save throws — we skip, so the handler fires at most once across the fleet.
             schedule.NextRunIso = ScheduleSpec.TryNext(schedule.Spec, now, out var next)
-                ? next.ToString("O")
-                : now.AddYears(100).ToString("O");   // unparseable spec: park it, don't hot-loop
+                ? IsoTime.From(next)
+                : IsoTime.From(now.AddYears(100));   // unparseable spec: park it, don't hot-loop
             schedule.LastRunIso = nowIso;
             if (!await ClaimLease.TryCommitAsync(db, schedule, ct)) continue;
 

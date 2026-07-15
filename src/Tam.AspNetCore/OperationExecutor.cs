@@ -190,7 +190,7 @@ public sealed class OperationExecutor(
                 OperationId = operationId,
                 EventType = effect.Event,
                 PayloadJson = JsonSerializer.Serialize(effect.Payload, TamJson.Options),
-                CreatedAtIso = DateTimeOffset.UtcNow.ToString("O"),
+                CreatedAtIso = IsoTime.Now(),
             });
         }
 

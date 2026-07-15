@@ -69,7 +69,7 @@ public static class TamAudit
             CorrelationId = context.CorrelationId,
             IdempotencyKey = context.IdempotencyKey,
             Timestamp = DateTimeOffset.UtcNow,
-            TimestampIso = DateTimeOffset.UtcNow.ToString("O"),
+            TimestampIso = IsoTime.Now(),
         };
 
         foreach (var tracked in db.ChangeTracker.Entries().ToList())

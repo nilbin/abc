@@ -30,7 +30,7 @@ public sealed class OutboxDispatcher(
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
         var now = DateTimeOffset.UtcNow;
-        var nowIso = now.ToString("O");
+        var nowIso = IsoTime.From(now);
 
         // Cross-tenant background scan: no ambient tenant, so opt out of the global filter and
         // dispatch each row under its own TenantId (read from the row).
@@ -49,13 +49,13 @@ public sealed class OutboxDispatcher(
         {
             // Claim under the concurrency token before dispatching: only one instance delivers a
             // given row. A racing instance collides on ClaimedUntilIso and skips.
-            record.ClaimedUntilIso = now.Add(Lease).ToString("O");
+            record.ClaimedUntilIso = IsoTime.From(now.Add(Lease));
             if (!await ClaimLease.TryCommitAsync(db, record, ct)) continue;
 
             try
             {
                 await InvokeSubscribers(record, scope.ServiceProvider, db, activations, ct);
-                record.DispatchedAtIso = DateTimeOffset.UtcNow.ToString("O");
+                record.DispatchedAtIso = IsoTime.Now();
                 record.ClaimedUntilIso = null;
                 // Persist per record: a crash mid-batch must not redeliver what already went out.
                 // Delivery remains at-least-once; subscribers stay idempotent.
@@ -74,7 +74,7 @@ public sealed class OutboxDispatcher(
                 record.LastError = e.GetType().Name;
                 record.ClaimedUntilIso = null;
                 if (record.Attempts >= MaxAttempts)
-                    record.DeadAtIso = DateTimeOffset.UtcNow.ToString("O");
+                    record.DeadAtIso = IsoTime.Now();
                 try { await db.SaveChangesAsync(ct); }
                 catch { db.Entry(record).State = EntityState.Detached; }
             }

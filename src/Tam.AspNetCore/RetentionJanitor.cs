@@ -26,7 +26,7 @@ public sealed class RetentionJanitor(
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
         var cutoff = DateTimeOffset.UtcNow - options.RetentionPeriod;
-        var cutoffIso = cutoff.ToString("O");
+        var cutoffIso = IsoTime.From(cutoff);
 
         // A cross-tenant janitor: every sweep opts out of the ambient global filter (there is no
         // request tenant here) and trims across all tenants by timestamp.

@@ -227,7 +227,7 @@ public static class InviteUser
             .Replace('+', '-').Replace('/', '_').TrimEnd('=');
         invite.TokenHash = Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
-        invite.ExpiresAtIso = DateTimeOffset.UtcNow.AddDays(7).ToString("o");
+        invite.ExpiresAtIso = IsoTime.From(DateTimeOffset.UtcNow.AddDays(7));
 
         var request = http.HttpContext?.Request;
         var origin = request is null ? "" : $"{request.Scheme}://{request.Host}";

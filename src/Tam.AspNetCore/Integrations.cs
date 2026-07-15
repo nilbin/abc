@@ -151,7 +151,7 @@ internal static class InboxProcessor
         //    backoff has elapsed. Not-yet-due failures aren't fetched; the batch is bounded so a large
         //    failed backlog drains over several calls, not all in this request.
         var policy = RetryPolicy.Resolve(context.Services);
-        var nowIso = DateTimeOffset.UtcNow.ToString("O");
+        var nowIso = IsoTime.Now();
         var retryable = (await inbox
             .Where(x => x.IntegrationId == integrationId
                 && (x.Status == InboxStatus.Pending
@@ -190,7 +190,7 @@ internal static class InboxProcessor
                 record.LastError = string.Join(", ", response.Findings
                     .Where(f => f.Severity == FindingSeverity.Error).Select(f => f.Code).Distinct());
                 record.NextAttemptIso = record.Status == InboxStatus.Failed
-                    ? policy.NextAttempt(record.Attempts, DateTimeOffset.UtcNow).ToString("O")
+                    ? IsoTime.From(policy.NextAttempt(record.Attempts, DateTimeOffset.UtcNow))
                     : null;
             }
             else

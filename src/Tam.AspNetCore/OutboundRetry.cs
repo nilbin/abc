@@ -43,8 +43,8 @@ public static class OutboundRetryQueue
             Attempts = 1,                       // the inline run that just failed is attempt 1
             Status = InboxStatus.Failed,
             LastError = error,
-            NextAttemptIso = policy.NextAttempt(1, now).ToString("O"),
-            CreatedAtIso = now.ToString("O"),
+            NextAttemptIso = IsoTime.From(policy.NextAttempt(1, now)),
+            CreatedAtIso = IsoTime.From(now),
         });
     }
 }
@@ -70,7 +70,7 @@ public sealed class IntegrationRetryDriver(
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
         var now = DateTimeOffset.UtcNow;
-        var nowIso = now.ToString("O");
+        var nowIso = IsoTime.From(now);
 
         var due = (await db.Set<OutboundTaskEntity>()
                 .IgnoreQueryFilters()   // cross-tenant background scan (no ambient tenant)
@@ -78,8 +78,7 @@ public sealed class IntegrationRetryDriver(
                 .OrderBy(x => x.NextAttemptIso)
                 .Take(BatchSize)
                 .ToListAsync(ct))
-            .Where(x => DateTimeOffset.TryParse(x.NextAttemptIso, null,
-                System.Globalization.DateTimeStyles.RoundtripKind, out var n) && n <= now)
+            .Where(x => IsoTime.TryParse(x.NextAttemptIso, out var n) && n <= now)
             .ToList();
 
         // One activation lookup per tenant per tick, not per task (review-round-3 N+1).
@@ -95,7 +94,7 @@ public sealed class IntegrationRetryDriver(
 
             // Claim under the lease before running: push NextAttemptIso forward for the attempt we
             // are about to make. A racing instance collides on the token and skips.
-            task.NextAttemptIso = policy.NextAttempt(task.Attempts + 1, now).ToString("O");
+            task.NextAttemptIso = IsoTime.From(policy.NextAttempt(task.Attempts + 1, now));
             if (!await ClaimLease.TryCommitAsync(db, task, ct)) continue;
 
             JsonElement? payload = task.PayloadJson is { } json
@@ -109,7 +108,7 @@ public sealed class IntegrationRetryDriver(
             if (result.Ok)
             {
                 task.Status = InboxStatus.Processed;
-                task.CompletedAtIso = now.ToString("O");
+                task.CompletedAtIso = IsoTime.From(now);
                 task.LastError = null;
             }
             else if (policy.IsExhausted(task.Attempts))

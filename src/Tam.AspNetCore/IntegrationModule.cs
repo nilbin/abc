@@ -45,7 +45,7 @@ public static class ScheduleIntegration
         }
         schedule.Spec = input.Spec;
         schedule.Enabled = input.Enabled;
-        schedule.NextRunIso = next.ToString("O");
+        schedule.NextRunIso = IsoTime.From(next);
 
         return new Output(input.IntegrationId, schedule.NextRunIso);
     }
@@ -211,7 +211,7 @@ public static class RequeueDeadLetter
         {
             task.Status = InboxStatus.Failed;
             task.Attempts = 0;
-            task.NextAttemptIso = DateTimeOffset.UtcNow.ToString("O");   // due immediately
+            task.NextAttemptIso = IsoTime.Now();   // due immediately
             task.LastError = null;
             return new Output(input.Id, "outbound");
         }

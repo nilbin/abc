@@ -194,7 +194,7 @@ public static class InstallPackage
         }
         installed.Version = document.Version;
         installed.DocumentJson = input.Document;
-        installed.InstalledAtIso = DateTimeOffset.UtcNow.ToString("O");
+        installed.InstalledAtIso = IsoTime.Now();
 
         return new Output(document.Package, document.Version, Applied: true, toAdd.Count, roleSpecs.Count);
     }
