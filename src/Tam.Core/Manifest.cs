@@ -100,7 +100,9 @@ public static class ManifestBuilder
         IReadOnlySet<string>? activePlugins = null)
     {
         bool Included(string? plugin) =>
-            plugin is null || activePlugins is null || activePlugins.Contains(plugin);
+            plugin is null || activePlugins is null || activePlugins.Contains(plugin)
+            // Framework packages (docs/22 package tier) are always active — no row to look up.
+            || model.Packages.ContainsKey(plugin);
 
         var operations = model.Operations
             .Where(kv => Included(kv.Value.Plugin))

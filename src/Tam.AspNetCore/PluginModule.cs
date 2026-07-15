@@ -77,25 +77,32 @@ public static class PluginActivations
 /// it per (scope, tenant) collapses those to one query AND removes the incoherency window where
 /// a concurrent deactivate could be seen by one read and not another in the same request.
 /// </summary>
-public sealed class ActivationCache(ITamDb tam)
+public sealed class ActivationCache(ITamDb tam, TamModel model)
 {
     private readonly Dictionary<string, IReadOnlySet<string>> byTenant = new();
 
     public async ValueTask<IReadOnlySet<string>> ActiveAsync(string tenantId, CancellationToken ct)
     {
         if (byTenant.TryGetValue(tenantId, out var set)) return set;
-        set = await PluginActivations.ActiveAsync(tam.Db, tenantId, ct);
+        // Framework packages are ALWAYS active — no row, no toggle (docs/22 package tier).
+        var stored = await PluginActivations.ActiveAsync(tam.Db, tenantId, ct);
+        set = stored.Union(model.Packages.Keys).ToHashSet();
         byTenant[tenantId] = set;
         return set;
     }
 
     /// <summary>Resolve the request cache if present, else fall back to a direct query (background
     /// services outside a request scope pass their own DbContext).</summary>
-    public static ValueTask<IReadOnlySet<string>> ForAsync(
-        IServiceProvider services, DbContext db, string tenantId, CancellationToken ct) =>
-        services.GetService(typeof(ActivationCache)) is ActivationCache cache
-            ? cache.ActiveAsync(tenantId, ct)
-            : new ValueTask<IReadOnlySet<string>>(PluginActivations.ActiveAsync(db, tenantId, ct));
+    public static async ValueTask<IReadOnlySet<string>> ForAsync(
+        IServiceProvider services, DbContext db, string tenantId, CancellationToken ct)
+    {
+        if (services.GetService(typeof(ActivationCache)) is ActivationCache cache)
+            return await cache.ActiveAsync(tenantId, ct);
+        var stored = await PluginActivations.ActiveAsync(db, tenantId, ct);
+        return services.GetService(typeof(TamModel)) is TamModel model
+            ? stored.Union(model.Packages.Keys).ToHashSet()
+            : stored;
+    }
 }
 
 /// <summary>

@@ -2,259 +2,6 @@
   "version": "1",
   "defaultCulture": "sv",
   "catalogs": {
-    "sv": {
-      "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
-      "operations.extensions.retire-field.title": "Avveckla anpassat f\u00E4lt",
-      "operations.roles.define.title": "Definiera roll",
-      "labels.id": "Id",
-      "labels.entity": "Entitet",
-      "labels.key": "Nyckel",
-      "labels.type": "Typ",
-      "labels.labels": "Etiketter",
-      "labels.required": "Obligatoriskt",
-      "labels.max-length": "Maxl\u00E4ngd",
-      "labels.descriptions": "Beskrivningar",
-      "labels.options": "Alternativ",
-      "labels.field-id": "F\u00E4lt",
-      "labels.state": "Tillst\u00E5nd",
-      "labels.name": "Namn",
-      "labels.permissions": "Beh\u00F6righeter",
-      "labels.search": "S\u00F6k",
-      "labels.timestamp": "Tidpunkt",
-      "labels.operation": "Operation",
-      "labels.actor": "Utf\u00F6rd av",
-      "labels.entity-id": "Post",
-      "labels.field": "F\u00E4lt",
-      "labels.old-value": "F\u00F6reg\u00E5ende v\u00E4rde",
-      "labels.new-value": "Nytt v\u00E4rde",
-      "enums.draft": "Utkast",
-      "enums.active": "Aktivt",
-      "enums.deprecated": "Utfasas",
-      "enums.retired": "Avvecklat",
-      "validation.required": "F\u00E4ltet \u00E4r obligatoriskt.",
-      "validation.too-long": "F\u00E5r inneh\u00E5lla h\u00F6gst {max} tecken.",
-      "validation.invalid-email": "Ogiltig e-postadress.",
-      "validation.invalid-value": "Ogiltigt v\u00E4rde.",
-      "validation.unknown-field": "Ok\u00E4nt f\u00E4lt.",
-      "concurrency.field-conflict": "F\u00E4ltet har \u00E4ndrats av n\u00E5gon annan.",
-      "concurrency.version-conflict": "Posten har \u00E4ndrats av n\u00E5gon annan. Ladda om och f\u00F6rs\u00F6k igen.",
-      "pipeline.not-authorized": "Du saknar beh\u00F6righet ({permission}).",
-      "pipeline.unknown-operation": "Ok\u00E4nd operation: {operation}.",
-      "pipeline.unknown-view": "Ok\u00E4nd vy: {view}.",
-      "pipeline.invalid-input": "Ogiltig indata.",
-      "pipeline.not-found": "Posten finns inte.",
-      "pipeline.idempotent-replay": "Svaret \u00E5teranv\u00E4ndes fr\u00E5n en tidigare identisk beg\u00E4ran.",
-      "pipeline.idempotency-mismatch": "Idempotensnyckeln har redan anv\u00E4nts med en annan beg\u00E4ran.",
-      "extensions.unknown-field": "Ok\u00E4nt anpassat f\u00E4lt.",
-      "extensions.retired-field": "F\u00E4ltet \u00E4r avvecklat och kan inte \u00E4ndras.",
-      "extensions.deprecated-field": "F\u00E4ltet h\u00E5ller p\u00E5 att fasas ut.",
-      "extensions.unknown-type": "Ok\u00E4nd f\u00E4lttyp.",
-      "extensions.key-conflict": "Nyckeln anv\u00E4nds redan.",
-      "extensions.missing-label": "Etikett saknas f\u00F6r standardspr\u00E5ket.",
-      "extensions.invalid-option": "V\u00E4rdet finns inte bland alternativen.",
-      "roles.unknown-permission": "Ok\u00E4nd beh\u00F6righet: {permission}.",
-      "roles.invalid-name": "Ogiltigt rollnamn (sm\u00E5 bokst\u00E4ver, siffror och bindestreck).",
-      "roles.reserved-permission": "Beh\u00F6righeten {permission} kan inte tilldelas via en roll.",
-      "pipeline.unknown-form": "Ok\u00E4nt formul\u00E4r: {form}.",
-      "grid.total": "{count} tr\u00E4ffar",
-      "filters.from": "fr\u00E5n",
-      "filters.to": "till",
-      "common.yes": "Ja",
-      "common.no": "Nej",
-      "common.no-matches": "Inga tr\u00E4ffar",
-      "operations.plugins.activate.title": "Aktivera till\u00E4gg",
-      "operations.plugins.deactivate.title": "Inaktivera till\u00E4gg",
-      "labels.plugin": "Till\u00E4gg",
-      "labels.plugin-id": "Till\u00E4gg",
-      "labels.active": "Aktivt",
-      "plugins.unknown": "Ok\u00E4nt till\u00E4gg: {plugin}.",
-      "operations.packages.install.title": "Installera paket",
-      "operations.packages.uninstall.title": "Avinstallera paket",
-      "labels.package-document": "Paketdokument",
-      "labels.package": "Paket",
-      "labels.version": "Version",
-      "labels.installed-at": "Installerat",
-      "labels.dry-run": "Testk\u00F6rning",
-      "packages.invalid-document": "Ogiltigt paketdokument.",
-      "packages.field-conflict": "F\u00E4ltet {key} finns redan med en annan definition.",
-      "packages.older-version": "Version {offered} \u00E4r \u00E4ldre \u00E4n den installerade ({installed}).",
-      "packages.not-installed": "Paketet {package} \u00E4r inte installerat.",
-      "operations.rules.define.title": "Definiera regel",
-      "operations.rules.retire.title": "Avveckla regel",
-      "labels.rule": "Regel",
-      "labels.on-operation": "Vid operation",
-      "labels.condition": "Villkor",
-      "labels.messages": "Meddelanden",
-      "labels.target-field": "F\u00E4lt",
-      "labels.retired": "Avvecklad",
-      "rules.unknown-operation": "Ok\u00E4nd operation: {operation}.",
-      "rules.unknown-field": "Ok\u00E4nt f\u00E4lt i villkoret: {field}.",
-      "rules.missing-message": "Meddelande saknas f\u00F6r standardspr\u00E5ket.",
-      "rules.invalid-condition": "Ogiltigt villkor.",
-      "operations.users.define.title": "Definiera anv\u00E4ndare",
-      "operations.users.deactivate.title": "Inaktivera anv\u00E4ndare",
-      "labels.user-name": "Anv\u00E4ndarnamn",
-      "labels.display-name": "Visningsnamn",
-      "labels.password": "L\u00F6senord",
-      "labels.roles": "Roller",
-      "users.unknown-role": "Ok\u00E4nd roll: {role}.",
-      "users.invalid-name": "Ogiltigt anv\u00E4ndarnamn (sm\u00E5 bokst\u00E4ver, siffror, punkt och bindestreck).",
-      "extensions.unknown-entity": "Ok\u00E4nd entitet: {entity}.",
-      "packages.role-conflict": "Rollen {role} finns redan med andra beh\u00F6righeter.",
-      "rules.evaluation-failed": "Regeln {rule} kunde inte utv\u00E4rderas och hoppades \u00F6ver.",
-      "operations.subscriptions.set-plan.title": "Ange abonnemang",
-      "labels.plan": "Abonnemang",
-      "labels.seats": "Platser",
-      "labels.seats-used": "Anv\u00E4nda platser",
-      "labels.status": "Status",
-      "labels.entitlements": "R\u00E4ttigheter",
-      "subscriptions.not-entitled": "Ditt abonnemang omfattar inte till\u00E4gget {plugin}. Uppgradera f\u00F6r att aktivera det.",
-      "subscriptions.seat-limit": "Platsgr\u00E4nsen ({seats}) \u00E4r n\u00E5dd. Uppgradera f\u00F6r fler platser.",
-      "labels.renews-at": "F\u00F6rnyas",
-      "operations.settings.set.title": "Ange inst\u00E4llning",
-      "operations.secrets.set.title": "Ange hemlighet",
-      "operations.integrations.schedule.title": "Schemal\u00E4gg integration",
-      "operations.integrations.run.title": "K\u00F6r integration",
-      "operations.integrations.requeue.title": "K\u00F6a d\u00F6d post igen",
-      "labels.value": "V\u00E4rde",
-      "labels.secret-set": "Angiven",
-      "labels.integration": "Integration",
-      "labels.spec": "Schema",
-      "labels.enabled": "Aktiverad",
-      "labels.trigger": "Utl\u00F6sare",
-      "labels.detail": "Detalj",
-      "labels.direction": "Riktning",
-      "labels.reference": "Referens",
-      "labels.attempts": "F\u00F6rs\u00F6k",
-      "vault.invalid-key": "Ogiltig nyckel.",
-      "integrations.unknown": "Ok\u00E4nd integration: {integration}.",
-      "integrations.not-schedulable": "Integrationen {integration} kan inte schemal\u00E4ggas.",
-      "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
-      "integrations.dead-letter-not-found": "Ingen k\u00F6ad post med det id:t.",
-      "integrations.malformed-payload": "Integrationens data \u00E4r inte giltig JSON.",
-      "auth.sign-in": "Logga in",
-      "auth.sign-out": "Logga ut",
-      "auth.email": "E-post",
-      "auth.failed": "Fel e-post eller l\u00F6senord.",
-      "auth.pick-tenant": "V\u00E4lj en organisation f\u00F6r att forts\u00E4tta.",
-      "auth.continue": "Forts\u00E4tt",
-      "auth.no-access": "Detta konto har ingen \u00E5tkomst till n\u00E5gon organisation.",
-      "tenants.not-standable": "Du har inte beh\u00F6righet att agera i denna organisation.",
-      "roles.unknown-resource": "Ok\u00E4nd resurs: {resource}.",
-      "roles.unknown-level": "Ok\u00E4nd beh\u00F6righetsniv\u00E5: {level}.",
-      "labels.levels": "Beh\u00F6righetsniv\u00E5er",
-      "pipeline.field-not-authorized": "Du saknar beh\u00F6righet att ange f\u00E4ltet {field} ({permission}).",
-      "operations.tenants.create.title": "Skapa bolag",
-      "operations.tenants.move.title": "Flytta bolag",
-      "labels.tenant": "Bolag",
-      "labels.new-parent": "Ny f\u00F6r\u00E4lder",
-      "labels.parent": "F\u00F6r\u00E4lder",
-      "labels.path": "S\u00F6kv\u00E4g",
-      "tenants.invalid-id": "Ogiltigt id (gemener, siffror och bindestreck; inga punkter).",
-      "tenants.duplicate-id": "Id:t {id} anv\u00E4nds redan.",
-      "tenants.unknown-node": "Ok\u00E4nt bolag: {id}.",
-      "tenants.not-in-subtree": "{id} ligger utanf\u00F6r det aktiva bolagets undertr\u00E4d.",
-      "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget undertr\u00E4d ({id}).",
-      "operations.tenants.rename.title": "Byt namn p\u00E5 bolag",
-      "operations.users.invite.title": "Bjud in anv\u00E4ndare",
-      "auth.invite-title": "V\u00E4lj ett l\u00F6senord f\u00F6r att aktivera ditt konto.",
-      "auth.invite-accept": "Aktivera konto",
-      "auth.invite-invalid": "Inbjudningsl\u00E4nken \u00E4r ogiltig eller har g\u00E5tt ut.",
-      "auth.invite-weak": "L\u00F6senordet m\u00E5ste vara minst 8 tecken.",
-      "auth.invite-subject": "Du har blivit inbjuden",
-      "auth.invite-body": "F\u00F6lj l\u00E4nken f\u00F6r att v\u00E4lja l\u00F6senord och aktivera ditt konto: {link}",
-      "auth.added-subject": "Du har f\u00E5tt tillg\u00E5ng till en ny organisation",
-      "auth.added-body": "Logga in som vanligt och v\u00E4lj organisationen vid inloggning.",
-      "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; \u00E4ndringarna av anpassade f\u00E4lt kunde inte knytas till en.",
-      "pipeline.replay-actor-unavailable": "Den ursprungliga best\u00E4llarens konto \u00E4r inte l\u00E4ngre tillg\u00E4ngligt; den parkerade beg\u00E4ran kan inte utf\u00F6ras.",
-      "plugins.inspect.title": "Besiktning",
-      "operations.inspect.checklists.create.title": "Ny checklista",
-      "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
-      "inspect.labels.title": "Checklista",
-      "inspect.labels.passed": "Godk\u00E4nd",
-      "inspect.labels.order": "Order",
-      "inspect.labels.checklist-id": "Checklista",
-      "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
-      "inspect.checklist-incomplete": "Ordern har en checklista som inte \u00E4r godk\u00E4nd.",
-      "plugins.fortnox.title": "Fortnox",
-      "plugins.approvals.title": "Godk\u00E4nnandefl\u00F6den",
-      "operations.approvals.groups.define.title": "Ny godk\u00E4nnandegrupp",
-      "operations.approvals.groups.assign.title": "L\u00E4gg till godk\u00E4nnare",
-      "operations.approvals.rules.define.title": "Ny godk\u00E4nnanderegel",
-      "operations.approvals.approve.title": "Godk\u00E4nn",
-      "operations.approvals.reject.title": "Avsl\u00E5",
-      "approvals.labels.name": "Namn",
-      "approvals.labels.parent-group": "\u00D6verordnad grupp",
-      "approvals.labels.group": "Grupp",
-      "approvals.labels.email": "E-post",
-      "approvals.labels.operation": "\u00C5tg\u00E4rd",
-      "approvals.labels.threshold-field": "Beloppsf\u00E4lt",
-      "approvals.labels.threshold": "Beloppsgr\u00E4ns",
-      "approvals.labels.request": "Beg\u00E4ran",
-      "approvals.labels.note": "Anteckning",
-      "approvals.labels.initiator": "Beg\u00E4rd av",
-      "approvals.labels.status": "Status",
-      "approvals.labels.created": "Skapad",
-      "approvals.labels.outcome": "Utfall",
-      "approvals.pending": "Skickad f\u00F6r godk\u00E4nnande ({operation}).",
-      "approvals.not-pending": "Beg\u00E4ran v\u00E4ntar inte p\u00E5 beslut.",
-      "approvals.not-approver": "Du ing\u00E5r inte i regelns godk\u00E4nnandegrupp.",
-      "approvals.self-approval": "En beg\u00E4ran kan inte godk\u00E4nnas av den som skickade den.",
-      "approvals.unknown-group": "Ok\u00E4nd godk\u00E4nnandegrupp.",
-      "approvals.unknown-target": "Ok\u00E4nd \u00E5tg\u00E4rd.",
-      "approvals.not-gateable": "Godk\u00E4nnandefl\u00F6dets egna \u00E5tg\u00E4rder kan inte kr\u00E4va godk\u00E4nnande.",
-      "approvals.unknown-member": "Ingen aktiv anv\u00E4ndare med den e-postadressen i denna organisation.",
-      "approvals.email.requested-subject": "Godk\u00E4nnande kr\u00E4vs",
-      "approvals.email.requested-body": "En beg\u00E4ran ({operation}) v\u00E4ntar p\u00E5 ditt godk\u00E4nnande.",
-      "app.title": "Norrservice ERP",
-      "nav.orders": "Ordrar",
-      "nav.customers": "Kunder",
-      "nav.extensions": "Anpassade f\u00E4lt",
-      "operations.customers.create.title": "Ny kund",
-      "operations.orders.create.title": "Ny order",
-      "operations.orders.edit-details.title": "\u00C4ndra orderdetaljer",
-      "operations.orders.complete.title": "Slutf\u00F6r order",
-      "labels.visit-address": "Bes\u00F6ksadress",
-      "labels.email": "E-post",
-      "labels.phone": "Telefon",
-      "labels.is-active": "Aktiv",
-      "labels.customer": "Kund",
-      "labels.order-type": "Ordertyp",
-      "labels.project": "Projekt",
-      "labels.work-address": "Arbetsadress",
-      "labels.description": "Arbetsbeskrivning",
-      "labels.requested-date": "\u00D6nskat datum",
-      "labels.estimated-total": "Uppskattat belopp",
-      "labels.order-id": "Order",
-      "labels.number": "Ordernummer",
-      "labels.extensions": "Anpassade f\u00E4lt",
-      "labels.active-only": "Endast aktiva",
-      "enums.service": "Service",
-      "enums.project": "Projekt",
-      "enums.open": "\u00D6ppen",
-      "enums.completed": "Slutf\u00F6rd",
-      "enums.cancelled": "Makulerad",
-      "orders.already-completed": "Ordern \u00E4r redan slutf\u00F6rd.",
-      "orders.cannot-complete-cancelled": "En makulerad order kan inte slutf\u00F6ras.",
-      "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar.",
-      "orders.project-required": "V\u00E4lj ett projekt f\u00F6r projektordrar.",
-      "orders.project-not-for-customer": "Projektet tillh\u00F6r inte den valda kunden.",
-      "orders.not-found": "Ordern finns inte.",
-      "orders.not-editable": "Ordern kan inte l\u00E4ngre \u00E4ndras.",
-      "customers.not-found": "Kunden finns inte l\u00E4ngre.",
-      "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
-      "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
-      "customers.duplicate-name": "Det finns redan en kund med det namnet.",
-      "nav.audit": "Historik",
-      "nav.plugins": "Till\u00E4gg",
-      "nav.packages": "Paket",
-      "nav.rules": "Regler",
-      "labels.company": "Bolag",
-      "nav.overview": "Koncern\u00F6versikt",
-      "nav.tenants": "Bolag",
-      "nav.users": "Anv\u00E4ndare",
-      "nav.roles": "Roller"
-    },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
       "operations.extensions.retire-field.title": "Retire custom field",
@@ -507,6 +254,259 @@
       "nav.tenants": "Companies",
       "nav.users": "Users",
       "nav.roles": "Roles"
+    },
+    "sv": {
+      "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
+      "operations.extensions.retire-field.title": "Avveckla anpassat f\u00E4lt",
+      "operations.roles.define.title": "Definiera roll",
+      "labels.id": "Id",
+      "labels.entity": "Entitet",
+      "labels.key": "Nyckel",
+      "labels.type": "Typ",
+      "labels.labels": "Etiketter",
+      "labels.required": "Obligatoriskt",
+      "labels.max-length": "Maxl\u00E4ngd",
+      "labels.descriptions": "Beskrivningar",
+      "labels.options": "Alternativ",
+      "labels.field-id": "F\u00E4lt",
+      "labels.state": "Tillst\u00E5nd",
+      "labels.name": "Namn",
+      "labels.permissions": "Beh\u00F6righeter",
+      "labels.search": "S\u00F6k",
+      "labels.timestamp": "Tidpunkt",
+      "labels.operation": "Operation",
+      "labels.actor": "Utf\u00F6rd av",
+      "labels.entity-id": "Post",
+      "labels.field": "F\u00E4lt",
+      "labels.old-value": "F\u00F6reg\u00E5ende v\u00E4rde",
+      "labels.new-value": "Nytt v\u00E4rde",
+      "enums.draft": "Utkast",
+      "enums.active": "Aktivt",
+      "enums.deprecated": "Utfasas",
+      "enums.retired": "Avvecklat",
+      "validation.required": "F\u00E4ltet \u00E4r obligatoriskt.",
+      "validation.too-long": "F\u00E5r inneh\u00E5lla h\u00F6gst {max} tecken.",
+      "validation.invalid-email": "Ogiltig e-postadress.",
+      "validation.invalid-value": "Ogiltigt v\u00E4rde.",
+      "validation.unknown-field": "Ok\u00E4nt f\u00E4lt.",
+      "concurrency.field-conflict": "F\u00E4ltet har \u00E4ndrats av n\u00E5gon annan.",
+      "concurrency.version-conflict": "Posten har \u00E4ndrats av n\u00E5gon annan. Ladda om och f\u00F6rs\u00F6k igen.",
+      "pipeline.not-authorized": "Du saknar beh\u00F6righet ({permission}).",
+      "pipeline.unknown-operation": "Ok\u00E4nd operation: {operation}.",
+      "pipeline.unknown-view": "Ok\u00E4nd vy: {view}.",
+      "pipeline.invalid-input": "Ogiltig indata.",
+      "pipeline.not-found": "Posten finns inte.",
+      "pipeline.idempotent-replay": "Svaret \u00E5teranv\u00E4ndes fr\u00E5n en tidigare identisk beg\u00E4ran.",
+      "pipeline.idempotency-mismatch": "Idempotensnyckeln har redan anv\u00E4nts med en annan beg\u00E4ran.",
+      "extensions.unknown-field": "Ok\u00E4nt anpassat f\u00E4lt.",
+      "extensions.retired-field": "F\u00E4ltet \u00E4r avvecklat och kan inte \u00E4ndras.",
+      "extensions.deprecated-field": "F\u00E4ltet h\u00E5ller p\u00E5 att fasas ut.",
+      "extensions.unknown-type": "Ok\u00E4nd f\u00E4lttyp.",
+      "extensions.key-conflict": "Nyckeln anv\u00E4nds redan.",
+      "extensions.missing-label": "Etikett saknas f\u00F6r standardspr\u00E5ket.",
+      "extensions.invalid-option": "V\u00E4rdet finns inte bland alternativen.",
+      "roles.unknown-permission": "Ok\u00E4nd beh\u00F6righet: {permission}.",
+      "roles.invalid-name": "Ogiltigt rollnamn (sm\u00E5 bokst\u00E4ver, siffror och bindestreck).",
+      "roles.reserved-permission": "Beh\u00F6righeten {permission} kan inte tilldelas via en roll.",
+      "pipeline.unknown-form": "Ok\u00E4nt formul\u00E4r: {form}.",
+      "grid.total": "{count} tr\u00E4ffar",
+      "filters.from": "fr\u00E5n",
+      "filters.to": "till",
+      "common.yes": "Ja",
+      "common.no": "Nej",
+      "common.no-matches": "Inga tr\u00E4ffar",
+      "operations.plugins.activate.title": "Aktivera till\u00E4gg",
+      "operations.plugins.deactivate.title": "Inaktivera till\u00E4gg",
+      "labels.plugin": "Till\u00E4gg",
+      "labels.plugin-id": "Till\u00E4gg",
+      "labels.active": "Aktivt",
+      "plugins.unknown": "Ok\u00E4nt till\u00E4gg: {plugin}.",
+      "operations.packages.install.title": "Installera paket",
+      "operations.packages.uninstall.title": "Avinstallera paket",
+      "labels.package-document": "Paketdokument",
+      "labels.package": "Paket",
+      "labels.version": "Version",
+      "labels.installed-at": "Installerat",
+      "labels.dry-run": "Testk\u00F6rning",
+      "packages.invalid-document": "Ogiltigt paketdokument.",
+      "packages.field-conflict": "F\u00E4ltet {key} finns redan med en annan definition.",
+      "packages.older-version": "Version {offered} \u00E4r \u00E4ldre \u00E4n den installerade ({installed}).",
+      "packages.not-installed": "Paketet {package} \u00E4r inte installerat.",
+      "operations.rules.define.title": "Definiera regel",
+      "operations.rules.retire.title": "Avveckla regel",
+      "labels.rule": "Regel",
+      "labels.on-operation": "Vid operation",
+      "labels.condition": "Villkor",
+      "labels.messages": "Meddelanden",
+      "labels.target-field": "F\u00E4lt",
+      "labels.retired": "Avvecklad",
+      "rules.unknown-operation": "Ok\u00E4nd operation: {operation}.",
+      "rules.unknown-field": "Ok\u00E4nt f\u00E4lt i villkoret: {field}.",
+      "rules.missing-message": "Meddelande saknas f\u00F6r standardspr\u00E5ket.",
+      "rules.invalid-condition": "Ogiltigt villkor.",
+      "operations.users.define.title": "Definiera anv\u00E4ndare",
+      "operations.users.deactivate.title": "Inaktivera anv\u00E4ndare",
+      "labels.user-name": "Anv\u00E4ndarnamn",
+      "labels.display-name": "Visningsnamn",
+      "labels.password": "L\u00F6senord",
+      "labels.roles": "Roller",
+      "users.unknown-role": "Ok\u00E4nd roll: {role}.",
+      "users.invalid-name": "Ogiltigt anv\u00E4ndarnamn (sm\u00E5 bokst\u00E4ver, siffror, punkt och bindestreck).",
+      "extensions.unknown-entity": "Ok\u00E4nd entitet: {entity}.",
+      "packages.role-conflict": "Rollen {role} finns redan med andra beh\u00F6righeter.",
+      "rules.evaluation-failed": "Regeln {rule} kunde inte utv\u00E4rderas och hoppades \u00F6ver.",
+      "operations.subscriptions.set-plan.title": "Ange abonnemang",
+      "labels.plan": "Abonnemang",
+      "labels.seats": "Platser",
+      "labels.seats-used": "Anv\u00E4nda platser",
+      "labels.status": "Status",
+      "labels.entitlements": "R\u00E4ttigheter",
+      "subscriptions.not-entitled": "Ditt abonnemang omfattar inte till\u00E4gget {plugin}. Uppgradera f\u00F6r att aktivera det.",
+      "subscriptions.seat-limit": "Platsgr\u00E4nsen ({seats}) \u00E4r n\u00E5dd. Uppgradera f\u00F6r fler platser.",
+      "labels.renews-at": "F\u00F6rnyas",
+      "operations.settings.set.title": "Ange inst\u00E4llning",
+      "operations.secrets.set.title": "Ange hemlighet",
+      "operations.integrations.schedule.title": "Schemal\u00E4gg integration",
+      "operations.integrations.run.title": "K\u00F6r integration",
+      "operations.integrations.requeue.title": "K\u00F6a d\u00F6d post igen",
+      "labels.value": "V\u00E4rde",
+      "labels.secret-set": "Angiven",
+      "labels.integration": "Integration",
+      "labels.spec": "Schema",
+      "labels.enabled": "Aktiverad",
+      "labels.trigger": "Utl\u00F6sare",
+      "labels.detail": "Detalj",
+      "labels.direction": "Riktning",
+      "labels.reference": "Referens",
+      "labels.attempts": "F\u00F6rs\u00F6k",
+      "vault.invalid-key": "Ogiltig nyckel.",
+      "integrations.unknown": "Ok\u00E4nd integration: {integration}.",
+      "integrations.not-schedulable": "Integrationen {integration} kan inte schemal\u00E4ggas.",
+      "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
+      "integrations.dead-letter-not-found": "Ingen k\u00F6ad post med det id:t.",
+      "integrations.malformed-payload": "Integrationens data \u00E4r inte giltig JSON.",
+      "auth.sign-in": "Logga in",
+      "auth.sign-out": "Logga ut",
+      "auth.email": "E-post",
+      "auth.failed": "Fel e-post eller l\u00F6senord.",
+      "auth.pick-tenant": "V\u00E4lj en organisation f\u00F6r att forts\u00E4tta.",
+      "auth.continue": "Forts\u00E4tt",
+      "auth.no-access": "Detta konto har ingen \u00E5tkomst till n\u00E5gon organisation.",
+      "tenants.not-standable": "Du har inte beh\u00F6righet att agera i denna organisation.",
+      "roles.unknown-resource": "Ok\u00E4nd resurs: {resource}.",
+      "roles.unknown-level": "Ok\u00E4nd beh\u00F6righetsniv\u00E5: {level}.",
+      "labels.levels": "Beh\u00F6righetsniv\u00E5er",
+      "pipeline.field-not-authorized": "Du saknar beh\u00F6righet att ange f\u00E4ltet {field} ({permission}).",
+      "operations.tenants.create.title": "Skapa bolag",
+      "operations.tenants.move.title": "Flytta bolag",
+      "labels.tenant": "Bolag",
+      "labels.new-parent": "Ny f\u00F6r\u00E4lder",
+      "labels.parent": "F\u00F6r\u00E4lder",
+      "labels.path": "S\u00F6kv\u00E4g",
+      "tenants.invalid-id": "Ogiltigt id (gemener, siffror och bindestreck; inga punkter).",
+      "tenants.duplicate-id": "Id:t {id} anv\u00E4nds redan.",
+      "tenants.unknown-node": "Ok\u00E4nt bolag: {id}.",
+      "tenants.not-in-subtree": "{id} ligger utanf\u00F6r det aktiva bolagets undertr\u00E4d.",
+      "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget undertr\u00E4d ({id}).",
+      "operations.tenants.rename.title": "Byt namn p\u00E5 bolag",
+      "operations.users.invite.title": "Bjud in anv\u00E4ndare",
+      "auth.invite-title": "V\u00E4lj ett l\u00F6senord f\u00F6r att aktivera ditt konto.",
+      "auth.invite-accept": "Aktivera konto",
+      "auth.invite-invalid": "Inbjudningsl\u00E4nken \u00E4r ogiltig eller har g\u00E5tt ut.",
+      "auth.invite-weak": "L\u00F6senordet m\u00E5ste vara minst 8 tecken.",
+      "auth.invite-subject": "Du har blivit inbjuden",
+      "auth.invite-body": "F\u00F6lj l\u00E4nken f\u00F6r att v\u00E4lja l\u00F6senord och aktivera ditt konto: {link}",
+      "auth.added-subject": "Du har f\u00E5tt tillg\u00E5ng till en ny organisation",
+      "auth.added-body": "Logga in som vanligt och v\u00E4lj organisationen vid inloggning.",
+      "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; \u00E4ndringarna av anpassade f\u00E4lt kunde inte knytas till en.",
+      "pipeline.replay-actor-unavailable": "Den ursprungliga best\u00E4llarens konto \u00E4r inte l\u00E4ngre tillg\u00E4ngligt; den parkerade beg\u00E4ran kan inte utf\u00F6ras.",
+      "plugins.inspect.title": "Besiktning",
+      "operations.inspect.checklists.create.title": "Ny checklista",
+      "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
+      "inspect.labels.title": "Checklista",
+      "inspect.labels.passed": "Godk\u00E4nd",
+      "inspect.labels.order": "Order",
+      "inspect.labels.checklist-id": "Checklista",
+      "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
+      "inspect.checklist-incomplete": "Ordern har en checklista som inte \u00E4r godk\u00E4nd.",
+      "plugins.fortnox.title": "Fortnox",
+      "plugins.approvals.title": "Godk\u00E4nnandefl\u00F6den",
+      "operations.approvals.groups.define.title": "Ny godk\u00E4nnandegrupp",
+      "operations.approvals.groups.assign.title": "L\u00E4gg till godk\u00E4nnare",
+      "operations.approvals.rules.define.title": "Ny godk\u00E4nnanderegel",
+      "operations.approvals.approve.title": "Godk\u00E4nn",
+      "operations.approvals.reject.title": "Avsl\u00E5",
+      "approvals.labels.name": "Namn",
+      "approvals.labels.parent-group": "\u00D6verordnad grupp",
+      "approvals.labels.group": "Grupp",
+      "approvals.labels.email": "E-post",
+      "approvals.labels.operation": "\u00C5tg\u00E4rd",
+      "approvals.labels.threshold-field": "Beloppsf\u00E4lt",
+      "approvals.labels.threshold": "Beloppsgr\u00E4ns",
+      "approvals.labels.request": "Beg\u00E4ran",
+      "approvals.labels.note": "Anteckning",
+      "approvals.labels.initiator": "Beg\u00E4rd av",
+      "approvals.labels.status": "Status",
+      "approvals.labels.created": "Skapad",
+      "approvals.labels.outcome": "Utfall",
+      "approvals.pending": "Skickad f\u00F6r godk\u00E4nnande ({operation}).",
+      "approvals.not-pending": "Beg\u00E4ran v\u00E4ntar inte p\u00E5 beslut.",
+      "approvals.not-approver": "Du ing\u00E5r inte i regelns godk\u00E4nnandegrupp.",
+      "approvals.self-approval": "En beg\u00E4ran kan inte godk\u00E4nnas av den som skickade den.",
+      "approvals.unknown-group": "Ok\u00E4nd godk\u00E4nnandegrupp.",
+      "approvals.unknown-target": "Ok\u00E4nd \u00E5tg\u00E4rd.",
+      "approvals.not-gateable": "Godk\u00E4nnandefl\u00F6dets egna \u00E5tg\u00E4rder kan inte kr\u00E4va godk\u00E4nnande.",
+      "approvals.unknown-member": "Ingen aktiv anv\u00E4ndare med den e-postadressen i denna organisation.",
+      "approvals.email.requested-subject": "Godk\u00E4nnande kr\u00E4vs",
+      "approvals.email.requested-body": "En beg\u00E4ran ({operation}) v\u00E4ntar p\u00E5 ditt godk\u00E4nnande.",
+      "app.title": "Norrservice ERP",
+      "nav.orders": "Ordrar",
+      "nav.customers": "Kunder",
+      "nav.extensions": "Anpassade f\u00E4lt",
+      "operations.customers.create.title": "Ny kund",
+      "operations.orders.create.title": "Ny order",
+      "operations.orders.edit-details.title": "\u00C4ndra orderdetaljer",
+      "operations.orders.complete.title": "Slutf\u00F6r order",
+      "labels.visit-address": "Bes\u00F6ksadress",
+      "labels.email": "E-post",
+      "labels.phone": "Telefon",
+      "labels.is-active": "Aktiv",
+      "labels.customer": "Kund",
+      "labels.order-type": "Ordertyp",
+      "labels.project": "Projekt",
+      "labels.work-address": "Arbetsadress",
+      "labels.description": "Arbetsbeskrivning",
+      "labels.requested-date": "\u00D6nskat datum",
+      "labels.estimated-total": "Uppskattat belopp",
+      "labels.order-id": "Order",
+      "labels.number": "Ordernummer",
+      "labels.extensions": "Anpassade f\u00E4lt",
+      "labels.active-only": "Endast aktiva",
+      "enums.service": "Service",
+      "enums.project": "Projekt",
+      "enums.open": "\u00D6ppen",
+      "enums.completed": "Slutf\u00F6rd",
+      "enums.cancelled": "Makulerad",
+      "orders.already-completed": "Ordern \u00E4r redan slutf\u00F6rd.",
+      "orders.cannot-complete-cancelled": "En makulerad order kan inte slutf\u00F6ras.",
+      "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar.",
+      "orders.project-required": "V\u00E4lj ett projekt f\u00F6r projektordrar.",
+      "orders.project-not-for-customer": "Projektet tillh\u00F6r inte den valda kunden.",
+      "orders.not-found": "Ordern finns inte.",
+      "orders.not-editable": "Ordern kan inte l\u00E4ngre \u00E4ndras.",
+      "customers.not-found": "Kunden finns inte l\u00E4ngre.",
+      "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
+      "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
+      "customers.duplicate-name": "Det finns redan en kund med det namnet.",
+      "nav.audit": "Historik",
+      "nav.plugins": "Till\u00E4gg",
+      "nav.packages": "Paket",
+      "nav.rules": "Regler",
+      "labels.company": "Bolag",
+      "nav.overview": "Koncern\u00F6versikt",
+      "nav.tenants": "Bolag",
+      "nav.users": "Anv\u00E4ndare",
+      "nav.roles": "Roller"
     }
   },
   "operations": {
@@ -848,6 +848,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.extensions",
       "gatedBy": []
     },
     "extensions.retire-field": {
@@ -875,6 +876,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.extensions",
       "gatedBy": []
     },
     "roles.define": {
@@ -920,6 +922,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.roles",
       "gatedBy": []
     },
     "plugins.activate": {
@@ -956,6 +959,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.plugins",
       "gatedBy": []
     },
     "plugins.deactivate": {
@@ -992,6 +996,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.plugins",
       "gatedBy": []
     },
     "packages.install": {
@@ -1064,6 +1069,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.tenantpackages",
       "gatedBy": []
     },
     "packages.uninstall": {
@@ -1100,6 +1106,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.tenantpackages",
       "gatedBy": []
     },
     "rules.define": {
@@ -1163,6 +1170,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.rules",
       "gatedBy": []
     },
     "rules.retire": {
@@ -1190,6 +1198,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.rules",
       "gatedBy": []
     },
     "tenants.create": {
@@ -1235,6 +1244,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.tenancy",
       "gatedBy": []
     },
     "tenants.move": {
@@ -1280,6 +1290,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.tenancy",
       "gatedBy": []
     },
     "tenants.rename": {
@@ -1325,6 +1336,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.tenancy",
       "gatedBy": []
     },
     "users.define": {
@@ -1379,6 +1391,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.users",
       "gatedBy": []
     },
     "users.invite": {
@@ -1433,6 +1446,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.users",
       "gatedBy": []
     },
     "users.deactivate": {
@@ -1460,6 +1474,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.users",
       "gatedBy": []
     },
     "subscriptions.set-plan": {
@@ -1532,6 +1547,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.subscriptions",
       "gatedBy": []
     },
     "settings.set": {
@@ -1568,6 +1584,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.vault",
       "gatedBy": []
     },
     "secrets.set": {
@@ -1604,6 +1621,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.vault",
       "gatedBy": []
     },
     "integrations.schedule": {
@@ -1658,6 +1676,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.integrations",
       "gatedBy": []
     },
     "integrations.run": {
@@ -1694,6 +1713,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.integrations",
       "gatedBy": []
     },
     "integrations.requeue": {
@@ -1730,6 +1750,7 @@
           "extension": false
         }
       ],
+      "plugin": "tam.integrations",
       "gatedBy": []
     },
     "inspect.checklists.create": {
@@ -2502,367 +2523,6 @@
       "defaultSort": "number",
       "defaultSortDescending": true
     },
-    "users.list": {
-      "permission": "users.manage",
-      "queryFields": [
-        {
-          "name": "search",
-          "labelKey": "labels.search",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "resultFields": [
-        {
-          "name": "id",
-          "labelKey": "labels.id",
-          "type": "reference",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "userName",
-          "labelKey": "labels.user-name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "displayName",
-          "labelKey": "labels.display-name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "roles",
-          "labelKey": "labels.roles",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "active",
-          "labelKey": "labels.active",
-          "type": "boolean",
-          "wireKind": "boolean",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "userName"
-      ],
-      "filterable": [],
-      "defaultSort": "userName",
-      "defaultSortDescending": false
-    },
-    "subscriptions.current": {
-      "permission": "subscriptions.read",
-      "queryFields": [],
-      "resultFields": [
-        {
-          "name": "plan",
-          "labelKey": "labels.plan",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "seats",
-          "labelKey": "labels.seats",
-          "type": "integer",
-          "wireKind": "integer",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "seatsUsed",
-          "labelKey": "labels.seats-used",
-          "type": "integer",
-          "wireKind": "integer",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "status",
-          "labelKey": "labels.status",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "entitlements",
-          "labelKey": "labels.entitlements",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [],
-      "filterable": [],
-      "defaultSortDescending": false
-    },
-    "settings.list": {
-      "permission": "settings.manage",
-      "queryFields": [
-        {
-          "name": "search",
-          "labelKey": "labels.search",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "resultFields": [
-        {
-          "name": "key",
-          "labelKey": "labels.key",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "value",
-          "labelKey": "labels.value",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "key"
-      ],
-      "filterable": [],
-      "defaultSort": "key",
-      "defaultSortDescending": false
-    },
-    "secrets.list": {
-      "permission": "secrets.manage",
-      "queryFields": [
-        {
-          "name": "search",
-          "labelKey": "labels.search",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "resultFields": [
-        {
-          "name": "key",
-          "labelKey": "labels.key",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "isSet",
-          "labelKey": "labels.secret-set",
-          "type": "boolean",
-          "wireKind": "boolean",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "key"
-      ],
-      "filterable": [],
-      "defaultSort": "key",
-      "defaultSortDescending": false
-    },
-    "integrations.runs": {
-      "permission": "integrations.manage",
-      "queryFields": [
-        {
-          "name": "integrationId",
-          "labelKey": "labels.integration-id",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "resultFields": [
-        {
-          "name": "id",
-          "labelKey": "labels.id",
-          "type": "reference",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "integrationId",
-          "labelKey": "labels.integration",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "trigger",
-          "labelKey": "labels.trigger",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "status",
-          "labelKey": "labels.status",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "detail",
-          "labelKey": "labels.detail",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "ranAt",
-          "labelKey": "labels.timestamp",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "ranAt",
-        "integrationId"
-      ],
-      "filterable": [
-        "integrationId",
-        "status"
-      ],
-      "defaultSort": "ranAt",
-      "defaultSortDescending": true
-    },
-    "integrations.dead-letter": {
-      "permission": "integrations.manage",
-      "queryFields": [
-        {
-          "name": "kind",
-          "labelKey": "labels.kind",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "resultFields": [
-        {
-          "name": "id",
-          "labelKey": "labels.id",
-          "type": "reference",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "kind",
-          "labelKey": "labels.direction",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "integrationId",
-          "labelKey": "labels.integration",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "reference",
-          "labelKey": "labels.reference",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "attempts",
-          "labelKey": "labels.attempts",
-          "type": "integer",
-          "wireKind": "integer",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "lastError",
-          "labelKey": "labels.detail",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "integrationId",
-        "attempts"
-      ],
-      "filterable": [
-        "kind",
-        "integrationId"
-      ],
-      "defaultSort": "integrationId",
-      "defaultSortDescending": false
-    },
     "extensions.fields": {
       "permission": "extensions.manage",
       "queryFields": [
@@ -2943,7 +2603,8 @@
       ],
       "filterable": [],
       "defaultSort": "key",
-      "defaultSortDescending": false
+      "defaultSortDescending": false,
+      "plugin": "tam.extensions"
     },
     "roles.list": {
       "permission": "roles.manage",
@@ -3001,55 +2662,8 @@
       ],
       "filterable": [],
       "defaultSort": "name",
-      "defaultSortDescending": false
-    },
-    "tenants.list": {
-      "permission": "tenants.read",
-      "queryFields": [],
-      "resultFields": [
-        {
-          "name": "id",
-          "labelKey": "labels.id",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "displayName",
-          "labelKey": "labels.display-name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "parentId",
-          "labelKey": "labels.parent",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "path",
-          "labelKey": "labels.path",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "path"
-      ],
-      "filterable": [],
-      "defaultSort": "path",
-      "defaultSortDescending": false
+      "defaultSortDescending": false,
+      "plugin": "tam.roles"
     },
     "audit.entries": {
       "permission": "audit.read",
@@ -3162,7 +2776,8 @@
       ],
       "filterable": [],
       "defaultSort": "timestamp",
-      "defaultSortDescending": true
+      "defaultSortDescending": true,
+      "plugin": "tam.audit"
     },
     "plugins.list": {
       "permission": "plugins.manage",
@@ -3202,7 +2817,8 @@
       ],
       "filterable": [],
       "defaultSort": "pluginId",
-      "defaultSortDescending": false
+      "defaultSortDescending": false,
+      "plugin": "tam.plugins"
     },
     "packages.list": {
       "permission": "packages.manage",
@@ -3260,7 +2876,8 @@
       ],
       "filterable": [],
       "defaultSort": "package",
-      "defaultSortDescending": false
+      "defaultSortDescending": false,
+      "plugin": "tam.tenantpackages"
     },
     "rules.list": {
       "permission": "rules.manage",
@@ -3318,7 +2935,424 @@
       ],
       "filterable": [],
       "defaultSort": "name",
-      "defaultSortDescending": false
+      "defaultSortDescending": false,
+      "plugin": "tam.rules"
+    },
+    "tenants.list": {
+      "permission": "tenants.read",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "parentId",
+          "labelKey": "labels.parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "path",
+          "labelKey": "labels.path",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "path"
+      ],
+      "filterable": [],
+      "defaultSort": "path",
+      "defaultSortDescending": false,
+      "plugin": "tam.tenancy"
+    },
+    "users.list": {
+      "permission": "users.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "userName",
+          "labelKey": "labels.user-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "roles",
+          "labelKey": "labels.roles",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "active",
+          "labelKey": "labels.active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "userName"
+      ],
+      "filterable": [],
+      "defaultSort": "userName",
+      "defaultSortDescending": false,
+      "plugin": "tam.users"
+    },
+    "subscriptions.current": {
+      "permission": "subscriptions.read",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "plan",
+          "labelKey": "labels.plan",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "seats",
+          "labelKey": "labels.seats",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "seatsUsed",
+          "labelKey": "labels.seats-used",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "entitlements",
+          "labelKey": "labels.entitlements",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false,
+      "plugin": "tam.subscriptions"
+    },
+    "settings.list": {
+      "permission": "settings.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "value",
+          "labelKey": "labels.value",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "key"
+      ],
+      "filterable": [],
+      "defaultSort": "key",
+      "defaultSortDescending": false,
+      "plugin": "tam.vault"
+    },
+    "secrets.list": {
+      "permission": "secrets.manage",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "isSet",
+          "labelKey": "labels.secret-set",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "key"
+      ],
+      "filterable": [],
+      "defaultSort": "key",
+      "defaultSortDescending": false,
+      "plugin": "tam.vault"
+    },
+    "integrations.runs": {
+      "permission": "integrations.manage",
+      "queryFields": [
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "trigger",
+          "labelKey": "labels.trigger",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "detail",
+          "labelKey": "labels.detail",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "ranAt",
+          "labelKey": "labels.timestamp",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "ranAt",
+        "integrationId"
+      ],
+      "filterable": [
+        "integrationId",
+        "status"
+      ],
+      "defaultSort": "ranAt",
+      "defaultSortDescending": true,
+      "plugin": "tam.integrations"
+    },
+    "integrations.dead-letter": {
+      "permission": "integrations.manage",
+      "queryFields": [
+        {
+          "name": "kind",
+          "labelKey": "labels.kind",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "kind",
+          "labelKey": "labels.direction",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "integrationId",
+          "labelKey": "labels.integration",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "reference",
+          "labelKey": "labels.reference",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "attempts",
+          "labelKey": "labels.attempts",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "lastError",
+          "labelKey": "labels.detail",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "integrationId",
+        "attempts"
+      ],
+      "filterable": [
+        "kind",
+        "integrationId"
+      ],
+      "defaultSort": "integrationId",
+      "defaultSortDescending": false,
+      "plugin": "tam.integrations"
     },
     "inspect.checklists.list": {
       "permission": "inspect.checklists.read",
@@ -3495,6 +3529,302 @@
     }
   },
   "forms": {
+    "web.extensions.define": {
+      "operation": "extensions.define-field",
+      "fields": [
+        {
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "type",
+          "labelKey": "labels.type",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "labels",
+          "labelKey": "labels.labels",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "culture-text"
+        },
+        {
+          "name": "required",
+          "labelKey": "labels.required",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "maxLength",
+          "labelKey": "labels.max-length",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.extensions"
+    },
+    "web.roles.define": {
+      "operation": "roles.define",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "levels",
+          "labelKey": "labels.levels",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "level-map"
+        },
+        {
+          "name": "permissions",
+          "labelKey": "labels.permissions",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "string-list"
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.roles"
+    },
+    "web.packages.install": {
+      "operation": "packages.install",
+      "fields": [
+        {
+          "name": "document",
+          "labelKey": "labels.package-document",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "multiline"
+        },
+        {
+          "name": "dryRun",
+          "labelKey": "labels.dry-run",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.tenantpackages"
+    },
+    "web.rules.define": {
+      "operation": "rules.define",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.rule",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "onOperation",
+          "labelKey": "labels.on-operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "condition",
+          "labelKey": "labels.condition",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "multiline"
+        },
+        {
+          "name": "messages",
+          "labelKey": "labels.messages",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "culture-text"
+        },
+        {
+          "name": "targetField",
+          "labelKey": "labels.target-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.rules"
+    },
+    "web.tenants.create": {
+      "operation": "tenants.create",
+      "fields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.tenancy"
+    },
+    "web.tenants.move": {
+      "operation": "tenants.move",
+      "fields": [
+        {
+          "name": "tenantId",
+          "labelKey": "labels.tenant",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "newParentId",
+          "labelKey": "labels.new-parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.tenancy"
+    },
+    "web.tenants.rename": {
+      "operation": "tenants.rename",
+      "fields": [
+        {
+          "name": "tenantId",
+          "labelKey": "labels.tenant",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.tenancy"
+    },
+    "web.users.invite": {
+      "operation": "users.invite",
+      "fields": [
+        {
+          "name": "email",
+          "labelKey": "auth.email",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "roles",
+          "labelKey": "labels.roles",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "string-list"
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.users"
+    },
     "inspect.web.create": {
       "operation": "inspect.checklists.create",
       "fields": [
@@ -3816,297 +4146,134 @@
       ],
       "includeExtensions": false,
       "serverDependencies": []
-    },
-    "web.extensions.define": {
-      "operation": "extensions.define-field",
-      "fields": [
-        {
-          "name": "entity",
-          "labelKey": "labels.entity",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "key",
-          "labelKey": "labels.key",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "type",
-          "labelKey": "labels.type",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "labels",
-          "labelKey": "labels.labels",
-          "type": "object",
-          "wireKind": "object",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "culture-text"
-        },
-        {
-          "name": "required",
-          "labelKey": "labels.required",
-          "type": "boolean",
-          "wireKind": "boolean",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "maxLength",
-          "labelKey": "labels.max-length",
-          "type": "integer",
-          "wireKind": "integer",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.packages.install": {
-      "operation": "packages.install",
-      "fields": [
-        {
-          "name": "document",
-          "labelKey": "labels.package-document",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "multiline"
-        },
-        {
-          "name": "dryRun",
-          "labelKey": "labels.dry-run",
-          "type": "boolean",
-          "wireKind": "boolean",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.rules.define": {
-      "operation": "rules.define",
-      "fields": [
-        {
-          "name": "name",
-          "labelKey": "labels.rule",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "onOperation",
-          "labelKey": "labels.on-operation",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "condition",
-          "labelKey": "labels.condition",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "multiline"
-        },
-        {
-          "name": "messages",
-          "labelKey": "labels.messages",
-          "type": "object",
-          "wireKind": "object",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "culture-text"
-        },
-        {
-          "name": "targetField",
-          "labelKey": "labels.target-field",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.tenants.create": {
-      "operation": "tenants.create",
-      "fields": [
-        {
-          "name": "id",
-          "labelKey": "labels.id",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "displayName",
-          "labelKey": "labels.display-name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.tenants.move": {
-      "operation": "tenants.move",
-      "fields": [
-        {
-          "name": "tenantId",
-          "labelKey": "labels.tenant",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "newParentId",
-          "labelKey": "labels.new-parent",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.tenants.rename": {
-      "operation": "tenants.rename",
-      "fields": [
-        {
-          "name": "tenantId",
-          "labelKey": "labels.tenant",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "displayName",
-          "labelKey": "labels.display-name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.roles.define": {
-      "operation": "roles.define",
-      "fields": [
-        {
-          "name": "name",
-          "labelKey": "labels.name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "levels",
-          "labelKey": "labels.levels",
-          "type": "object",
-          "wireKind": "object",
-          "required": false,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "level-map"
-        },
-        {
-          "name": "permissions",
-          "labelKey": "labels.permissions",
-          "type": "object",
-          "wireKind": "object",
-          "required": false,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "string-list"
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.users.invite": {
-      "operation": "users.invite",
-      "fields": [
-        {
-          "name": "email",
-          "labelKey": "auth.email",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "displayName",
-          "labelKey": "labels.display-name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "roles",
-          "labelKey": "labels.roles",
-          "type": "object",
-          "wireKind": "object",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "string-list"
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
     }
   },
   "grids": {
+    "web.extensions.fields": {
+      "view": "extensions.fields",
+      "columns": [
+        "entity",
+        "key",
+        "type",
+        "required",
+        "state"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "extensions.define-field"
+      ],
+      "includeExtensions": false,
+      "plugin": "tam.extensions"
+    },
+    "web.roles": {
+      "view": "roles.list",
+      "columns": [
+        "name",
+        "levels",
+        "permissions"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "roles.define"
+      ],
+      "includeExtensions": false,
+      "plugin": "tam.roles"
+    },
+    "web.audit.list": {
+      "view": "audit.entries",
+      "columns": [
+        "timestamp",
+        "operationId",
+        "actorName",
+        "entity",
+        "field",
+        "oldValue",
+        "newValue"
+      ],
+      "rowActions": [],
+      "toolbarActions": [],
+      "includeExtensions": false,
+      "plugin": "tam.audit"
+    },
+    "web.plugins": {
+      "view": "plugins.list",
+      "columns": [
+        "pluginId",
+        "active"
+      ],
+      "rowActions": [
+        "plugins.activate",
+        "plugins.deactivate"
+      ],
+      "toolbarActions": [],
+      "includeExtensions": false,
+      "plugin": "tam.plugins"
+    },
+    "web.packages": {
+      "view": "packages.list",
+      "columns": [
+        "package",
+        "version",
+        "installedAt"
+      ],
+      "rowActions": [
+        "packages.uninstall"
+      ],
+      "toolbarActions": [
+        "packages.install"
+      ],
+      "includeExtensions": false,
+      "plugin": "tam.tenantpackages"
+    },
+    "web.rules": {
+      "view": "rules.list",
+      "columns": [
+        "name",
+        "onOperation",
+        "retired"
+      ],
+      "rowActions": [
+        "rules.retire"
+      ],
+      "toolbarActions": [
+        "rules.define"
+      ],
+      "includeExtensions": false,
+      "plugin": "tam.rules"
+    },
+    "web.tenants": {
+      "view": "tenants.list",
+      "columns": [
+        "id",
+        "displayName",
+        "path"
+      ],
+      "rowActions": [],
+      "toolbarActions": [
+        "tenants.create",
+        "tenants.move",
+        "tenants.rename"
+      ],
+      "includeExtensions": false,
+      "plugin": "tam.tenancy"
+    },
+    "web.users": {
+      "view": "users.list",
+      "columns": [
+        "userName",
+        "displayName",
+        "roles",
+        "active"
+      ],
+      "rowActions": [
+        "users.deactivate"
+      ],
+      "toolbarActions": [
+        "users.invite"
+      ],
+      "includeExtensions": false,
+      "plugin": "tam.users"
+    },
     "inspect.web.checklists": {
       "view": "inspect.checklists.list",
       "columns": [
@@ -4183,123 +4350,6 @@
       "rowActions": [],
       "toolbarActions": [
         "customers.create"
-      ],
-      "includeExtensions": false
-    },
-    "web.audit.list": {
-      "view": "audit.entries",
-      "columns": [
-        "timestamp",
-        "operationId",
-        "actorName",
-        "entity",
-        "field",
-        "oldValue",
-        "newValue"
-      ],
-      "rowActions": [],
-      "toolbarActions": [],
-      "includeExtensions": false
-    },
-    "web.extensions.fields": {
-      "view": "extensions.fields",
-      "columns": [
-        "entity",
-        "key",
-        "type",
-        "required",
-        "state"
-      ],
-      "rowActions": [],
-      "toolbarActions": [
-        "extensions.define-field"
-      ],
-      "includeExtensions": false
-    },
-    "web.plugins": {
-      "view": "plugins.list",
-      "columns": [
-        "pluginId",
-        "active"
-      ],
-      "rowActions": [
-        "plugins.activate",
-        "plugins.deactivate"
-      ],
-      "toolbarActions": [],
-      "includeExtensions": false
-    },
-    "web.packages": {
-      "view": "packages.list",
-      "columns": [
-        "package",
-        "version",
-        "installedAt"
-      ],
-      "rowActions": [
-        "packages.uninstall"
-      ],
-      "toolbarActions": [
-        "packages.install"
-      ],
-      "includeExtensions": false
-    },
-    "web.rules": {
-      "view": "rules.list",
-      "columns": [
-        "name",
-        "onOperation",
-        "retired"
-      ],
-      "rowActions": [
-        "rules.retire"
-      ],
-      "toolbarActions": [
-        "rules.define"
-      ],
-      "includeExtensions": false
-    },
-    "web.tenants": {
-      "view": "tenants.list",
-      "columns": [
-        "id",
-        "displayName",
-        "path"
-      ],
-      "rowActions": [],
-      "toolbarActions": [
-        "tenants.create",
-        "tenants.move",
-        "tenants.rename"
-      ],
-      "includeExtensions": false
-    },
-    "web.roles": {
-      "view": "roles.list",
-      "columns": [
-        "name",
-        "levels",
-        "permissions"
-      ],
-      "rowActions": [],
-      "toolbarActions": [
-        "roles.define"
-      ],
-      "includeExtensions": false
-    },
-    "web.users": {
-      "view": "users.list",
-      "columns": [
-        "userName",
-        "displayName",
-        "roles",
-        "active"
-      ],
-      "rowActions": [
-        "users.deactivate"
-      ],
-      "toolbarActions": [
-        "users.invite"
       ],
       "includeExtensions": false
     }

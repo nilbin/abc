@@ -27,6 +27,11 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, PluginDefinition> Plugins { get; init; } =
         new Dictionary<string, PluginDefinition>();
 
+    /// <summary>Framework packages (docs/22, the framework-trust tier): registered through the
+    /// plugin surface, ALWAYS active for every tenant — activation consumers union these ids in.</summary>
+    public IReadOnlyDictionary<string, PackageDefinition> Packages { get; init; } =
+        new Dictionary<string, PackageDefinition>();
+
     /// <summary>Plugin-packaged extension fields on host entities, by entity key (docs/22 P2).</summary>
     public IReadOnlyList<PackagedFieldDefinition> PackagedFields { get; init; } = [];
 
@@ -81,6 +86,7 @@ public sealed class TamModelBuilder
     private readonly Dictionary<string, (Type Input, object Builder, string OperationId, string? Plugin)> forms = [];
     private readonly Dictionary<string, (object Builder, string ViewId, string? Plugin)> grids = [];
     private readonly Dictionary<string, PluginDefinition> plugins = [];
+    private readonly Dictionary<string, PackageDefinition> packages = [];
     private readonly List<(string EntityKey, string Key, string Type, bool Required, int? MaxLength, IReadOnlyList<string>? Options, string Plugin)> packagedFields = [];
     private readonly List<GateDefinition> gates = [];
     private readonly List<SubscriberDefinition> subscribers = [];
@@ -141,7 +147,7 @@ public sealed class TamModelBuilder
         if (!System.Text.RegularExpressions.Regex.IsMatch(attribute.Id, "^[a-z][a-z0-9]*$"))
             throw new InvalidOperationException(
                 $"PLG000: plugin id '{attribute.Id}' must match ^[a-z][a-z0-9]*$ — it is a permanent wire prefix.");
-        if (plugins.ContainsKey(attribute.Id))
+        if (plugins.ContainsKey(attribute.Id) || packages.ContainsKey(attribute.Id))
             throw new InvalidOperationException($"PLG003: plugin id '{attribute.Id}' registered twice.");
 
         plugins[attribute.Id] = new PluginDefinition(attribute.Id);
@@ -149,6 +155,40 @@ public sealed class TamModelBuilder
         try
         {
             new TPlugin().Configure(new PluginBuilder(attribute.Id, typeof(TPlugin).Assembly, this));
+        }
+        finally
+        {
+            currentPlugin = null;
+        }
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a FRAMEWORK PACKAGE (docs/22, the framework-trust tier): same authoring surface
+    /// as a plugin, but always active for every tenant and validated against its CLAIMED wire
+    /// prefixes instead of an id namespace — framework wire names ("users.invite") are live and
+    /// permanent, so a package owns them rather than re-prefixing.
+    /// </summary>
+    public TamModelBuilder AddPackage<TPackage>() where TPackage : ITamPlugin, new()
+    {
+        var attribute = typeof(TPackage).GetCustomAttribute<TamPackageAttribute>()
+            ?? throw new InvalidOperationException(
+                $"PKG000: package type '{typeof(TPackage).Name}' lacks [TamPackage(\"id\", prefixes)].");
+        if (!System.Text.RegularExpressions.Regex.IsMatch(
+                attribute.Id, "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$"))
+            throw new InvalidOperationException(
+                $"PKG000: package id '{attribute.Id}' must be dot-separated lowercase segments.");
+        if (attribute.Prefixes.Length == 0)
+            throw new InvalidOperationException(
+                $"PKG000: package '{attribute.Id}' claims no wire prefixes — every contribution would be a violation.");
+        if (packages.ContainsKey(attribute.Id) || plugins.ContainsKey(attribute.Id))
+            throw new InvalidOperationException($"PLG003: id '{attribute.Id}' registered twice.");
+
+        packages[attribute.Id] = new PackageDefinition(attribute.Id, attribute.Prefixes);
+        currentPlugin = attribute.Id;
+        try
+        {
+            new TPackage().Configure(new PluginBuilder(attribute.Id, typeof(TPackage).Assembly, this));
         }
         finally
         {
@@ -338,6 +378,7 @@ public sealed class TamModelBuilder
             Forms = formDefs,
             Grids = gridDefs,
             Plugins = plugins,
+            Packages = packages,
             PackagedFields = packaged,
             ExtensibleEntityKeys = extensibleKeys,
             Gates = gates.GroupBy(g => g.OperationId)
@@ -376,6 +417,18 @@ public sealed class TamModelBuilder
         void Check(string kind, string id, string? plugin, string? permission = null)
         {
             if (plugin is null) return;
+            // A PACKAGE (framework tier) owns its CLAIMED prefixes; a plugin owns "{id}.".
+            if (model.Packages.TryGetValue(plugin, out var package))
+            {
+                bool Claimed(string value) =>
+                    package.Prefixes.Any(p => value == p
+                        || value.StartsWith(p + ".", StringComparison.Ordinal));
+                if (!Claimed(id))
+                    violations.Add($"{kind} '{id}' is outside package '{plugin}' claimed prefixes");
+                if (permission is not null && !Claimed(permission))
+                    violations.Add($"{kind} '{id}' permission '{permission}' is outside package '{plugin}' claimed prefixes");
+                return;
+            }
             var prefix = plugin + ".";
             if (!id.StartsWith(prefix, StringComparison.Ordinal))
                 violations.Add($"{kind} '{id}' is not under '{prefix}'");

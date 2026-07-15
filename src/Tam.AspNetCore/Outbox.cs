@@ -100,7 +100,12 @@ public sealed class OutboxDispatcher(
         if (model is null || model.Subscribers.Count == 0 && model.OutboundIntegrations.Count == 0) return;
 
         if (!activations.TryGetValue(record.TenantId, out var active))
-            activations[record.TenantId] = active = await PluginActivations.ActiveAsync(db, record.TenantId, ct);
+        {
+            // Framework packages are always active (docs/22 package tier) — union them in so
+            // package-shipped subscribers and event triggers fire for every tenant.
+            var stored = await PluginActivations.ActiveAsync(db, record.TenantId, ct);
+            activations[record.TenantId] = active = stored.Union(model!.Packages.Keys).ToHashSet();
+        }
         var payload = System.Text.Json.JsonDocument.Parse(
             string.IsNullOrEmpty(record.PayloadJson) ? "{}" : record.PayloadJson);
         var effect = new EffectEvent(record.TenantId, record.OperationId, record.EventType, payload.RootElement);

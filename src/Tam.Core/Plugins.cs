@@ -27,6 +27,27 @@ public sealed record PluginDefinition(string Id)
 }
 
 /// <summary>
+/// Names a FRAMEWORK PACKAGE: the framework-trust tier of the plugin system (docs/22). A package
+/// registers through the same <see cref="PluginBuilder"/> surface a vendor plugin uses — the
+/// framework's own admin capabilities dogfood the seams they sell — but differs on the tier axes:
+/// always active for every tenant (never in the activation table, never entitlement-gated), and
+/// it CLAIMS existing wire prefixes ("users", "audit") instead of being namespaced under its id —
+/// those wire names are live and permanent (D4). Prefix claims are validated like PLG001.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class TamPackageAttribute(string id, params string[] prefixes) : Attribute
+{
+    public string Id { get; } = id;
+
+    /// <summary>The wire prefixes this package owns; every id/permission it registers must sit
+    /// under one of them ("users" covers "users.invite" and permission "users.manage").</summary>
+    public string[] Prefixes { get; } = prefixes;
+}
+
+/// <summary>A framework package in the compiled model. Always active — there is no row.</summary>
+public sealed record PackageDefinition(string Id, IReadOnlyList<string> Prefixes);
+
+/// <summary>
 /// A plugin-packaged extension field on a HOST entity (docs/22 P2): same spec, same
 /// ExtensionData storage, same wire channel as tenant custom fields — compiled origin,
 /// key-prefixed with the plugin id, present only for tenants with the plugin active.

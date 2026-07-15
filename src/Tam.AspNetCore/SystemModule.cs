@@ -7,58 +7,23 @@ namespace Tam.AspNetCore.SystemOps;
 public static class SystemModule
 {
     /// <summary>
-    /// Registers the framework's own operations and views — tenant custom fields (docs/15),
-    /// roles (D1), and the audit read model (D3) — plus their locale defaults from embedded
-    /// resources. These are framework capabilities, not app code: the app only decides whether
-    /// and where to expose them (grids/nav).
+    /// Registers the framework's own capabilities as FRAMEWORK PACKAGES (docs/22 package tier)
+    /// — each one an ordinary <see cref="ITamPlugin"/>-shaped module claiming its permanent wire
+    /// prefixes, always active, shipping its own forms and grids. This aggregate is the one-line
+    /// host opt-in; a host may also compose the packages individually.
     /// </summary>
-    public static TamModelBuilder AddTamSystem(this TamModelBuilder builder)
-    {
-        foreach (var culture in new[] { "sv", "en" })
-        {
-            using var stream = typeof(SystemModule).Assembly
-                .GetManifestResourceStream($"Tam.AspNetCore.locales.{culture}.json");
-            if (stream is null) continue;
-            var entries = JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? [];
-            builder.LocaleDefaults(culture, entries);
-        }
-
-        return builder
-            .AddOperationType(typeof(DefineExtensionField))
-            .AddOperationType(typeof(RetireExtensionField))
-            .AddOperationType(typeof(DefineRole))
-            .AddOperationType(typeof(ActivatePlugin))
-            .AddOperationType(typeof(DeactivatePlugin))
-            .AddOperationType(typeof(InstallPackage))
-            .AddOperationType(typeof(UninstallPackage))
-            .AddOperationType(typeof(DefineAutomationRule))
-            .AddOperationType(typeof(RetireRule))
-            .AddOperationType(typeof(CreateTenant))
-            .AddOperationType(typeof(MoveTenant))
-            .AddOperationType(typeof(RenameTenant))
-            .AddOperationType(typeof(DefineUser))
-            .AddOperationType(typeof(InviteUser))
-            .AddOperationType(typeof(DeactivateUser))
-            .AddOperationType(typeof(SetPlan))
-            .AddOperationType(typeof(SetSetting))
-            .AddOperationType(typeof(SetSecret))
-            .AddOperationType(typeof(ScheduleIntegration))
-            .AddOperationType(typeof(RunIntegration))
-            .AddOperationType(typeof(RequeueDeadLetter))
-            .AddViewType(typeof(UserList))
-            .AddViewType(typeof(CurrentSubscription))
-            .AddViewType(typeof(SettingList))
-            .AddViewType(typeof(SecretList))
-            .AddViewType(typeof(IntegrationRunList))
-            .AddViewType(typeof(DeadLetterList))
-            .AddViewType(typeof(ExtensionFieldList))
-            .AddViewType(typeof(RoleList))
-            .AddViewType(typeof(TenantList))
-            .AddViewType(typeof(AuditLog))
-            .AddViewType(typeof(PluginList))
-            .AddViewType(typeof(PackageList))
-            .AddViewType(typeof(RuleList));
-    }
+    public static TamModelBuilder AddTamSystem(this TamModelBuilder builder) => builder
+        .AddPackage<TamExtensionsPackage>()
+        .AddPackage<TamRolesPackage>()
+        .AddPackage<TamAuditPackage>()
+        .AddPackage<TamPluginsPackage>()
+        .AddPackage<TamTenantPackagesPackage>()
+        .AddPackage<TamRulesPackage>()
+        .AddPackage<TamTenancyPackage>()
+        .AddPackage<TamUsersPackage>()
+        .AddPackage<TamSubscriptionsPackage>()
+        .AddPackage<TamVaultPackage>()
+        .AddPackage<TamIntegrationsPackage>();
 }
 
 // ---------------------------------------------------------------- tenant custom fields

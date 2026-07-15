@@ -407,6 +407,89 @@ export interface OrdersOverviewQuery {
 
 }
 
+export interface ExtensionsFieldsRow {
+  id: string;
+  entity: string;
+  key: string;
+  type: string;
+  required: boolean;
+  state: "draft" | "active" | "deprecated" | "retired";
+}
+
+export interface ExtensionsFieldsQuery {
+  entity?: string;
+}
+
+export interface RolesListRow {
+  id: string;
+  name: string;
+  permissions: string;
+  levels: string;
+}
+
+export interface RolesListQuery {
+  search?: string;
+}
+
+export interface AuditEntriesRow {
+  id: string;
+  timestamp: string;
+  operationId: string;
+  actorName: string;
+  entity: string;
+  entityId: string;
+  field: string;
+  oldValue?: string;
+  newValue?: string;
+}
+
+export interface AuditEntriesQuery {
+  entity?: string;
+  entityId?: string;
+}
+
+export interface PluginsListRow {
+  pluginId: string;
+  active: boolean;
+}
+
+export interface PluginsListQuery {
+  search?: string;
+}
+
+export interface PackagesListRow {
+  id: string;
+  package: string;
+  version: number;
+  installedAt: string;
+}
+
+export interface PackagesListQuery {
+  search?: string;
+}
+
+export interface RulesListRow {
+  id: string;
+  name: string;
+  onOperation: string;
+  retired: boolean;
+}
+
+export interface RulesListQuery {
+  search?: string;
+}
+
+export interface TenantsListRow {
+  id: string;
+  displayName: string;
+  parentId?: string;
+  path: string;
+}
+
+export interface TenantsListQuery {
+
+}
+
 export interface UsersListRow {
   id: string;
   userName: string;
@@ -473,89 +556,6 @@ export interface IntegrationsDeadLetterRow {
 
 export interface IntegrationsDeadLetterQuery {
   kind?: string;
-}
-
-export interface ExtensionsFieldsRow {
-  id: string;
-  entity: string;
-  key: string;
-  type: string;
-  required: boolean;
-  state: "draft" | "active" | "deprecated" | "retired";
-}
-
-export interface ExtensionsFieldsQuery {
-  entity?: string;
-}
-
-export interface RolesListRow {
-  id: string;
-  name: string;
-  permissions: string;
-  levels: string;
-}
-
-export interface RolesListQuery {
-  search?: string;
-}
-
-export interface TenantsListRow {
-  id: string;
-  displayName: string;
-  parentId?: string;
-  path: string;
-}
-
-export interface TenantsListQuery {
-
-}
-
-export interface AuditEntriesRow {
-  id: string;
-  timestamp: string;
-  operationId: string;
-  actorName: string;
-  entity: string;
-  entityId: string;
-  field: string;
-  oldValue?: string;
-  newValue?: string;
-}
-
-export interface AuditEntriesQuery {
-  entity?: string;
-  entityId?: string;
-}
-
-export interface PluginsListRow {
-  pluginId: string;
-  active: boolean;
-}
-
-export interface PluginsListQuery {
-  search?: string;
-}
-
-export interface PackagesListRow {
-  id: string;
-  package: string;
-  version: number;
-  installedAt: string;
-}
-
-export interface PackagesListQuery {
-  search?: string;
-}
-
-export interface RulesListRow {
-  id: string;
-  name: string;
-  onOperation: string;
-  retired: boolean;
-}
-
-export interface RulesListQuery {
-  search?: string;
 }
 
 export interface InspectChecklistsListRow {
@@ -779,6 +779,41 @@ export class TypedTamClient {
     return this.client.view("orders.overview", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersOverviewRow[] }>;
   }
 
+  /** view extensions.fields (requires extensions.manage) */
+  extensionsFields(query?: ExtensionsFieldsQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ExtensionsFieldsRow[] }> {
+    return this.client.view("extensions.fields", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ExtensionsFieldsRow[] }>;
+  }
+
+  /** view roles.list (requires roles.manage) */
+  rolesList(query?: RolesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RolesListRow[] }> {
+    return this.client.view("roles.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RolesListRow[] }>;
+  }
+
+  /** view audit.entries (requires audit.read) */
+  auditEntries(query?: AuditEntriesQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: AuditEntriesRow[] }> {
+    return this.client.view("audit.entries", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: AuditEntriesRow[] }>;
+  }
+
+  /** view plugins.list (requires plugins.manage) */
+  pluginsList(query?: PluginsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }> {
+    return this.client.view("plugins.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }>;
+  }
+
+  /** view packages.list (requires packages.manage) */
+  packagesList(query?: PackagesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }> {
+    return this.client.view("packages.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }>;
+  }
+
+  /** view rules.list (requires rules.manage) */
+  rulesList(query?: RulesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }> {
+    return this.client.view("rules.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }>;
+  }
+
+  /** view tenants.list (requires tenants.read) */
+  tenantsList(query?: TenantsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: TenantsListRow[] }> {
+    return this.client.view("tenants.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: TenantsListRow[] }>;
+  }
+
   /** view users.list (requires users.manage) */
   usersList(query?: UsersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }> {
     return this.client.view("users.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }>;
@@ -807,41 +842,6 @@ export class TypedTamClient {
   /** view integrations.dead-letter (requires integrations.manage) */
   integrationsDeadLetter(query?: IntegrationsDeadLetterQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsDeadLetterRow[] }> {
     return this.client.view("integrations.dead-letter", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsDeadLetterRow[] }>;
-  }
-
-  /** view extensions.fields (requires extensions.manage) */
-  extensionsFields(query?: ExtensionsFieldsQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ExtensionsFieldsRow[] }> {
-    return this.client.view("extensions.fields", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ExtensionsFieldsRow[] }>;
-  }
-
-  /** view roles.list (requires roles.manage) */
-  rolesList(query?: RolesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RolesListRow[] }> {
-    return this.client.view("roles.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RolesListRow[] }>;
-  }
-
-  /** view tenants.list (requires tenants.read) */
-  tenantsList(query?: TenantsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: TenantsListRow[] }> {
-    return this.client.view("tenants.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: TenantsListRow[] }>;
-  }
-
-  /** view audit.entries (requires audit.read) */
-  auditEntries(query?: AuditEntriesQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: AuditEntriesRow[] }> {
-    return this.client.view("audit.entries", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: AuditEntriesRow[] }>;
-  }
-
-  /** view plugins.list (requires plugins.manage) */
-  pluginsList(query?: PluginsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }> {
-    return this.client.view("plugins.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PluginsListRow[] }>;
-  }
-
-  /** view packages.list (requires packages.manage) */
-  packagesList(query?: PackagesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }> {
-    return this.client.view("packages.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PackagesListRow[] }>;
-  }
-
-  /** view rules.list (requires rules.manage) */
-  rulesList(query?: RulesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }> {
-    return this.client.view("rules.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }>;
   }
 
   /** view inspect.checklists.list (requires inspect.checklists.read) */

@@ -15,8 +15,9 @@ src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effec
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
                              OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, plugin
-                             system (packages/rules/integrations/subscriptions), users, and the
-                             system module (framework operations with embedded sv/en locales)
+                             system, and the framework admin surface as ELEVEN always-active
+                             [TamPackage] modules (users/roles/audit/tenancy/rules/... with
+                             their forms, grids and embedded sv/en locales)
 src/Tam.Auth.OpenIddict      embedded OpenIddict token server + ClaimsActorProvider (the
                              framework's own auth, behind the IActorProvider seam)
 packages/tam-core            manifest types, portable AST evaluator, localization, HTTP client
@@ -29,7 +30,7 @@ samples/fortnox              a plugin whose whole job is one inbound integration
 samples/approvals            Step 16: nested approver groups + tenant-configured rules gating
                              host operations via the wildcard gate, park, replay seams
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              97 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              102 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay)
@@ -299,6 +300,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
   audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
   redelivery. Six pipeline-level tests prove all of it on SQLite.
+- **The framework package tier exists — and the system module IS it** (docs/22): `[TamPackage(id,
+  prefixes)]` + `AddPackage<T>()` register through the exact plugin surface (PLG005 seams
+  unlocked, contributions tagged), validated against CLAIMED wire prefixes (PLG001 package
+  variant — `users.invite` stays `users.invite`, D4-permanent) and ALWAYS active: activation
+  consumers union `model.Packages` in, `plugins.activate` rejects package ids (nothing to
+  toggle), and the manifest includes package contributions for a tenant with zero activation
+  rows. `AddTamSystem()` is now eleven packages — tam.extensions, tam.roles, tam.audit,
+  tam.plugins, tam.tenantpackages, tam.rules, tam.tenancy, tam.users, tam.subscriptions,
+  tam.vault, tam.integrations — each shipping its own forms/grids, deleting ~130 lines of
+  hand-wired admin UI from the sample host (the app no longer names any framework admin
+  surface). Core stays core: authorization, tenant isolation, pipeline atoms, entitlement
+  enforcement, the activation machinery. 102 tests; full wire matrix green (paired-atom 13/13,
+  tenants 11/11, invite, approvals 23/23, inspect 7/7, token hardening).
 - **Plugin authoring surface v2 — ctor-DI classes, no service locators**: gates, effect
   handlers and parked work are CLASSES constructed per invocation by `ITamActivator` (cached
   `ActivatorUtilities` factories) — `plugin.Gate<ChecklistGate>("orders.complete")`,

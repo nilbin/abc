@@ -71,6 +71,34 @@ Per-plugin entitlement (billing tiers) is the same mechanism with a different gu
 
 D4 applies per plugin: each plugin's manifest contribution is baseline-checked in the host's CI, and its wire names/permissions are permanent. A plugin upgrade that removes an operation fails the host build until the baseline is consciously re-approved — the host vendor, not the tenant, absorbs compatibility risk, which is where the compiler is.
 
+### Framework packages (the framework-trust tier) — BUILT
+
+The framework's own admin capabilities register through the SAME `PluginBuilder` surface a
+vendor plugin uses — `AddTamSystem()` is eleven `[TamPackage]` modules (`tam.users`,
+`tam.audit`, `tam.roles`, `tam.tenancy`, `tam.rules`, …), each shipping its operations, views,
+forms and grids. Every framework capability therefore exercises the plugin seams daily — the
+strongest regression guard the seams can have. A package differs from a vendor plugin on the
+tier axes only:
+
+- **Always active.** Never in the activation table, never entitlement-gated; every activation
+  consumer (pipeline existence check, gate filter, manifest, outbox dispatch) unions package
+  ids in. There is nothing to toggle — `plugins.activate` doesn't know packages exist, so the
+  always-on tier can't be switched off (who activates the activator).
+- **Claimed prefixes instead of an id namespace.** Framework wire names (`users.invite`,
+  `audit.entries`) are live and permanent (D4), so a package CLAIMS the prefixes it has always
+  owned — `[TamPackage("tam.users", "users", "web.users")]` — and PLG001's package variant
+  validates every contribution against the claims.
+- **Framework trust.** Packages ship in the Tam repo and may touch framework tables; the hook
+  set itself (gates, subscribers, park, replay) stays closed even for packages — the executor
+  remains auditable. Middleware/endpoint access, when it arrives, is package-tier only: a raw
+  endpoint bypasses the pipeline, which is exactly the hole the wire-only rule closes for
+  vendor plugins.
+
+What stays CORE, never a package: authorization and actor resolution (a gate fails OPEN by
+absence — nothing mandatory can be a gate), tenant isolation, the same-transaction pipeline
+atoms (idempotency, audit capture, outbox write, extension channel), entitlement/seat
+enforcement, and the activation machinery itself.
+
 ## Tenant packages (the declarative channel, bundled)
 
 Everything the tenant registry accepts one item at a time — extension fields today; roles; later custom objects and rules — can be expressed as one JSON document and installed as one act:
