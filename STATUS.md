@@ -238,6 +238,11 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   email/phone in rows and manifest while alva ("*") sees values; didrik's create WITH email is
   rejected at the field and passes without it; {customers:manage} grants the atom (stina reads and
   writes email); {subscriptions:manage} still cannot reach set-plan. 82 tests; baseline + types regen.
+- **Postgres parity for the hierarchy/capability stack**: the full suite re-verified on PostgreSQL 16
+  (fresh DB, `Host=` connection string, LISTEN/NOTIFY backplane registered): cascade login at a
+  descendant, subtree roll-up (tenants-table semi-join / LIKE), inherited customers (ancestor
+  IN-list), act-as create with per-node numbering + coherent side-artifacts, read masking, level
+  role definition, and act-as denial — all identical to SQLite. No code changes required.
 - **Subscriptions & seats (docs/24)**: subscription registry (plan, seats, plugin entitlements,
   status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
   view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —
