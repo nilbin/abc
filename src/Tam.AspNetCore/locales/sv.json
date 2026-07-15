@@ -134,5 +134,6 @@
   "auth.failed": "Fel e-post eller lösenord.",
   "auth.pick-tenant": "Välj en organisation för att fortsätta.",
   "auth.continue": "Fortsätt",
-  "auth.no-access": "Detta konto har ingen åtkomst till någon organisation."
+  "auth.no-access": "Detta konto har ingen åtkomst till någon organisation.",
+  "tenants.not-standable": "Du har inte behörighet att agera i denna organisation."
 }

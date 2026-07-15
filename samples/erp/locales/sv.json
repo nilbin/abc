@@ -49,5 +49,6 @@
   "nav.rules": "Regler",
   "auth.sign-in": "Logga in",
   "auth.sign-out": "Logga ut",
-  "auth.failed": "Fel e-post eller lösenord."
+  "auth.failed": "Fel e-post eller lösenord.",
+  "labels.company": "Bolag"
 }

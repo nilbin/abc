@@ -73,8 +73,9 @@ public sealed class ClaimsActorProvider : IActorProvider
         if (account is null) return Anonymous;
 
         // The active node and its ancestor chain, from the materialized path. An active node with no
-        // TenantEntity row degrades to single-node behavior (the pre-hierarchy shape).
-        var activeId = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http).Value;
+        // TenantEntity row degrades to single-node behavior (the pre-hierarchy shape). Resolved via
+        // the pinned ambient scope, so an act-as rebind (D-H4) yields Cap_eff(target) automatically.
+        var activeId = TamTenant.Resolve(http).Value;
         var activeNode = db.Set<TenantEntity>().FirstOrDefault(t => t.Id == activeId);
         var chainIds = (activeNode?.AncestorIds() ?? [activeId]).ToArray();
 

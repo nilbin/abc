@@ -31,10 +31,8 @@ public sealed class EffectBroadcaster
 
     public async Task Stream(HttpContext http, CancellationToken ct)
     {
-        var tenant = http.RequestServices
-            .GetService(typeof(ITenantProvider)) is ITenantProvider tenants
-            ? tenants.GetTenant(http).Value
-            : "";
+        // The pinned ambient tenant (incl. an act-as rebind) — the channel this client listens on.
+        var tenant = TamTenant.Resolve(http).Value;
         var id = Guid.NewGuid();
         var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(64)
         {

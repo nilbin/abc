@@ -57,9 +57,9 @@ public class RoleActorProvider(
     public Actor GetActor(HttpContext http)
     {
         var name = roleName(http);
-        var tenant = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http);
         var db = http.RequestServices.GetRequiredService<ITamDb>().Db;
 
+        // The global query filter already scopes the role lookup to the ambient tenant.
         var role = db.Set<RoleEntity>().FirstOrDefault(
             x => x.Name == name);
 
@@ -271,7 +271,9 @@ public static class TamAspNetCore
     public static OperationContext BuildContext(HttpContext http, TamModel model)
     {
         var actor = http.RequestServices.GetRequiredService<IActorProvider>().GetActor(http);
-        var tenant = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http);
+        // The pinned ambient tenant — includes an act-as rebind (docs/26 D-H4), so the context,
+        // the actor above and the DbContext filter all agree on the node this request acts in.
+        var tenant = TamTenant.Resolve(http);
 
         var requested = http.Request.Query.TryGetValue("culture", out var q) && q.Count > 0
             ? q[0]

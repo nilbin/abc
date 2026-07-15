@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.AspNetCore;
+using Tam.EntityFrameworkCore;
 
 namespace Erp.Features;
 
@@ -48,9 +49,12 @@ public static class CustomerList
         public bool IsActive { get; init; }
     }
 
-    public static IQueryable<Result> Execute(Query query, ErpDbContext db)
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
-        var customers = db.Customers.AsQueryable();
+        // Customers are the group's shared registry (docs/27 INHERITED scope): a node sees its own
+        // customers plus its ancestors' — a group-level customer serves every company below it.
+        // Upward only; a sibling subtree is never exposed.
+        var customers = db.Customers.WithInherited(db, context.TenantId);
         if (!string.IsNullOrWhiteSpace(query.Search))
             customers = customers.Where(x => ((string)(object)x.Name).Contains(query.Search!));
 
@@ -81,9 +85,10 @@ public static class CustomerLookup
         public bool IsActive { get; init; }
     }
 
-    public static IQueryable<Result> Execute(Query query, ErpDbContext db)
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
-        var customers = db.Customers.Where(x => x.IsActive);
+        // Same inherited scope as customers.list: order pickers offer ancestor-owned customers too.
+        var customers = db.Customers.WithInherited(db, context.TenantId).Where(x => x.IsActive);
         if (!string.IsNullOrWhiteSpace(query.Search))
             customers = customers.Where(x => ((string)(object)x.Name).Contains(query.Search!));
         return customers.Select(x => new Result { Id = x.Id, Name = x.Name, IsActive = x.IsActive });

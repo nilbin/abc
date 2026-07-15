@@ -143,42 +143,45 @@ public static class TamOpenIddict
         if (memberships.Count == 0)
             return Html(AuthPages.Message(model, culture, "auth.no-access"));
 
-        var memberTenantIds = memberships.Select(m => m.TenantId).ToHashSet();
         var requested = request.GetParameter("tenant")?.Value?.ToString();
 
         // A standable node is a membership node OR any descendant of a membership carrying at least
         // one CASCADING role (docs/26 D-H3/D-H5): the region admin may stand at a sub-company without
         // a membership row there — the resolver unions the cascading ancestor grants per request.
-        string? chosen = null;
-        if (requested is { Length: > 0 })
-        {
-            if (memberTenantIds.Contains(requested))
-                chosen = requested;
-            else if (await tam.Db.Set<TenantEntity>()
-                .FirstOrDefaultAsync(t => t.Id == requested) is { } requestedNode)
-            {
-                var cascadingRoots = memberships
-                    .Where(m => m.Roles().Any(a => a.Cascade))
-                    .Select(m => m.TenantId)
-                    .ToHashSet();
-                var rootPaths = await tam.Db.Set<TenantEntity>()
-                    .Where(t => cascadingRoots.Contains(t.Id))
-                    .Select(t => t.Path)
-                    .ToListAsync();
-                if (rootPaths.Any(p => TenantEntity.IsSelfOrDescendant(p, requestedNode.Path)))
-                    chosen = requested;
-            }
-        }
-        chosen ??= memberships.Count == 1 ? memberships[0].TenantId : null;
+        var chosen = requested is { Length: > 0 } && TenantTree.IsStandable(tam.Db, accountId, requested)
+            ? requested
+            : memberships.Count == 1 ? memberships[0].TenantId : null;
 
         if (chosen is null)
         {
-            var tenants = await tam.Db.Set<TenantEntity>()
-                .Where(t => memberTenantIds.Contains(t.Id)).ToListAsync();
-            var displayById = tenants.ToDictionary(t => t.Id, t => t.DisplayName);
-            var options = memberships
-                .Select(m => (m.TenantId, Display: displayById.GetValueOrDefault(m.TenantId, m.TenantId)))
+            // The picker offers the full STANDABLE set (docs/26 D-H3): membership nodes plus every
+            // descendant of a membership carrying a cascading role — labeled by their path so "Demo AB
+            // ▸ Norrservice Nord AB" reads as the drill-down it is. Never collapsed to "the highest":
+            // different nodes mean different effective grants. (The tenants table is small; a very
+            // large tree would page/search here instead of listing.)
+            var memberNodeIds = memberships.Select(m => m.TenantId).ToHashSet();
+            var allTenants = await tam.Db.Set<TenantEntity>().ToListAsync();
+            var byId = allTenants.ToDictionary(t => t.Id);
+            var cascadingRootPaths = memberships
+                .Where(m => m.Roles().Any(a => a.Cascade))
+                .Select(m => byId.TryGetValue(m.TenantId, out var root) ? root.Path : null)
+                .OfType<string>()
                 .ToList();
+
+            static string PathLabel(TenantEntity node, IReadOnlyDictionary<string, TenantEntity> byId) =>
+                string.Join(" ▸ ", node.AncestorIds()
+                    .Select(id => byId.TryGetValue(id, out var t) ? t.DisplayName : id));
+
+            var options = allTenants
+                .Where(t => memberNodeIds.Contains(t.Id)
+                    || cascadingRootPaths.Any(p => TenantEntity.IsSelfOrDescendant(p, t.Path)))
+                .OrderBy(t => t.Path, StringComparer.Ordinal)
+                .Select(t => (t.Id, Display: PathLabel(t, byId)))
+                .ToList();
+            // A membership node with no TenantEntity row (pre-hierarchy data) still gets an option.
+            options.AddRange(memberships
+                .Where(m => !byId.ContainsKey(m.TenantId))
+                .Select(m => (Id: m.TenantId, Display: m.TenantId)));
             return Html(AuthPages.TenantPicker(model, culture, http.Request.Query, options));
         }
 

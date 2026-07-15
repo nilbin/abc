@@ -209,7 +209,24 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   there while seeing ONLY nord's data (1 order/1 customer, no demo bleed; demo shows 5 orders, no
   roll-up — reads stay strict by default); tekla (non-cascading) requesting nord falls back to demo;
   legacy flat roles unchanged. Grants fan out, data stays per-node.
-- **Subscriptions & seats (docs/24)**: subscription registry (plan, seats, plugin entitlements,
+- **Hierarchy read scopes + act-as writes (docs/26 D-H1/D-H4 + docs/27)**: the global filter stays
+  STRICT; a view widens explicitly — `InSubtree` (downward roll-up via a tenants-table semi-join) or
+  `WithInherited` (upward shared read via a bounded ancestor IN-list); rows carry only TenantId, no
+  path denormalization, so re-parenting rewrites the tenants table only. Sample: `orders.overview`
+  (subtree, labeled by company) and customers as the group's shared registry (inherited, list/lookup/
+  rules/derivations all widened together). Cross-node writes: the `X-Tam-Tenant` act-as header names a
+  target node, validated against the account's standable set (membership or cascaded descendant;
+  denied → 403 `tenants.not-standable`) and REBOUND as the request's ambient tenant — one resolution
+  seam (`TamTenant.Resolve`) feeds the context, actor, filter, stamp, audit, outbox/effects,
+  idempotency and lookups, so everything lands coherently in the target. The login tenant picker
+  offers the full standable set, cascaded descendants labeled by path ("Demo AB ▸ Norrservice Nord
+  AB"). ⚠ Composition rule (found on the wire): EF's IgnoreQueryFilters is QUERY-WIDE — a query
+  composing a widened source must explicitly scope every other ITenantScoped source (`InNode`), or
+  the join silently drops the strict filter; documented in docs/27, TAM005 candidate. Verified on the
+  wire: overview rolls up 6 orders across both companies while orders.list stays at 5; nord sees 6
+  customers (1 own + 5 inherited) with no upward leak; act-as create from demo lands the order, its
+  audit entry and its numbering in nord (demo untouched); tekla/unknown-node act-as → 403; alva's
+  picker lists demo, demo▸nord, demo2. 82 tests; baseline + typed client regenerated (orders.overview).
   status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
   view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —
   both localized upsell findings, both degrading to a free-plan default when no row exists.

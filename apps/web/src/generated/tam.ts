@@ -218,6 +218,15 @@ export interface IntegrationsRunOutput {
   status: string;
 }
 
+export interface IntegrationsRequeueInput {
+  id: string;
+}
+
+export interface IntegrationsRequeueOutput {
+  id: string;
+  kind: string;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
@@ -292,6 +301,21 @@ export interface OrdersListQuery {
   search?: string;
 }
 
+export interface OrdersOverviewRow {
+  id: string;
+  number: string;
+  company: string;
+  description: string;
+  type: "service" | "project";
+  status: "open" | "completed" | "cancelled";
+  requestedDate?: string;
+  estimatedTotal?: number;
+}
+
+export interface OrdersOverviewQuery {
+
+}
+
 export interface UsersListRow {
   id: string;
   userName: string;
@@ -345,6 +369,19 @@ export interface IntegrationsRunsRow {
 
 export interface IntegrationsRunsQuery {
   integrationId?: string;
+}
+
+export interface IntegrationsDeadLetterRow {
+  id: string;
+  kind: string;
+  integrationId: string;
+  reference: string;
+  attempts: number;
+  lastError?: string;
+}
+
+export interface IntegrationsDeadLetterQuery {
+  kind?: string;
 }
 
 export interface ExtensionsFieldsRow {
@@ -531,6 +568,11 @@ export class TypedTamClient {
     return this.client.operation("integrations.run", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<IntegrationsRunOutput>>;
   }
 
+  /** integrations.requeue (requires integrations.manage) */
+  integrationsRequeue(input: IntegrationsRequeueInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<IntegrationsRequeueOutput>> {
+    return this.client.operation("integrations.requeue", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<IntegrationsRequeueOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
@@ -561,6 +603,11 @@ export class TypedTamClient {
     return this.client.view("orders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersListRow[] }>;
   }
 
+  /** view orders.overview (requires orders.read) */
+  ordersOverview(query?: OrdersOverviewQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersOverviewRow[] }> {
+    return this.client.view("orders.overview", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersOverviewRow[] }>;
+  }
+
   /** view users.list (requires users.manage) */
   usersList(query?: UsersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }> {
     return this.client.view("users.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }>;
@@ -584,6 +631,11 @@ export class TypedTamClient {
   /** view integrations.runs (requires integrations.manage) */
   integrationsRuns(query?: IntegrationsRunsQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsRunsRow[] }> {
     return this.client.view("integrations.runs", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsRunsRow[] }>;
+  }
+
+  /** view integrations.dead-letter (requires integrations.manage) */
+  integrationsDeadLetter(query?: IntegrationsDeadLetterQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsDeadLetterRow[] }> {
+    return this.client.view("integrations.dead-letter", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsDeadLetterRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

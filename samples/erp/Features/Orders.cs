@@ -8,9 +8,11 @@ namespace Erp.Features;
 public static class OrderRules
 {
     public static async Task<Result> CustomerCanReceiveOrder(
-        CustomerId customerId, ErpDbContext db, CancellationToken ct)
+        CustomerId customerId, TenantId tenant, ErpDbContext db, CancellationToken ct)
     {
-        var customer = await db.Customers
+        // Customers are a shared registry down the group (docs/27 inherited): an order may reference
+        // this node's own customers AND ancestor-owned ones — the same set the lookup view offers.
+        var customer = await db.Customers.WithInherited(db, tenant)
             .Where(x => x.Id == customerId)
             .Select(x => new { x.IsActive })
             .SingleOrDefaultAsync(ct);
@@ -46,7 +48,8 @@ public static class CreateOrder
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
-        var customerCheck = await OrderRules.CustomerCanReceiveOrder(input.CustomerId, db, ct);
+        var customerCheck = await OrderRules.CustomerCanReceiveOrder(
+            input.CustomerId, context.TenantId, db, ct);
         if (customerCheck.IsError) return customerCheck.As<Output>();
 
         if (input.OrderType == OrderType.Project)
@@ -100,11 +103,13 @@ public static class CreateOrderDerivations
     {
         if (input.CustomerId.Value == Guid.Empty) return DerivationResult.Empty;
 
-        var check = await OrderRules.CustomerCanReceiveOrder(input.CustomerId, db, ct);
+        var check = await OrderRules.CustomerCanReceiveOrder(
+            input.CustomerId, context.Operation.TenantId, db, ct);
         if (check.IsError)
             return DerivationResult.From(check, target: nameof(CreateOrder.Input.CustomerId));
 
-        var customer = await db.Customers
+        // Same inherited scope as the rule: the picked customer may be ancestor-owned (docs/27).
+        var customer = await db.Customers.WithInherited(db, context.Operation.TenantId)
             .Where(x => x.Id == input.CustomerId)
             .Select(x => new { x.CreditBlocked, x.VisitAddress })
             .SingleAsync(ct);
@@ -195,14 +200,22 @@ public static class OrderList
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
-        var orders = db.Orders.ScopedTo(context, "orders.read", x => x.AssignedToActorId);
+        // InNode: this query composes a WIDENED source (the customer join below), and EF's
+        // IgnoreQueryFilters is query-wide — without the explicit node scope the orders side would
+        // silently lose its strict filter too (the TamTreeScopes composition rule).
+        var orders = db.Orders.InNode(context.TenantId)
+            .ScopedTo(context, "orders.read", x => x.AssignedToActorId);
         if (!string.IsNullOrWhiteSpace(query.Search))
             orders = orders.Where(x =>
                 ((string)(object)x.Number).Contains(query.Search!) ||
                 ((string)(object)x.Description).Contains(query.Search!));
 
+        // The customer join uses the SAME inherited scope the create validated against (docs/27):
+        // an order may reference an ancestor-owned customer, and a strict join would silently drop
+        // that order from the list — the widened read and the widened reference must move together.
         return orders
-            .Join(db.Customers, o => o.CustomerId, c => c.Id, (o, c) => new Result
+            .Join(db.Customers.WithInherited(db, context.TenantId),
+                o => o.CustomerId, c => c.Id, (o, c) => new Result
             {
                 Id = o.Id, Number = o.Number, CustomerName = c.Name, Type = o.Type,
                 Status = o.Status, RequestedDate = o.RequestedDate,
@@ -214,6 +227,56 @@ public static class OrderList
         .Sortable(nameof(Result.Number), nameof(Result.CustomerName), nameof(Result.RequestedDate))
         .Filterable(nameof(Result.Status), nameof(Result.Type), nameof(Result.CustomerName),
             nameof(Result.RequestedDate), nameof(Result.EstimatedTotal))
+        .DefaultSort(nameof(Result.Number), descending: true);
+}
+
+/// <summary>
+/// The group roll-up (docs/26 D-H1): the one purpose-built view that opts into the SUBTREE read
+/// scope — standing at a parent node shows its own and every descendant company's orders, labeled by
+/// company. Transactional lists (orders.list) stay strict; breadth is always a deliberate choice in
+/// the view, never a default. Read-only by design: writes fan in to one node (D-H4).
+/// </summary>
+[View("orders.overview")]
+[Authorize("orders.read")]
+public static class OrderOverview
+{
+    public sealed record Query();
+
+    public sealed record Result
+    {
+        public OrderId Id { get; init; }
+        public OrderNumber Number { get; init; }
+        [LabelKey("labels.company")]
+        public string Company { get; init; } = "";
+        public OrderDescription Description { get; init; }
+        public OrderType Type { get; init; }
+        public OrderStatus Status { get; init; }
+        public DateOnly? RequestedDate { get; init; }
+        public decimal? EstimatedTotal { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
+    {
+        var orders = db.Orders.InSubtree(db, context.TenantId);
+        return from o in orders
+               join node in db.Set<TenantEntity>() on o.TenantId equals node.Id into nodes
+               from node in nodes.DefaultIfEmpty()
+               select new Result
+               {
+                   Id = o.Id,
+                   Number = o.Number,
+                   Company = node != null ? node.DisplayName : o.TenantId,
+                   Description = o.Description,
+                   Type = o.Type,
+                   Status = o.Status,
+                   RequestedDate = o.RequestedDate,
+                   EstimatedTotal = o.EstimatedTotal,
+               };
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+        .Sortable(nameof(Result.Number), nameof(Result.Company))
+        .Filterable(nameof(Result.Status), nameof(Result.Type))
         .DefaultSort(nameof(Result.Number), descending: true);
 }
 
@@ -241,9 +304,12 @@ public static class OrderDetail
         public ExtensionData Extensions { get; init; } = new();
     }
 
-    public static IQueryable<Result> Execute(Query query, ErpDbContext db) =>
-        db.Orders.Where(x => x.Id == query.OrderId)
-            .Join(db.Customers, o => o.CustomerId, c => c.Id, (o, c) => new Result
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context) =>
+        // Same inherited customer scope as orders.list; InNode on the orders side for the same
+        // query-wide-IgnoreQueryFilters reason (TamTreeScopes composition rule).
+        db.Orders.InNode(context.TenantId).Where(x => x.Id == query.OrderId)
+            .Join(db.Customers.WithInherited(db, context.TenantId),
+                o => o.CustomerId, c => c.Id, (o, c) => new Result
             {
                 Id = o.Id, Number = o.Number, CustomerName = c.Name, Type = o.Type,
                 Status = o.Status, WorkAddress = o.WorkAddress, Description = o.Description,

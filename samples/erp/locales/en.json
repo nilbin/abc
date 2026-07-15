@@ -49,5 +49,6 @@
   "nav.rules": "Rules",
   "auth.sign-in": "Sign in",
   "auth.sign-out": "Sign out",
-  "auth.failed": "Incorrect email or password."
+  "auth.failed": "Incorrect email or password.",
+  "labels.company": "Company"
 }

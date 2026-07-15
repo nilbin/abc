@@ -134,5 +134,6 @@
   "auth.failed": "Incorrect email or password.",
   "auth.pick-tenant": "Choose an organization to continue.",
   "auth.continue": "Continue",
-  "auth.no-access": "This account has no access to any organization."
+  "auth.no-access": "This account has no access to any organization.",
+  "tenants.not-standable": "You do not have access to act in this organization."
 }

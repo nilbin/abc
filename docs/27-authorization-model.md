@@ -197,6 +197,12 @@ must be *bound*; data-scope (a predicate over existing rows) cannot bind it. The
   `inherited` = a bounded `TenantId IN (ancestor ids)` list computed from the active node's own path.
   This keeps every row single-tenant-keyed on existing indexes and makes **re-parenting nearly free**:
   moving a subtree rewrites the moved nodes' `Path` values in `tenants` and nothing else.
+- **The composition rule (found on the wire).** EF's `IgnoreQueryFilters` is **query-wide**, not
+  per-source: composing one widened source into a query (a join, a subquery over another scoped set)
+  strips the global strict filter from EVERY source in that query — silently returning other tenants'
+  rows. Therefore any query touching a widened source must scope every other `ITenantScoped` source
+  explicitly (`InNode` for strict, or its own `InSubtree`/`WithInherited`). Single-source widened
+  views are unaffected. Candidate for a TAM005 analyzer rule.
 - **Cross-node create = ambient rebind.** The validated target node becomes the request's execution
   tenant (see the create-target invariant above): one mechanism, and audit/outbox/effects/idempotency/
   lookups stay coherent with the row. No per-handler `TenantId` assignments.
