@@ -140,6 +140,9 @@
       "auth.continue": "Forts\u00E4tt",
       "auth.no-access": "Detta konto har ingen \u00E5tkomst till n\u00E5gon organisation.",
       "tenants.not-standable": "Du har inte beh\u00F6righet att agera i denna organisation.",
+      "roles.unknown-resource": "Ok\u00E4nd resurs: {resource}.",
+      "roles.unknown-level": "Ok\u00E4nd beh\u00F6righetsniv\u00E5: {level}.",
+      "labels.levels": "Beh\u00F6righetsniv\u00E5er",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -334,6 +337,9 @@
       "auth.continue": "Continue",
       "auth.no-access": "This account has no access to any organization.",
       "tenants.not-standable": "You do not have access to act in this organization.",
+      "roles.unknown-resource": "Unknown resource: {resource}.",
+      "roles.unknown-level": "Unknown access level: {level}.",
+      "labels.levels": "Access levels",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -776,6 +782,15 @@
           "type": "object",
           "wireKind": "object",
           "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "levels",
+          "labelKey": "labels.levels",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
           "changeSet": false,
           "extension": false
         }
@@ -2439,6 +2454,15 @@
         {
           "name": "permissions",
           "labelKey": "labels.permissions",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "levels",
+          "labelKey": "labels.levels",
           "type": "text",
           "wireKind": "string",
           "required": true,

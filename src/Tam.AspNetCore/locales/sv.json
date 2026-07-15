@@ -135,5 +135,8 @@
   "auth.pick-tenant": "Välj en organisation för att fortsätta.",
   "auth.continue": "Fortsätt",
   "auth.no-access": "Detta konto har ingen åtkomst till någon organisation.",
-  "tenants.not-standable": "Du har inte behörighet att agera i denna organisation."
+  "tenants.not-standable": "Du har inte behörighet att agera i denna organisation.",
+  "roles.unknown-resource": "Okänd resurs: {resource}.",
+  "roles.unknown-level": "Okänd behörighetsnivå: {level}.",
+  "labels.levels": "Behörighetsnivåer"
 }

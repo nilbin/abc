@@ -97,7 +97,10 @@ public sealed class ClaimsActorProvider : IActorProvider
             return new Actor(account.Id.ToString(), account.DisplayName, new HashSet<string>());
 
         // Role names bind to the MEMBERSHIP's node definitions (docs/27): load the chain's role rows
-        // unfiltered once, then match per (tenant, name) — names never merge across levels.
+        // unfiltered once, then match per (tenant, name) — names never merge across levels. A role's
+        // grants are its explicit atoms plus its access levels expanded at load time (docs/27 D-A1),
+        // so a new action on a resource flows into existing Manage roles without a role edit.
+        var model = http.RequestServices.GetRequiredService<TamModel>();
         var roleRows = db.Set<RoleEntity>().IgnoreQueryFilters()
             .Where(r => chainIds.Contains(r.TenantId))
             .ToList();
@@ -105,7 +108,8 @@ public sealed class ClaimsActorProvider : IActorProvider
         var grants = wanted
             .Select(w => byNodeAndName.GetValueOrDefault((w.TenantId, w.Role)))
             .Where(role => role is not null)
-            .SelectMany(role => role!.Permissions())
+            .SelectMany(role => role!.Permissions().Concat(
+                role.Levels().SelectMany(l => AccessLevels.Expand(model, l.Key, l.Value))))
             .ToHashSet();
 
         return new Actor(account.Id.ToString(), account.DisplayName, grants);

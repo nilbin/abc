@@ -82,6 +82,7 @@ export interface ExtensionsRetireFieldOutput {
 export interface RolesDefineInput {
   name: string;
   permissions: Record<string, unknown>;
+  levels?: Record<string, unknown>;
 }
 
 export interface RolesDefineOutput {
@@ -401,6 +402,7 @@ export interface RolesListRow {
   id: string;
   name: string;
   permissions: string;
+  levels: string;
 }
 
 export interface RolesListQuery {

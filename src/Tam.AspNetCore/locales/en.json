@@ -135,5 +135,8 @@
   "auth.pick-tenant": "Choose an organization to continue.",
   "auth.continue": "Continue",
   "auth.no-access": "This account has no access to any organization.",
-  "tenants.not-standable": "You do not have access to act in this organization."
+  "tenants.not-standable": "You do not have access to act in this organization.",
+  "roles.unknown-resource": "Unknown resource: {resource}.",
+  "roles.unknown-level": "Unknown access level: {level}.",
+  "labels.levels": "Access levels"
 }

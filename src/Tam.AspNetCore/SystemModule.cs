@@ -176,6 +176,8 @@ public static class RoleFindings
     public static readonly FindingFactory UnknownPermission = Finding.Error("roles.unknown-permission");
     public static readonly FindingFactory InvalidName = Finding.Error("roles.invalid-name");
     public static readonly FindingFactory ReservedPermission = Finding.Error("roles.reserved-permission");
+    public static readonly FindingFactory UnknownResource = Finding.Error("roles.unknown-resource");
+    public static readonly FindingFactory UnknownLevel = Finding.Error("roles.unknown-level");
 }
 
 /// <summary>
@@ -191,7 +193,8 @@ public static class RoleRules
         permission.EndsWith(":own", StringComparison.Ordinal) ? permission[..^4] : permission;
 
     public static IReadOnlyList<Finding> Validate(
-        string name, IReadOnlyList<string> permissions, TamModel model, string field)
+        string name, IReadOnlyList<string> permissions, TamModel model, string field,
+        IReadOnlyDictionary<string, string>? levels = null)
     {
         var findings = new List<Finding>();
         if (!System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-z][a-z0-9-]*$"))
@@ -201,9 +204,19 @@ public static class RoleRules
             .Select(p => RoleFindings.UnknownPermission.With(("permission", p)).At(field)));
         // Reserved permissions (subscriptions.manage) are never grantable through a tenant role,
         // whether authored directly or shipped in a package — closes the wildcard-admin bypass.
+        // (Access levels can't smuggle them either: AccessLevels.Expand never yields a reserved atom.)
         findings.AddRange(permissions
             .Where(p => Actor.Reserved.Contains(TrimScope(p)))
             .Select(p => RoleFindings.ReservedPermission.With(("permission", p)).At(field)));
+        // Access levels (docs/27 D-A1): the resource must exist in the compiled catalogue and the
+        // level must be one of the ordered presets — same registry-as-compiler rule as the atoms.
+        foreach (var (resource, level) in levels ?? new Dictionary<string, string>())
+        {
+            if (!AccessLevels.Catalog(model).ContainsKey(resource))
+                findings.Add(RoleFindings.UnknownResource.With(("resource", resource)).At(field));
+            if (!AccessLevels.All.Contains(level))
+                findings.Add(RoleFindings.UnknownLevel.With(("level", level)).At(field));
+        }
         return findings;
     }
 }
@@ -216,14 +229,20 @@ public static class RoleRules
 [Authorize("roles.manage")]
 public static class DefineRole
 {
-    public sealed record Input(string Name, List<string> Permissions);
+    /// <summary>A role is authored as access levels per resource ({"orders":"manage"}) and/or
+    /// explicit permission atoms — the escape hatch when a level is too coarse (docs/27 D-A1).</summary>
+    public sealed record Input(
+        string Name,
+        List<string> Permissions,
+        [property: LabelKey("labels.levels")] Dictionary<string, string>? Levels = null);
 
     public sealed record Output(Guid RoleId);
 
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
     {
-        var invalid = RoleRules.Validate(input.Name, input.Permissions, model, nameof(Input.Permissions));
+        var invalid = RoleRules.Validate(
+            input.Name, input.Permissions, model, nameof(Input.Permissions), input.Levels);
         if (invalid.Count > 0) return new Result<Output> { Findings = [.. invalid] };
 
         var role = await tam.Db.Set<RoleEntity>().SingleOrDefaultAsync(
@@ -238,6 +257,7 @@ public static class DefineRole
             tam.Db.Add(role);
         }
         role.PermissionsJson = JsonSerializer.Serialize(input.Permissions);
+        role.LevelsJson = JsonSerializer.Serialize(input.Levels ?? []);
 
         return new Output(role.Id);
     }
@@ -254,13 +274,15 @@ public static class RoleList
         public Guid Id { get; init; }
         public string Name { get; init; } = "";
         public string Permissions { get; init; } = "";
+        [LabelKey("labels.levels")]
+        public string Levels { get; init; } = "";
     }
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
         tam.Db.Set<RoleEntity>()
             .Select(x => new Result
             {
-                Id = x.Id, Name = x.Name, Permissions = x.PermissionsJson,
+                Id = x.Id, Name = x.Name, Permissions = x.PermissionsJson, Levels = x.LevelsJson,
             });
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>

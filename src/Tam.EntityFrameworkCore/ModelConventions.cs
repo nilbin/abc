@@ -365,16 +365,22 @@ public sealed class TenantEntity
         otherPath == ancestorPath || otherPath.StartsWith(ancestorPath + ".", StringComparison.Ordinal);
 }
 
-/// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.</summary>
+/// <summary>Tenant-managed role: a named grant set (decision D1). Managed only through operations.
+/// Carries BOTH authoring shapes (docs/27 D-A1): explicit permission atoms and per-resource access
+/// levels ({"orders":"manage"}); levels expand to atoms at load time (see Tam.AccessLevels).</summary>
 public sealed class RoleEntity : ITenantScoped
 {
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
     public string Name { get; set; } = "";
     public string PermissionsJson { get; set; } = "[]";
+    public string LevelsJson { get; set; } = "{}";
 
     public IReadOnlySet<string> Permissions() =>
         System.Text.Json.JsonSerializer.Deserialize<HashSet<string>>(PermissionsJson) ?? [];
+
+    public IReadOnlyDictionary<string, string> Levels() =>
+        System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(LevelsJson) ?? [];
 }
 
 /// <summary>Per-tenant plugin activation (docs/22): the row's existence IS the activation.
