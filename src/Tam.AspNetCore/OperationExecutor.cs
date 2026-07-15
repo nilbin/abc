@@ -132,8 +132,21 @@ public sealed class OperationExecutor(
             var changes = extensionsElement.Deserialize<Dictionary<string, ExtensionChange>>(TamJson.Options)!;
             if (changes.Count > 0)
             {
-                var tracked = db.ChangeTracker.Entries()
-                    .FirstOrDefault(e => extensibleType.IsInstanceOfType(e.Entity));
+                // Deterministic target, never a guess: with ONE tracked instance of the extensible
+                // type it is the target; with several (a handler that also loaded sibling rows) the
+                // single Added/Modified one is; anything else fails CLOSED — silently writing onto
+                // whichever row happened to be tracked first would be cross-record corruption.
+                var candidates = db.ChangeTracker.Entries()
+                    .Where(e => extensibleType.IsInstanceOfType(e.Entity))
+                    .ToList();
+                var written = candidates
+                    .Where(e => e.State is EntityState.Added or EntityState.Modified)
+                    .ToList();
+                var tracked = candidates.Count == 1 ? candidates[0]
+                    : written.Count == 1 ? written[0]
+                    : null;
+                if (tracked is null && candidates.Count > 1)
+                    findings.Add(PipelineFindings.AmbiguousExtensionTarget.Create());
                 if (tracked?.Entity is IExtensible extensible)
                 {
                     // The registered registry, not a bare EF one: plugin-packaged fields

@@ -264,6 +264,12 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   row action) with the invite form on the toolbar — roles/policies authored through an app-owned
   "string-list" renderer. Verified headless: an invite submitted through the UI lands and the
   grid live-refreshes with the new member.
+- **Extension-channel targeting is deterministic and fail-closed** (the old review medium): the
+  executor no longer binds `extensions` changes to whichever tracked instance of the extensible
+  type came FIRST — one tracked instance is the target; among several, the single Added/Modified
+  one is; anything else returns `pipeline.ambiguous-extension-target` instead of guessing (a wrong
+  guess is silent cross-record corruption). Wire-verified: create-with-extension lands on the right
+  row, unknown keys still rejected.
 - **One background-loop shape**: the five drivers (outbox dispatcher, integration retry queue,
   scheduler, retention janitor, token janitor) now share `TamBackgroundLoop` (tick, swallow
   transient failures, wait, repeat — a bad tick never kills a loop) and the three competing

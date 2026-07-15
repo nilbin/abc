@@ -43,4 +43,5 @@ public static class PipelineFindings
     public static readonly FindingFactory NotFound = Finding.Error("pipeline.not-found");
     public static readonly FindingFactory IdempotentReplay = Finding.Information("pipeline.idempotent-replay");
     public static readonly FindingFactory FieldNotAuthorized = Finding.Error("pipeline.field-not-authorized");
+    public static readonly FindingFactory AmbiguousExtensionTarget = Finding.Error("pipeline.ambiguous-extension-target");
 }
