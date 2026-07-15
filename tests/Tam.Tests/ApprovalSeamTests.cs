@@ -49,6 +49,7 @@ public class ApprovalSeamTests : IDisposable
             .AddScoped(sp => new ErpDbContext(options, sp.GetRequiredService<TenantScope>()))
             .AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<ErpDbContext>()))
             .AddScoped<ActivationCache>()
+            .AddScoped<ITamActivator, TamActivator>()
             .AddScoped(sp => new OperationExecutor(_model, sp, s => s.GetRequiredService<ErpDbContext>()))
             .AddSingleton(sp => new EnvelopeReplay(_model, sp, s => s.GetRequiredService<ErpDbContext>()))
             .BuildServiceProvider();
@@ -98,50 +99,63 @@ public class ApprovalSeamTests : IDisposable
             });
             // Seam 1: ONE wildcard registration — which operations it actually blocks is the
             // gate's own runtime decision, standing in for tenant-configured approval rules.
-            plugin.Gate(GateDefinition.Wildcard, (gate, ct) =>
-            {
-                // Seam 3's sanction: a replay released by an approver passes the gate.
-                if (gate.Context.Source == InvocationSource.Workflow)
-                    return Task.FromResult(Result.Success());
-                if (gate.OperationId != "host.customers.create"
-                    || !gate.Input.TryGetProperty("name", out var name)
-                    || name.GetString() is not { } value)
-                    return Task.FromResult(Result.Success());
-
-                if (value.StartsWith("SOFT", StringComparison.Ordinal))
-                {
-                    // Parks but ALLOWS — the parked work must be discarded (nothing may leak
-                    // from a gate that ends up letting the operation through).
-                    gate.Park((sp, c) => ParkEnvelope(sp, gate, c));
-                    return Task.FromResult(Result.Success());
-                }
-
-                if (!value.StartsWith("BLOCK", StringComparison.Ordinal))
-                    return Task.FromResult(Result.Success());
-
-                // Seam 2: keep the envelope, lose the attempt.
-                gate.Park((sp, c) => ParkEnvelope(sp, gate, c));
-                return Task.FromResult((Result)Finding.Error("appr.parked").Create());
-            });
-        }
-
-        private static async Task ParkEnvelope(IServiceProvider sp, GateContext gate, CancellationToken ct)
-        {
-            var db = ((ITamDb)sp.GetService(typeof(ITamDb))!).Db;
-            // Stands in for the plugin's own envelope table: key by the pipeline's payload hash
-            // (the idempotency hash), store the raw wire body + initiator for replay.
-            db.Add(new TenantSettingEntity
-            {
-                Id = Guid.NewGuid(),
-                Key = "appr.envelope." + gate.PayloadHash,
-                Value = JsonSerializer.Serialize(new ParkedEnvelope(
-                    gate.OperationId, gate.Input.GetRawText(), gate.Context.Actor.Id, gate.Context.Culture)),
-            });
-            await db.SaveChangesAsync(ct);
+            plugin.GateAll<ParkingGate>();
         }
     }
 
-    private sealed record ParkedEnvelope(string OperationId, string BodyJson, string ActorId, string Culture);
+    private sealed class ParkingGate : IOperationGate
+    {
+        public Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
+        {
+            // Seam 3's sanction: a replay released by an approver passes the gate.
+            if (gate.Context.Source == InvocationSource.Workflow)
+                return Task.FromResult(Result.Success());
+            if (gate.OperationId != "host.customers.create"
+                || !gate.Input.TryGetProperty("name", out var name)
+                || name.GetString() is not { } value)
+                return Task.FromResult(Result.Success());
+
+            // Stands in for the plugin's own envelope table: key by the pipeline's payload
+            // hash (the idempotency hash), store the raw wire body + initiator for replay.
+            var envelope = new ParkedEnvelope(
+                gate.OperationId, gate.Input.GetRawText(), gate.PayloadHash,
+                gate.Context.Actor.Id, gate.Context.Culture);
+
+            if (value.StartsWith("SOFT", StringComparison.Ordinal))
+            {
+                // Parks but ALLOWS — the parked work must be discarded (nothing may leak
+                // from a gate that ends up letting the operation through).
+                gate.Park<ParkEnvelopeWork, ParkedEnvelope>(envelope);
+                return Task.FromResult(Result.Success());
+            }
+
+            if (!value.StartsWith("BLOCK", StringComparison.Ordinal))
+                return Task.FromResult(Result.Success());
+
+            // Seam 2: keep the envelope, lose the attempt.
+            gate.Park<ParkEnvelopeWork, ParkedEnvelope>(envelope);
+            return Task.FromResult((Result)Finding.Error("appr.parked").Create());
+        }
+    }
+
+    // Constructed by the pipeline IN the fresh scope: the injected ITamDb is the fresh context
+    // by construction — the rolled-back gate scope is structurally unreachable from here.
+    private sealed class ParkEnvelopeWork(ITamDb tam) : IParkedWork<ParkedEnvelope>
+    {
+        public async Task RunAsync(ParkedEnvelope envelope, CancellationToken ct)
+        {
+            tam.Db.Add(new TenantSettingEntity
+            {
+                Id = Guid.NewGuid(),
+                Key = "appr.envelope." + envelope.PayloadHash,
+                Value = JsonSerializer.Serialize(envelope),
+            });
+            await tam.Db.SaveChangesAsync(ct);
+        }
+    }
+
+    private sealed record ParkedEnvelope(
+        string OperationId, string BodyJson, string PayloadHash, string ActorId, string Culture);
 
     // ---- helpers ---------------------------------------------------------------------------
 
@@ -223,9 +237,9 @@ public class ApprovalSeamTests : IDisposable
 
         using var body = JsonDocument.Parse(envelope.BodyJson);
         var replay = _services.GetRequiredService<EnvelopeReplay>();
-        var response = await replay.ReplayAsync(
-            envelope.OperationId, body.RootElement, Guid.Parse(envelope.ActorId),
-            Tenant, "env-1", envelope.Culture, CancellationToken.None);
+        var response = await replay.ReplayAsync(new EnvelopeReplay.Envelope(
+            envelope.OperationId, body.RootElement, envelope.ActorId,
+            Tenant, "env-1", envelope.Culture), CancellationToken.None);
 
         // The gate saw Workflow and let it pass; the operation ran with the initiator's grants
         // as re-resolved from the seeded membership (clerk → host.customers.create).
@@ -243,9 +257,9 @@ public class ApprovalSeamTests : IDisposable
 
         // Redelivered approval effect → the stored outcome, not a second execution.
         using var again = JsonDocument.Parse(envelope.BodyJson);
-        var second = await replay.ReplayAsync(
-            envelope.OperationId, again.RootElement, Guid.Parse(envelope.ActorId),
-            Tenant, "env-1", envelope.Culture, CancellationToken.None);
+        var second = await replay.ReplayAsync(new EnvelopeReplay.Envelope(
+            envelope.OperationId, again.RootElement, envelope.ActorId,
+            Tenant, "env-1", envelope.Culture), CancellationToken.None);
         Assert.Contains(second.Findings, f => f.Code == "pipeline.idempotent-replay");
         Assert.Equal(1, Query(db => db.Customers.Count()));
     }
@@ -264,8 +278,9 @@ public class ApprovalSeamTests : IDisposable
 
         using var body = JsonDocument.Parse(envelope.BodyJson);
         var response = await _services.GetRequiredService<EnvelopeReplay>().ReplayAsync(
-            envelope.OperationId, body.RootElement, Initiator,
-            Tenant, "env-2", envelope.Culture, CancellationToken.None);
+            new EnvelopeReplay.Envelope(
+                envelope.OperationId, body.RootElement, Initiator.ToString(),
+                Tenant, "env-2", envelope.Culture), CancellationToken.None);
 
         Assert.Contains(response.Findings, f => f.Code == "pipeline.replay-actor-unavailable");
         Assert.Equal(0, Query(db => db.Customers.Count()));

@@ -28,31 +28,46 @@ public sealed class EnvelopeReplay(
     /// <summary>The idempotency-key prefix marking a replayed envelope.</summary>
     public const string KeyPrefix = "replay:";
 
-    public Task<OperationResponse> ReplayAsync(
-        string operationId, JsonElement body, Guid initiatorAccountId,
-        string tenantId, string envelopeId, string culture, CancellationToken ct)
-        => PinnedScope.RunAsync(services, tenantId, async (sp, c) =>
+    /// <summary>
+    /// Everything a replay needs, as ONE named shape — a parked envelope row maps to it field by
+    /// field, and there is no adjacent-string parameter list to transpose. The initiator is the
+    /// actor-id string exactly as <see cref="Actor.Id"/> gave it at park time.
+    /// </summary>
+    public sealed record Envelope(
+        string OperationId,
+        JsonElement Body,
+        string InitiatorActorId,
+        string TenantId,
+        string EnvelopeId,
+        string Culture);
+
+    public Task<OperationResponse> ReplayAsync(Envelope envelope, CancellationToken ct)
+        => PinnedScope.RunAsync(services, envelope.TenantId, async (sp, c) =>
         {
+            // Fail closed on anything that does not resolve to a live account — including an
+            // actor id that was never an account id at all.
             var db = dbResolver(sp);
-            var actor = ClaimsActorProvider.Resolve(db, model, initiatorAccountId, tenantId);
+            var actor = Guid.TryParse(envelope.InitiatorActorId, out var accountId)
+                ? ClaimsActorProvider.Resolve(db, model, accountId, envelope.TenantId)
+                : null;
             if (actor is null)
             {
                 var finding = model.Locales.Resolve(
-                    PipelineFindings.ReplayActorUnavailable.Create(), culture);
+                    PipelineFindings.ReplayActorUnavailable.Create(), envelope.Culture);
                 return new OperationResponse(null, [finding], [], null, null);
             }
 
             var context = new OperationContext
             {
                 Actor = actor,
-                TenantId = new TenantId(tenantId),
+                TenantId = new TenantId(envelope.TenantId),
                 Source = InvocationSource.Workflow,
-                Culture = culture,
-                IdempotencyKey = KeyPrefix + envelopeId,
-                CorrelationId = envelopeId,
+                Culture = envelope.Culture,
+                IdempotencyKey = KeyPrefix + envelope.EnvelopeId,
+                CorrelationId = envelope.EnvelopeId,
                 Services = sp,
             };
             return await sp.GetRequiredService<OperationExecutor>()
-                .ExecuteAsync(operationId, body, context, c);
+                .ExecuteAsync(envelope.OperationId, envelope.Body, context, c);
         }, ct);
 }

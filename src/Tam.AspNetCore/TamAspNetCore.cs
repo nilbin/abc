@@ -85,6 +85,11 @@ public static class TamAspNetCore
         services.AddScoped<IExtensionRegistry>(sp => new PluginAwareExtensionRegistry(
             new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()), model, sp.GetRequiredService<TDbContext>(), sp));
         services.AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<TDbContext>()));
+        // Plugin handler construction (gates, effect handlers, parked work): ctor injection from
+        // the resolving scope — request scope for gates, tenant-pinned scopes for the rest.
+        services.AddScoped<ITamActivator, TamActivator>();
+        // People lookups for plugins (assign/notify): the sanctioned seam over identity tables.
+        services.AddScoped<ITamDirectory, TamDirectory>();
         // Sanctioned envelope replay (docs/28 approvals seam 3): singleton because it always
         // executes in a fresh pinned scope of its own — never the caller's (whose transaction
         // may be the very one the parked envelope must be independent of).

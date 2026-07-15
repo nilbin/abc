@@ -108,11 +108,14 @@ public sealed class OperationExecutor(
         if (specificGates.Count > 0 || wildcardGates.Count > 0)
         {
             var activePlugins = await ActivationCache.ForAsync(services, db, context.TenantId.Value, ct);
+            var activator = services.GetService(typeof(ITamActivator)) as ITamActivator
+                ?? new TamActivator(services);
             foreach (var gate in specificGates.Concat(wildcardGates)
                          .Where(g => activePlugins.Contains(g.PluginId)))
             {
-                var gateContext = new GateContext(operationId, body, payloadHash, context, services);
-                var gateResult = await gate.Handler(gateContext, ct);
+                var gateContext = new GateContext(operationId, body, payloadHash, context);
+                var handler = (IOperationGate)activator.Create(gate.HandlerType);
+                var gateResult = await handler.CheckAsync(gateContext, ct);
                 if (!gateResult.IsError) continue;
 
                 // Parking (docs/28 approvals seam 2): the blocking gate may have deferred writes
@@ -200,17 +203,7 @@ public sealed class OperationExecutor(
         // Outbox (docs/09): explicit event effects persist in this same transaction —
         // the event exists if and only if the operation committed.
         foreach (var effect in result.Effects.OfType<EventPublished>())
-        {
-            db.Add(new OutboxRecord
-            {
-                Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,
-                OperationId = operationId,
-                EventType = effect.Event,
-                PayloadJson = JsonSerializer.Serialize(effect.Payload, TamJson.Options),
-                CreatedAtIso = IsoTime.Now(),
-            });
-        }
+            db.Publish(effect.Event, effect.Payload, operationId, context.TenantId.Value);
 
         var audit = TamAudit.Capture(db, context, operationId);
         try

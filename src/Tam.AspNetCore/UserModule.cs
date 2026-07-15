@@ -184,16 +184,12 @@ public static class InviteUser
         membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
         membership.Active = true;
 
-        string Localize(string key, IReadOnlyDictionary<string, object?> args) =>
-            LocaleCatalogs.Format(
-                model.Locales.Lookup(key, context.Culture) ?? key, args, context.Culture);
-
         if (account.PasswordHash is { Length: > 0 })
         {
             // Existing credentialed account: membership added, nothing to accept.
             await email.SendAsync(account.Email,
-                Localize("auth.added-subject", new Dictionary<string, object?>()),
-                Localize("auth.added-body", new Dictionary<string, object?>()), ct);
+                model.Locales.Localize("auth.added-subject", context.Culture),
+                model.Locales.Localize("auth.added-body", context.Culture), ct);
             return new Output(account.Id, false);
         }
 
@@ -218,8 +214,9 @@ public static class InviteUser
         var origin = request is null ? "" : $"{request.Scheme}://{request.Host}";
         var link = $"{origin}/connect/invite?token={token}";
         await email.SendAsync(account.Email,
-            Localize("auth.invite-subject", new Dictionary<string, object?>()),
-            Localize("auth.invite-body", new Dictionary<string, object?> { ["link"] = link }), ct);
+            model.Locales.Localize("auth.invite-subject", context.Culture),
+            model.Locales.Localize("auth.invite-body", context.Culture,
+                new Dictionary<string, object?> { ["link"] = link }), ct);
         return new Output(account.Id, true);
     }
 }

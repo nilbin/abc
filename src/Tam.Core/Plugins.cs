@@ -33,17 +33,59 @@ public sealed record PluginDefinition(string Id)
 /// </summary>
 public sealed record PackagedFieldDefinition(string PluginId, string EntityKey, ExtensionFieldSpec Spec);
 
+/// <summary>
+/// Constructs plugin handler classes (gates, effect handlers, parked work) with constructor
+/// injection from the CURRENT scope. Defined in core so seam types can name it without core
+/// referencing a DI package; implemented over ActivatorUtilities in the host layer. Handlers are
+/// ordinary classes — no DI registration required, dependencies are ctor parameters.
+/// </summary>
+public interface ITamActivator
+{
+    object Create(Type handlerType);
+}
+
+/// <summary>
+/// A typed precondition on a host operation (docs/22 P2): constructed per invocation with
+/// constructor injection (declare <c>ITamDb</c>, <c>TamModel</c>, … as ctor parameters — never a
+/// service locator), it runs after authorization and structural validation, before the handler,
+/// INSIDE the transaction. Blocks by returning an error result.
+/// </summary>
+public interface IOperationGate
+{
+    Task<Result> CheckAsync(GateContext gate, CancellationToken ct);
+}
+
+/// <summary>
+/// A plugin's reaction to a committed host effect (docs/22 P2): constructed per delivery with
+/// constructor injection, in a scope pinned to the record's tenant. Delivery is at-least-once —
+/// handlers stay idempotent.
+/// </summary>
+public interface IEffectHandler
+{
+    Task HandleAsync(EffectEvent effect, CancellationToken ct);
+}
+
+/// <summary>
+/// Work a blocking gate parks across the rollback (docs/28 approvals seam 2). Constructed by the
+/// pipeline in a FRESH tenant-pinned scope AFTER the domain transaction rolled back — so an
+/// injected <c>ITamDb</c> is a fresh context by construction; the rolled-back gate scope is
+/// unreachable. State crosses from the gate as the explicit <typeparamref name="TState"/> value.
+/// </summary>
+public interface IParkedWork<in TState>
+{
+    Task RunAsync(TState state, CancellationToken ct);
+}
+
 /// <summary>What a gate sees: the operation being guarded (so a WILDCARD gate can decide from its
 /// own config which operations it applies to — docs/28 approvals seam 1), the raw wire input (a
 /// plugin couples to the host's wire contract, never its CLR types), the pipeline's SHA-256 hash
 /// of that input (the idempotency hash — the natural dedupe/integrity key for a parked envelope),
-/// the execution context, and scoped services.</summary>
+/// and the execution context. Dependencies belong on the gate class's CONSTRUCTOR, not here.</summary>
 public sealed record GateContext(
     string OperationId,
     System.Text.Json.JsonElement Input,
     string PayloadHash,
-    OperationContext Context,
-    IServiceProvider Services)
+    OperationContext Context)
 {
     private List<Func<IServiceProvider, CancellationToken, Task>>? parked;
 
@@ -52,25 +94,29 @@ public sealed record GateContext(
     /// transaction has rolled back, in a FRESH service scope pinned to the same tenant (docs/28
     /// approvals seam 2). The one sanctioned way for a gate to keep state from a blocked attempt:
     /// writes inside the gate body itself die with the rollback, and a gate that wrote before
-    /// deciding could leak state from attempts it allowed. Park the envelope here; if the gate
-    /// returns success the parked work is discarded.
+    /// deciding could leak state from attempts it allowed. <typeparamref name="TWork"/> is
+    /// constructed IN the fresh scope, so its injected services cannot be the rolled-back ones;
+    /// if the gate returns success the parked work is discarded.
     /// </summary>
-    public void Park(Func<IServiceProvider, CancellationToken, Task> work) =>
-        (parked ??= []).Add(work);
+    public void Park<TWork, TState>(TState state) where TWork : class, IParkedWork<TState> =>
+        (parked ??= []).Add((services, ct) =>
+        {
+            var activator = services.GetService(typeof(ITamActivator)) as ITamActivator
+                ?? throw new InvalidOperationException("DI001: ITamActivator is not registered.");
+            return ((IParkedWork<TState>)activator.Create(typeof(TWork))).RunAsync(state, ct);
+        });
 
     /// <summary>The deferred work, drained by the pipeline when the gate blocks. Empty otherwise.</summary>
     public IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>> ParkedWork =>
         parked ?? (IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>>)[];
 }
 
-public delegate Task<Result> OperationGate(GateContext gate, CancellationToken ct);
-
-/// <summary>A typed precondition a plugin declares (docs/22 P2): runs after authorization and
-/// structural validation, before the handler. An operation-specific gate names one operation id;
-/// a WILDCARD gate (<see cref="OperationId"/> = "*") runs on EVERY operation and decides from its
-/// own config whether to act — the approvals seam (docs/28 tutorial Step 16), where the set of
-/// gated operations is tenant data, not compile-time. Visible in the manifest as GatedBy.</summary>
-public sealed record GateDefinition(string OperationId, string PluginId, OperationGate Handler)
+/// <summary>A declared gate (docs/22 P2): the handler TYPE (resolved per invocation via
+/// <see cref="ITamActivator"/>) bound to one operation id — or to the WILDCARD
+/// (<see cref="OperationId"/> = "*"), which runs on EVERY operation and decides from its own
+/// config whether to act (docs/28 tutorial Step 16: the set of gated operations is tenant data,
+/// not compile-time). Visible in the manifest as GatedBy.</summary>
+public sealed record GateDefinition(string OperationId, string PluginId, Type HandlerType)
 {
     public const string Wildcard = "*";
 }
@@ -81,11 +127,9 @@ public sealed record EffectEvent(
     string EventType,
     System.Text.Json.JsonElement Payload);
 
-public delegate Task EffectSubscriber(EffectEvent effect, IServiceProvider services, CancellationToken ct);
-
-/// <summary>A plugin's reaction to a committed host effect (docs/22 P2): delivered from the
+/// <summary>A declared effect subscription (docs/22 P2): the handler TYPE, delivered from the
 /// outbox after the operation's transaction, never by patching host handlers.</summary>
-public sealed record SubscriberDefinition(string EventType, string PluginId, EffectSubscriber Handler);
+public sealed record SubscriberDefinition(string EventType, string PluginId, Type HandlerType);
 
 /// <summary>The stable idempotency key of one source row (e.g. the vendor's document number).
 /// Cheap and pure over the source — computed at receive time to dedupe.</summary>
@@ -170,18 +214,42 @@ public sealed record OutboundIntegrationDefinition(
 /// </summary>
 public sealed class PluginBuilder
 {
-    internal PluginBuilder(string id, TamModelBuilder model)
+    internal PluginBuilder(string id, System.Reflection.Assembly assembly, TamModelBuilder model)
     {
         Id = id;
+        Assembly = assembly;
         Model = model;
     }
 
     public string Id { get; }
 
+    /// <summary>The plugin's assembly — the source of embedded locale defaults.</summary>
+    public System.Reflection.Assembly Assembly { get; }
+
     /// <summary>Plugin-scoped model builder — use the assembly's generated AddDiscovered() here.</summary>
     public TamModelBuilder Model { get; }
 
-    /// <summary>Plugin locale defaults (embedded resources); application locale files override them.</summary>
+    /// <summary>
+    /// Loads embedded locale defaults by convention: every manifest resource in the plugin
+    /// assembly matching <c>*.locales.{culture}.json</c> (ship a <c>locales/</c> folder as
+    /// EmbeddedResource). Application locale files override them, like all defaults.
+    /// </summary>
+    public PluginBuilder LocaleDefaults()
+    {
+        foreach (var resource in Assembly.GetManifestResourceNames())
+        {
+            var parts = resource.Split('.');
+            // "{Root}.locales.{culture}.json" — culture is the second-to-last segment.
+            if (parts.Length < 4 || parts[^1] != "json" || parts[^3] != "locales") continue;
+            using var stream = Assembly.GetManifestResourceStream(resource);
+            if (stream is null) continue;
+            Model.LocaleDefaults(parts[^2], System.Text.Json.JsonSerializer
+                .Deserialize<Dictionary<string, string>>(stream) ?? []);
+        }
+        return this;
+    }
+
+    /// <summary>Plugin locale defaults (programmatic form); application locale files override them.</summary>
     public PluginBuilder LocaleDefaults(string culture, IReadOnlyDictionary<string, string> entries)
     {
         Model.LocaleDefaults(culture, entries);
@@ -204,18 +272,29 @@ public sealed class PluginBuilder
     }
 
     /// <summary>Declares a precondition on a host operation (by operation id — the wire
-    /// contract). Runs only for tenants with this plugin active; listed in the manifest.</summary>
-    public PluginBuilder Gate(string operationId, OperationGate gate)
+    /// contract). <typeparamref name="TGate"/> is constructed per invocation with ctor injection.
+    /// Runs only for tenants with this plugin active; listed in the manifest.</summary>
+    public PluginBuilder Gate<TGate>(string operationId) where TGate : class, IOperationGate
     {
-        Model.Gate(operationId, gate);
+        Model.Gate(operationId, typeof(TGate));
         return this;
     }
 
-    /// <summary>Subscribes to committed event effects (the outbox). Runs post-commit, per
-    /// tenant-with-plugin-active, in its own service scope.</summary>
-    public PluginBuilder OnEffect(string eventType, EffectSubscriber handler)
+    /// <summary>Declares a WILDCARD gate (docs/28 approvals seam 1): runs on EVERY operation,
+    /// after any operation-specific gates, and decides from its own data whether to act — the
+    /// gated set is tenant config, not compile time.</summary>
+    public PluginBuilder GateAll<TGate>() where TGate : class, IOperationGate
     {
-        Model.OnEffect(eventType, handler);
+        Model.Gate(GateDefinition.Wildcard, typeof(TGate));
+        return this;
+    }
+
+    /// <summary>Subscribes to committed event effects (the outbox). The handler is constructed
+    /// per delivery with ctor injection, post-commit, in a scope pinned to the record's
+    /// tenant; runs only for tenants with this plugin active.</summary>
+    public PluginBuilder OnEffect<THandler>(string eventType) where THandler : class, IEffectHandler
+    {
+        Model.OnEffect(eventType, typeof(THandler));
         return this;
     }
 

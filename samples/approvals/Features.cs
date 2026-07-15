@@ -57,20 +57,19 @@ public static class AssignMember
     public sealed record Output(Guid GroupId, string ActorId);
 
     public static async Task<Result<Output>> Execute(
-        Input input, OperationContext context, ITamDb tam, CancellationToken ct)
+        Input input, OperationContext context, ITamDb tam,
+        Tam.AspNetCore.ITamDirectory directory, CancellationToken ct)
     {
         if (!await tam.Db.Set<ApprovalGroup>().AnyAsync(g => g.Id == input.GroupId, ct))
             return ApprovalsFindings.UnknownGroup.At(nameof(Input.GroupId));
 
-        // Accounts are platform-global; the tenant boundary is the MEMBERSHIP (docs/26) —
-        // only someone who can already act in this tenant can approve for it.
-        var account = await tam.Db.Set<AccountEntity>()
-            .FirstOrDefaultAsync(a => a.Email == input.Email && a.Active, ct);
-        if (account is null || !await tam.Db.Set<TenantMembershipEntity>()
-                .AnyAsync(m => m.AccountId == account.Id && m.Active, ct))
+        // The directory seam resolves only accounts that can already ACT in this tenant
+        // (docs/26: the tenant boundary is the membership) — the plugin never touches
+        // identity tables directly.
+        var actorId = await directory.ActorIdByEmailAsync(input.Email, ct);
+        if (actorId is null)
             return ApprovalsFindings.UnknownMember.At(nameof(Input.Email));
 
-        var actorId = account.Id.ToString();
         if (!await tam.Db.Set<ApprovalGroupMember>()
                 .AnyAsync(m => m.GroupId == input.GroupId && m.ActorId == actorId, ct))
             tam.Db.Add(new ApprovalGroupMember

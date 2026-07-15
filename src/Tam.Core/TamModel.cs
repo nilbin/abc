@@ -148,7 +148,7 @@ public sealed class TamModelBuilder
         currentPlugin = attribute.Id;
         try
         {
-            new TPlugin().Configure(new PluginBuilder(attribute.Id, this));
+            new TPlugin().Configure(new PluginBuilder(attribute.Id, typeof(TPlugin).Assembly, this));
         }
         finally
         {
@@ -183,18 +183,18 @@ public sealed class TamModelBuilder
         packagedFields.Add((entityKey, key, type, required, maxLength, options, currentPlugin));
     }
 
-    internal void Gate(string operationId, OperationGate gate)
+    internal void Gate(string operationId, Type handlerType)
     {
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: gates can only be declared by a plugin.");
-        gates.Add(new GateDefinition(operationId, currentPlugin, gate));
+        gates.Add(new GateDefinition(operationId, currentPlugin, handlerType));
     }
 
-    internal void OnEffect(string eventType, EffectSubscriber handler)
+    internal void OnEffect(string eventType, Type handlerType)
     {
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: effect subscribers can only be declared by a plugin.");
-        subscribers.Add(new SubscriberDefinition(eventType, currentPlugin, handler));
+        subscribers.Add(new SubscriberDefinition(eventType, currentPlugin, handlerType));
     }
 
     internal void Integration(

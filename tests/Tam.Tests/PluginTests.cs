@@ -101,8 +101,14 @@ public class PluginTests
                 ["ext.pkg.priority"] = "Priority",
             });
             plugin.ExtensionField("thing", "priority", "integer");
-            plugin.Gate("host.things.close", (_, _) => Task.FromResult(Result.Success()));
+            plugin.Gate<NoopGate>("host.things.close");
         }
+    }
+
+    private sealed class NoopGate : IOperationGate
+    {
+        public Task<Result> CheckAsync(GateContext gate, CancellationToken ct) =>
+            Task.FromResult(Result.Success());
     }
 
     private sealed class Thing : IExtensible

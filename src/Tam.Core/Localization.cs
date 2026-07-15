@@ -50,6 +50,18 @@ public sealed class LocaleCatalogs(string defaultCulture)
         return Format(template, args, culture);
     }
 
+    /// <summary>
+    /// General-purpose lookup + format for code that COMPOSES text (emails, exports): the key
+    /// resolves through the culture chain, {placeholders} fill from <paramref name="args"/>, and
+    /// a missing key falls back to the key itself. The one replacement for every hand-rolled
+    /// "Lookup ?? key then Format" helper.
+    /// </summary>
+    public string Localize(string key, string culture, IReadOnlyDictionary<string, object?>? args = null) =>
+        Format(Lookup(key, culture) ?? key, args ?? Empty, culture);
+
+    private static readonly IReadOnlyDictionary<string, object?> Empty =
+        new Dictionary<string, object?>();
+
     public Finding Resolve(Finding finding, string culture) =>
         finding.Message is not null ? finding : finding with
         {

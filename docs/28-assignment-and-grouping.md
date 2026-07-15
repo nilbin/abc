@@ -100,8 +100,9 @@ stress test of the plugin architecture. The three genuine gaps that scenario exp
 framework seams, each proven through the real pipeline in the test suite: **config-driven gate
 targets** (`GateDefinition.Wildcard` — the gate runs on every operation, receives
 `gate.OperationId`, and decides from its own rules), **parking a blocked envelope across the
-rollback** (`gate.Park(work)` — the domain transaction rolls back first, then the parked work
-commits in a fresh scope pinned to the same tenant; discarded if the gate allows), and
+rollback** (`gate.Park<TWork, TState>(state)` — the domain transaction rolls back first, then
+the parked-work class is CONSTRUCTED in a fresh tenant-pinned scope, so its injected services
+cannot be the rolled-back ones; discarded if the gate allows), and
 **sanctioned envelope replay** (`EnvelopeReplay` — full-pipeline re-execution as the original
 initiator with grants re-resolved as of now, `InvocationSource.Workflow` as the sanction, the
 envelope id as both audit correlation and initiator-scoped idempotency key — dual attribution

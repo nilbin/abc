@@ -160,11 +160,13 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   the effective overlay through a plugin-aware registry wrapper — key-prefixed, labels from
   the plugin's locale files (`ext.inspect.requiresInspection`), validating/persisting through
   the same Change channel and appearing in forms, grid columns, MCP schemas alongside tenant
-  fields with zero new downstream code. *Gates*: `plugin.Gate("orders.complete", …)` runs
-  declared preconditions after validation, before the handler — the gate reads wire input and
-  the plugin's own data, never host CLR types; manifest shows `gatedBy: ["inspect"]`; verified:
-  unpassed linked checklist → 422 localized finding, pass → completes. *Effect subscribers*:
-  `plugin.OnEffect("order-completed", …)` runs post-commit off the outbox in its own scope
+  fields with zero new downstream code. *Gates*: `plugin.Gate<ChecklistGate>("orders.complete")`
+  runs declared preconditions after validation, before the handler — the gate CLASS is
+  constructed per invocation with ctor injection (`ITamDb tam` as a parameter, no service
+  locators), reads wire input and the plugin's own data, never host CLR types; manifest shows
+  `gatedBy: ["inspect"]`; verified: unpassed linked checklist → 422 localized finding, pass →
+  completes. *Effect subscribers*: `plugin.OnEffect<OpenFollowUpChecklist>("order-completed")`
+  runs post-commit off the outbox in a tenant-pinned scope
   (isolated failures, at-most-once), verified: completion auto-opens a follow-up checklist;
   none of the three fire for tenants with the plugin inactive. PLG002/PLG004/PLG005 validate
   gate targets, packaged-field entities/types and plugin-only registration at model build.
@@ -289,13 +291,32 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (profiles → flat groups → nesting never in core); approval flows are plugin territory.
 - **The three approvals seams are BUILT** (docs/28 D-AG4, tutorial Step 16): a wildcard gate
   (`GateDefinition.Wildcard`) runs on every operation with `gate.OperationId` + the pipeline's
-  payload hash, so its target set is the plugin's own config; `gate.Park(work)` keeps a blocked
-  envelope — domain transaction rolls back first, parked work commits in a fresh scope pinned to
-  the tenant, and work parked by an ALLOWING gate is discarded; `EnvelopeReplay` re-executes a
+  payload hash, so its target set is the plugin's own config; `gate.Park<TWork, TState>(state)`
+  keeps a blocked envelope — domain transaction rolls back first, then the parked-work class is
+  CONSTRUCTED in a fresh tenant-pinned scope (its injected `ITamDb` cannot be the rolled-back
+  one, structurally), and work parked by an ALLOWING gate is discarded; `EnvelopeReplay` re-executes a
   parked envelope through the full pipeline as the original initiator (grants re-resolved as of
   now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
   audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
   redelivery. Six pipeline-level tests prove all of it on SQLite.
+- **Plugin authoring surface v2 — ctor-DI classes, no service locators**: gates, effect
+  handlers and parked work are CLASSES constructed per invocation by `ITamActivator` (cached
+  `ActivatorUtilities` factories) — `plugin.Gate<ChecklistGate>("orders.complete")`,
+  `plugin.GateAll<ApprovalsGate>()`, `plugin.OnEffect<NotifyApprovers>("approvals.requested")`,
+  `gate.Park<ParkEnvelope, ApprovalRequest>(envelope)`. Dependencies are ctor parameters exactly
+  like operation-handler parameters; every `((ITamDb)services.GetService(typeof(ITamDb))!).Db`
+  cast in the samples is gone, and `GateContext` no longer carries an `IServiceProvider` at all.
+  The disposed-scope footgun died structurally: parked work is constructed IN the fresh
+  post-rollback scope, so it cannot capture the rolled-back gate scope. Rounded out with the
+  review absorptions: `LocaleCatalogs.Localize` (kills the duplicated lookup+format helper in
+  UserModule and plugins), `db.Publish(eventType, payload)` (framework-owned outbox row
+  conventions, reused by the executor itself), convention-based `plugin.LocaleDefaults()`
+  (embedded locales/*.json — the 8-line resource loop deleted from all plugins),
+  `EnvelopeReplay.Envelope` record (no adjacent-string transposition; initiator is the actor-id
+  string), and `ITamDirectory` (the sanctioned people seam: actor↔email over identity tables —
+  approvals no longer queries `AccountEntity` internals). Wire-verified: approvals 23/23 and a
+  new inspect matrix 7/7 (class gate blocks/unblocks, class handler opens the follow-up
+  checklist), paired-atom 13/13, tenants 11/11, reserved-twin, invite.
 - **The approvals package exists** (`samples/approvals`, tutorial Step 16 BUILT): nested
   `ApprovalGroup`s (subgroup members approve for ancestors — plugin semantics, framework-blind),
   `ApprovalRule` rows over host wire ids with optional thresholds (`orders.create` ≥ 100 000),

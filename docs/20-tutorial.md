@@ -705,20 +705,33 @@ public sealed class InspectionPlugin : ITamPlugin
         plugin.ExtensionField("order", "requiresInspection", "boolean");
 
         // A declared precondition on the HOST's operation — visible in the manifest as
-        // orders.complete.gatedBy: ["inspect"] and in the impact report. The gate reads the
-        // wire input and the plugin's OWN data (via the ITamDb seam), never host CLR types.
-        plugin.Gate("orders.complete", async (gate, ct) =>
+        // orders.complete.gatedBy: ["inspect"] and in the impact report.
+        plugin.Gate<ChecklistGate>("orders.complete");
+
+        // A reaction to a committed HOST effect — post-commit, off the outbox, in a scope
+        // pinned to the record's tenant. Completing an order opens its follow-up checklist.
+        plugin.OnEffect<OpenFollowUpChecklist>("order-completed");
+    }
+
+    // Handlers are classes constructed per invocation with CONSTRUCTOR injection — the ctor
+    // signature is the dependency declaration, exactly like an operation handler's parameters.
+    // The gate reads the wire input and the plugin's OWN data, never host CLR types; the
+    // ambient tenant filter scopes the query, so no hand-written TenantId predicate.
+    private sealed class ChecklistGate(ITamDb tam) : IOperationGate
+    {
+        public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
         {
             var orderId = gate.Input.GetProperty("orderId").GetGuid();
-            var db = ((ITamDb)gate.Services.GetService(typeof(ITamDb))!).Db;
-            var blocked = await db.Set<Checklist>().AnyAsync(
-                x => x.TenantId == gate.Context.TenantId.Value && x.OrderId == orderId && !x.Passed, ct);
+            var blocked = await tam.Db.Set<Checklist>().AnyAsync(
+                x => x.OrderId == orderId && !x.Passed, ct);
             return blocked ? InspectFindings.ChecklistIncomplete : Result.Success();
-        });
+        }
+    }
 
-        // A reaction to a committed HOST effect — post-commit, off the outbox, in the
-        // plugin's own scope. Completing an order opens its follow-up checklist.
-        plugin.OnEffect("order-completed", async (effect, services, ct) => { /* create checklist */ });
+    private sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
+    {
+        public Task HandleAsync(EffectEvent effect, CancellationToken ct)
+            => Task.CompletedTask; /* create the follow-up checklist, idempotently */
     }
 }
 ```
@@ -784,9 +797,10 @@ later runs it for real. Walking through one order, exactly as the wire verificat
 1. Didrik submits `orders.create` for 180 000 kr. The approvals gate (running inside the
    pipeline, before the handler's effects commit) consults its `ApprovalRule` table: this
    operation + this threshold ⇒ sign-off required. The gate **parks the envelope** — operation
-   id, wire body, payload hash, actor, culture — as an `ApprovalRequest` via `gate.Park` (the
-   domain transaction rolls back; the envelope commits; an identical resubmit re-blocks but
-   dedupes on the hash), and blocks with `approvals.pending` (a localized finding the form
+   id, wire body, payload hash, actor, culture — as an `ApprovalRequest` via
+   `gate.Park<ParkEnvelope, ApprovalRequest>(…)` (the domain transaction rolls back; the
+   envelope commits from a fresh scope; an identical resubmit re-blocks but dedupes on the
+   hash), and blocks with `approvals.pending` (a localized finding the form
    renders as "submitted for approval", not as an error).
 2. The rule's group resolves — members of the group plus every nested subgroup —
    `OnEffect` mails the approvers, and the pending request sits in the plugin's grid.
@@ -806,17 +820,19 @@ gated and the impact report shows it, exactly like Step 13.
 test of the plugin architecture so far. The three gaps it exposed are now framework seams, each
 proven end to end through the real pipeline in the test suite:
 
-1. **Config-driven gate targets — built.** A gate registered as `plugin.Gate(GateDefinition.Wildcard, …)`
+1. **Config-driven gate targets — built.** A gate registered as `plugin.GateAll<MyGate>()`
    runs on EVERY operation (after the operation-specific gates) and receives `gate.OperationId`,
    so which operations it actually blocks is a lookup in the plugin's own `ApprovalRule` rows —
    tenant data, not compile time. Every other gate contract is unchanged: wire input only,
    activation-gated, inside the transaction.
-2. **Parking survives the rollback — built.** A blocking gate calls `gate.Park(work)`; the
-   pipeline rolls the domain transaction back FIRST, then runs the parked work in a fresh
-   service scope pinned to the same tenant — its own DbContext, its own commit (the same
-   isolation the outbox dispatcher practices). Work parked by a gate that ends up *allowing*
-   the operation is discarded, so nothing leaks from attempts that went through. The
-   `gate.PayloadHash` (the pipeline's idempotency hash) is the natural envelope key.
+2. **Parking survives the rollback — built.** A blocking gate calls
+   `gate.Park<MyParkedWork, TState>(state)`; the pipeline rolls the domain transaction back
+   FIRST, then CONSTRUCTS the parked-work class in a fresh service scope pinned to the same
+   tenant — so its injected `ITamDb` is a fresh context *by construction*, and the rolled-back
+   gate scope is structurally unreachable (state crosses only as the explicit value). Work
+   parked by a gate that ends up *allowing* the operation is discarded, so nothing leaks from
+   attempts that went through. The `gate.PayloadHash` (the pipeline's idempotency hash) is the
+   natural envelope key.
 3. **Sanctioned envelope replay — built.** `EnvelopeReplay.ReplayAsync` re-executes a stored
    envelope through the FULL pipeline — authorization, validation, rules, gates, audit — as the
    ORIGINAL initiator, whose grants are re-resolved *as of now* (a revoked role or deactivated

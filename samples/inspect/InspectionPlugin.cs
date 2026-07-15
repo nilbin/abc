@@ -21,14 +21,8 @@ public sealed class InspectionPlugin : ITamPlugin
         // assembly, so host and plugins never collide.
         plugin.Model.AddDiscovered();
 
-        foreach (var culture in new[] { "sv", "en" })
-        {
-            using var stream = typeof(InspectionPlugin).Assembly
-                .GetManifestResourceStream($"Inspect.locales.{culture}.json");
-            if (stream is null) continue;
-            plugin.LocaleDefaults(
-                culture, JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? []);
-        }
+        // Embedded locales/*.json by convention; application locale files override.
+        plugin.LocaleDefaults();
 
         plugin.Model.Form<CreateChecklist.Input>(
             "inspect.web.create", "inspect.checklists.create", form =>
@@ -51,24 +45,34 @@ public sealed class InspectionPlugin : ITamPlugin
         plugin.ExtensionField("order", "requiresInspection", "boolean");
 
         // P2 — a gate on the HOST's operation: an order with an unpassed linked checklist
-        // cannot complete. The gate reads the wire input and the plugin's OWN data — never
-        // host CLR types. Visible in the manifest as orders.complete.gatedBy: ["inspect"].
-        plugin.Gate("orders.complete", async (gate, ct) =>
+        // cannot complete. The gate class is constructed per invocation with ctor injection;
+        // it reads the wire input and the plugin's OWN data — never host CLR types. Visible
+        // in the manifest as orders.complete.gatedBy: ["inspect"].
+        plugin.Gate<ChecklistGate>("orders.complete");
+
+        // P2 — an effect subscriber: when the host commits an order completion, open a
+        // follow-up checklist. Post-commit via the outbox, in the plugin's own tenant-pinned
+        // scope — never by patching the host handler.
+        plugin.OnEffect<OpenFollowUpChecklist>("order-completed");
+    }
+
+    private sealed class ChecklistGate(ITamDb tam) : IOperationGate
+    {
+        public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
         {
             if (!gate.Input.TryGetProperty("orderId", out var idElement)
                 || !idElement.TryGetGuid(out var orderId))
                 return Result.Success();
 
-            var db = ((ITamDb)gate.Services.GetService(typeof(ITamDb))!).Db;
-            var blocked = await db.Set<Checklist>().AnyAsync(
-                x => x.TenantId == gate.Context.TenantId.Value && x.OrderId == orderId && !x.Passed, ct);
+            var blocked = await tam.Db.Set<Checklist>().AnyAsync(
+                x => x.OrderId == orderId && !x.Passed, ct);
             return blocked ? InspectFindings.ChecklistIncomplete : Result.Success();
-        });
+        }
+    }
 
-        // P2 — an effect subscriber: when the host commits an order completion, open a
-        // follow-up checklist. Post-commit via the outbox, in the plugin's own operation
-        // scope — never by patching the host handler.
-        plugin.OnEffect("order-completed", async (effect, services, ct) =>
+    private sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
+    {
+        public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
         {
             if (!effect.Payload.TryGetProperty("number", out var numberElement)
                 || numberElement.GetString() is not { Length: > 0 } number)
@@ -76,14 +80,14 @@ public sealed class InspectionPlugin : ITamPlugin
             var orderId = effect.Payload.TryGetProperty("orderId", out var idElement)
                 && idElement.TryGetGuid(out var id) ? id : (Guid?)null;
 
-            var db = ((ITamDb)services.GetService(typeof(ITamDb))!).Db;
-            // Outbox delivery is at-least-once — the subscriber must be idempotent.
-            var exists = orderId is { } linked && await db.Set<Checklist>().AnyAsync(
-                x => x.TenantId == effect.TenantId && x.OrderId == linked && x.Title == number, ct);
+            // Outbox delivery is at-least-once — the handler must be idempotent. The delivery
+            // scope is pinned to the record's tenant, so the ambient filter applies here too.
+            var exists = orderId is { } linked && await tam.Db.Set<Checklist>().AnyAsync(
+                x => x.OrderId == linked && x.Title == number, ct);
             if (exists) return;
-            db.Add(Checklist.Create(effect.TenantId, number, orderId));
-            await db.SaveChangesAsync(ct);
-        });
+            tam.Db.Add(Checklist.Create(effect.TenantId, number, orderId));
+            await tam.Db.SaveChangesAsync(ct);
+        }
     }
 
     /// <summary>Host opt-in for the plugin's storage: one line in the host's OnModelCreating.

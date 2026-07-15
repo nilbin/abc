@@ -105,12 +105,15 @@ public sealed class OutboxDispatcher(
             string.IsNullOrEmpty(record.PayloadJson) ? "{}" : record.PayloadJson);
         var effect = new EffectEvent(record.TenantId, record.OperationId, record.EventType, payload.RootElement);
 
+        var activator = services.GetService(typeof(ITamActivator)) as ITamActivator
+            ?? new TamActivator(services);
         foreach (var subscriber in model.Subscribers
             .Where(s => s.EventType == record.EventType && active.Contains(s.PluginId)))
         {
             try
             {
-                await subscriber.Handler(effect, services, ct);
+                // Constructed per delivery with ctor injection, in the record-pinned scope.
+                await ((IEffectHandler)activator.Create(subscriber.HandlerType)).HandleAsync(effect, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {

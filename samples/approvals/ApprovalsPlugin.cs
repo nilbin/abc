@@ -12,8 +12,9 @@ namespace Approvals;
 /// nested approver groups, tenant-configured rules over host operation ids, parked envelopes,
 /// sanctioned replay. The point is what it does NOT require: no change to any domain operation,
 /// no approval engine in the framework. It is built ENTIRELY on the three seams: the wildcard
-/// gate (targets are ApprovalRule rows, not compile time), gate.Park (the envelope survives the
+/// gate (targets are ApprovalRule rows, not compile time), Park (the envelope survives the
 /// rollback), and EnvelopeReplay (the release runs as the original initiator, dual-attributed).
+/// Every handler is a class constructed with ctor injection — no service locators.
 /// </summary>
 [TamPlugin("approvals")]
 public sealed class ApprovalsPlugin : ITamPlugin
@@ -21,15 +22,7 @@ public sealed class ApprovalsPlugin : ITamPlugin
     public void Configure(PluginBuilder plugin)
     {
         plugin.Model.AddDiscovered();
-
-        foreach (var culture in new[] { "sv", "en" })
-        {
-            using var stream = typeof(ApprovalsPlugin).Assembly
-                .GetManifestResourceStream($"Approvals.locales.{culture}.json");
-            if (stream is null) continue;
-            plugin.LocaleDefaults(
-                culture, JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? []);
-        }
+        plugin.LocaleDefaults();   // embedded locales/*.json by convention
 
         plugin.Model.Form<DefineGroup.Input>(
             "approvals.web.groups.define", "approvals.groups.define", form =>
@@ -65,8 +58,20 @@ public sealed class ApprovalsPlugin : ITamPlugin
             grid.RowAction("approvals.reject");
         });
 
-        // ---- Seam 1: ONE wildcard gate. Which operations it blocks is ApprovalRule data. ----
-        plugin.Gate(GateDefinition.Wildcard, async (gate, ct) =>
+        // Seam 1: ONE wildcard gate — which operations it blocks is ApprovalRule data.
+        plugin.GateAll<ApprovalsGate>();
+        // Post-commit, via the outbox, in tenant-pinned scopes:
+        plugin.OnEffect<NotifyApprovers>("approvals.requested");
+        plugin.OnEffect<ReleaseApproved>("approvals.approved");
+    }
+
+    /// <summary>
+    /// Seam 1 + 2. Consults the tenant's rules for the operation at hand; a match parks the
+    /// envelope (kept across the rollback) and blocks with approvals.pending.
+    /// </summary>
+    private sealed class ApprovalsGate(ITamDb tam) : IOperationGate
+    {
+        public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
         {
             // The sanction (seam 3): a replay the plugin itself released passes. Workflow is
             // only ever set by compiled code — never by a wire caller — so this is not forgeable.
@@ -75,20 +80,19 @@ public sealed class ApprovalsPlugin : ITamPlugin
             if (gate.OperationId.StartsWith("approvals.", StringComparison.Ordinal))
                 return Result.Success();
 
-            var db = ((ITamDb)gate.Services.GetService(typeof(ITamDb))!).Db;
-            var tenant = gate.Context.TenantId.Value;
-            var rules = await db.Set<ApprovalRule>()
+            var rules = await tam.Db.Set<ApprovalRule>()
                 .Where(r => r.OperationId == gate.OperationId && !r.Retired)
                 .ToListAsync(ct);
             var rule = rules.FirstOrDefault(r => Applies(r, gate.Input));
             if (rule is null) return Result.Success();
 
-            // Seam 2: keep the envelope, lose the attempt. The parked work runs AFTER the
-            // domain transaction rolls back, in a fresh scope pinned to this tenant.
-            var envelope = new ApprovalRequest
+            // Seam 2: keep the envelope, lose the attempt. ParkEnvelope is constructed in the
+            // FRESH scope after the domain transaction rolled back — its ITamDb cannot be this
+            // gate's rolled-back one, by construction.
+            gate.Park<ParkEnvelope, ApprovalRequest>(new ApprovalRequest
             {
                 Id = Guid.NewGuid(),
-                TenantId = tenant,
+                TenantId = gate.Context.TenantId.Value,
                 RuleId = rule.Id,
                 OperationId = gate.OperationId,
                 BodyJson = gate.Input.GetRawText(),
@@ -96,99 +100,89 @@ public sealed class ApprovalsPlugin : ITamPlugin
                 InitiatorActorId = gate.Context.Actor.Id,
                 Culture = gate.Context.Culture,
                 CreatedAtIso = IsoTime.Now(),
-            };
-            gate.Park(async (services, c) =>
-            {
-                var fresh = ((ITamDb)services.GetService(typeof(ITamDb))!).Db;
-                // A retried submit re-blocks but never double-parks: the pipeline's payload
-                // hash is the envelope's natural dedupe key.
-                if (await fresh.Set<ApprovalRequest>().AnyAsync(
-                        r => r.PayloadHash == envelope.PayloadHash
-                             && r.Status == ApprovalRequest.Pending, c))
-                    return;
-                fresh.Add(envelope);
-                // The notification event rides the outbox from the SAME commit as the envelope:
-                // the approver is mailed if and only if there is a request to act on.
-                fresh.Add(new OutboxRecord
-                {
-                    Id = Guid.NewGuid(),
-                    TenantId = tenant,
-                    OperationId = gate.OperationId,
-                    EventType = "approvals.requested",
-                    PayloadJson = JsonSerializer.Serialize(new { requestId = envelope.Id }),
-                    CreatedAtIso = IsoTime.Now(),
-                });
-                await fresh.SaveChangesAsync(c);
             });
             return ApprovalsFindings.Pending.With(("operation", gate.OperationId));
-        });
+        }
 
-        // ---- Notify the approvers (post-commit, via the outbox + the email seam). ----
-        plugin.OnEffect("approvals.requested", async (effect, services, ct) =>
+        /// <summary>No threshold → the rule always applies; with one, the named wire field must
+        /// be a number at or above the limit (a missing or non-numeric field does not trigger).</summary>
+        private static bool Applies(ApprovalRule rule, JsonElement input) =>
+            rule.ThresholdField is not { Length: > 0 } field || rule.Threshold is not { } limit
+                || (input.ValueKind == JsonValueKind.Object
+                    && input.TryGetProperty(field, out var value)
+                    && value.ValueKind == JsonValueKind.Number
+                    && value.GetDecimal() >= limit);
+    }
+
+    /// <summary>Persists the parked envelope + its notification event in one commit.</summary>
+    private sealed class ParkEnvelope(ITamDb tam) : IParkedWork<ApprovalRequest>
+    {
+        public async Task RunAsync(ApprovalRequest envelope, CancellationToken ct)
         {
-            var db = ((ITamDb)services.GetService(typeof(ITamDb))!).Db;
+            // A retried submit re-blocks but never double-parks: the pipeline's payload hash
+            // is the envelope's natural dedupe key.
+            if (await tam.Db.Set<ApprovalRequest>().AnyAsync(
+                    r => r.PayloadHash == envelope.PayloadHash
+                         && r.Status == ApprovalRequest.Pending, ct))
+                return;
+            tam.Db.Add(envelope);
+            // The notification event rides the outbox from the SAME commit as the envelope:
+            // the approver is mailed if and only if there is a request to act on.
+            tam.Db.Publish("approvals.requested", new { requestId = envelope.Id }, envelope.OperationId);
+            await tam.Db.SaveChangesAsync(ct);
+        }
+    }
+
+    /// <summary>Mails the rule's effective approver set through the framework seams.</summary>
+    private sealed class NotifyApprovers(
+        ITamDb tam, TamModel model, ITamEmail email, ITamDirectory directory) : IEffectHandler
+    {
+        public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
+        {
             var requestId = effect.Payload.GetProperty("requestId").GetGuid();
-            var request = await db.Set<ApprovalRequest>()
+            var request = await tam.Db.Set<ApprovalRequest>()
                 .SingleOrDefaultAsync(r => r.Id == requestId, ct);
-            var rule = request is null ? null : await db.Set<ApprovalRule>()
+            var rule = request is null ? null : await tam.Db.Set<ApprovalRule>()
                 .SingleOrDefaultAsync(r => r.Id == request.RuleId, ct);
             if (request is null || rule is null) return;
 
-            var model = (TamModel)services.GetService(typeof(TamModel))!;
-            var email = (ITamEmail)services.GetService(typeof(ITamEmail))!;
-            string Localize(string key, IReadOnlyDictionary<string, object?> args) =>
-                LocaleCatalogs.Format(
-                    model.Locales.Lookup(key, request.Culture) ?? key, args, request.Culture);
-
-            var approvers = await ApprovalGroups.EffectiveApproversAsync(db, rule.GroupId, ct);
-            var ids = approvers.Select(Guid.Parse).ToList();
-            var addresses = await db.Set<AccountEntity>()
-                .Where(a => ids.Contains(a.Id) && a.Active)
-                .Select(a => a.Email).ToListAsync(ct);
+            var approvers = await ApprovalGroups.EffectiveApproversAsync(tam.Db, rule.GroupId, ct);
             var args = new Dictionary<string, object?> { ["operation"] = request.OperationId };
-            foreach (var address in addresses)
+            foreach (var address in await directory.EmailsAsync(approvers.ToList(), ct))
                 await email.SendAsync(address,
-                    Localize("approvals.email.requested-subject", args),
-                    Localize("approvals.email.requested-body", args), ct);
-        });
+                    model.Locales.Localize("approvals.email.requested-subject", request.Culture, args),
+                    model.Locales.Localize("approvals.email.requested-body", request.Culture, args), ct);
+        }
+    }
 
-        // ---- Seam 3: the release. Replay the envelope as its ORIGINAL initiator. ----
-        plugin.OnEffect("approvals.approved", async (effect, services, ct) =>
+    /// <summary>Seam 3: replay the approved envelope as its ORIGINAL initiator and record the
+    /// outcome. Redelivery-safe twice over: only an APPROVED request replays, and the replay is
+    /// idempotent by envelope id.</summary>
+    private sealed class ReleaseApproved(ITamDb tam, EnvelopeReplay replay) : IEffectHandler
+    {
+        public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
         {
-            var db = ((ITamDb)services.GetService(typeof(ITamDb))!).Db;
             var requestId = effect.Payload.GetProperty("requestId").GetGuid();
-            var request = await db.Set<ApprovalRequest>()
+            var request = await tam.Db.Set<ApprovalRequest>()
                 .SingleOrDefaultAsync(r => r.Id == requestId, ct);
-            // Only an approved request replays; executed/failed means a redelivered effect
-            // whose work is already done (delivery is at-least-once).
             if (request is null || request.Status != ApprovalRequest.Approved) return;
 
             using var body = JsonDocument.Parse(request.BodyJson);
-            var replay = (EnvelopeReplay)services.GetService(typeof(EnvelopeReplay))!;
             // Grants re-resolve as of NOW; Workflow marks the sanction; the request id is the
             // audit correlation AND the initiator-scoped idempotency key — so even if THIS
             // status write is lost and the effect redelivers, the operation runs once.
-            var response = await replay.ReplayAsync(
-                request.OperationId, body.RootElement, Guid.Parse(request.InitiatorActorId),
-                request.TenantId, request.Id.ToString("N"), request.Culture, ct);
+            var response = await replay.ReplayAsync(new EnvelopeReplay.Envelope(
+                request.OperationId, body.RootElement, request.InitiatorActorId,
+                request.TenantId, request.Id.ToString("N"), request.Culture), ct);
 
             var failed = response.Findings.Any(f => f.Severity == FindingSeverity.Error);
             request.Status = failed ? ApprovalRequest.Failed : ApprovalRequest.Executed;
             request.Outcome = failed
                 ? response.Findings.First(f => f.Severity == FindingSeverity.Error).Code
                 : response.AuditReference;
-            await db.SaveChangesAsync(ct);
-        });
+            await tam.Db.SaveChangesAsync(ct);
+        }
     }
-
-    /// <summary>No threshold → the rule always applies; with one, the named wire field must be
-    /// a number at or above the limit (a missing or non-numeric field does not trigger).</summary>
-    private static bool Applies(ApprovalRule rule, JsonElement input) =>
-        rule.ThresholdField is not { Length: > 0 } field || rule.Threshold is not { } limit
-            || (input.ValueKind == JsonValueKind.Object
-                && input.TryGetProperty(field, out var value)
-                && value.ValueKind == JsonValueKind.Number
-                && value.GetDecimal() >= limit);
 
     /// <summary>Host opt-in for the plugin's storage, like inspect's: one line in OnModelCreating.</summary>
     public static ModelBuilder AddApprovals(ModelBuilder modelBuilder)
