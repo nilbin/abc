@@ -183,6 +183,24 @@ var model = new TamModelBuilder()
         grid.ToolbarAction("tenants.rename");
     })
 
+    .Form<InviteUser.Input>("web.users.invite", "users.invite", form =>
+    {
+        form.Field(x => x.Email);
+        form.Field(x => x.DisplayName);
+        form.Field(x => x.Roles).Renderer("string-list");
+        form.Field(x => x.Policies).Renderer("string-list");
+    })
+
+    .Grid<UserList.Result>("web.users", "users.list", grid =>
+    {
+        grid.Column(x => x.UserName);
+        grid.Column(x => x.DisplayName);
+        grid.Column(x => x.Roles);
+        grid.Column(x => x.Active);
+        grid.ToolbarAction("users.invite");
+        grid.RowAction("users.deactivate");
+    })
+
     .Form<DefinePolicy.Input>("web.policies.define", "policies.define", form =>
     {
         form.Field(x => x.Name);

@@ -81,9 +81,39 @@ function ScopeMap(p: FieldRendererProps) {
   );
 }
 
+function StringList(p: FieldRendererProps) {
+  // Simple repeated-value editor (role names, policy names): rows + add. The server validates
+  // every name against its registry, so this renderer only shapes the array.
+  const value = (p.value ?? []) as string[];
+  const [draft, setDraft] = useState('');
+  const draftKey = draft.trim();
+  const remove = (i: number) => {
+    const next = value.filter((_, j) => j !== i);
+    p.onChange(next.length ? next : null);
+  };
+  return (
+    <Stack gap={4}>
+      <Text size="sm" fw={500}>{p.label}{p.required ? ' *' : ''}</Text>
+      {value.map((item, i) => (
+        <Group key={`${item}-${i}`} gap="xs">
+          <TextInput value={item} readOnly style={{ flex: 1 }} />
+          <Button size="compact-xs" variant="subtle" color="red" onClick={() => remove(i)}>✕</Button>
+        </Group>
+      ))}
+      <Group gap="xs">
+        <TextInput value={draft} style={{ flex: 1 }} error={p.error}
+          onChange={e => setDraft(e.currentTarget.value)} />
+        <Button size="compact-sm" variant="light" disabled={!draftKey || value.includes(draftKey)}
+          onClick={() => { p.onChange([...value, draftKey]); setDraft(''); }}>+</Button>
+      </Group>
+    </Stack>
+  );
+}
+
 registerRenderer('customer-picker', CustomerPicker);
 registerRenderer('culture-text', CultureText);
 registerRenderer('scope-map', ScopeMap);
+registerRenderer('string-list', StringList);
 
 // ---- Pages: each is a grid + modals, everything else comes from the manifest ----
 
@@ -174,6 +204,10 @@ function PoliciesPage() {
   return <ViewGrid grid="web.policies" />;
 }
 
+function UsersPage() {
+  return <ViewGrid grid="web.users" />;
+}
+
 /** Generic page for an ACTIVE plugin: renders every grid the plugin contributed.
  *  Nothing here knows what "inspect" is — the manifest is the only source. */
 function PluginPage(props: { plugin: string }) {
@@ -213,6 +247,7 @@ function Shell(props: {
     rules: <RulesPage />,
     tenants: <TenantsPage />,
     policies: <PoliciesPage />,
+    users: <UsersPage />,
     ...Object.fromEntries(activePlugins.map(id =>
       [`plugin:${id}`, <PluginPage key={id} plugin={id} />])),
   }) as Record<string, ReactNode>, [activePlugins.join(',')]);
@@ -285,6 +320,9 @@ function Shell(props: {
         )}
         {can('roles.manage') && (
           <NavLink label={t('nav.policies')} active={page === 'policies'} onClick={() => setPage('policies')} />
+        )}
+        {can('users.manage') && (
+          <NavLink label={t('nav.users')} active={page === 'users'} onClick={() => setPage('users')} />
         )}
         {can('audit.read') && (
           <NavLink label={t('nav.audit')} active={page === 'audit'} onClick={() => setPage('audit')} />

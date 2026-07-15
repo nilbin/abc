@@ -53,5 +53,6 @@
   "labels.company": "Bolag",
   "nav.overview": "Koncernöversikt",
   "nav.tenants": "Bolag",
-  "nav.policies": "Åtkomstpolicyer"
+  "nav.policies": "Åtkomstpolicyer",
+  "nav.users": "Användare"
 }

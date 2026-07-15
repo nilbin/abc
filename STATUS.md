@@ -254,6 +254,10 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   Access-policies page (web.policies grid; the define form authors the resource→scope map with an
   app-owned "scope-map" renderer — rows of resource + all|own toggle). Verified headless: both pages
   render, the create form submits and the grid live-refreshes with `demo.syd`.
+- **Users admin page**: web.users grid (username, display name, roles, active; deactivate as a
+  row action) with the invite form on the toolbar — roles/policies authored through an app-owned
+  "string-list" renderer. Verified headless: an invite submitted through the UI lands and the
+  grid live-refreshes with the new member.
 - **Invite flow (docs/26)**: `users.invite` creates account + membership up front (same
   role/policy validation and seat gate + lease as users.define, via shared MembershipRules) and
   mails a one-shot invite link through the new `ITamEmail` seam (default: `LogTamEmail`, the dev
