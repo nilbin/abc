@@ -27,7 +27,6 @@ public static class SystemModule
             .AddOperationType(typeof(DefineExtensionField))
             .AddOperationType(typeof(RetireExtensionField))
             .AddOperationType(typeof(DefineRole))
-            .AddOperationType(typeof(DefinePolicy))
             .AddOperationType(typeof(ActivatePlugin))
             .AddOperationType(typeof(DeactivatePlugin))
             .AddOperationType(typeof(InstallPackage))
@@ -54,7 +53,6 @@ public static class SystemModule
             .AddViewType(typeof(DeadLetterList))
             .AddViewType(typeof(ExtensionFieldList))
             .AddViewType(typeof(RoleList))
-            .AddViewType(typeof(PolicyList))
             .AddViewType(typeof(TenantList))
             .AddViewType(typeof(AuditLog))
             .AddViewType(typeof(PluginList))
@@ -195,10 +193,6 @@ public static class RoleFindings
 /// </summary>
 public static class RoleRules
 {
-    /// <summary>A grant may carry a ":own" record-scope suffix; the catalogue holds the base name.</summary>
-    public static string TrimScope(string permission) =>
-        permission.EndsWith(":own", StringComparison.Ordinal) ? permission[..^4] : permission;
-
     public static IReadOnlyList<Finding> Validate(
         string name, IReadOnlyList<string> permissions, TamModel model, string field,
         IReadOnlyDictionary<string, string>? levels = null)
@@ -206,14 +200,17 @@ public static class RoleRules
         var findings = new List<Finding>();
         if (!System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-z][a-z0-9-]*$"))
             findings.Add(RoleFindings.InvalidName.At(field));
+        // Atoms only (docs/28 D-AG1/D-AG2): there are no scope suffixes — own-scoping is the
+        // paired-atom pattern ("orders.read" own-scoped, "orders.read-all" widening), so every
+        // grant must literally exist in the compiled catalogue.
         findings.AddRange(permissions
-            .Where(p => p != "*" && !model.Permissions.Contains(TrimScope(p)))
+            .Where(p => p != "*" && !model.Permissions.Contains(p))
             .Select(p => RoleFindings.UnknownPermission.With(("permission", p)).At(field)));
         // Reserved permissions (subscriptions.manage) are never grantable through a tenant role,
         // whether authored directly or shipped in a package — closes the wildcard-admin bypass.
         // (Access levels can't smuggle them either: AccessLevels.Expand never yields a reserved atom.)
         findings.AddRange(permissions
-            .Where(p => Actor.Reserved.Contains(TrimScope(p)))
+            .Where(p => Actor.Reserved.Contains(p))
             .Select(p => RoleFindings.ReservedPermission.With(("permission", p)).At(field)));
         // Access levels (docs/27 D-A1): the resource must exist in the compiled catalogue and the
         // level must be one of the ordered presets — same registry-as-compiler rule as the atoms.
@@ -226,82 +223,6 @@ public static class RoleRules
         }
         return findings;
     }
-}
-
-public static class PolicyFindings
-{
-    public static readonly FindingFactory UnknownResource = Finding.Error("policies.unknown-resource");
-    public static readonly FindingFactory UnknownScope = Finding.Error("policies.unknown-scope");
-    public static readonly FindingFactory InvalidName = Finding.Error("policies.invalid-name");
-}
-
-/// <summary>
-/// Access policies (docs/27 Axis 2): a named resource → scope map ("orders" → "own"), the DATA-SCOPE
-/// menu memberships pick from independently of roles. v1 scope kinds: all | own — `where`/`shared`
-/// stay design-deferred (attribute predicates need the actor-attributes design; D-A2 note).
-/// </summary>
-[Operation("policies.define")]
-[Authorize("roles.manage")]
-public static class DefinePolicy
-{
-    public sealed record Input(
-        string Name,
-        [property: LabelKey("labels.scopes")] Dictionary<string, string> Scopes);
-
-    public sealed record Output(Guid PolicyId);
-
-    private static readonly HashSet<string> Known = ["all", "own"];
-
-    public static async Task<Result<Output>> Execute(
-        Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
-    {
-        // Scope values are stored CANONICAL (lower-case): the actor-side narrowing compares ordinal,
-        // so accepting "Own" verbatim would validate here and then silently fail OPEN at enforcement.
-        var scopes = input.Scopes.ToDictionary(s => s.Key, s => s.Value.ToLowerInvariant());
-        var findings = new List<Finding>();
-        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
-            findings.Add(PolicyFindings.InvalidName.At(nameof(Input.Name)));
-        foreach (var (resource, scope) in scopes)
-        {
-            if (!AccessLevels.Catalog(model).ContainsKey(resource))
-                findings.Add(PolicyFindings.UnknownResource.With(("resource", resource)).At(nameof(Input.Scopes)));
-            if (!Known.Contains(scope))
-                findings.Add(PolicyFindings.UnknownScope.With(("scope", scope)).At(nameof(Input.Scopes)));
-        }
-        if (findings.Count > 0) return new Result<Output> { Findings = findings };
-
-        var policy = await tam.Db.Set<AccessPolicyEntity>().SingleOrDefaultAsync(
-            x => x.Name == input.Name, ct);
-        if (policy is null)
-        {
-            policy = new AccessPolicyEntity { Id = Guid.NewGuid(), Name = input.Name };
-            tam.Db.Add(policy);
-        }
-        policy.ScopesJson = JsonSerializer.Serialize(scopes);
-        return new Output(policy.Id);
-    }
-}
-
-[View("policies.list")]
-[Authorize("roles.manage")]
-public static class PolicyList
-{
-    public sealed record Query();
-
-    public sealed record Result
-    {
-        public Guid Id { get; init; }
-        public string Name { get; init; } = "";
-        [LabelKey("labels.scopes")]
-        public string Scopes { get; init; } = "";
-    }
-
-    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
-        tam.Db.Set<AccessPolicyEntity>()
-            .Select(x => new Result { Id = x.Id, Name = x.Name, Scopes = x.ScopesJson });
-
-    public static void Capabilities(ViewCapabilitiesBuilder caps) =>
-        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
 }
 
 /// <summary>

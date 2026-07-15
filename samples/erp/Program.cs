@@ -203,7 +203,6 @@ var model = new TamModelBuilder()
         form.Field(x => x.Email);
         form.Field(x => x.DisplayName);
         form.Field(x => x.Roles).Renderer("string-list");
-        form.Field(x => x.Policies).Renderer("string-list");
     })
 
     .Grid<UserList.Result>("web.users", "users.list", grid =>
@@ -214,19 +213,6 @@ var model = new TamModelBuilder()
         grid.Column(x => x.Active);
         grid.ToolbarAction("users.invite");
         grid.RowAction("users.deactivate");
-    })
-
-    .Form<DefinePolicy.Input>("web.policies.define", "policies.define", form =>
-    {
-        form.Field(x => x.Name);
-        form.Field(x => x.Scopes).Renderer("scope-map");
-    })
-
-    .Grid<PolicyList.Result>("web.policies", "policies.list", grid =>
-    {
-        grid.Column(x => x.Name);
-        grid.Column(x => x.Scopes);
-        grid.ToolbarAction("policies.define");
     })
 
     .Build();

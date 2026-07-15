@@ -44,8 +44,8 @@ function CultureText(p: FieldRendererProps) {
   );
 }
 
-// Keyed-choice map editor (policy scopes: resource → all|own; role levels: resource →
-// view|edit|manage). The framework validates keys and values server-side; this only shapes the map.
+// Keyed-choice map editor (role levels: resource → view|edit|manage). The framework validates
+// keys and values server-side; this renderer only shapes the map.
 const keyValueMap = (choices: string[]) => function KeyValueMap(p: FieldRendererProps) {
   const value = (p.value ?? {}) as Record<string, string>;
   const entries = Object.entries(value);
@@ -112,7 +112,6 @@ function StringList(p: FieldRendererProps) {
 
 registerRenderer('customer-picker', CustomerPicker);
 registerRenderer('culture-text', CultureText);
-registerRenderer('scope-map', keyValueMap(['all', 'own']));
 registerRenderer('level-map', keyValueMap(['view', 'edit', 'manage']));
 registerRenderer('string-list', StringList);
 
@@ -201,10 +200,6 @@ function TenantsPage() {
   return <ViewGrid grid="web.tenants" onAction={() => void refreshManifest()} />;
 }
 
-function PoliciesPage() {
-  return <ViewGrid grid="web.policies" />;
-}
-
 function UsersPage() {
   return <ViewGrid grid="web.users" />;
 }
@@ -253,7 +248,6 @@ function Shell(props: {
     packages: <PackagesPage />,
     rules: <RulesPage />,
     tenants: <TenantsPage />,
-    policies: <PoliciesPage />,
     users: <UsersPage />,
     roles: <RolesPage />,
     ...Object.fromEntries(activePlugins.map(id =>
@@ -328,9 +322,6 @@ function Shell(props: {
         )}
         {can('roles.manage') && (
           <NavLink label={t('nav.roles')} active={page === 'roles'} onClick={() => setPage('roles')} />
-        )}
-        {can('roles.manage') && (
-          <NavLink label={t('nav.policies')} active={page === 'policies'} onClick={() => setPage('policies')} />
         )}
         {can('users.manage') && (
           <NavLink label={t('nav.users')} active={page === 'users'} onClick={() => setPage('users')} />

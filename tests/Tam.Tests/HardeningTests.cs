@@ -14,7 +14,6 @@ public class ReservedPermissionTests
     {
         Assert.True(Wildcard().Can("orders.read"));
         Assert.True(Wildcard().Can("plugins.manage"));
-        Assert.Equal("all", Wildcard().Scope("orders.read"));
     }
 
     [Fact]
@@ -23,7 +22,6 @@ public class ReservedPermissionTests
         // The self-service entitlement bypass: a tenant admin ("*") — or a plugin running as the
         // system actor ("*") — must NOT be able to change the tenant's own subscription.
         Assert.False(Wildcard().Can("subscriptions.manage"));
-        Assert.Equal("none", Wildcard().Scope("subscriptions.manage"));
     }
 
     [Fact]
@@ -31,7 +29,6 @@ public class ReservedPermissionTests
     {
         var billing = new Actor("billing", "Billing", new HashSet<string> { "subscriptions.manage" });
         Assert.True(billing.Can("subscriptions.manage"));
-        Assert.Equal("all", billing.Scope("subscriptions.manage"));
     }
 }
 

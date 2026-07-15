@@ -38,9 +38,8 @@ public static class TamPasswords
 /// the ACTIVE node are the union up its ancestor chain — the active node's own membership contributes
 /// every role assignment, ancestor memberships contribute only the CASCADING ones (D-H5), and each
 /// membership's role names resolve against its OWN node's role definitions, never the active node's
-/// (docs/27 — cross-level role resolution). Access policies on a membership narrow that
-/// membership's grants to a data scope before the union (docs/27 Axis 2). Everything is re-read per
-/// request, so a revoked role, policy, or cascade takes effect immediately. No membership on the chain ⇒ no grants — the cross-tenant guard:
+/// (docs/27 — cross-level role resolution). Everything is re-read per request, so a revoked role
+/// or cascade takes effect immediately. No membership on the chain ⇒ no grants — the cross-tenant guard:
 /// a token for account X speaks for tenant Y only if X is a member of Y or of a cascading ancestor.
 /// Grants never flow up. Replace IActorProvider for any other authentication mechanism.
 /// </summary>
@@ -79,9 +78,8 @@ public sealed class ClaimsActorProvider : IActorProvider
             .Where(m => m.AccountId == accountId && m.Active && chainIds.Contains(m.TenantId))
             .ToList();
 
-        // Role names and policy names bind to the MEMBERSHIP's node definitions (docs/27): load the
-        // chain's rows unfiltered once, then match per (tenant, name) — names never merge across
-        // levels. A role's grants are its explicit atoms plus its access levels expanded at load
+        // Role names bind to the MEMBERSHIP's node definitions (docs/27): load the chain's rows
+        // unfiltered once, then match per (tenant, name) — names never merge across levels. A role's grants are its explicit atoms plus its access levels expanded at load
         // time (docs/27 D-A1), so a new action on a resource flows into existing Manage roles
         // without a role edit.
         var model = http.RequestServices.GetRequiredService<TamModel>();
@@ -89,52 +87,21 @@ public sealed class ClaimsActorProvider : IActorProvider
             .Where(r => chainIds.Contains(r.TenantId))
             .ToList();
         var byNodeAndName = roleRows.ToDictionary(r => (r.TenantId, r.Name));
-        var policyRows = db.Set<AccessPolicyEntity>().IgnoreQueryFilters()
-            .Where(p => chainIds.Contains(p.TenantId))
-            .ToList();
-        var policyByNodeAndName = policyRows.ToDictionary(p => (p.TenantId, p.Name));
 
-        // Each membership's grants are narrowed by ITS OWN policies before union (docs/27 Axis 2):
-        // a policy's "own" scope suffixes that membership's unsuffixed atoms with ":own", while a
-        // role atom the author already suffixed is kept as written. Across a membership's policies
-        // the broadest scope wins per resource; across memberships plain union applies (D-A5), so
-        // one unrestricted membership makes the grant unrestricted.
+        // Plain union across memberships (docs/28: the actor is a flat grant set, and this union
+        // is THE extension seam — groups, if ever, arrive as one more source flattened here).
         var grants = new HashSet<string>();
         foreach (var membership in memberships)
         {
             // Active node's membership contributes ALL assignments; ancestors only cascading (D-H5).
             var atActiveNode = membership.TenantId == activeId;
-            var membershipGrants = membership.Roles()
+            foreach (var grant in membership.Roles()
                 .Where(a => atActiveNode || a.Cascade)
                 .Select(a => byNodeAndName.GetValueOrDefault((membership.TenantId, a.Name)))
                 .Where(role => role is not null)
                 .SelectMany(role => role!.Permissions().Concat(
-                    role.Levels().SelectMany(l => AccessLevels.Expand(model, l.Key, l.Value))))
-                .ToHashSet();
-
-            var scopes = new Dictionary<string, string>();
-            foreach (var name in membership.Policies())
-            {
-                if (policyByNodeAndName.GetValueOrDefault((membership.TenantId, name)) is not { } policy)
-                    continue;
-                foreach (var (resource, scope) in policy.Scopes())
-                    scopes[resource] =
-                        scopes.TryGetValue(resource, out var current) && current == "all" ? "all"
-                        : scope == "all" ? "all"
-                        : scope;
-            }
-
-            // Deliberate: "*" has no resource prefix, so policies never narrow a wildcard role —
-            // like reserved atoms, "*" means the FULL app surface (docs/27); scope a user by
-            // granting resources, not "*", when a policy should apply.
-            foreach (var grant in membershipGrants)
-            {
-                var dot = grant.IndexOf('.');
-                var resource = dot > 0 ? grant[..dot] : grant;
-                grants.Add(!grant.Contains(':') && scopes.GetValueOrDefault(resource) == "own"
-                    ? grant + ":own"
-                    : grant);
-            }
+                    role.Levels().SelectMany(l => AccessLevels.Expand(model, l.Key, l.Value)))))
+                grants.Add(grant);
         }
 
         return new Actor(account.Id.ToString(), account.DisplayName, grants);

@@ -68,9 +68,10 @@ public readonly record struct TenantId(string Value)
 }
 
 /// <summary>
-/// Grants may carry a record-scope qualifier (decision D1): "orders.read" grants everything,
-/// "orders.read:own" grants only records owned by the actor. The entity declares what "own"
-/// means; the grant declares who gets which scope.
+/// The actor is a flat grant set — capability atoms only (docs/28 D-AG1/D-AG2): row reach is
+/// either the tenancy dimension (tree scopes, framework-owned end to end) or a DOMAIN pattern
+/// (paired atoms — "orders.read" own-scoped by default, "orders.read-all" widening — enforced
+/// via <see cref="Scoping.ScopedUnless{T}"/> / <see cref="Scoping.CheckOwnershipUnless"/>).
 /// </summary>
 public sealed record Actor(string Id, string Name, IReadOnlySet<string> Permissions)
 {
@@ -86,29 +87,34 @@ public sealed record Actor(string Id, string Name, IReadOnlySet<string> Permissi
 
     public bool Can(string permission) =>
         Permissions.Contains(permission)
-        || Permissions.Contains(permission + ":own")
         || (Permissions.Contains("*") && !Reserved.Contains(permission));
+}
 
-    /// <summary>"all" or "own" for a granted permission.</summary>
-    public string Scope(string permission) =>
-        Permissions.Contains(permission)
-            || (Permissions.Contains("*") && !Reserved.Contains(permission)) ? "all"
-        : Permissions.Contains(permission + ":own") ? "own"
-        : "none";
-
-    public bool OwnsOnly(string permission) => Scope(permission) == "own";
+/// <summary>
+/// Declares the WIDENING atom a scoped view/operation consults (docs/28 D-AG2): the resource is
+/// own-scoped by default and this capability lifts the restriction ("orders.read-all"). The
+/// declaration puts the atom into the compiled catalogue (so roles can grant it and levels can
+/// expand into it) and lets the analyzer verify the class actually applies the scope (TAM006) —
+/// the fail-closed property policy-authored scopes could never have.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+public sealed class WidensAttribute(string permission) : Attribute
+{
+    public string Permission { get; } = permission;
 }
 
 public static class Scoping
 {
-    /// <summary>Declarative row scope for views: one line per view, enforced in the query.</summary>
-    public static IQueryable<T> ScopedTo<T>(
+    /// <summary>Declarative row scope for views (the paired-atom pattern, docs/28): rows are
+    /// restricted to the actor's own UNLESS the actor holds the widening capability. Declare the
+    /// atom with <see cref="WidensAttribute"/> on the view class — TAM006 enforces the pairing.</summary>
+    public static IQueryable<T> ScopedUnless<T>(
         this IQueryable<T> source,
         OperationContext context,
-        string permission,
+        string wideningPermission,
         System.Linq.Expressions.Expression<Func<T, string?>> owner)
     {
-        if (!context.Actor.OwnsOnly(permission)) return source;
+        if (context.Actor.Can(wideningPermission)) return source;
         var actorId = context.Actor.Id;
         var parameter = owner.Parameters[0];
         var body = System.Linq.Expressions.Expression.Equal(
@@ -116,13 +122,14 @@ public static class Scoping
         return source.Where(System.Linq.Expressions.Expression.Lambda<Func<T, bool>>(body, parameter));
     }
 
-    /// <summary>Operation-side scope precondition: same rule the view enforced, re-checked authoritatively.</summary>
-    public static Result CheckOwnership(
-        this OperationContext context, string permission, string? ownerActorId)
+    /// <summary>Operation-side twin: the same rule the view enforced, re-checked authoritatively
+    /// on the target row before mutating — a stale/forged id cannot escape the scope.</summary>
+    public static Result CheckOwnershipUnless(
+        this OperationContext context, string wideningPermission, string? ownerActorId)
     {
-        if (!context.Actor.OwnsOnly(permission)) return Result.Success();
+        if (context.Actor.Can(wideningPermission)) return Result.Success();
         return ownerActorId == context.Actor.Id
             ? Result.Success()
-            : PipelineFindings.NotAuthorized.With(("permission", permission + ":own"));
+            : PipelineFindings.NotAuthorized.With(("permission", wideningPermission));
     }
 }

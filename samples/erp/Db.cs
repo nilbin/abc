@@ -107,8 +107,11 @@ public static class Seed
             PermissionsJson = System.Text.Json.JsonSerializer.Serialize(permissions),
         });
         Role("admin", "*");
+        // The paired-atom pattern (docs/28 D-AG2): orders are OWN-scoped by default; the
+        // "-all" widening atoms lift the restriction. Dispatchers work the whole board.
         Role("dispatcher",
-            "orders.read", "orders.create", "orders.edit", "orders.complete",
+            "orders.read", "orders.read-all", "orders.create",
+            "orders.edit", "orders.edit-all", "orders.complete", "orders.complete-all",
             "customers.read", "customers.create");
         // "viewer" is authored as ACCESS LEVELS (docs/27 D-A1): { orders: view, customers: view }
         // expands to the read atoms at load time — the level shape and the atom shape coexist.
@@ -119,8 +122,9 @@ public static class Seed
             Name = "viewer",
             LevelsJson = """{"orders":"view","customers":"view"}""",
         });
+        // Technicians carry only the base atoms — own-scoped by construction, no suffixes.
         Role("technician",
-            "orders.read:own", "orders.edit:own", "orders.complete:own", "customers.read");
+            "orders.read", "orders.edit", "orders.complete", "customers.read");
 
         // The tenant node (docs/26): the demo tenant is the root of its own hierarchy, so its
         // materialized Path is just its own id. Nesting adds children with Path = "demo.<child>".
@@ -156,17 +160,7 @@ public static class Seed
         // Alva's admin CASCADES (D-H5 shape): one membership at "demo" reaches every descendant node.
         // The others keep the legacy flat shape (reads as cascade: false) — exercising back-compat.
         User("alva", "Alva Andersson", "admin").RolesJson = """[{"name":"admin","cascade":true}]""";
-        // Didrik carries the "own-orders" access policy (docs/27 Axis 2): his dispatcher role's
-        // unsuffixed orders atoms narrow to ":own" at actor resolution — same role as mcp-agent
-        // below, different data scope, no role fork.
-        db.Add(new AccessPolicyEntity
-        {
-            Id = Guid.NewGuid(),
-            TenantId = Tenant,
-            Name = "own-orders",
-            ScopesJson = """{"orders":"own"}""",
-        });
-        User("didrik", "Didrik Berg", "dispatcher").PoliciesJson = """["own-orders"]""";
+        User("didrik", "Didrik Berg", "dispatcher");
         User("tekla", "Tekla Nilsson", "technician");
         User("vera", "Vera Lund", "viewer");
         User("mcp-agent", "MCP Agent", "dispatcher");

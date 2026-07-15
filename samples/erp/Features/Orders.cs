@@ -124,6 +124,7 @@ public static class CreateOrderDerivations
 
 [Operation("orders.edit-details")]
 [Authorize("orders.edit")]
+[Widens("orders.edit-all")]
 [AcceptsExtensions(typeof(Order))]
 public static class EditOrderDetails
 {
@@ -141,6 +142,12 @@ public static class EditOrderDetails
     {
         var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
         if (order is null) return OrderErrors.NotFound;
+
+        // The write-side twin of the list's scope: base-atom holders edit only their own orders.
+        // (The old :own model never checked here — the fail-open the paired-atom pattern closes.)
+        var scope = context.CheckOwnershipUnless("orders.edit-all", order.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
+
         if (order.Status != OrderStatus.Open) return OrderErrors.NotEditable;
 
         var merge = TamMerge.Apply(order, input);
@@ -152,6 +159,7 @@ public static class EditOrderDetails
 
 [Operation("orders.complete")]
 [Authorize("orders.complete")]
+[Widens("orders.complete-all")]
 public static class CompleteOrder
 {
     public sealed record Input(OrderId OrderId);
@@ -164,7 +172,7 @@ public static class CompleteOrder
         var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
         if (order is null) return OrderErrors.NotFound;
 
-        var scope = context.CheckOwnership("orders.complete", order.AssignedToActorId);
+        var scope = context.CheckOwnershipUnless("orders.complete-all", order.AssignedToActorId);
         if (scope.IsError) return scope.As<Output>();
 
         var result = order.Complete();
@@ -178,6 +186,7 @@ public static class CompleteOrder
 
 [View("orders.list")]
 [Authorize("orders.read")]
+[Widens("orders.read-all")]
 [AcceptsExtensions(typeof(Order))]
 public static class OrderList
 {
@@ -204,7 +213,7 @@ public static class OrderList
         // IgnoreQueryFilters is query-wide — without the explicit node scope the orders side would
         // silently lose its strict filter too (the TamTreeScopes composition rule).
         var orders = db.Orders.InNode(context.TenantId)
-            .ScopedTo(context, "orders.read", x => x.AssignedToActorId);
+            .ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId);
         if (!string.IsNullOrWhiteSpace(query.Search))
             orders = orders.Where(x =>
                 ((string)(object)x.Number).Contains(query.Search!) ||
@@ -238,6 +247,7 @@ public static class OrderList
 /// </summary>
 [View("orders.overview")]
 [Authorize("orders.read")]
+[Widens("orders.read-all")]
 public static class OrderOverview
 {
     public sealed record Query();
@@ -257,7 +267,10 @@ public static class OrderOverview
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
-        var orders = db.Orders.InSubtree(db, context.TenantId);
+        // Roll-up breadth (subtree) and row reach (own-unless-widened) compose: a technician
+        // standing at the region sees THEIR orders across the group, an office role sees all.
+        var orders = db.Orders.InSubtree(db, context.TenantId)
+            .ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId);
         return from o in orders
                join node in db.Set<TenantEntity>() on o.TenantId equals node.Id into nodes
                from node in nodes.DefaultIfEmpty()
@@ -283,6 +296,7 @@ public static class OrderOverview
 /// <summary>Detail view backing the edit form: current values + version for the merge base.</summary>
 [View("orders.detail")]
 [Authorize("orders.read")]
+[Widens("orders.read-all")]
 [AcceptsExtensions(typeof(Order))]
 public static class OrderDetail
 {
@@ -308,6 +322,7 @@ public static class OrderDetail
         // Same inherited customer scope as orders.list; InNode on the orders side for the same
         // query-wide-IgnoreQueryFilters reason (TamTreeScopes composition rule).
         db.Orders.InNode(context.TenantId).Where(x => x.Id == query.OrderId)
+            .ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId)
             .Join(db.Customers.WithInherited(db, context.TenantId),
                 o => o.CustomerId, c => c.Id, (o, c) => new Result
             {

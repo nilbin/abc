@@ -57,6 +57,13 @@ public sealed class TamModel
                 .Select(f => f.SensitivePermission).OfType<string>())
             .Concat(Views.Values.SelectMany(v => v.ResultFields)
                 .Select(f => f.SensitivePermission).OfType<string>())
+            // Widening atoms (docs/28 D-AG2, the paired-atom ownership pattern) join the
+            // catalogue so roles can grant them and levels can expand into them.
+            .Concat(Operations.Values.Select(o => o.DeclaringType)
+                .Concat(Views.Values.Select(v => v.DeclaringType))
+                .SelectMany(t => t.GetCustomAttributes(typeof(WidensAttribute), inherit: false)
+                    .Cast<WidensAttribute>())
+                .Select(w => w.Permission))
             .Distinct().Order().ToList();
 
     public IEnumerable<DerivationDefinition> DerivationsFor(Type inputType) =>

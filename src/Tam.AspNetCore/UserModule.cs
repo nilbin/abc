@@ -10,7 +10,6 @@ public static class UserFindings
 {
     public static readonly FindingFactory UnknownRole = Finding.Error("users.unknown-role");
     public static readonly FindingFactory InvalidName = Finding.Error("users.invalid-name");
-    public static readonly FindingFactory UnknownPolicy = Finding.Error("users.unknown-policy");
 }
 
 internal static class MembershipRules
@@ -35,24 +34,14 @@ internal static class MembershipRules
         return null;
     }
 
-    /// <summary>Role and policy names resolve against the ACTIVE tenant's registries — the same
-    /// validation for define and invite. Returns field-targeted findings, empty when valid.</summary>
+    /// <summary>Role names resolve against the ACTIVE tenant's registry — the same validation
+    /// for define and invite. Returns field-targeted findings, empty when valid.</summary>
     public static async Task<List<Finding>> ValidateAssignmentsAsync(
-        ITamDb tam, List<string> roles, List<string>? policies,
-        string rolesField, string policiesField, CancellationToken ct)
+        ITamDb tam, List<string> roles, string rolesField, CancellationToken ct)
     {
-        var findings = new List<Finding>();
         var knownRoles = await tam.Db.Set<RoleEntity>().Select(x => x.Name).ToListAsync(ct);
-        findings.AddRange(roles.Where(r => !knownRoles.Contains(r)).Select(r =>
-            UserFindings.UnknownRole.With(("role", r)).At(rolesField)));
-        if (policies is { Count: > 0 })
-        {
-            var knownPolicies = await tam.Db.Set<AccessPolicyEntity>()
-                .Select(x => x.Name).ToListAsync(ct);
-            findings.AddRange(policies.Where(x => !knownPolicies.Contains(x)).Select(x =>
-                UserFindings.UnknownPolicy.With(("policy", x)).At(policiesField)));
-        }
-        return findings;
+        return roles.Where(r => !knownRoles.Contains(r)).Select(r =>
+            UserFindings.UnknownRole.With(("role", r)).At(rolesField)).ToList();
     }
 }
 
@@ -82,8 +71,7 @@ public static class DefineUser
         [property: LabelKey("labels.user-name")] string UserName,
         [property: LabelKey("labels.display-name")] string DisplayName,
         [property: LabelKey("labels.password")] string? Password,
-        [property: LabelKey("labels.roles")] List<string> Roles,
-        [property: LabelKey("labels.policies")] List<string>? Policies = null);
+        [property: LabelKey("labels.roles")] List<string> Roles);
 
     public sealed record Output(Guid UserId);
 
@@ -94,7 +82,7 @@ public static class DefineUser
             return UserFindings.InvalidName.At(nameof(Input.UserName));
 
         var invalid = await MembershipRules.ValidateAssignmentsAsync(
-            tam, input.Roles, input.Policies, nameof(Input.Roles), nameof(Input.Policies), ct);
+            tam, input.Roles, nameof(Input.Roles), ct);
         if (invalid.Count > 0) return new Result<Output> { Findings = invalid };
 
         var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
@@ -127,7 +115,6 @@ public static class DefineUser
             tam.Db.Add(membership);
         }
         membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
-        membership.PoliciesJson = System.Text.Json.JsonSerializer.Serialize(input.Policies ?? []);
         membership.Active = true;
 
         return new Output(account.Id);
@@ -149,8 +136,7 @@ public static class InviteUser
     public sealed record Input(
         [property: LabelKey("auth.email")] string Email,
         [property: LabelKey("labels.display-name")] string DisplayName,
-        [property: LabelKey("labels.roles")] List<string> Roles,
-        [property: LabelKey("labels.policies")] List<string>? Policies = null);
+        [property: LabelKey("labels.roles")] List<string> Roles);
 
     public sealed record Output(Guid UserId, bool InviteSent);
 
@@ -164,7 +150,7 @@ public static class InviteUser
             return UserFindings.InvalidName.At(nameof(Input.Email));
 
         var invalid = await MembershipRules.ValidateAssignmentsAsync(
-            tam, input.Roles, input.Policies, nameof(Input.Roles), nameof(Input.Policies), ct);
+            tam, input.Roles, nameof(Input.Roles), ct);
         if (invalid.Count > 0) return new Result<Output> { Findings = invalid };
 
         var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
@@ -196,7 +182,6 @@ public static class InviteUser
             tam.Db.Add(membership);
         }
         membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
-        membership.PoliciesJson = System.Text.Json.JsonSerializer.Serialize(input.Policies ?? []);
         membership.Active = true;
 
         string Localize(string key, IReadOnlyDictionary<string, object?> args) =>
