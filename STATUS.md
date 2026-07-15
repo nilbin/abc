@@ -27,7 +27,7 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              87 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              91 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy
 ```
