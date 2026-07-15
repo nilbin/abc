@@ -124,6 +124,9 @@ public sealed class ClaimsActorProvider : IActorProvider
                         : scope;
             }
 
+            // Deliberate: "*" has no resource prefix, so policies never narrow a wildcard role —
+            // like reserved atoms, "*" means the FULL app surface (docs/27); scope a user by
+            // granting resources, not "*", when a policy should apply.
             foreach (var grant in membershipGrants)
             {
                 var dot = grant.IndexOf('.');

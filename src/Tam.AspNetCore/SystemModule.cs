@@ -36,6 +36,7 @@ public static class SystemModule
             .AddOperationType(typeof(RetireRule))
             .AddOperationType(typeof(CreateTenant))
             .AddOperationType(typeof(MoveTenant))
+            .AddOperationType(typeof(RenameTenant))
             .AddOperationType(typeof(DefineUser))
             .AddOperationType(typeof(DeactivateUser))
             .AddOperationType(typeof(SetPlan))
@@ -248,18 +249,18 @@ public static class DefinePolicy
 
     public sealed record Output(Guid PolicyId);
 
-    private static readonly HashSet<string> Known = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "all", "own",
-    };
+    private static readonly HashSet<string> Known = ["all", "own"];
 
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
     {
+        // Scope values are stored CANONICAL (lower-case): the actor-side narrowing compares ordinal,
+        // so accepting "Own" verbatim would validate here and then silently fail OPEN at enforcement.
+        var scopes = input.Scopes.ToDictionary(s => s.Key, s => s.Value.ToLowerInvariant());
         var findings = new List<Finding>();
         if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
             findings.Add(PolicyFindings.InvalidName.At(nameof(Input.Name)));
-        foreach (var (resource, scope) in input.Scopes)
+        foreach (var (resource, scope) in scopes)
         {
             if (!AccessLevels.Catalog(model).ContainsKey(resource))
                 findings.Add(PolicyFindings.UnknownResource.With(("resource", resource)).At(nameof(Input.Scopes)));
@@ -275,7 +276,7 @@ public static class DefinePolicy
             policy = new AccessPolicyEntity { Id = Guid.NewGuid(), Name = input.Name };
             tam.Db.Add(policy);
         }
-        policy.ScopesJson = JsonSerializer.Serialize(input.Scopes);
+        policy.ScopesJson = JsonSerializer.Serialize(scopes);
         return new Output(policy.Id);
     }
 }

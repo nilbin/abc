@@ -49,13 +49,16 @@ function ScopeMap(p: FieldRendererProps) {
   // resources and scope kinds server-side; this renderer only shapes the map.
   const value = (p.value ?? {}) as Record<string, string>;
   const entries = Object.entries(value);
-  const set = (resource: string, scope: string | null) => {
+  // Spread-update keeps the row's position; only removal rebuilds the map.
+  const update = (resource: string, scope: string) => p.onChange({ ...value, [resource]: scope });
+  const remove = (resource: string) => {
     const next = { ...value };
     delete next[resource];
-    if (scope !== null) next[resource] = scope;
     p.onChange(Object.keys(next).length ? next : null);
   };
   const [draft, setDraft] = useState('');
+  const draftKey = draft.trim();
+  const draftTaken = draftKey in value;
   return (
     <Stack gap={4}>
       <Text size="sm" fw={500}>{p.label}{p.required ? ' *' : ''}</Text>
@@ -63,16 +66,16 @@ function ScopeMap(p: FieldRendererProps) {
         <Group key={resource} gap="xs">
           <TextInput value={resource} readOnly style={{ flex: 1 }} />
           <SegmentedControl size="xs" data={['all', 'own']} value={scope}
-            onChange={v => set(resource, v)} />
+            onChange={v => update(resource, v)} />
           <Button size="compact-xs" variant="subtle" color="red"
-            onClick={() => set(resource, null)}>✕</Button>
+            onClick={() => remove(resource)}>✕</Button>
         </Group>
       ))}
       <Group gap="xs">
         <TextInput placeholder="orders" value={draft} style={{ flex: 1 }} error={p.error}
           onChange={e => setDraft(e.currentTarget.value)} />
-        <Button size="compact-sm" variant="light" disabled={!draft.trim()}
-          onClick={() => { set(draft.trim(), 'own'); setDraft(''); }}>+</Button>
+        <Button size="compact-sm" variant="light" disabled={!draftKey || draftTaken}
+          onClick={() => { update(draftKey, 'own'); setDraft(''); }}>+</Button>
       </Group>
     </Stack>
   );

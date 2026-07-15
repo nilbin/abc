@@ -157,5 +157,6 @@
   "tenants.duplicate-id": "Id:t {id} används redan.",
   "tenants.unknown-node": "Okänt bolag: {id}.",
   "tenants.not-in-subtree": "{id} ligger utanför det aktiva bolagets underträd.",
-  "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget underträd ({id})."
+  "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget underträd ({id}).",
+  "operations.tenants.rename.title": "Byt namn på bolag"
 }

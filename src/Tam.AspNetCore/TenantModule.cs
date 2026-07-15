@@ -33,20 +33,28 @@ public static class CreateTenant
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
         // The id is a path segment: lowercase, no dots (the separator), same shape as role names.
+        // The active id is checked explicitly: on a pre-hierarchy tenant (no registry row yet) the
+        // registry probe would miss it and the self-heal below would add the same key twice.
+        var activeId = context.TenantId.Value;
         if (!System.Text.RegularExpressions.Regex.IsMatch(input.Id, "^[a-z][a-z0-9-]*$"))
             return TenantFindings.InvalidId.At(nameof(Input.Id));
-        if (await tam.Db.Set<TenantEntity>().AnyAsync(t => t.Id == input.Id, ct))
+        if (input.Id == activeId
+            || await tam.Db.Set<TenantEntity>().AnyAsync(t => t.Id == input.Id, ct))
             return TenantFindings.DuplicateId.With(("id", input.Id)).At(nameof(Input.Id));
 
         // Self-healing root (docs/26): a pre-hierarchy tenant has no TenantEntity row; its first
         // child creation materializes the root so the path machinery has an anchor.
-        var activeId = context.TenantId.Value;
         var parent = await tam.Db.Set<TenantEntity>().FirstOrDefaultAsync(t => t.Id == activeId, ct);
         if (parent is null)
         {
             parent = new TenantEntity { Id = activeId, ParentId = null, Path = activeId, DisplayName = activeId };
             tam.Db.Add(parent);
         }
+
+        // Structural lease: attaching under a node bumps ITS version, so this create conflicts at
+        // SaveChanges with any concurrent move/re-parent of the parent (whose stale path we would
+        // otherwise bake into the child) instead of silently orphaning the new node.
+        parent.Version++;
 
         tam.Db.Add(new TenantEntity
         {
@@ -100,6 +108,11 @@ public static class MoveTenant
         if (TenantEntity.IsSelfOrDescendant(moved.Path, newParent.Path))
             return TenantFindings.Cycle.With(("id", newParent.Id)).At(nameof(Input.NewParentId));
 
+        // Structural lease (see CreateTenant): bump the attachment point so this move conflicts at
+        // SaveChanges with any concurrent structural change to the new parent, instead of baking a
+        // stale parent path into the moved subtree.
+        newParent.Version++;
+
         var oldPath = moved.Path;
         var newPath = newParent.Path + "." + moved.Id;
         moved.ParentId = newParent.Id;
@@ -110,6 +123,36 @@ public static class MoveTenant
                 node.Path = newPath + node.Path[oldPath.Length..];
         }
         return new Output(moved.Id, newPath);
+    }
+}
+
+/// <summary>Rename a node in the active subtree (including the active node itself — the only way to
+/// give a self-healed root a real display name). Ids are immutable; only the label changes.</summary>
+[Operation("tenants.rename")]
+[Authorize("tenants.edit")]
+public static class RenameTenant
+{
+    public sealed record Input(
+        [property: LabelKey("labels.tenant")] string TenantId,
+        [property: LabelKey("labels.display-name")] string DisplayName);
+
+    public sealed record Output(string Id, string DisplayName);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, CancellationToken ct)
+    {
+        var activeId = context.TenantId.Value;
+        var active = await tam.Db.Set<TenantEntity>().FirstOrDefaultAsync(t => t.Id == activeId, ct);
+        var node = input.TenantId == activeId
+            ? active
+            : await tam.Db.Set<TenantEntity>().FirstOrDefaultAsync(t => t.Id == input.TenantId, ct);
+        if (node is null)
+            return TenantFindings.UnknownNode.With(("id", input.TenantId)).At(nameof(Input.TenantId));
+        if (active is null || !TenantEntity.IsSelfOrDescendant(active.Path, node.Path))
+            return TenantFindings.NotInSubtree.With(("id", node.Id)).At(nameof(Input.TenantId));
+
+        node.DisplayName = input.DisplayName;
+        return new Output(node.Id, node.DisplayName);
     }
 }
 

@@ -361,12 +361,17 @@ public sealed class TenantMembershipEntity : ITenantScoped
 /// range scan, not a recursive query. Ids must not contain '.', the path separator. The registry of
 /// tenants itself; not tenant-scoped.
 /// </summary>
-public sealed class TenantEntity
+public sealed class TenantEntity : IVersioned
 {
     public string Id { get; set; } = "";          // the tenant id used as TenantId across the model
     public string? ParentId { get; set; }
     public string Path { get; set; } = "";
     public string DisplayName { get; set; } = "";
+
+    /// <summary>Concurrency token: structural operations (move, create-under) are read-modify-write
+    /// over the registry with a cross-row invariant (path consistency), so a stale write must FAIL
+    /// at SaveChanges rather than silently persist an orphaned path.</summary>
+    public long Version { get; set; }
 
     /// <summary>The ancestor chain including self, from the path segments (segment = tenant id).</summary>
     public IReadOnlyList<string> AncestorIds() => Path.Split('.');

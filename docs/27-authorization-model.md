@@ -234,7 +234,11 @@ must be *bound*; data-scope (a predicate over existing rows) cannot bind it. The
   a membership's policies the broadest scope wins per resource, and across memberships plain union
   applies (D-A5) — one unrestricted membership makes the grant unrestricted. Downstream nothing
   changed: the existing `:own` grant machinery (gate acceptance + `ScopedTo` query narrowing) does
-  the enforcement. `subtree`/`inherited`/`where` policy kinds remain to be wired onto the same seam.
+  the enforcement. Scope values are stored canonical (lower-cased at define time) because
+  enforcement compares ordinal — a control that could be authored in a casing enforcement ignores
+  would fail open. Policies never narrow a `*` role grant (no resource prefix): like reserved
+  atoms, `*` means the full app surface — scope a user by granting resources, not `*`.
+  `subtree`/`inherited`/`where` policy kinds remain to be wired onto the same seam.
 
 ## How it binds to identity (docs/26)
 

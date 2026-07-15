@@ -157,5 +157,6 @@
   "tenants.duplicate-id": "The id {id} is already in use.",
   "tenants.unknown-node": "Unknown company: {id}.",
   "tenants.not-in-subtree": "{id} is outside the active company's subtree.",
-  "tenants.cycle": "Cannot move a company under its own subtree ({id})."
+  "tenants.cycle": "Cannot move a company under its own subtree ({id}).",
+  "operations.tenants.rename.title": "Rename company"
 }

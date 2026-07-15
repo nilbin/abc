@@ -178,6 +178,16 @@ export interface TenantsMoveOutput {
   path: string;
 }
 
+export interface TenantsRenameInput {
+  tenantId: string;
+  displayName: string;
+}
+
+export interface TenantsRenameOutput {
+  id: string;
+  displayName: string;
+}
+
 export interface UsersDefineInput {
   userName: string;
   displayName: string;
@@ -599,6 +609,11 @@ export class TypedTamClient {
   /** tenants.move (requires tenants.move) */
   tenantsMove(input: TenantsMoveInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<TenantsMoveOutput>> {
     return this.client.operation("tenants.move", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TenantsMoveOutput>>;
+  }
+
+  /** tenants.rename (requires tenants.edit) */
+  tenantsRename(input: TenantsRenameInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<TenantsRenameOutput>> {
+    return this.client.operation("tenants.rename", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TenantsRenameOutput>>;
   }
 
   /** users.define (requires users.manage) */

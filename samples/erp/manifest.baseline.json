@@ -162,6 +162,7 @@
       "tenants.unknown-node": "Ok\u00E4nt bolag: {id}.",
       "tenants.not-in-subtree": "{id} ligger utanf\u00F6r det aktiva bolagets undertr\u00E4d.",
       "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget undertr\u00E4d ({id}).",
+      "operations.tenants.rename.title": "Byt namn p\u00E5 bolag",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -380,6 +381,7 @@
       "tenants.unknown-node": "Unknown company: {id}.",
       "tenants.not-in-subtree": "{id} is outside the active company\u0027s subtree.",
       "tenants.cycle": "Cannot move a company under its own subtree ({id}).",
+      "operations.tenants.rename.title": "Rename company",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -1239,6 +1241,51 @@
         {
           "name": "path",
           "labelKey": "labels.path",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "tenants.rename": {
+      "permission": "tenants.edit",
+      "titleKey": "operations.tenants.rename.title",
+      "fields": [
+        {
+          "name": "tenantId",
+          "labelKey": "labels.tenant",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
           "type": "text",
           "wireKind": "string",
           "required": true,
@@ -3486,6 +3533,31 @@
       "includeExtensions": false,
       "serverDependencies": []
     },
+    "web.tenants.rename": {
+      "operation": "tenants.rename",
+      "fields": [
+        {
+          "name": "tenantId",
+          "labelKey": "labels.tenant",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
     "web.policies.define": {
       "operation": "policies.define",
       "fields": [
@@ -3660,7 +3732,8 @@
       "rowActions": [],
       "toolbarActions": [
         "tenants.create",
-        "tenants.move"
+        "tenants.move",
+        "tenants.rename"
       ],
       "includeExtensions": false
     },
@@ -3700,6 +3773,7 @@
     "subscriptions.manage",
     "subscriptions.read",
     "tenants.create",
+    "tenants.edit",
     "tenants.move",
     "tenants.read",
     "users.manage"

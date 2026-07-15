@@ -254,6 +254,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   Access-policies page (web.policies grid; the define form authors the resource→scope map with an
   app-owned "scope-map" renderer — rows of resource + all|own toggle). Verified headless: both pages
   render, the create form submits and the grid live-refreshes with `demo.syd`.
+- **Review round on the new surfaces** (two adversarial agents over Axis 2 + lifecycle + UI), all
+  findings fixed and wire-verified: (1) HIGH — policy scope values were validated case-insensitively
+  but ENFORCED ordinal, so `{"orders":"Own"}` validated and then silently failed OPEN (full access);
+  scopes are now canonicalized (lower-cased) at define time and the fail-open is proven closed on
+  the wire. (2) MED — `TenantEntity` is now `IVersioned` and structural ops take a "structural
+  lease" (create/move bump the attachment parent's version), so a concurrent move/create pair that
+  would bake a stale parent path into a child fails at SaveChanges instead of silently orphaning a
+  subtree. (3) `tenants.create` with the ACTIVE node's own id on a pre-hierarchy tenant now returns
+  `tenants.duplicate-id` instead of a 500 (double-Add of the self-healed root). (4) `tenants.rename`
+  added (subtree-guarded; the only way to give a self-healed root a real display name) with form +
+  toolbar action. (5) ScopeMap renderer: toggling all|own no longer reorders rows; adding an
+  already-listed resource is disabled instead of silently resetting it to `own`. Policies never
+  narrow a `*` role grant — documented as deliberate in docs/27 and at the narrowing site.
 - **Access policies (docs/27 Axis 2, v1 `all`|`own`)**: `AccessPolicyEntity` is a tenant-scoped named
   resource→scope map, managed by `policies.define`/`policies.list` (validated against the same
   resource catalogue as levels; unknown resource/scope → localized findings); a membership lists

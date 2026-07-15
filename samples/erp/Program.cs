@@ -167,6 +167,12 @@ var model = new TamModelBuilder()
         form.Field(x => x.NewParentId);
     })
 
+    .Form<RenameTenant.Input>("web.tenants.rename", "tenants.rename", form =>
+    {
+        form.Field(x => x.TenantId);
+        form.Field(x => x.DisplayName);
+    })
+
     .Grid<TenantList.Result>("web.tenants", "tenants.list", grid =>
     {
         grid.Column(x => x.Id);
@@ -174,6 +180,7 @@ var model = new TamModelBuilder()
         grid.Column(x => x.Path);
         grid.ToolbarAction("tenants.create");
         grid.ToolbarAction("tenants.move");
+        grid.ToolbarAction("tenants.rename");
     })
 
     .Form<DefinePolicy.Input>("web.policies.define", "policies.define", form =>
