@@ -46,6 +46,17 @@ that already has a password — a member of another tenant, platform-global iden
 membership and mails a notification. Transport is the `ITamEmail` seam; the default logs the
 message (the dev inbox).
 
+**Token hardening (BUILT — settled: no BFF).** The SPA is a public client holding its own tokens
+(sessionStorage, tab-scoped); the hardening lives server-side: refresh tokens are one-time-use and
+ROTATE on every refresh; a redeemed token replayed after the 30s leeway (the leeway absorbs the
+client's own racing retries) is rejected AND its whole family — the shared authorization and every
+token descended from it — is revoked (`RefreshReuseGuard`; replayed authorization codes get the
+same treatment), so a stolen refresh token ends the session for thief and victim alike instead of
+quietly serving the thief. Sign-out revokes the refresh token at `/connect/revocation`
+(fire-and-forget from the client). API validation checks token AND authorization entries per call,
+so revocation takes effect immediately, not at access-token expiry. A `TokenJanitor` prunes
+expired/revoked entries past the longest lifetime.
+
 ### Three scoping modes, declared per view/operation
 
 - **Strict** (default): a request at node *T* sees only *T*'s own rows.

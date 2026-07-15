@@ -264,6 +264,17 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   row action) with the invite form on the toolbar — roles/policies authored through an app-owned
   "string-list" renderer. Verified headless: an invite submitted through the UI lands and the
   grid live-refreshes with the new member.
+- **No-BFF token hardening (docs/26 — settled: no BFF)**: the SPA keeps holding its own tokens
+  (sessionStorage, tab-scoped); the server enforces the guarantees. Refresh tokens rotate per use;
+  a redeemed token replayed after the 30s leeway is rejected and `RefreshReuseGuard` revokes the
+  WHOLE family (shared authorization + all descended tokens) — OpenIddict alone rejects the replay
+  but leaves rotated siblings alive; replayed authorization codes get the same cut. signOut()
+  revokes the refresh token at /connect/revocation (fire-and-forget). Token + authorization ENTRY
+  validation is on for API calls, so revocation bites immediately instead of at access-token
+  expiry; a TokenJanitor prunes the store past the longest lifetime. Wire-verified (10 checks):
+  rotation, within-leeway retry tolerated, post-leeway replay rejected, rotated sibling dead after
+  the cut, public-client revocation accepted, revoked refresh dead, revoked ACCESS token rejected
+  by the API immediately.
 - **Invite flow (docs/26)**: `users.invite` creates account + membership up front (same
   role/policy validation and seat gate + lease as users.define, via shared MembershipRules) and
   mails a one-shot invite link through the new `ITamEmail` seam (default: `LogTamEmail`, the dev

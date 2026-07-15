@@ -471,8 +471,22 @@ export class TamAuth {
       : null;
   }
 
-  /** Forget the tokens and unwire the client. (Re-auth is a fresh signIn.) */
+  /** Forget the tokens, revoke the refresh token server-side, and unwire the client. Revocation is
+   *  fire-and-forget — local sign-out never waits on (or fails with) the network; an unreachable
+   *  revocation endpoint still leaves the token to die by rotation reuse-detection or expiry. */
   signOut(): void {
+    const refreshToken = typeof window === 'undefined' ? null : sessionStorage.getItem(this.refreshKey);
+    if (refreshToken) {
+      void fetch(`${this.client.baseUrl}/connect/revocation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          token: refreshToken,
+          token_type_hint: 'refresh_token',
+          client_id: this.clientId,
+        }),
+      }).catch(() => undefined);
+    }
     sessionStorage.removeItem(this.storageKey);
     sessionStorage.removeItem(this.refreshKey);
     delete this.client.headers['Authorization'];
@@ -486,7 +500,9 @@ export class TamAuth {
   private adopt(token: string, refreshToken?: string): TamSession {
     sessionStorage.setItem(this.storageKey, token);
     // The refresh token is stored to survive reloads. sessionStorage (not localStorage) keeps it to
-    // the tab session; a hardened deployment would move refresh handling behind a BFF cookie.
+    // the tab session (settled: no BFF). The server side carries the hardening: one-time-use
+    // rotation with reuse detection (a replayed token revokes its whole family), revocation on
+    // sign-out, and a pruned token store.
     if (typeof refreshToken === 'string' && refreshToken.length > 0)
       sessionStorage.setItem(this.refreshKey, refreshToken);
     this.client.headers['Authorization'] = `Bearer ${token}`;

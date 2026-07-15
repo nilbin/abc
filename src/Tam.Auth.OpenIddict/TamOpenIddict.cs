@@ -44,7 +44,8 @@ public static class TamOpenIddict
             {
                 options.SetAuthorizationEndpointUris("/connect/authorize")
                        .SetTokenEndpointUris("/connect/token")
-                       .SetEndSessionEndpointUris("/connect/logout");
+                       .SetEndSessionEndpointUris("/connect/logout")
+                       .SetRevocationEndpointUris("/connect/revocation");
 
                 // Humans: Authorization Code + PKCE (PKCE required — the SPA is a public client with
                 // no secret) + refresh so a short-lived access token renews silently. Machines: client
@@ -59,6 +60,13 @@ public static class TamOpenIddict
                 // the scenes); the refresh token carries the longer session. Production tunes both.
                 options.SetAccessTokenLifetime(TimeSpan.FromMinutes(10));
                 options.SetRefreshTokenLifetime(TimeSpan.FromDays(14));
+
+                // No-BFF hardening (docs/26): the SPA holds the rotating refresh token itself, so
+                // the server enforces one-time use — a redeemed token replayed after this leeway is
+                // rejected AND its whole family (the shared authorization) is revoked, cutting off a
+                // stolen-token session. The leeway only absorbs the client's own racing retries.
+                options.SetRefreshTokenReuseLeeway(TimeSpan.FromSeconds(30));
+                options.AddEventHandler(RefreshReuseGuard.Descriptor);
 
                 // Development keys: ephemeral, tokens do not survive a restart. Production supplies
                 // certificates here — the one deliberate configuration seam.
@@ -79,6 +87,11 @@ public static class TamOpenIddict
             {
                 options.UseLocalServer();
                 options.UseAspNetCore();
+                // Check the token AND authorization entries on every API call (one indexed lookup
+                // each), so revocation — sign-out, reuse-triggered family cut — takes effect
+                // immediately instead of when the 10-minute access token happens to expire.
+                options.EnableTokenEntryValidation();
+                options.EnableAuthorizationEntryValidation();
             });
 
         // Bearer validation is the default scheme for API calls; the login cookie is a named scheme
@@ -93,6 +106,8 @@ public static class TamOpenIddict
                 options.SlidingExpiration = true;
             });
         services.AddAuthorization();
+        services.AddScoped<RefreshReuseGuard>();
+        services.AddHostedService<TokenJanitor>();
         services.AddSingleton<IActorProvider, ClaimsActorProvider>();
         // The active tenant now comes from the token's claim (set at login when the account picks a
         // tenant); unauthenticated requests fall back to the configured default.
@@ -354,6 +369,7 @@ public static class TamOpenIddict
                 Permissions.Endpoints.Authorization,
                 Permissions.Endpoints.Token,
                 Permissions.Endpoints.EndSession,
+                Permissions.Endpoints.Revocation,
                 Permissions.GrantTypes.AuthorizationCode,
                 Permissions.GrantTypes.RefreshToken,
                 Permissions.ResponseTypes.Code,
