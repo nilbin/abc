@@ -210,7 +210,11 @@ must be *bound*; data-scope (a predicate over existing rows) cannot bind it. The
   strips the global strict filter from EVERY source in that query — silently returning other tenants'
   rows. Therefore any query touching a widened source must scope every other `ITenantScoped` source
   explicitly (`InNode` for strict, or its own `InSubtree`/`WithInherited`). Single-source widened
-  views are unaffected. Candidate for a TAM005 analyzer rule.
+  views are unaffected. **Enforced at compile time as TAM005**: a method-syntax composition
+  (Join/GroupJoin/Concat/Union/Except/Intersect) containing a widened source errors on any
+  ITenantScoped side without an explicit scope call — local variables resolve to their declaration
+  initializer, so a chain scoped at assignment is recognized at the join. (Query-syntax joins are
+  outside the rule; the codebase's are over unscoped registry tables.)
 - **Cross-node create = ambient rebind.** The validated target node becomes the request's execution
   tenant (see the create-target invariant above): one mechanism, and audit/outbox/effects/idempotency/
   lookups stay coherent with the row. No per-handler `TenantId` assignments.

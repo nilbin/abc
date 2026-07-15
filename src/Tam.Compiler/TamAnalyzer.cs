@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
 namespace Tam.Compiler;
@@ -47,8 +49,12 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         "TAM004", "Redundant tenant filter",
         "Tenant scoping is automatic for ITenantScoped entities via the global query filter — remove this 'TenantId ==' predicate. For a deliberate cross-tenant read (a background job), chain .IgnoreQueryFilters() and this warning goes away.");
 
+    public static readonly DiagnosticDescriptor Tam005 = Rule(
+        "TAM005", "Widened query composes an implicitly-filtered source",
+        "EF's IgnoreQueryFilters is query-wide: composing a widened source (InSubtree/WithInherited/IgnoreQueryFilters) strips the global tenant filter from EVERY source in this query. Scope this side explicitly — .InNode(tenant) for strict, or its own InSubtree/WithInherited (docs/27, the composition rule).");
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004];
+        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -75,6 +81,12 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
             // global query filter, and a forgotten one used to be the leak. Flag every copy so the
             // DRY win can't regress; a deliberate cross-tenant read declares .IgnoreQueryFilters().
             start.RegisterOperationAction(AnalyzeTenantFilter, OperationKind.Binary);
+
+            // TAM005: the composition rule (docs/27), found on the wire — one widened source in a
+            // join strips the global filter from the whole query and silently returns other
+            // tenants' rows. Method-syntax compositions only; query-syntax joins are rare here and
+            // the sample's are over unscoped registry tables.
+            start.RegisterSyntaxNodeAction(AnalyzeQueryComposition, SyntaxKind.InvocationExpression);
         });
     }
 
@@ -104,6 +116,61 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
 
     private static IPropertySymbol? TenantIdProperty(IOperation operation) =>
         operation is IPropertyReferenceOperation { Property.Name: "TenantId" } p ? p.Property : null;
+
+    private static readonly string[] WideningCalls = { "IgnoreQueryFilters", "InSubtree", "WithInherited" };
+    private static readonly string[] ExplicitScopeCalls = { "IgnoreQueryFilters", "InSubtree", "WithInherited", "InNode" };
+    private static readonly string[] ComposingMethods = { "Join", "GroupJoin", "Concat", "Union", "Except", "Intersect" };
+
+    private static void AnalyzeQueryComposition(SyntaxNodeAnalysisContext context)
+    {
+        var invocation = (InvocationExpressionSyntax)context.Node;
+        if (invocation.Expression is not MemberAccessExpressionSyntax member) return;
+        if (!ComposingMethods.Contains(member.Name.Identifier.Text)) return;
+        if (invocation.ArgumentList.Arguments.Count == 0) return;
+
+        // The two composed sides: the receiver and the inner sequence (first argument).
+        var sides = new[] { member.Expression, invocation.ArgumentList.Arguments[0].Expression };
+        var resolved = sides.Select(s => ResolveChain(s, context.SemanticModel, context.CancellationToken)).ToArray();
+
+        // Only queries that actually contain a widened source are dangerous.
+        if (!resolved.Any(text => WideningCalls.Any(text.Contains))) return;
+
+        for (var i = 0; i < sides.Length; i++)
+        {
+            if (ExplicitScopeCalls.Any(resolved[i].Contains)) continue;
+            var type = context.SemanticModel.GetTypeInfo(sides[i], context.CancellationToken).Type;
+            if (!IsTenantScopedSequence(type)) continue;
+            context.ReportDiagnostic(Diagnostic.Create(Tam005, sides[i].GetLocation()));
+        }
+    }
+
+    /// <summary>An identifier resolves to its local declaration's initializer, so a chain that was
+    /// scoped when assigned to a variable is still recognized at the composition site.</summary>
+    private static string ResolveChain(
+        ExpressionSyntax expression, SemanticModel model, System.Threading.CancellationToken ct)
+    {
+        if (expression is IdentifierNameSyntax identifier
+            && model.GetSymbolInfo(identifier, ct).Symbol is ILocalSymbol local
+            && local.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(ct)
+                is VariableDeclaratorSyntax { Initializer.Value: { } initializer })
+            return initializer.ToString();
+        return expression.ToString();
+    }
+
+    private static bool IsTenantScopedSequence(ITypeSymbol? type)
+    {
+        if (type is null) return false;
+        foreach (var candidate in new[] { type }.Concat(type.AllInterfaces))
+        {
+            if (candidate is INamedTypeSymbol named
+                && named.TypeArguments.Length == 1
+                && (named.Name == "IQueryable" || named.Name == "IEnumerable" || named.Name == "DbSet")
+                && named.TypeArguments[0].AllInterfaces.Any(i =>
+                    i.ToDisplayString() == "Tam.EntityFrameworkCore.ITenantScoped"))
+                return true;
+        }
+        return false;
+    }
 
     private static void AnalyzeType(
         SymbolAnalysisContext context, HashSet<string>? catalog, string defaultCulture)
