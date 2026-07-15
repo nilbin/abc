@@ -280,6 +280,10 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   vera/alva unaffected (5); didrik's create still passes the gate via the suffixed grant and lands
   in the tenant; a user defined live with the policy is narrowed immediately; validation findings
   fire. 82 tests; baseline + typed client regenerated (policies.define/list).
+- **Postgres parity for the policy + lifecycle stack**: all four new suites re-run on PostgreSQL 16
+  (fresh DB) with zero code changes — access policies (11/11), tenant lifecycle (11/11), scope
+  canonicalization fail-closed, rename + guards. The `tenants.Version` concurrency column is live
+  and the structural leases visibly bump attachment parents on create/move/rename.
 - **Postgres parity for the hierarchy/capability stack**: the full suite re-verified on PostgreSQL 16
   (fresh DB, `Host=` connection string, LISTEN/NOTIFY backplane registered): cascade login at a
   descendant, subtree roll-up (tenants-table semi-join / LIKE), inherited customers (ancestor
