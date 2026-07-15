@@ -144,13 +144,6 @@
       "roles.unknown-level": "Ok\u00E4nd beh\u00F6righetsniv\u00E5: {level}.",
       "labels.levels": "Beh\u00F6righetsniv\u00E5er",
       "pipeline.field-not-authorized": "Du saknar beh\u00F6righet att ange f\u00E4ltet {field} ({permission}).",
-      "operations.policies.define.title": "Definiera \u00E5tkomstpolicy",
-      "labels.scopes": "Omf\u00E5ng",
-      "labels.policies": "\u00C5tkomstpolicyer",
-      "policies.unknown-resource": "Ok\u00E4nd resurs: {resource}.",
-      "policies.unknown-scope": "Ok\u00E4nt omf\u00E5ng: {scope}.",
-      "policies.invalid-name": "Ogiltigt policynamn (gemener, siffror och bindestreck).",
-      "users.unknown-policy": "Ok\u00E4nd policy: {policy}.",
       "operations.tenants.create.title": "Skapa bolag",
       "operations.tenants.move.title": "Flytta bolag",
       "labels.tenant": "Bolag",
@@ -172,6 +165,7 @@
       "auth.invite-body": "F\u00F6lj l\u00E4nken f\u00F6r att v\u00E4lja l\u00F6senord och aktivera ditt konto: {link}",
       "auth.added-subject": "Du har f\u00E5tt tillg\u00E5ng till en ny organisation",
       "auth.added-body": "Logga in som vanligt och v\u00E4lj organisationen vid inloggning.",
+      "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; \u00E4ndringarna av anpassade f\u00E4lt kunde inte knytas till en.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -228,7 +222,6 @@
       "labels.company": "Bolag",
       "nav.overview": "Koncern\u00F6versikt",
       "nav.tenants": "Bolag",
-      "nav.policies": "\u00C5tkomstpolicyer",
       "nav.users": "Anv\u00E4ndare",
       "nav.roles": "Roller"
     },
@@ -374,13 +367,6 @@
       "roles.unknown-level": "Unknown access level: {level}.",
       "labels.levels": "Access levels",
       "pipeline.field-not-authorized": "You lack permission to set the field {field} ({permission}).",
-      "operations.policies.define.title": "Define access policy",
-      "labels.scopes": "Scopes",
-      "labels.policies": "Access policies",
-      "policies.unknown-resource": "Unknown resource: {resource}.",
-      "policies.unknown-scope": "Unknown scope: {scope}.",
-      "policies.invalid-name": "Invalid policy name (lowercase letters, digits and hyphens).",
-      "users.unknown-policy": "Unknown policy: {policy}.",
       "operations.tenants.create.title": "Create company",
       "operations.tenants.move.title": "Move company",
       "labels.tenant": "Company",
@@ -402,6 +388,7 @@
       "auth.invite-body": "Follow this link to set your password and activate your account: {link}",
       "auth.added-subject": "You have been given access to a new organization",
       "auth.added-body": "Sign in as usual and pick the organization at login.",
+      "pipeline.ambiguous-extension-target": "The operation tracked several records of this type; the custom-field changes could not be attributed to one.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -458,7 +445,6 @@
       "labels.company": "Company",
       "nav.overview": "Group overview",
       "nav.tenants": "Companies",
-      "nav.policies": "Access policies",
       "nav.users": "Users",
       "nav.roles": "Roles"
     }
@@ -867,42 +853,6 @@
         {
           "name": "roleId",
           "labelKey": "labels.role-id",
-          "type": "reference",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "gatedBy": []
-    },
-    "policies.define": {
-      "permission": "roles.manage",
-      "titleKey": "operations.policies.define.title",
-      "fields": [
-        {
-          "name": "name",
-          "labelKey": "labels.name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "scopes",
-          "labelKey": "labels.scopes",
-          "type": "object",
-          "wireKind": "object",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "outputFields": [
-        {
-          "name": "policyId",
-          "labelKey": "labels.policy-id",
           "type": "reference",
           "wireKind": "string",
           "required": true,
@@ -1356,15 +1306,6 @@
           "required": true,
           "changeSet": false,
           "extension": false
-        },
-        {
-          "name": "policies",
-          "labelKey": "labels.policies",
-          "type": "object",
-          "wireKind": "object",
-          "required": false,
-          "changeSet": false,
-          "extension": false
         }
       ],
       "outputFields": [
@@ -1408,15 +1349,6 @@
           "type": "object",
           "wireKind": "object",
           "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "policies",
-          "labelKey": "labels.policies",
-          "type": "object",
-          "wireKind": "object",
-          "required": false,
           "changeSet": false,
           "extension": false
         }
@@ -2790,45 +2722,6 @@
       "defaultSort": "name",
       "defaultSortDescending": false
     },
-    "policies.list": {
-      "permission": "roles.manage",
-      "queryFields": [],
-      "resultFields": [
-        {
-          "name": "id",
-          "labelKey": "labels.id",
-          "type": "reference",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "name",
-          "labelKey": "labels.name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "scopes",
-          "labelKey": "labels.scopes",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "name"
-      ],
-      "filterable": [],
-      "defaultSort": "name",
-      "defaultSortDescending": false
-    },
     "tenants.list": {
       "permission": "tenants.read",
       "queryFields": [],
@@ -3709,42 +3602,6 @@
           "changeSet": false,
           "extension": false,
           "renderer": "string-list"
-        },
-        {
-          "name": "policies",
-          "labelKey": "labels.policies",
-          "type": "object",
-          "wireKind": "object",
-          "required": false,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "string-list"
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.policies.define": {
-      "operation": "policies.define",
-      "fields": [
-        {
-          "name": "name",
-          "labelKey": "labels.name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "scopes",
-          "labelKey": "labels.scopes",
-          "type": "object",
-          "wireKind": "object",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "scope-map"
         }
       ],
       "includeExtensions": false,
@@ -3931,18 +3788,6 @@
         "users.invite"
       ],
       "includeExtensions": false
-    },
-    "web.policies": {
-      "view": "policies.list",
-      "columns": [
-        "name",
-        "scopes"
-      ],
-      "rowActions": [],
-      "toolbarActions": [
-        "policies.define"
-      ],
-      "includeExtensions": false
     }
   },
   "extensions": {},
@@ -3956,9 +3801,12 @@
     "inspect.checklists.read",
     "integrations.manage",
     "orders.complete",
+    "orders.complete-all",
     "orders.create",
     "orders.edit",
+    "orders.edit-all",
     "orders.read",
+    "orders.read-all",
     "packages.manage",
     "plugins.manage",
     "roles.manage",

@@ -89,15 +89,6 @@ export interface RolesDefineOutput {
   roleId: string;
 }
 
-export interface PoliciesDefineInput {
-  name: string;
-  scopes: Record<string, unknown>;
-}
-
-export interface PoliciesDefineOutput {
-  policyId: string;
-}
-
 export interface PluginsActivateInput {
   pluginId: string;
 }
@@ -193,7 +184,6 @@ export interface UsersDefineInput {
   displayName: string;
   password?: string;
   roles: Record<string, unknown>;
-  policies?: Record<string, unknown>;
 }
 
 export interface UsersDefineOutput {
@@ -204,7 +194,6 @@ export interface UsersInviteInput {
   email: string;
   displayName: string;
   roles: Record<string, unknown>;
-  policies?: Record<string, unknown>;
 }
 
 export interface UsersInviteOutput {
@@ -461,16 +450,6 @@ export interface RolesListQuery {
   search?: string;
 }
 
-export interface PoliciesListRow {
-  id: string;
-  name: string;
-  scopes: string;
-}
-
-export interface PoliciesListQuery {
-
-}
-
 export interface TenantsListRow {
   id: string;
   displayName: string;
@@ -576,11 +555,6 @@ export class TypedTamClient {
   /** roles.define (requires roles.manage) */
   rolesDefine(input: RolesDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<RolesDefineOutput>> {
     return this.client.operation("roles.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RolesDefineOutput>>;
-  }
-
-  /** policies.define (requires roles.manage) */
-  policiesDefine(input: PoliciesDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<PoliciesDefineOutput>> {
-    return this.client.operation("policies.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<PoliciesDefineOutput>>;
   }
 
   /** plugins.activate (requires plugins.manage) */
@@ -746,11 +720,6 @@ export class TypedTamClient {
   /** view roles.list (requires roles.manage) */
   rolesList(query?: RolesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RolesListRow[] }> {
     return this.client.view("roles.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RolesListRow[] }>;
-  }
-
-  /** view policies.list (requires roles.manage) */
-  policiesList(query?: PoliciesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PoliciesListRow[] }> {
-    return this.client.view("policies.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PoliciesListRow[] }>;
   }
 
   /** view tenants.list (requires tenants.read) */
