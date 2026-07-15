@@ -30,7 +30,7 @@ samples/fortnox              a plugin whose whole job is one inbound integration
 samples/approvals            Step 16: nested approver groups + tenant-configured rules gating
                              host operations via the wildcard gate, park, replay seams
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              102 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              106 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay)
@@ -300,6 +300,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
   audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
   redelivery. Six pipeline-level tests prove all of it on SQLite.
+- **Subscriptions understand the tenant tree — the ANCHOR model** (docs/24 hierarchy, D-S1..6):
+  a subscription row covers its subtree; the nearest ancestor-or-self anchor governs
+  (`Subscriptions.CoveringAsync`, the grants chain walk applied to money); an anchor-less tree
+  shares ONE free default anchored at the root — creating child nodes no longer mints fresh free
+  seats (the ceiling bypass is closed). Entitlement is the anchor's, activation stays per node;
+  seats POOL at the anchor with the lease on the anchor's row (cross-node invite races now
+  conflict); sub-anchors (set-plan at a non-root node, billing-provider-only via the reserved
+  atom) carve genuinely separate billing with absolute boundaries — no unions, no borrowing.
+  `tenants.move` across anchor boundaries succeeds with entitlement-lost/seat-overflow WARNINGS
+  (never destructive; reconciliation enforces). Wire: `subscriptions.current` gained
+  `anchorTenantId` + pooled `seatsUsed` (additive). Verified on the wire: nord resolves demo's
+  standard plan and anchor, identical pool from both nodes, child activates via anchor
+  entitlement, seat-lease race and ceiling regressions green. 106 tests.
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

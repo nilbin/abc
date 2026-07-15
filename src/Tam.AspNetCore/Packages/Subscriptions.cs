@@ -75,26 +75,29 @@ public static class CurrentSubscription
         public string Status { get; init; } = "";
         [LabelKey("labels.entitlements")]
         public string Entitlements { get; init; } = "";
+        [LabelKey("labels.anchor-tenant")]
+        public string AnchorTenantId { get; init; } = "";
     }
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
     {
-        var tenant = context.TenantId.Value;
-        var subscription = tam.Db.Set<SubscriptionEntity>().Find(tenant)
-            ?? new SubscriptionEntity { TenantId = tenant };
-        // Seats are consumed per tenant by active memberships (docs/26); the global filter already
-        // scopes the count to this tenant.
-        var used = tam.Db.Set<TenantMembershipEntity>().Count(x => x.Active);
+        // The COVERING subscription (docs/24 hierarchy): possibly anchored on an ancestor. Seat
+        // usage is the anchor's whole pool — active memberships across every covered node.
+        var covering = Subscriptions.Covering(tam.Db, context.TenantId.Value);
+        var covered = Subscriptions.CoveredTenants(tam.Db, covering.AnchorTenantId);
+        var used = tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+            .Count(m => m.Active && covered.Contains(m.TenantId));
 
         return new[]
         {
             new Result
             {
-                Plan = subscription.Plan,
-                Seats = subscription.Seats,
+                Plan = covering.Subscription.Plan,
+                Seats = covering.Subscription.Seats,
                 SeatsUsed = used,
-                Status = subscription.Status,
-                Entitlements = subscription.EntitlementsJson,
+                Status = covering.Subscription.Status,
+                Entitlements = covering.Subscription.EntitlementsJson,
+                AnchorTenantId = covering.AnchorTenantId,
             },
         }.AsQueryable();
     }

@@ -162,5 +162,8 @@
   "auth.added-subject": "Du har fått tillgång till en ny organisation",
   "auth.added-body": "Logga in som vanligt och välj organisationen vid inloggning.",
   "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; ändringarna av anpassade fält kunde inte knytas till en.",
-  "pipeline.replay-actor-unavailable": "Den ursprungliga beställarens konto är inte längre tillgängligt; den parkerade begäran kan inte utföras."
+  "pipeline.replay-actor-unavailable": "Den ursprungliga beställarens konto är inte längre tillgängligt; den parkerade begäran kan inte utföras.",
+  "subscriptions.entitlement-lost": "Planen som täcker denna enhet omfattar inte längre det aktiva tillägget {plugin} (på {tenant}); det inaktiveras vid nästa avstämning.",
+  "subscriptions.seat-overflow": "Platspoolen är över sin gräns ({used} av {seats}); inga nya medlemmar kan läggas till förrän den är under gränsen igen.",
+  "labels.anchor-tenant": "Faktureras på"
 }

@@ -38,6 +38,53 @@ Both read the subscription row once (cheap, one-per-tenant), and both degrade sa
 
 Because entitlement is enforced at activation, not at every request, an entitled-then-downgraded tenant keeps working until the next activation attempt; a background reconciliation (deactivate plugins a lapsed plan no longer entitles) is the `past_due`/`canceled` handler — designed, on the integration channel, not yet built.
 
+## Hierarchy — the anchor model (BUILT)
+
+docs/24 was written flat; docs/26 then made tenants trees. Unreconciled, the flat model gave
+three wrong answers in a tree: a child with no subscription row was a free-plan *island inside a
+paid group* (entitled to nothing its parent paid for); every new child minted its own free seat
+pool (a seat-ceiling bypass one `tenants.create` wide); and nothing said whether a subsidiary
+could be billed separately. The organizing principle mirrors the settled authorization rule —
+*capability cascades, data does not* (docs/26): **a subscription is the money above a subtree,
+and it cascades; activation is a per-node choice, and it does not.**
+
+A `SubscriptionEntity` row **is an anchor**: it covers its own node and every descendant, until a
+nearer anchor shadows it. No schema change — anchorship is implicit in which node has a row.
+
+- **D-S1 — nearest ancestor-or-self anchor governs** (`Subscriptions.CoveringAsync`): the same
+  materialized-path chain walk actor grants use. The free default survives only when NO anchor
+  exists on the chain — and it is then anchored at the **root**: one tree, one commercial
+  standing; child nodes never mint fresh free seats.
+- **D-S2 — entitlement is the anchor's; activation stays per node; entitlement is enough.** A
+  child activates a plugin iff the covering anchor entitles it. No per-subtree allow/deny masks —
+  "the parent didn't intend it" is governance, answered by who holds `plugins.manage` where
+  (deny rules stay settled out, docs/27 D-A4).
+- **D-S3 — seats pool at the anchor**: the count spans the anchor's covered set (its subtree
+  minus sub-anchored subtrees) and the seat LEASE lands on the anchor's row — invites racing at
+  two different covered nodes now conflict at SaveChanges. A materialized free default lands at
+  the root, never at a child (a child row would silently shadow a future root plan). An
+  over-ceiling pool blocks only NEW consumption; existing members are never deactivated.
+- **D-S4 — sub-anchors are the deliberate exception** for genuinely separate billing (an
+  acquired subsidiary on its own contract): `subscriptions.set-plan` run while acting at that
+  node. Creation is billing-provider-only *by construction* — `subscriptions.manage` is a
+  reserved atom (excluded from `*`, ungrantable through roles). Boundaries are absolute: a
+  sub-anchored subtree ignores every anchor above it — no entitlement unions, no seat borrowing
+  (union semantics would open pricing arbitrage).
+- **D-S5 — `tenants.move` across anchor boundaries: allow, warn, never destroy.** The move is
+  structural and succeeds (the mover typically cannot fix billing anyway — the atom is
+  reserved); it returns `subscriptions.entitlement-lost` / `subscriptions.seat-overflow`
+  WARNINGS. Enforcement rides the existing downgrade semantics: no new activation of an
+  unentitled plugin, no new seat past an overflowed pool, and the S2 reconciliation job
+  deactivates later — undo the move before it runs and nothing happened. (Hard-failing the move
+  or deleting activation rows were both rejected: the first holds re-orgs hostage to billing,
+  the second destroys undoable state.)
+- **D-S6 — wire impact is two additive facts**: `subscriptions.current` shows the COVERING
+  subscription plus `anchorTenantId` and the pooled `seatsUsed`. The entity and `set-plan` are
+  unchanged (set-plan at a non-root node *is* sub-anchor creation).
+
+Deferred: `subscriptions.detach` (removing a sub-anchor when a subsidiary is re-absorbed into
+group billing) — deliberately unbuilt until the scenario is real.
+
 ## Marketplace composition (docs/22 tiers × this)
 
 The marketplace's three tiers each get their price hook here:

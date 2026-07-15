@@ -53,16 +53,22 @@ internal static class MembershipRules
     public static async Task<Finding?> ConsumeSeatAsync(
         ITamDb tam, string tenantId, CancellationToken ct)
     {
-        var subscription = await Subscriptions.ForAsync(tam.Db, tenantId, ct);
-        var activeMembers = await tam.Db.Set<TenantMembershipEntity>()
-            .CountAsync(m => m.Active, ct);
-        if (activeMembers >= subscription.Seats)
-            return SubscriptionFindings.SeatLimit.With(("seats", subscription.Seats));
+        // Seats POOL at the covering anchor (docs/24 hierarchy): the count spans every node the
+        // anchor covers, and the lease lands on the ANCHOR's row — two admins racing invites at
+        // two different covered nodes now conflict at SaveChanges instead of each passing a
+        // node-local check. A materialized free default lands at the ROOT, never at a child
+        // (a child row would silently shadow any future root plan).
+        var covering = await Subscriptions.CoveringAsync(tam.Db, tenantId, ct);
+        var covered = await Subscriptions.CoveredTenantsAsync(tam.Db, covering.AnchorTenantId, ct);
+        var activeMembers = await tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+            .CountAsync(m => m.Active && covered.Contains(m.TenantId), ct);
+        if (activeMembers >= covering.Subscription.Seats)
+            return SubscriptionFindings.SeatLimit.With(("seats", covering.Subscription.Seats));
 
-        if (tam.Db.Entry(subscription).State == EntityState.Detached)
-            tam.Db.Add(subscription);
+        if (tam.Db.Entry(covering.Subscription).State == EntityState.Detached)
+            tam.Db.Add(covering.Subscription);
         else
-            subscription.Version++;
+            covering.Subscription.Version++;
         return null;
     }
 

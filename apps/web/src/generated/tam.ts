@@ -508,6 +508,7 @@ export interface SubscriptionsCurrentRow {
   seatsUsed: number;
   status: string;
   entitlements: string;
+  anchorTenantId: string;
 }
 
 export interface SubscriptionsCurrentQuery {

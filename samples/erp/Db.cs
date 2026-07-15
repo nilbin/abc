@@ -208,8 +208,10 @@ public static class Seed
             Customer.Create(Tenant2, new("Lidköping Kyl AB"), new("Fabriksgatan 9, Lidköping"),
                 new("kontakt@lidkyl.se"), null));
 
-        // The tenant's subscription (docs/24): a "standard" plan, 10 seats, entitled to the
-        // inspect plugin. A billing provider would drive this via subscriptions.set-plan.
+        // The tenant's subscription (docs/24): a "standard" plan, 10 seats, entitled plugins.
+        // A billing provider would drive this via subscriptions.set-plan. This row is the tree's
+        // ANCHOR (docs/24 hierarchy): it covers "nord" too — the money cascades down the tree,
+        // activation stays per node, and the seat pool spans both.
         db.Add(new SubscriptionEntity
         {
             TenantId = Tenant,

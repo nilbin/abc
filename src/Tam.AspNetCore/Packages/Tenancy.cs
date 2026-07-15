@@ -163,7 +163,69 @@ public static class MoveTenant
             else if (node.Path.StartsWith(oldPath + ".", StringComparison.Ordinal))
                 node.Path = newPath + node.Path[oldPath.Length..];
         }
-        return new Output(moved.Id, newPath);
+
+        // Crossing an anchor boundary (docs/24 hierarchy) changes effective entitlements and
+        // seat pools. The move is structural and always succeeds — the mover typically CANNOT
+        // fix billing anyway (subscriptions.manage is reserved) — but it WARNS about every
+        // active plugin the new anchor doesn't entitle and about a seat pool now over its
+        // ceiling. Enforcement follows the existing downgrade semantics: no new activations,
+        // no new seats, reconciliation deactivates later. Undo the move and nothing happened.
+        var findings = await AnchorCrossingWarningsAsync(tam, nodes, moved, ct);
+        return new Result<Output> { Output = new Output(moved.Id, newPath), Findings = findings };
+    }
+
+    private static async Task<List<Finding>> AnchorCrossingWarningsAsync(
+        ITamDb tam, List<TenantEntity> nodes, TenantEntity moved, CancellationToken ct)
+    {
+        var findings = new List<Finding>();
+        var anchors = await tam.Db.Set<SubscriptionEntity>().IgnoreQueryFilters().ToListAsync(ct);
+        var byId = nodes.ToDictionary(t => t.Id);
+
+        // Post-move covering anchors, computed over the ALREADY-REWRITTEN in-memory paths.
+        CoveringSubscription CoveringOf(string id) =>
+            Subscriptions.Pick(Subscriptions.Chain(byId.GetValueOrDefault(id), id), anchors);
+
+        // Active plugins anywhere in the moved subtree that the NEW covering anchor no longer
+        // entitles. Cross-tenant read by nature — the subtree spans nodes.
+        var subtreeIds = nodes
+            .Where(t => TenantEntity.IsSelfOrDescendant(moved.Path, t.Path))
+            .Select(t => t.Id).ToList();
+        var activations = await tam.Db.Set<PluginActivationEntity>().IgnoreQueryFilters()
+            .Where(a => subtreeIds.Contains(a.TenantId)).ToListAsync(ct);
+        foreach (var activation in activations)
+        {
+            if (!CoveringOf(activation.TenantId).Subscription.Entitles(activation.PluginId))
+                findings.Add(SubscriptionFindings.EntitlementLost
+                    .With(("plugin", activation.PluginId), ("tenant", activation.TenantId)));
+        }
+
+        // The moved node's new pool may now be over its ceiling. New consumption is blocked by
+        // the seat lease; existing members are never deactivated (docs/24).
+        var covering = CoveringOf(moved.Id);
+        var anchorIds = anchors.Select(a => a.TenantId).ToHashSet();
+        var covered = nodes
+            .Where(t => byId.TryGetValue(covering.AnchorTenantId, out var anchor)
+                && TenantEntity.IsSelfOrDescendant(anchor.Path, t.Path)
+                && !Shadowed(t, covering.AnchorTenantId, anchorIds))
+            .Select(t => t.Id).ToList();
+        var used = await tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+            .CountAsync(m => m.Active && covered.Contains(m.TenantId), ct);
+        if (used > covering.Subscription.Seats)
+            findings.Add(SubscriptionFindings.SeatOverflow
+                .With(("used", used), ("seats", covering.Subscription.Seats)));
+
+        return findings;
+    }
+
+    private static bool Shadowed(TenantEntity tenant, string anchorId, HashSet<string> anchorIds)
+    {
+        var chain = tenant.AncestorIds();
+        for (var i = chain.Count - 1; i >= 0; i--)
+        {
+            if (chain[i] == anchorId) return false;
+            if (anchorIds.Contains(chain[i])) return true;
+        }
+        return false;
     }
 }
 
