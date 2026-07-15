@@ -57,7 +57,7 @@ A sixth cross-cutting concern, **tenant extensibility** (runtime custom fields d
 | [25 External integrations](docs/25-external-integrations.md) | Outbound seam: triggers, retries, dead-letter, scheduling |
 | [26 Tenancy & identity](docs/26-tenancy-hierarchy-and-identity.md) | **Hierarchical tenants** (materialized paths, act-as, lifecycle, invites) and platform-global accounts with per-tenant memberships |
 | [27 Authorization](docs/27-authorization-model.md) | **Capability × data scope**: access levels, field masking, access policies, the fan-out/fan-in write model |
-| [28 Actor attributes](docs/28-actor-attributes.md) | DRAFT: the design `where` scopes wait on (D-AA1…D-AA5 open) |
+| [28 Assignment & grouping](docs/28-assignment-and-grouping.md) | The closed scope set; domain assignment in domain tables; groups ladder; approvals as a plugin |
 | [Review notes](docs/review-notes.md) | Design risks, refinements, and open questions |
 
 ## Reading order

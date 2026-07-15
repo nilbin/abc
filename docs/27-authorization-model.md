@@ -87,14 +87,15 @@ A **scope** is a declarative row rule attached to a (resource, capability). Kind
   every company reads). Cheaper still: the active node's ancestor ids are enumerable from its own
   path, so this is a **bounded `row.TenantId IN (ancestor ids)` list** — no LIKE at all. Only ever
   exposes the active node's *own* ancestors' rows, never a sibling subtree, so isolation holds.
-- **where(attribute)** — an attribute predicate the resource defines and the policy parameterizes
-  (e.g. `region == actor.region`, `team ∈ actor.teams`). Declarative, translated into the query.
-- **shared** — explicit per-record grants (a share table: this record shared with this account/team).
-  Distinct from `inherited`: `inherited` is structural (ancestor-owned), `shared` is an ACL per row.
+- ~~**where(attribute)**~~ / ~~**shared**~~ — SETTLED OUT ([docs/28](28-assignment-and-grouping.md)
+  D-AG1/D-AG2): attribute predicates and per-record grants require subject-side facts the framework
+  does not own (regions, teams, share edges are domain data), so they are **domain patterns** —
+  assignment tables keyed by `actor.Id` with one predicate enforced on both read and write — never
+  policy scope kinds. The set above is closed.
 
 Scope is **per (resource, capability)**, so "view all Orders but manage only your own" is two grants
 with different scopes on the same resource. Scopes **union** (broadest wins) when several grants cover
-the same capability — `all ⊇ subtree ⊇ own`, and `shared`/`where` add rows.
+the same capability — `all ⊇ subtree ⊇ own`.
 
 ### Grouping: access policies (the separate axis)
 
@@ -110,8 +111,8 @@ picks from each menu — the same role reused with different policies across mem
 ### Enforcement
 
 - **Reads**: the view's declarative scope (generalizing today's `ScopedTo`) compiles the resolved
-  scope into the query — `own` → owner predicate, `subtree` → path prefix, `where` → attribute
-  predicate, `shared` → join the share table. One line per view, same as today.
+  scope into the query — `own` → owner predicate, `subtree` → path prefix. One line per view, same
+  as today; domain assignment predicates (docs/28) join through domain tables the same way.
 - **Writes**: the operation re-checks the scope on the target row authoritatively (generalizing
   today's `CheckOwnership`) — a stale/forged id can't escape scope.
 - Both ride the existing pipeline; the row rules live in one resolver, not per operation.
@@ -265,11 +266,15 @@ scope is a line worker. Seats (docs/24) count memberships per tenant.
 
 - **D-A1 — access levels: YES.** `None/View/Edit/Manage` presets are the authoring model over the
   existing permission atoms (sugar; nothing downstream changes).
-- **D-A2 — row-scope kinds: `all`, `own`, `subtree`, `inherited`, `where` now; DEFER `shared`
-  (record ACLs).** `inherited` (upward, ancestor-owned shared data) was added at the hierarchy review.
+- **D-A2 — row-scope kinds: `all`, `own`, `subtree`, `inherited` — and that set is CLOSED
+  (docs/28 D-AG1; `where`/`shared` settled out as domain patterns).** `inherited` (upward,
+  ancestor-owned shared data) was added at the hierarchy review.
   Per-record sharing is a per-domain design later, not a framework primitive yet. Policies are BUILT
-  for `all`|`own` (see implementation notes); `where` waits on the actor-attributes design — now
-  drafted decision-ready in [docs/28](28-actor-attributes.md) (D-AA1…D-AA5).
+  for `all`|`own` (see implementation notes). SETTLED in [docs/28](28-assignment-and-grouping.md):
+  the policy scope set is CLOSED at `all`/`own`/`subtree`/`inherited` (a framework scope kind
+  requires a framework-owned subject-side fact — identity or tree position); `where` and `shared`
+  are domain patterns on the existing seams, and rich grouping/approval systems are plugin
+  territory (tutorial Step 16).
 - **D-A3 — field-level: FULL now (read + write masking).** Resources opt a field in as sensitive; a
   grant can hide it from views/manifest (read) AND reject a `Change` to it (write).
 - **D-A4 — deny rules: NO.** Union-grant only.

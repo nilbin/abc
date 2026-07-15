@@ -759,6 +759,80 @@ A year in, Norrservice buys a company in Kiruna. Nothing about Orders changes �
 
 The pattern of Steps 1–14 holds: the tree, the memberships, the roles, the policies, the invites are all *data behind operations* — no deploy moves a company, grants a scope, or seats a user.
 
+## Step 16 — Approvals arrive as a plugin — and the domains never notice *(design — the next stress test for [22-plugins.md](22-plugins.md))*
+
+Norrservice's group buys an add-on from a workflow vendor: purchase approvals. Orders above a
+threshold need a manager's sign-off; time corrections need the team lead. The point of this step
+is what it does **not** require: no change to `CreateOrder`, no change to any domain, and no
+approval engine in the framework. Groups and workflows are exactly the things docs/28 keeps out
+of core — so they arrive the way inspection checklists did in Step 13: as a package the tenant
+activates.
+
+What the vendor ships, using only plugin machinery that exists today:
+
+```csharp
+[TamPlugin("approvals")]
+public sealed class ApprovalsPlugin : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.Model.AddDiscovered();
+        // Its OWN aggregates, in the host database like inspect's checklists: ApprovalGroup
+        // (nested if the vendor wants — nesting semantics are the PLUGIN's problem, the
+        // framework never learns about groups), GroupMember, ApprovalRule (which operation ids
+        // need sign-off, thresholds), ApprovalRequest (the parked envelope + its payload hash).
+        // Plus approvals.* operations/views: request lists, approve/reject, group admin — each
+        // an ordinary operation: authorized, audited, localized, in the manifest, an MCP tool.
+        // OnEffect("approvals.requested") → ITamEmail: the approver gets a link. (Exists today.)
+    }
+}
+```
+
+The interesting part is the gate. Step 13's gate was declared against one known operation id;
+approvals must intercept operation ids *the tenant configures at runtime*, park the request, and
+later run it for real. Walking through one order:
+
+1. Didrik submits `orders.create` for 180 000 kr. The approvals gate (running inside the
+   pipeline, before the handler's effects commit) consults its `ApprovalRule` table: this
+   operation + this threshold ⇒ sign-off required, and no approval ticket accompanies the
+   request. The gate **parks the envelope** — operation id, wire body, actor, tenant, culture —
+   as an `ApprovalRequest`, and blocks with `approvals.pending` (a localized finding the form
+   renders as "submitted for approval", not as an error).
+2. The team-lead group resolves (however the plugin defines resolution — flat, nested, quorum),
+   `OnEffect` mails the approvers, and the pending request sits in the plugin's grid.
+3. A lead runs `approvals.approve`. The plugin **replays the parked envelope** through the real
+   pipeline — the same executor every caller uses — as the *original* actor, with the approval
+   ticket attached. The gate sees a ticket whose payload hash matches the parked body (the same
+   hash the idempotency machinery already computes) and passes; the order is created; the audit
+   trail shows both facts: requested by Didrik, released by the lead.
+
+The domain wrote none of this. `CreateOrder` still doesn't know approvals exist — for tenants
+without the plugin, nothing changed; for tenants with it, the manifest says `orders.create` is
+gated and the impact report shows it, exactly like Step 13.
+
+**What this scenario proves — and the three seams it demands.** This is the sharpest stress test
+of the plugin architecture so far, and it is honest about where today's machinery falls short:
+
+1. **Config-driven gate targets.** Gates today bind to operation ids at plugin-compile time; the
+   approvals gate must attach to whatever `ApprovalRule` rows say. The executor's gate loop needs
+   a wildcard bucket ("run for every operation, decide from config") — small mechanically, but
+   the manifest's `gatedBy` transparency becomes per-tenant, which the effective-manifest overlay
+   already knows how to express.
+2. **Parking must survive the rollback.** A blocking gate rolls the transaction back — that is
+   its contract — but the `ApprovalRequest` row must COMMIT anyway, or nothing was parked. The
+   pipeline needs a "park" outcome distinct from plain blocking: capture-and-commit the plugin's
+   rows while discarding the domain's, likely via a separate unit of work for the gate's own
+   writes (the same isolation the outbox dispatcher already practices).
+3. **Sanctioned envelope replay.** Re-executing a stored envelope as the original actor is
+   powerful and must be a framework seam, not an impersonation hack: replay is only valid for an
+   envelope the pipeline itself parked, the payload hash must match, and the audit row carries
+   dual attribution (initiator + releaser). The pieces exist — in-process execution, payload
+   hashing, actor construction — but the seam must own the rules.
+
+When these three land, "an opinionated nested-group approval system for existing domains, without
+the domains knowing" stops being a slogan and becomes a package. That is the bar docs/22 set for
+the plugin architecture; this step is how we will know it has been met.
+
 ---
 
 ## The tally

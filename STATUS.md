@@ -264,12 +264,15 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   row action) with the invite form on the toolbar — roles/policies authored through an app-owned
   "string-list" renderer. Verified headless: an invite submitted through the UI lands and the
   grid live-refreshes with the new member.
-- **Actor-attributes design drafted** ([docs/28](docs/28-actor-attributes.md), decision-ready
-  D-AA1…D-AA5): the model `where` scopes wait on — attribute values as a JSON map on the
-  membership, names declared by resources (`AttributeScope`, validated at policies.define like
-  everything else), grants suffixed `:where:attr=value` at actor resolution on the Axis 2 seam,
-  `own`/`where` unioning as row-sets, missing attributes failing closed, and `shared` shaped as a
-  future declared join-scope. Design only — nothing built until the decisions are settled.
+- **Assignment & grouping settled** ([docs/28](docs/28-assignment-and-grouping.md), D-AG1…D-AG4,
+  superseding the earlier actor-attributes draft): the policy scope set is CLOSED at
+  `all`/`own`/`subtree`/`inherited` — a framework scope kind requires a framework-owned
+  subject-side fact (identity or tree position), and there are no more of those. `where`/`shared`
+  are domain patterns (assignment tables keyed by actor id, one predicate enforced on both read
+  and write); generic groups, if ever, arrive as one more source in the actor-resolution union
+  (profiles → flat groups → nesting never in core); approval flows are plugin territory —
+  tutorial Step 16 drafts the approvals-plugin scenario and names the three seams it demands
+  (config-driven gate targets, park-across-rollback, sanctioned envelope replay).
 - **Extension-channel targeting is deterministic and fail-closed** (the old review medium): the
   executor no longer binds `extensions` changes to whichever tracked instance of the extensible
   type came FIRST — one tracked instance is the target; among several, the single Added/Modified
