@@ -300,6 +300,13 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
   audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
   redelivery. Six pipeline-level tests prove all of it on SQLite.
+- **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
+  package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
+  gates, operations and views co-resident; pipeline infrastructure extracted to named root
+  files (PluginActivation, Entitlements, SecretVault) with a litmus test ("would it exist
+  without the admin surface?"); Integrations.cs renamed InboundIntegrations.cs. Provably
+  mechanical move: manifest byte-identical, 102 tests green, wire smoke passed. The remaining
+  organization debts are a checked ledger in docs/29.
 - **Rules run through the gate seam they sell**: the executor's hard call to `RuleEvaluator`
   is gone — tenant automation rules (P5) execute as `tam.rules`' own PURE wildcard gate.
   Gates gained a declared `pure` flag: pure-over-input gates run BEFORE the transaction (the
