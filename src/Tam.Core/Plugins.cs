@@ -136,8 +136,11 @@ public sealed record GateContext(
 /// <see cref="ITamActivator"/>) bound to one operation id — or to the WILDCARD
 /// (<see cref="OperationId"/> = "*"), which runs on EVERY operation and decides from its own
 /// config whether to act (docs/28 tutorial Step 16: the set of gated operations is tenant data,
-/// not compile-time). Visible in the manifest as GatedBy.</summary>
-public sealed record GateDefinition(string OperationId, string PluginId, Type HandlerType)
+/// not compile-time). A PURE gate declares itself pure-over-input and runs BEFORE the
+/// transaction — the cheap fail (tenant automation rules ride here); transactional gates run
+/// inside it, where the state they check cannot change underneath the handler. Visible in the
+/// manifest as GatedBy.</summary>
+public sealed record GateDefinition(string OperationId, string PluginId, Type HandlerType, bool Pure = false)
 {
     public const string Wildcard = "*";
 }
@@ -295,18 +298,20 @@ public sealed class PluginBuilder
     /// <summary>Declares a precondition on a host operation (by operation id — the wire
     /// contract). <typeparamref name="TGate"/> is constructed per invocation with ctor injection.
     /// Runs only for tenants with this plugin active; listed in the manifest.</summary>
-    public PluginBuilder Gate<TGate>(string operationId) where TGate : class, IOperationGate
+    public PluginBuilder Gate<TGate>(string operationId, bool pure = false)
+        where TGate : class, IOperationGate
     {
-        Model.Gate(operationId, typeof(TGate));
+        Model.Gate(operationId, typeof(TGate), pure);
         return this;
     }
 
     /// <summary>Declares a WILDCARD gate (docs/28 approvals seam 1): runs on EVERY operation,
     /// after any operation-specific gates, and decides from its own data whether to act — the
-    /// gated set is tenant config, not compile time.</summary>
-    public PluginBuilder GateAll<TGate>() where TGate : class, IOperationGate
+    /// gated set is tenant config, not compile time. A PURE wildcard gate (pure-over-input,
+    /// no state reads it needs transactional protection for) runs BEFORE the transaction.</summary>
+    public PluginBuilder GateAll<TGate>(bool pure = false) where TGate : class, IOperationGate
     {
-        Model.Gate(GateDefinition.Wildcard, typeof(TGate));
+        Model.Gate(GateDefinition.Wildcard, typeof(TGate), pure);
         return this;
     }
 

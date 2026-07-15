@@ -148,7 +148,7 @@ The last Salesforce pillar, and the one where the "no tenant code" line matters 
   "then": { "finding": "rules.cold-chain-needs-date", "target": "requestedDate" } }
 ```
 
-Rules are registry data (RUL### diagnostics at definition: unknown field, type mismatch, unreachable condition), evaluated in the pipeline with a budget (no loops, no recursion, bounded tree depth), fully audited, and — because Px is portable — the *same* condition can drive client-side form behavior without a round trip. Message keys, as always: the finding's text lives in the tenant's label catalog, per culture.
+Rules are registry data (RUL### diagnostics at definition: unknown field, type mismatch, unreachable condition), evaluated with a budget (no loops, no recursion, bounded tree depth), fully audited, and — the sharpest dogfood in the codebase — **executed as the `tam.rules` package's own PURE wildcard gate**: the executor has no rules special case; the framework's P5 feature runs through the very gate seam it sells, in the pre-transaction phase (a declared pure-over-input gate is the cheap fail; transactional gates keep running inside the transaction). And — because Px is portable — the *same* condition can drive client-side form behavior without a round trip. Message keys, as always: the finding's text lives in the tenant's label catalog, per culture.
 
 What rules never get: arbitrary code, HTTP calls (that's the integration channel, via the enqueue action), or writes to compiled fields (operations own compiled state transitions — EDIT001's philosophy extended to tenants).
 

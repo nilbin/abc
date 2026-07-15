@@ -86,48 +86,67 @@ public sealed class OperationExecutor(
         if (structural.Any(f => f.Severity == FindingSeverity.Error))
             return Fail(context, [.. structural]);
 
-        // Tenant automation rules (docs/22 P5): declarative Px conditions over the wire input,
-        // firing tenant-authored blocking findings — validation as data, evaluated in-pipeline.
-        // (Pure over the input, so safe outside the transaction.)
-        var ruleFindings = await RuleEvaluator.EvaluateAsync(
-            db, operationId, body, context, model.DefaultCulture, ct);
-        if (ruleFindings.Any(f => f.Severity == FindingSeverity.Error))
-            return Fail(context, [.. ruleFindings]);
-
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
-
-        // Plugin gates (docs/22 P2): declared preconditions, run only for tenants with the
-        // owning plugin active — INSIDE the transaction, so the state a gate checked cannot
-        // change underneath the handler it guards. Wire input only, never host CLR types.
-        // Operation-specific gates run first, then wildcard gates (docs/28 approvals seam 1):
-        // a wildcard gate sees every operation and decides from its own config whether to act.
+        // Plugin gates (docs/22 P2): typed preconditions in TWO phases, run only for tenants
+        // with the owning plugin active; within each phase, operation-specific gates run before
+        // wildcard gates (docs/28 approvals seam 1 — a wildcard gate sees every operation and
+        // decides from its own config). Non-blocking findings a passing gate returns (warnings)
+        // are carried into the response. Wire input only, never host CLR types.
         var specificGates = model.Gates.GetValueOrDefault(operationId, []);
         var wildcardGates = operationId == GateDefinition.Wildcard
             ? []
             : model.Gates.GetValueOrDefault(GateDefinition.Wildcard, []);
-        if (specificGates.Count > 0 || wildcardGates.Count > 0)
+        var orderedGates = specificGates.Concat(wildcardGates).ToList();
+        var gateFindings = new List<Finding>();
+        IReadOnlySet<string> activePlugins = new HashSet<string>();
+        ITamActivator activator = new TamActivator(services);
+        if (orderedGates.Count > 0)
         {
-            var activePlugins = await ActivationCache.ForAsync(services, db, context.TenantId.Value, ct);
-            var activator = services.GetService(typeof(ITamActivator)) as ITamActivator
-                ?? new TamActivator(services);
-            foreach (var gate in specificGates.Concat(wildcardGates)
-                         .Where(g => activePlugins.Contains(g.PluginId)))
-            {
-                var gateContext = new GateContext(operationId, body, payloadHash, context);
-                var handler = (IOperationGate)activator.Create(gate.HandlerType);
-                var gateResult = await handler.CheckAsync(gateContext, ct);
-                if (!gateResult.IsError) continue;
+            activePlugins = await ActivationCache.ForAsync(services, db, context.TenantId.Value, ct);
+            activator = services.GetService(typeof(ITamActivator)) as ITamActivator ?? activator;
+        }
 
-                // Parking (docs/28 approvals seam 2): the blocking gate may have deferred writes
-                // — the envelope it wants to keep. Everything else about this attempt rolls back
-                // FIRST; the parked work then runs in a fresh scope pinned to the same tenant, so
-                // its commit is independent of the discarded attempt. A parking failure propagates:
-                // answering "parked for approval" without a durable envelope would be a lie.
-                await transaction.RollbackAsync(ct);
-                foreach (var work in gateContext.ParkedWork)
-                    await PinnedScope.RunAsync(services, context.TenantId.Value, work, ct);
-                return Fail(context, [.. gateResult.Findings]);
+        // PURE phase: gates declared pure-over-input run BEFORE the transaction — the cheap
+        // fail. Tenant automation rules (docs/22 P5) ride here as tam.rules' wildcard gate.
+        foreach (var gate in orderedGates.Where(g => g.Pure && activePlugins.Contains(g.PluginId)))
+        {
+            var gateContext = new GateContext(operationId, body, payloadHash, context);
+            var gateResult = await ((IOperationGate)activator.Create(gate.HandlerType))
+                .CheckAsync(gateContext, ct);
+            if (!gateResult.IsError)
+            {
+                gateFindings.AddRange(gateResult.Findings);
+                continue;
             }
+            // Nothing to roll back yet; parked work still commits from its own fresh scope.
+            foreach (var work in gateContext.ParkedWork)
+                await PinnedScope.RunAsync(services, context.TenantId.Value, work, ct);
+            return Fail(context, [.. gateResult.Findings]);
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+        // TRANSACTIONAL phase: the state a gate checks here cannot change underneath the
+        // handler it guards.
+        foreach (var gate in orderedGates.Where(g => !g.Pure && activePlugins.Contains(g.PluginId)))
+        {
+            var gateContext = new GateContext(operationId, body, payloadHash, context);
+            var handler = (IOperationGate)activator.Create(gate.HandlerType);
+            var gateResult = await handler.CheckAsync(gateContext, ct);
+            if (!gateResult.IsError)
+            {
+                gateFindings.AddRange(gateResult.Findings);
+                continue;
+            }
+
+            // Parking (docs/28 approvals seam 2): the blocking gate may have deferred writes
+            // — the envelope it wants to keep. Everything else about this attempt rolls back
+            // FIRST; the parked work then runs in a fresh scope pinned to the same tenant, so
+            // its commit is independent of the discarded attempt. A parking failure propagates:
+            // answering "parked for approval" without a durable envelope would be a lie.
+            await transaction.RollbackAsync(ct);
+            foreach (var work in gateContext.ParkedWork)
+                await PinnedScope.RunAsync(services, context.TenantId.Value, work, ct);
+            return Fail(context, [.. gateResult.Findings]);
         }
 
         Result result;
@@ -141,7 +160,7 @@ public sealed class OperationExecutor(
         }
 
         var findings = new List<Finding>(structural.Where(f => f.Severity != FindingSeverity.Error));
-        findings.AddRange(ruleFindings.Where(f => f.Severity != FindingSeverity.Error));
+        findings.AddRange(gateFindings);
         findings.AddRange(result.Findings);
         var conflicts = new List<FieldConflict>(result.Conflicts ?? []);
 

@@ -300,6 +300,15 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
   audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
   redelivery. Six pipeline-level tests prove all of it on SQLite.
+- **Rules run through the gate seam they sell**: the executor's hard call to `RuleEvaluator`
+  is gone — tenant automation rules (P5) execute as `tam.rules`' own PURE wildcard gate.
+  Gates gained a declared `pure` flag: pure-over-input gates run BEFORE the transaction (the
+  cheap fail, where rules always ran), transactional gates keep running inside it, and
+  non-blocking findings a passing gate returns (a rule's evaluation-failed warning) are carried
+  into the response. Wire-verified: define rule → blocks pre-transaction with the
+  tenant-authored message in culture → below-threshold passes → retire → stops firing; and the
+  layering test fell out for free (tenant rule retired ⇒ the approvals plugin's wildcard gate
+  took over the same operation).
 - **The framework package tier exists — and the system module IS it** (docs/22): `[TamPackage(id,
   prefixes)]` + `AddPackage<T>()` register through the exact plugin surface (PLG005 seams
   unlocked, contributions tagged), validated against CLAIMED wire prefixes (PLG001 package

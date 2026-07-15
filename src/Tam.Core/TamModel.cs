@@ -223,11 +223,11 @@ public sealed class TamModelBuilder
         packagedFields.Add((entityKey, key, type, required, maxLength, options, currentPlugin));
     }
 
-    internal void Gate(string operationId, Type handlerType)
+    internal void Gate(string operationId, Type handlerType, bool pure = false)
     {
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: gates can only be declared by a plugin.");
-        gates.Add(new GateDefinition(operationId, currentPlugin, handlerType));
+        gates.Add(new GateDefinition(operationId, currentPlugin, handlerType, pure));
     }
 
     internal void OnEffect(string eventType, Type handlerType)

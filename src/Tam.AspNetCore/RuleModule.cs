@@ -14,6 +14,23 @@ public static class RuleFindings
 }
 
 /// <summary>
+/// Tenant automation rules as the tam.rules package's own PURE wildcard gate — the framework's
+/// P5 feature runs through the very gate seam it sells (docs/22): no hard call in the executor,
+/// no special case. Pure-over-input, so it rides the pre-transaction phase (the cheap fail);
+/// which operations it fires on is AutomationRuleEntity data, exactly like the approvals
+/// plugin's rule table.
+/// </summary>
+internal sealed class RulesGate(ITamDb tam, TamModel model) : IOperationGate
+{
+    public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
+    {
+        var findings = await RuleEvaluator.EvaluateAsync(
+            tam.Db, gate.OperationId, gate.Input, gate.Context, model.DefaultCulture, ct);
+        return findings.Count == 0 ? Result.Success() : new Result { Findings = findings };
+    }
+}
+
+/// <summary>
 /// Tenant automation rules (docs/22 P5): declarative validation authored as data. The
 /// condition is the same portable Px AST forms already evaluate — structured, analyzable,
 /// bounded — never a string-parsed expression. The action set is closed: v1 is the blocking
