@@ -158,6 +158,26 @@ export interface RulesRetireOutput {
   name: string;
 }
 
+export interface TenantsCreateInput {
+  id: string;
+  displayName: string;
+}
+
+export interface TenantsCreateOutput {
+  id: string;
+  path: string;
+}
+
+export interface TenantsMoveInput {
+  tenantId: string;
+  newParentId: string;
+}
+
+export interface TenantsMoveOutput {
+  id: string;
+  path: string;
+}
+
 export interface UsersDefineInput {
   userName: string;
   displayName: string;
@@ -429,6 +449,17 @@ export interface PoliciesListQuery {
 
 }
 
+export interface TenantsListRow {
+  id: string;
+  displayName: string;
+  parentId?: string;
+  path: string;
+}
+
+export interface TenantsListQuery {
+
+}
+
 export interface AuditEntriesRow {
   id: string;
   timestamp: string;
@@ -560,6 +591,16 @@ export class TypedTamClient {
     return this.client.operation("rules.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RulesRetireOutput>>;
   }
 
+  /** tenants.create (requires tenants.create) */
+  tenantsCreate(input: TenantsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<TenantsCreateOutput>> {
+    return this.client.operation("tenants.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TenantsCreateOutput>>;
+  }
+
+  /** tenants.move (requires tenants.move) */
+  tenantsMove(input: TenantsMoveInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<TenantsMoveOutput>> {
+    return this.client.operation("tenants.move", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TenantsMoveOutput>>;
+  }
+
   /** users.define (requires users.manage) */
   usersDefine(input: UsersDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<UsersDefineOutput>> {
     return this.client.operation("users.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<UsersDefineOutput>>;
@@ -678,6 +719,11 @@ export class TypedTamClient {
   /** view policies.list (requires roles.manage) */
   policiesList(query?: PoliciesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: PoliciesListRow[] }> {
     return this.client.view("policies.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: PoliciesListRow[] }>;
+  }
+
+  /** view tenants.list (requires tenants.read) */
+  tenantsList(query?: TenantsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: TenantsListRow[] }> {
+    return this.client.view("tenants.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: TenantsListRow[] }>;
   }
 
   /** view audit.entries (requires audit.read) */

@@ -151,6 +151,17 @@
       "policies.unknown-scope": "Ok\u00E4nt omf\u00E5ng: {scope}.",
       "policies.invalid-name": "Ogiltigt policynamn (gemener, siffror och bindestreck).",
       "users.unknown-policy": "Ok\u00E4nd policy: {policy}.",
+      "operations.tenants.create.title": "Skapa bolag",
+      "operations.tenants.move.title": "Flytta bolag",
+      "labels.tenant": "Bolag",
+      "labels.new-parent": "Ny f\u00F6r\u00E4lder",
+      "labels.parent": "F\u00F6r\u00E4lder",
+      "labels.path": "S\u00F6kv\u00E4g",
+      "tenants.invalid-id": "Ogiltigt id (gemener, siffror och bindestreck; inga punkter).",
+      "tenants.duplicate-id": "Id:t {id} anv\u00E4nds redan.",
+      "tenants.unknown-node": "Ok\u00E4nt bolag: {id}.",
+      "tenants.not-in-subtree": "{id} ligger utanf\u00F6r det aktiva bolagets undertr\u00E4d.",
+      "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget undertr\u00E4d ({id}).",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -356,6 +367,17 @@
       "policies.unknown-scope": "Unknown scope: {scope}.",
       "policies.invalid-name": "Invalid policy name (lowercase letters, digits and hyphens).",
       "users.unknown-policy": "Unknown policy: {policy}.",
+      "operations.tenants.create.title": "Create company",
+      "operations.tenants.move.title": "Move company",
+      "labels.tenant": "Company",
+      "labels.new-parent": "New parent",
+      "labels.parent": "Parent",
+      "labels.path": "Path",
+      "tenants.invalid-id": "Invalid id (lowercase letters, digits and hyphens; no dots).",
+      "tenants.duplicate-id": "The id {id} is already in use.",
+      "tenants.unknown-node": "Unknown company: {id}.",
+      "tenants.not-in-subtree": "{id} is outside the active company\u0027s subtree.",
+      "tenants.cycle": "Cannot move a company under its own subtree ({id}).",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -1123,6 +1145,96 @@
         {
           "name": "name",
           "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "tenants.create": {
+      "permission": "tenants.create",
+      "titleKey": "operations.tenants.create.title",
+      "fields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "path",
+          "labelKey": "labels.path",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "tenants.move": {
+      "permission": "tenants.move",
+      "titleKey": "operations.tenants.move.title",
+      "fields": [
+        {
+          "name": "tenantId",
+          "labelKey": "labels.tenant",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "newParentId",
+          "labelKey": "labels.new-parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "path",
+          "labelKey": "labels.path",
           "type": "text",
           "wireKind": "string",
           "required": true,
@@ -2581,6 +2693,54 @@
       "defaultSort": "name",
       "defaultSortDescending": false
     },
+    "tenants.list": {
+      "permission": "tenants.read",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "parentId",
+          "labelKey": "labels.parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "path",
+          "labelKey": "labels.path",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "path"
+      ],
+      "filterable": [],
+      "defaultSort": "path",
+      "defaultSortDescending": false
+    },
     "audit.entries": {
       "permission": "audit.read",
       "queryFields": [
@@ -3433,6 +3593,9 @@
     "settings.manage",
     "subscriptions.manage",
     "subscriptions.read",
+    "tenants.create",
+    "tenants.move",
+    "tenants.read",
     "users.manage"
   ],
   "revision": 0,

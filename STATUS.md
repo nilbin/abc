@@ -238,6 +238,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   email/phone in rows and manifest while alva ("*") sees values; didrik's create WITH email is
   rejected at the field and passes without it; {customers:manage} grants the atom (stina reads and
   writes email); {subscriptions:manage} still cannot reach set-plan. 82 tests; baseline + types regen.
+- **Tenant lifecycle (docs/26)**: `tenants.create` creates a node as a CHILD OF THE ACTIVE node
+  (writes fan in — a grandchild means acting-as the child first, like its data); the id is a path
+  segment (lowercase, no dots, globally unique) and a pre-hierarchy tenant self-heals its root row
+  on first child creation; no membership row is written — a cascading membership above reaches the
+  new node immediately. `tenants.move` re-parents a strict descendant of the active node under the
+  active node or another of its descendants — never the node you stand on, never out of your
+  subtree, never into the moved subtree (cycle) — by rewriting the moved nodes' `Path` values in
+  the tenants registry and NOTHING else. `tenants.list` is the active node's subtree. Verified on
+  the wire (11/11): create `syd` under demo → path `demo.syd`, alva's standable set includes it
+  live via cascade, act-as syd creates and reads a customer, invalid/duplicate ids rejected, move
+  syd under nord → `demo.nord.syd` with data intact, cycle and out-of-subtree moves rejected with
+  localized findings, viewer denied by the capability gate, overview roll-up unaffected.
 - **Access policies (docs/27 Axis 2, v1 `all`|`own`)**: `AccessPolicyEntity` is a tenant-scoped named
   resource→scope map, managed by `policies.define`/`policies.list` (validated against the same
   resource catalogue as levels; unknown resource/scope → localized findings); a membership lists

@@ -30,6 +30,16 @@ Every tenant-scoped row keeps its single owning `TenantId` (unchanged — no row
 "in a subtree" is a **prefix test on the path**, which is one indexed range scan, not a recursive
 CTE per query.
 
+**Lifecycle (BUILT)**: `tenants.create` creates a node as a child of the ACTIVE node — writes fan
+in, so a grandchild is created by acting-as the child first, exactly like its data; the id is a
+path segment (lowercase, no dots, globally unique), and a pre-hierarchy tenant self-heals its root
+row on first child creation. A cascading membership above the new node reaches it immediately — no
+membership row is written. `tenants.move` re-parents a strict descendant of the active node under
+the active node or another of its descendants (never the node you stand on, never out of your
+subtree, never into the moved node's own subtree) by rewriting the moved nodes' `Path` values in
+the tenants registry and nothing else — no data row is touched. `tenants.list` shows the active
+node's subtree.
+
 ### Three scoping modes, declared per view/operation
 
 - **Strict** (default): a request at node *T* sees only *T*'s own rows.

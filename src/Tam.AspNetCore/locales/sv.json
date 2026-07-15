@@ -146,5 +146,16 @@
   "policies.unknown-resource": "Okänd resurs: {resource}.",
   "policies.unknown-scope": "Okänt omfång: {scope}.",
   "policies.invalid-name": "Ogiltigt policynamn (gemener, siffror och bindestreck).",
-  "users.unknown-policy": "Okänd policy: {policy}."
+  "users.unknown-policy": "Okänd policy: {policy}.",
+  "operations.tenants.create.title": "Skapa bolag",
+  "operations.tenants.move.title": "Flytta bolag",
+  "labels.tenant": "Bolag",
+  "labels.new-parent": "Ny förälder",
+  "labels.parent": "Förälder",
+  "labels.path": "Sökväg",
+  "tenants.invalid-id": "Ogiltigt id (gemener, siffror och bindestreck; inga punkter).",
+  "tenants.duplicate-id": "Id:t {id} används redan.",
+  "tenants.unknown-node": "Okänt bolag: {id}.",
+  "tenants.not-in-subtree": "{id} ligger utanför det aktiva bolagets underträd.",
+  "tenants.cycle": "Ett bolag kan inte flyttas in under sitt eget underträd ({id})."
 }

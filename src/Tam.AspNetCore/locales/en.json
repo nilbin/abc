@@ -146,5 +146,16 @@
   "policies.unknown-resource": "Unknown resource: {resource}.",
   "policies.unknown-scope": "Unknown scope: {scope}.",
   "policies.invalid-name": "Invalid policy name (lowercase letters, digits and hyphens).",
-  "users.unknown-policy": "Unknown policy: {policy}."
+  "users.unknown-policy": "Unknown policy: {policy}.",
+  "operations.tenants.create.title": "Create company",
+  "operations.tenants.move.title": "Move company",
+  "labels.tenant": "Company",
+  "labels.new-parent": "New parent",
+  "labels.parent": "Parent",
+  "labels.path": "Path",
+  "tenants.invalid-id": "Invalid id (lowercase letters, digits and hyphens; no dots).",
+  "tenants.duplicate-id": "The id {id} is already in use.",
+  "tenants.unknown-node": "Unknown company: {id}.",
+  "tenants.not-in-subtree": "{id} is outside the active company's subtree.",
+  "tenants.cycle": "Cannot move a company under its own subtree ({id})."
 }
