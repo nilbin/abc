@@ -268,7 +268,8 @@ scope is a line worker. Seats (docs/24) count memberships per tenant.
 - **D-A2 — row-scope kinds: `all`, `own`, `subtree`, `inherited`, `where` now; DEFER `shared`
   (record ACLs).** `inherited` (upward, ancestor-owned shared data) was added at the hierarchy review.
   Per-record sharing is a per-domain design later, not a framework primitive yet. Policies are BUILT
-  for `all`|`own` (see implementation notes); `where` also waits on the actor-attributes design.
+  for `all`|`own` (see implementation notes); `where` waits on the actor-attributes design — now
+  drafted decision-ready in [docs/28](28-actor-attributes.md) (D-AA1…D-AA5).
 - **D-A3 — field-level: FULL now (read + write masking).** Resources opt a field in as sensitive; a
   grant can hide it from views/manifest (read) AND reject a `Change` to it (write).
 - **D-A4 — deny rules: NO.** Union-grant only.
