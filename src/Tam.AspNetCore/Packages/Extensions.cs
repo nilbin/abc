@@ -11,6 +11,8 @@ public sealed class TamExtensionsPackage : ITamPlugin
     public void Configure(PluginBuilder plugin)
     {
         plugin.LocaleDefaults();
+        // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
+        plugin.Nav(nav => nav.Page("extensions", grid: "web.extensions.fields", suggest: "administration", order: 30));
         plugin.Model
             .AddOperationType(typeof(DefineExtensionField))
             .AddOperationType(typeof(RetireExtensionField))

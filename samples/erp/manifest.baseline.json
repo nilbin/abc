@@ -170,6 +170,17 @@
       "subscriptions.entitlement-lost": "The plan covering this location no longer includes the active add-on {plugin} (at {tenant}); it will be deactivated at the next reconciliation.",
       "subscriptions.seat-overflow": "The seat pool is over its limit ({used} of {seats}); no new members can be added until it is back under.",
       "labels.anchor-tenant": "Billed at",
+      "concurrency.keep-current": "Keep current",
+      "concurrency.use-mine": "Use mine",
+      "nav.users": "Users",
+      "nav.roles": "Roles",
+      "nav.extensions": "Custom fields",
+      "nav.plugins": "Plugins",
+      "nav.packages": "Packages",
+      "nav.rules": "Rules",
+      "nav.audit": "History",
+      "nav.tenants": "Companies",
+      "nav.more": "More",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -212,7 +223,6 @@
       "app.title": "Norrservice ERP",
       "nav.orders": "Orders",
       "nav.customers": "Customers",
-      "nav.extensions": "Custom fields",
       "operations.customers.create.title": "New customer",
       "operations.orders.create.title": "New order",
       "operations.orders.edit-details.title": "Edit order details",
@@ -248,15 +258,11 @@
       "customers.inactive": "The selected customer is inactive.",
       "customers.credit-blocked": "The customer is credit blocked.",
       "customers.duplicate-name": "A customer with that name already exists.",
-      "nav.audit": "History",
-      "nav.plugins": "Plugins",
-      "nav.packages": "Packages",
-      "nav.rules": "Rules",
       "labels.company": "Company",
       "nav.overview": "Group overview",
-      "nav.tenants": "Companies",
-      "nav.users": "Users",
-      "nav.roles": "Roles"
+      "nav.work": "Work",
+      "nav.admin": "Administration",
+      "nav.administration": "General"
     },
     "sv": {
       "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
@@ -426,6 +432,17 @@
       "subscriptions.entitlement-lost": "Planen som t\u00E4cker denna enhet omfattar inte l\u00E4ngre det aktiva till\u00E4gget {plugin} (p\u00E5 {tenant}); det inaktiveras vid n\u00E4sta avst\u00E4mning.",
       "subscriptions.seat-overflow": "Platspoolen \u00E4r \u00F6ver sin gr\u00E4ns ({used} av {seats}); inga nya medlemmar kan l\u00E4ggas till f\u00F6rr\u00E4n den \u00E4r under gr\u00E4nsen igen.",
       "labels.anchor-tenant": "Faktureras p\u00E5",
+      "concurrency.keep-current": "Beh\u00E5ll aktuellt",
+      "concurrency.use-mine": "Anv\u00E4nd mitt",
+      "nav.users": "Anv\u00E4ndare",
+      "nav.roles": "Roller",
+      "nav.extensions": "Anpassade f\u00E4lt",
+      "nav.plugins": "Till\u00E4gg",
+      "nav.packages": "Paket",
+      "nav.rules": "Regler",
+      "nav.audit": "Historik",
+      "nav.tenants": "Bolag",
+      "nav.more": "Mer",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -468,7 +485,6 @@
       "app.title": "Norrservice ERP",
       "nav.orders": "Ordrar",
       "nav.customers": "Kunder",
-      "nav.extensions": "Anpassade f\u00E4lt",
       "operations.customers.create.title": "Ny kund",
       "operations.orders.create.title": "Ny order",
       "operations.orders.edit-details.title": "\u00C4ndra orderdetaljer",
@@ -504,15 +520,11 @@
       "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
       "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
       "customers.duplicate-name": "Det finns redan en kund med det namnet.",
-      "nav.audit": "Historik",
-      "nav.plugins": "Till\u00E4gg",
-      "nav.packages": "Paket",
-      "nav.rules": "Regler",
       "labels.company": "Bolag",
       "nav.overview": "Koncern\u00F6versikt",
-      "nav.tenants": "Bolag",
-      "nav.users": "Anv\u00E4ndare",
-      "nav.roles": "Roller"
+      "nav.work": "Arbete",
+      "nav.admin": "Administration",
+      "nav.administration": "Allm\u00E4nt"
     }
   },
   "operations": {
@@ -4408,5 +4420,189 @@
     "approvals",
     "fortnox",
     "inspect"
-  ]
+  ],
+  "packages": [
+    "tam.audit",
+    "tam.extensions",
+    "tam.integrations",
+    "tam.plugins",
+    "tam.roles",
+    "tam.rules",
+    "tam.subscriptions",
+    "tam.tenancy",
+    "tam.tenantpackages",
+    "tam.users",
+    "tam.vault"
+  ],
+  "nav": {
+    "web": [
+      {
+        "id": "work",
+        "kind": "mode",
+        "labelKey": "nav.work",
+        "children": [
+          {
+            "id": "orders",
+            "kind": "page",
+            "labelKey": "nav.orders",
+            "order": 10,
+            "target": {
+              "page": "orders"
+            },
+            "permission": "orders.read",
+            "children": []
+          },
+          {
+            "id": "overview",
+            "kind": "page",
+            "labelKey": "nav.overview",
+            "order": 20,
+            "target": {
+              "grid": "web.orders.overview"
+            },
+            "children": []
+          },
+          {
+            "id": "customers",
+            "kind": "page",
+            "labelKey": "nav.customers",
+            "order": 30,
+            "target": {
+              "grid": "web.customers.list"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "admin",
+        "kind": "mode",
+        "labelKey": "nav.admin",
+        "children": [
+          {
+            "id": "administration",
+            "kind": "section",
+            "labelKey": "nav.administration",
+            "children": [
+              {
+                "id": "users",
+                "kind": "page",
+                "labelKey": "nav.users",
+                "order": 10,
+                "target": {
+                  "grid": "web.users"
+                },
+                "plugin": "tam.users",
+                "children": []
+              },
+              {
+                "id": "roles",
+                "kind": "page",
+                "labelKey": "nav.roles",
+                "order": 20,
+                "target": {
+                  "grid": "web.roles"
+                },
+                "plugin": "tam.roles",
+                "children": []
+              },
+              {
+                "id": "extensions",
+                "kind": "page",
+                "labelKey": "nav.extensions",
+                "order": 30,
+                "target": {
+                  "grid": "web.extensions.fields"
+                },
+                "plugin": "tam.extensions",
+                "children": []
+              },
+              {
+                "id": "plugins",
+                "kind": "page",
+                "labelKey": "nav.plugins",
+                "order": 40,
+                "target": {
+                  "grid": "web.plugins"
+                },
+                "plugin": "tam.plugins",
+                "children": []
+              },
+              {
+                "id": "packages",
+                "kind": "page",
+                "labelKey": "nav.packages",
+                "order": 50,
+                "target": {
+                  "grid": "web.packages"
+                },
+                "plugin": "tam.tenantpackages",
+                "children": []
+              },
+              {
+                "id": "rules",
+                "kind": "page",
+                "labelKey": "nav.rules",
+                "order": 60,
+                "target": {
+                  "grid": "web.rules"
+                },
+                "plugin": "tam.rules",
+                "children": []
+              },
+              {
+                "id": "audit",
+                "kind": "page",
+                "labelKey": "nav.audit",
+                "order": 70,
+                "target": {
+                  "grid": "web.audit.list"
+                },
+                "plugin": "tam.audit",
+                "children": []
+              },
+              {
+                "id": "tenants",
+                "kind": "page",
+                "labelKey": "nav.tenants",
+                "order": 80,
+                "target": {
+                  "grid": "web.tenants"
+                },
+                "plugin": "tam.tenancy",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "more",
+            "kind": "section",
+            "labelKey": "nav.more",
+            "children": [
+              {
+                "id": "approvals",
+                "kind": "page",
+                "labelKey": "plugins.approvals.title",
+                "target": {
+                  "plugin": "approvals"
+                },
+                "plugin": "approvals",
+                "children": []
+              },
+              {
+                "id": "inspect",
+                "kind": "page",
+                "labelKey": "plugins.inspect.title",
+                "target": {
+                  "plugin": "inspect"
+                },
+                "plugin": "inspect",
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
 }

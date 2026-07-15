@@ -7,7 +7,6 @@
   "app.title": "Norrservice ERP",
   "nav.orders": "Ordrar",
   "nav.customers": "Kunder",
-  "nav.extensions": "Anpassade fält",
   "operations.customers.create.title": "Ny kund",
   "operations.orders.create.title": "Ny order",
   "operations.orders.edit-details.title": "Ändra orderdetaljer",
@@ -43,13 +42,9 @@
   "customers.inactive": "Den valda kunden är inaktiv.",
   "customers.credit-blocked": "Kunden är kreditspärrad.",
   "customers.duplicate-name": "Det finns redan en kund med det namnet.",
-  "nav.audit": "Historik",
-  "nav.plugins": "Tillägg",
-  "nav.packages": "Paket",
-  "nav.rules": "Regler",
   "labels.company": "Bolag",
   "nav.overview": "Koncernöversikt",
-  "nav.tenants": "Bolag",
-  "nav.users": "Användare",
-  "nav.roles": "Roller"
+  "nav.work": "Arbete",
+  "nav.admin": "Administration",
+  "nav.administration": "Allmänt"
 }

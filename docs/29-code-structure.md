@@ -76,6 +76,7 @@ never become a privilege-escalation vector). Packages never call each other's op
 | Entity | `src/Tam.EntityFrameworkCore` (`*Entity`, `ITenantScoped`, `*Json`, `*Iso`) |
 | Operation / view | the owning package file (framework) or plugin Features.cs (vendor) |
 | Form / grid binding | the same package/plugin `Configure` |
+| Nav declaration | package/plugin: `plugin.Nav(...)` in `Configure` (content + suggestion); host layout: `model.Nav("web", …)` in Program.cs — never the other way (docs/30) |
 | Finding codes | `<Area>Findings` in the same file; locale entries in BOTH catalogs |
 | Gate / handler classes | same file as the package/plugin class; ctor-injected |
 | Test | `tests/Tam.Tests` — plus an analyzer rule when the invariant is structural |
@@ -110,6 +111,12 @@ Done:
       Tam.AspNetCore.Postgres extraction; MockFortnox to samples/fortnox; UseTamConventions +
       TamManifestExport host helpers; erp locale dedupe.
 
+- [x] App.tsx rewritten onto nav slots (docs/30 v1): the hand-wired NavLink block and one-line
+      page components are gone; what remains is the shell, `CustomerPicker`, and the one custom
+      page (`OrdersPage`, registered via `registerPage`). Nav model + merge live in
+      `Tam.Core/Nav.cs` + `TamModel.MergeNav/VerifyNav`; slot components in
+      `packages/tam-react/src/nav.tsx`.
+
 Open, in priority order:
 - [ ] Split `Tam.EntityFrameworkCore/ModelConventions.cs` (532 lines): conventions vs
       `FrameworkEntities.cs`.
@@ -120,8 +127,6 @@ Open, in priority order:
 - [ ] `PipelineFindings` out of `Envelope.cs` into `Findings.cs`.
 - [ ] `packages/tam-core/src/index.ts` (515 lines) → `manifest.ts` / `px.ts` / `i18n.ts` /
       `client.ts` + re-exporting index.
-- [ ] `apps/web/src/App.tsx` page-per-file (deliberately deferred to the nav rework — the
-      shell is being rewritten onto nav slots anyway).
 - [ ] Memoize/centralize the 11 identical embedded-locale loads (one per package).
 - [ ] `samples/erp/Db.cs` → Db.cs + Seed.cs (exemplar hygiene).
 - [ ] `Tam.Auth.OpenIddict/TamOpenIddict.cs`: invite-accept pages join `AuthPages.cs`.

@@ -12,6 +12,8 @@ public sealed class TamRulesPackage : ITamPlugin
     public void Configure(PluginBuilder plugin)
     {
         plugin.LocaleDefaults();
+        // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
+        plugin.Nav(nav => nav.Page("rules", grid: "web.rules", suggest: "administration", order: 60));
         // The evaluator IS a gate: pure-over-input, pre-transaction, target set = rule rows.
         // The executor has no rules special case — the P5 feature dogfoods the gate seam.
         plugin.GateAll<RulesGate>(pure: true);

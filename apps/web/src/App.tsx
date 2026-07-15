@@ -5,8 +5,9 @@ import {
 } from '@mantine/core';
 import { TamClient, type StandableInfo } from '@tam/core';
 import {
-  FieldRendererProps, LookupSelect, OperationForm, TamProvider, ViewGrid, registerBadgeColors,
-  registerRenderer, useTam, useTamAuth,
+  FieldRendererProps, LookupSelect, NavModeSwitcher, NavPage, NavProvider, NavSidebar, NavTabs,
+  OperationForm, TamProvider, ViewGrid, registerBadgeColors, registerPage, registerRenderer,
+  useTam, useTamAuth,
 } from '@tam/react';
 
 const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
@@ -79,68 +80,10 @@ function OrdersPage() {
   );
 }
 
-function CustomersPage() {
-  return <ViewGrid grid="web.customers.list" />;
-}
-
-function OverviewPage() {
-  // The group roll-up (docs/26): subtree-scoped, labeled by company, read-only by design.
-  return <ViewGrid grid="web.orders.overview" />;
-}
-
-function AuditPage() {
-  return <ViewGrid grid="web.audit.list" pageSize={20} />;
-}
-
-function ExtensionsPage() {
-  const { refreshManifest } = useTam();
-  return <ViewGrid grid="web.extensions.fields" onAction={() => void refreshManifest()} />;
-}
-
-function PluginsPage() {
-  const { refreshManifest } = useTam();
-  // Activation flips the effective manifest (nav, grids, MCP tools) — refresh after actions.
-  return <ViewGrid grid="web.plugins" onAction={() => void refreshManifest()} />;
-}
-
-function PackagesPage() {
-  const { refreshManifest } = useTam();
-  return <ViewGrid grid="web.packages" onAction={() => void refreshManifest()} />;
-}
-
-function RulesPage() {
-  return <ViewGrid grid="web.rules" />;
-}
-
-function TenantsPage() {
-  const { refreshManifest } = useTam();
-  // Creating or moving a node changes the standable set and paths — refresh after actions.
-  return <ViewGrid grid="web.tenants" onAction={() => void refreshManifest()} />;
-}
-
-function UsersPage() {
-  return <ViewGrid grid="web.users" />;
-}
-
-function RolesPage() {
-  const { refreshManifest } = useTam();
-  // Role edits change the actor's effective grants — refresh so nav/buttons follow.
-  return <ViewGrid grid="web.roles" onAction={() => void refreshManifest()} />;
-}
-
-/** Generic page for an ACTIVE plugin: renders every grid the plugin contributed.
- *  Nothing here knows what "inspect" is — the manifest is the only source. */
-function PluginPage(props: { plugin: string }) {
-  const { manifest } = useTam();
-  const grids = Object.entries(manifest.grids)
-    .filter(([, g]) => g.plugin === props.plugin)
-    .map(([id]) => id);
-  return (
-    <Stack gap="lg">
-      {grids.map(id => <ViewGrid key={id} grid={id} />)}
-    </Stack>
-  );
-}
+// The one genuinely custom page: row-click loads the detail view and opens the edit form with
+// initial values — app logic, not derivable from the manifest. Registered under the key the
+// host's nav declaration binds ({ page: "orders" }).
+registerPage('orders', () => <OrdersPage />);
 
 function Shell(props: {
   userName: string;
@@ -149,107 +92,61 @@ function Shell(props: {
   actAs: string | null;
   onActAs: (id: string | null) => void;
 }) {
-  const { t, culture, setCulture, can, manifest } = useTam();
-  const [page, setPage] = useState<string>('orders');
-
-  // Active plugins contribute nav entries straight from the manifest (docs/22): activation
-  // per tenant is the whole install experience — no app code names any plugin.
-  const activePlugins = manifest.plugins ?? [];
-
-  const pages = useMemo(() => ({
-    orders: <OrdersPage />,
-    overview: <OverviewPage />,
-    customers: <CustomersPage />,
-    extensions: <ExtensionsPage />,
-    audit: <AuditPage />,
-    plugins: <PluginsPage />,
-    packages: <PackagesPage />,
-    rules: <RulesPage />,
-    tenants: <TenantsPage />,
-    users: <UsersPage />,
-    roles: <RolesPage />,
-    ...Object.fromEntries(activePlugins.map(id =>
-      [`plugin:${id}`, <PluginPage key={id} plugin={id} />])),
-  }) as Record<string, ReactNode>, [activePlugins.join(',')]);
-
-  const current = pages[page] ?? pages.orders;
+  const { t, culture, setCulture } = useTam();
 
   // The acting-company selector (docs/26 D-H4): every standable node — memberships plus cascaded
   // descendants, labeled by path. Picking one rebinds every request via the act-as header (the
   // server validates it), so views, forms, lookups and creates all act in that node — no re-login.
   const companies = props.standable;
 
+  // The nav itself is the manifest's (docs/30): modes → switcher, depth 1 → sidebar,
+  // depth 2 → tabs, pages → generic grid/plugin renders or registered custom pages.
   return (
-    <AppShell header={{ height: 56 }} navbar={{ width: 220, breakpoint: 'sm' }} padding="lg">
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group gap="xs">
-            <Text fw={700} size="lg" c="indigo">◆</Text>
-            <Title order={4}>{t('app.title')}</Title>
-            {companies && companies.nodes.length > 1 && (
-              <Select
+    <NavProvider>
+      <AppShell header={{ height: 56 }} navbar={{ width: 220, breakpoint: 'sm' }} padding="lg">
+        <AppShell.Header>
+          <Group h="100%" px="md" justify="space-between">
+            <Group gap="xs">
+              <Text fw={700} size="lg" c="indigo">◆</Text>
+              <Title order={4}>{t('app.title')}</Title>
+              <NavModeSwitcher />
+              {companies && companies.nodes.length > 1 && (
+                <Select
+                  size="xs"
+                  w={240}
+                  ml="md"
+                  value={props.actAs ?? companies.active}
+                  data={companies.nodes.map(n => ({ value: n.id, label: n.display }))}
+                  onChange={v => props.onActAs(v === null || v === companies.active ? null : v)}
+                  allowDeselect={false}
+                />
+              )}
+            </Group>
+            <Group gap="sm">
+              <Text size="sm" c="dimmed">{props.userName}</Text>
+              <Button size="compact-xs" variant="subtle" onClick={props.onLogout}>
+                {t('auth.sign-out')}
+              </Button>
+              <SegmentedControl
                 size="xs"
-                w={240}
-                ml="md"
-                value={props.actAs ?? companies.active}
-                data={companies.nodes.map(n => ({ value: n.id, label: n.display }))}
-                onChange={v => props.onActAs(v === null || v === companies.active ? null : v)}
-                allowDeselect={false}
+                value={culture}
+                onChange={v => setCulture(v)}
+                data={[{ value: 'sv', label: 'Svenska' }, { value: 'en', label: 'English' }]}
               />
-            )}
+            </Group>
           </Group>
-          <Group gap="sm">
-            <Text size="sm" c="dimmed">{props.userName}</Text>
-            <Button size="compact-xs" variant="subtle" onClick={props.onLogout}>
-              {t('auth.sign-out')}
-            </Button>
-            <SegmentedControl
-              size="xs"
-              value={culture}
-              onChange={v => setCulture(v)}
-              data={[{ value: 'sv', label: 'Svenska' }, { value: 'en', label: 'English' }]}
-            />
-          </Group>
-        </Group>
-      </AppShell.Header>
-      <AppShell.Navbar p="xs">
-        <NavLink label={t('nav.orders')} active={page === 'orders'} onClick={() => setPage('orders')} />
-        <NavLink label={t('nav.overview')} active={page === 'overview'} onClick={() => setPage('overview')} />
-        <NavLink label={t('nav.customers')} active={page === 'customers'} onClick={() => setPage('customers')} />
-        {activePlugins.filter(id =>
-          Object.values(manifest.grids).some(g =>
-            g.plugin === id && can(manifest.views[g.view]?.permission ?? ''))
-        ).map(id => (
-          <NavLink key={id} label={t(`plugins.${id}.title`)}
-            active={page === `plugin:${id}`} onClick={() => setPage(`plugin:${id}`)} />
-        ))}
-        {can('extensions.manage') && (
-          <NavLink label={t('nav.extensions')} active={page === 'extensions'} onClick={() => setPage('extensions')} />
-        )}
-        {can('plugins.manage') && (
-          <NavLink label={t('nav.plugins')} active={page === 'plugins'} onClick={() => setPage('plugins')} />
-        )}
-        {can('packages.manage') && (
-          <NavLink label={t('nav.packages')} active={page === 'packages'} onClick={() => setPage('packages')} />
-        )}
-        {can('rules.manage') && (
-          <NavLink label={t('nav.rules')} active={page === 'rules'} onClick={() => setPage('rules')} />
-        )}
-        {can('tenants.read') && (
-          <NavLink label={t('nav.tenants')} active={page === 'tenants'} onClick={() => setPage('tenants')} />
-        )}
-        {can('roles.manage') && (
-          <NavLink label={t('nav.roles')} active={page === 'roles'} onClick={() => setPage('roles')} />
-        )}
-        {can('users.manage') && (
-          <NavLink label={t('nav.users')} active={page === 'users'} onClick={() => setPage('users')} />
-        )}
-        {can('audit.read') && (
-          <NavLink label={t('nav.audit')} active={page === 'audit'} onClick={() => setPage('audit')} />
-        )}
-      </AppShell.Navbar>
-      <AppShell.Main>{current}</AppShell.Main>
-    </AppShell>
+        </AppShell.Header>
+        <AppShell.Navbar p="xs">
+          <NavSidebar />
+        </AppShell.Navbar>
+        <AppShell.Main>
+          <Stack gap="md">
+            <NavTabs />
+            <NavPage />
+          </Stack>
+        </AppShell.Main>
+      </AppShell>
+    </NavProvider>
   );
 }
 

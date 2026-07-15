@@ -19,6 +19,17 @@ var model = new TamModelBuilder()
     .AddPlugin<Fortnox.FortnoxPlugin>()      // a plugin that ships an inbound integration (docs/10 + docs/22)
     .AddPlugin<Approvals.ApprovalsPlugin>()  // Step 16: approval flows over the three seams (docs/28 D-AG4)
 
+    // The web nav tree (docs/30): the HOST owns layout — modes at the top, the administration
+    // section collects every package/plugin page that SUGGESTS it; anything uncollected lands
+    // under "more" in the last mode automatically (nothing can be authored into invisibility).
+    .Nav("web", nav => nav
+        .Mode("work", m => m
+            .Page("orders", page: "orders", permission: "orders.read", order: 10)
+            .Page("overview", grid: "web.orders.overview", order: 20)
+            .Page("customers", grid: "web.customers.list", order: 30))
+        .Mode("admin", m => m
+            .Section("administration")))
+
     .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
     {
         form.Field(x => x.CustomerId).Renderer("customer-picker");

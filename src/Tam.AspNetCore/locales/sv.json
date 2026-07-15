@@ -167,5 +167,14 @@
   "subscriptions.seat-overflow": "Platspoolen är över sin gräns ({used} av {seats}); inga nya medlemmar kan läggas till förrän den är under gränsen igen.",
   "labels.anchor-tenant": "Faktureras på",
   "concurrency.keep-current": "Behåll aktuellt",
-  "concurrency.use-mine": "Använd mitt"
+  "concurrency.use-mine": "Använd mitt",
+  "nav.users": "Användare",
+  "nav.roles": "Roller",
+  "nav.extensions": "Anpassade fält",
+  "nav.plugins": "Tillägg",
+  "nav.packages": "Paket",
+  "nav.rules": "Regler",
+  "nav.audit": "Historik",
+  "nav.tenants": "Bolag",
+  "nav.more": "Mer"
 }

@@ -167,5 +167,14 @@
   "subscriptions.seat-overflow": "The seat pool is over its limit ({used} of {seats}); no new members can be added until it is back under.",
   "labels.anchor-tenant": "Billed at",
   "concurrency.keep-current": "Keep current",
-  "concurrency.use-mine": "Use mine"
+  "concurrency.use-mine": "Use mine",
+  "nav.users": "Users",
+  "nav.roles": "Roles",
+  "nav.extensions": "Custom fields",
+  "nav.plugins": "Plugins",
+  "nav.packages": "Packages",
+  "nav.rules": "Rules",
+  "nav.audit": "History",
+  "nav.tenants": "Companies",
+  "nav.more": "More"
 }

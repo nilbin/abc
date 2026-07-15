@@ -32,10 +32,11 @@ samples/fortnox              a plugin whose whole job is one inbound integration
 samples/approvals            Step 16: nested approver groups + tenant-configured rules gating
                              host operations via the wildcard gate, park, replay seams
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              106 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              117 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
-                             (wildcard gates, park-across-rollback, envelope replay)
+                             (wildcard gates, park-across-rollback, envelope replay), nav merge
+                             + NAV diagnostics, subscription anchors, package tier
 ```
 
 ### Run it
@@ -325,6 +326,23 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   `anchorTenantId` + pooled `seatsUsed` (additive). Verified on the wire: nord resolves demo's
   standard plan and anchor, identical pool from both nodes, child activates via anchor
   entitlement, seat-lease race and ceiling regressions green. 106 tests.
+- **Navigation is manifest-driven — nav v1** (docs/30 D-N1..8): the compiled model carries a
+  declared tree (mode → section → page, ids D4-permanent, labels by `nav.{id}` key); packages
+  and plugins contribute CONTENT plus a suggested section slug while the host alone declares
+  layout (`model.Nav("web", …)`, NAV000 stops a plugin trying) — sections collect matching
+  suggestions in order-then-declaration sort, `Place()` adopts a contribution but the HOST's
+  order wins, and anything uncollected lands mechanically under a well-known `more` section in
+  the last mode (a plugin that declared nav has graduated and never also gets the generic
+  fallback page — both semantics locked by tests the first cut actually failed). Diagnostics
+  NAV000-005 at Build(); every nav label key is L10N001-gated. The manifest gains `nav` (per
+  surface, activation-filtered per tenant) + `packages`; tam-react ships `NavProvider`/`useNav`,
+  `NavModeSwitcher`/`NavSidebar`/`NavTabs`/`NavPage` (depth→slot) and `registerPage` for custom
+  page targets; App.tsx is now just the shell composed of slots — the hand-wired NavLink block
+  and one-line page components are deleted, all eight framework admin pages ride package nav
+  declarations. Verified: 9-check wire suite (tree shape, suggestion collection, fallback
+  tracking each tenant's OWN activation set — nord sees only inspect where demo sees
+  approvals+inspect, catalog coverage in both cultures) plus rendered-UI screenshots of both
+  modes and the fallback plugin page. 117 tests; manifest change additive (nav + packages).
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

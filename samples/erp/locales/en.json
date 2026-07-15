@@ -7,7 +7,6 @@
   "app.title": "Norrservice ERP",
   "nav.orders": "Orders",
   "nav.customers": "Customers",
-  "nav.extensions": "Custom fields",
   "operations.customers.create.title": "New customer",
   "operations.orders.create.title": "New order",
   "operations.orders.edit-details.title": "Edit order details",
@@ -43,13 +42,9 @@
   "customers.inactive": "The selected customer is inactive.",
   "customers.credit-blocked": "The customer is credit blocked.",
   "customers.duplicate-name": "A customer with that name already exists.",
-  "nav.audit": "History",
-  "nav.plugins": "Plugins",
-  "nav.packages": "Packages",
-  "nav.rules": "Rules",
   "labels.company": "Company",
   "nav.overview": "Group overview",
-  "nav.tenants": "Companies",
-  "nav.users": "Users",
-  "nav.roles": "Roles"
+  "nav.work": "Work",
+  "nav.admin": "Administration",
+  "nav.administration": "General"
 }

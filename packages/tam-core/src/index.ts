@@ -137,7 +137,30 @@ export interface Manifest {
   actorPermissions?: string[];
   /** Plugins ACTIVE for this tenant — inactive plugins are absent from every collection. */
   plugins?: string[];
+  /** Framework packages — always active, enumerable so clients can group admin surfaces. */
+  packages?: string[];
+  /** Declared navigation trees per surface class (docs/30); filter per actor at render. */
+  nav?: Record<string, NavNode[]>;
   revision: number;
+}
+
+export interface NavTarget {
+  grid?: string;
+  page?: string;
+  /** The generic "every grid this plugin contributed" fallback page. */
+  plugin?: string;
+}
+
+export interface NavNode {
+  id: string;
+  kind: 'mode' | 'section' | 'page';
+  labelKey: string;
+  icon?: string;
+  order?: number;
+  target?: NavTarget;
+  permission?: string;
+  plugin?: string;
+  children: NavNode[];
 }
 
 export interface ResolvedFieldState {

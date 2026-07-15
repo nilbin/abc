@@ -295,6 +295,20 @@ public sealed class PluginBuilder
         return this;
     }
 
+    /// <summary>
+    /// Contributes navigation CONTENT (docs/30 D-N2): pages plus a suggested semantic section
+    /// slug ("administration", "work"). Placement is the host's, then the tenant's — a plugin
+    /// never names a mode, slot or position in a layout it cannot see.
+    /// </summary>
+    public PluginBuilder Nav(Action<NavContributionBuilder> configure)
+    {
+        var builder = new NavContributionBuilder(Id);
+        configure(builder);
+        foreach (var contribution in builder.Contributions)
+            Model.NavContribute(contribution);
+        return this;
+    }
+
     /// <summary>Declares a precondition on a host operation (by operation id — the wire
     /// contract). <typeparamref name="TGate"/> is constructed per invocation with ctor injection.
     /// Runs only for tenants with this plugin active; listed in the manifest.</summary>

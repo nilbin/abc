@@ -12,6 +12,8 @@ public sealed class TamAuditPackage : ITamPlugin
     public void Configure(PluginBuilder plugin)
     {
         plugin.LocaleDefaults();
+        // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
+        plugin.Nav(nav => nav.Page("audit", grid: "web.audit.list", suggest: "administration", order: 70));
         plugin.Model
             .AddViewType(typeof(AuditLog))
             .Grid<AuditLog.Result>("web.audit.list", "audit.entries", grid =>

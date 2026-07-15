@@ -23,7 +23,30 @@ public sealed record ManifestDto(
     /// <summary>Plugins ACTIVE for this tenant (docs/22). Inactive plugins' contributions are
     /// omitted from every collection above — for that tenant they do not exist.</summary>
     public IReadOnlyList<string> Plugins { get; init; } = [];
+
+    /// <summary>Framework packages (docs/22 package tier): always active, enumerable so clients
+    /// can group admin surfaces without sniffing id prefixes.</summary>
+    public IReadOnlyList<string> Packages { get; init; } = [];
+
+    /// <summary>The declared navigation trees per surface class (docs/30). Inactive plugins'
+    /// nodes are omitted; the client filters per actor at render (nav is discoverability,
+    /// never authorization — D-N6). Headless consumers ignore this section.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<ManifestNavNode>> Nav { get; init; } =
+        new Dictionary<string, IReadOnlyList<ManifestNavNode>>();
 }
+
+/// <summary>A nav node on the wire (docs/30). Grid-target visibility derives client-side from
+/// the bound view's permission; page targets carry their explicit atom.</summary>
+public sealed record ManifestNavNode(
+    string Id,
+    string Kind,
+    string LabelKey,
+    string? Icon,
+    int? Order,
+    NavTarget? Target,
+    string? Permission,
+    string? Plugin,
+    IReadOnlyList<ManifestNavNode> Children);
 
 public sealed record ManifestField(
     string Name,
@@ -190,6 +213,15 @@ public static class ManifestBuilder
             c => c,
             c => model.Locales.Catalog(c));
 
+        ManifestNavNode? NavOf(NavNode node)
+        {
+            if (!Included(node.Plugin)) return null;
+            return new ManifestNavNode(
+                node.Id, node.Kind.ToString().ToLowerInvariant(), node.LabelKey, node.Icon,
+                node.Order, node.Target, node.Permission, node.Plugin,
+                node.Children.Select(NavOf).OfType<ManifestNavNode>().ToList());
+        }
+
         return new ManifestDto(
             "1", model.DefaultCulture, catalogs, operations, views, forms, grids,
             extensions, model.Permissions, revision)
@@ -197,6 +229,11 @@ public static class ManifestBuilder
             Plugins = model.Plugins.Keys
                 .Where(id => activePlugins is null || activePlugins.Contains(id))
                 .Order().ToList(),
+            Packages = model.Packages.Keys.Order().ToList(),
+            Nav = model.Nav.ToDictionary(
+                kv => kv.Key,
+                kv => (IReadOnlyList<ManifestNavNode>)kv.Value
+                    .Select(NavOf).OfType<ManifestNavNode>().ToList()),
         };
     }
 

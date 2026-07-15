@@ -11,6 +11,8 @@ export type { OperationFormProps } from './OperationForm';
 export { ViewGrid, registerBadgeColors } from './ViewGrid';
 export type { ViewGridProps } from './ViewGrid';
 export { LookupSelect } from './LookupSelect';
+export { NavProvider, useNav, NavModeSwitcher, NavSidebar, NavTabs, NavPage, registerPage } from './nav';
+export type { NavState } from './nav';
 export type { LookupSelectProps } from './LookupSelect';
 export { useTamAuth } from './auth';
 export type { TamAuthState, TamAuthStatus } from './auth';

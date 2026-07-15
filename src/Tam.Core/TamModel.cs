@@ -39,6 +39,12 @@ public sealed class TamModel
     /// tenant/package field definitions against this set (EXT007).</summary>
     public IReadOnlySet<string> ExtensibleEntityKeys { get; init; } = new HashSet<string>();
 
+    /// <summary>The declared navigation trees per surface class (docs/30) — merged from the
+    /// host's layout, package/plugin contributions and the mechanical fallback. Empty when the
+    /// host declares no nav (the client keeps its own).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<NavNode>> Nav { get; init; } =
+        new Dictionary<string, IReadOnlyList<NavNode>>();
+
     /// <summary>Plugin gates by target operation id (docs/22 P2).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<GateDefinition>> Gates { get; init; } =
         new Dictionary<string, IReadOnlyList<GateDefinition>>();
@@ -89,6 +95,8 @@ public sealed class TamModelBuilder
     private readonly Dictionary<string, PackageDefinition> packages = [];
     private readonly List<(string EntityKey, string Key, string Type, bool Required, int? MaxLength, IReadOnlyList<string>? Options, string Plugin)> packagedFields = [];
     private readonly List<GateDefinition> gates = [];
+    private readonly Dictionary<string, NavTreeBuilder> navTrees = [];
+    private readonly List<NavContribution> navContributions = [];
     private readonly List<SubscriberDefinition> subscribers = [];
     private readonly List<(string Id, string OperationId, IntegrationKeySelector Key, IntegrationRowMapper Map, string Plugin)> integrations = [];
     private readonly List<(string Id, IntegrationTrigger Trigger, OutboundIntegrationHandler Handler, string Plugin)> outboundIntegrations = [];
@@ -196,6 +204,24 @@ public sealed class TamModelBuilder
         }
         return this;
     }
+
+    /// <summary>
+    /// Declares a surface's navigation tree (docs/30). LAYOUT IS THE HOST'S: packages/plugins
+    /// contribute content + suggestions through <see cref="PluginBuilder.Nav"/>, never layout.
+    /// </summary>
+    public TamModelBuilder Nav(string surface, Action<NavTreeBuilder> configure)
+    {
+        if (currentPlugin is not null)
+            throw new InvalidOperationException(
+                "NAV000: layout is the host's — plugins/packages contribute via PluginBuilder.Nav.");
+        if (!navTrees.TryGetValue(surface, out var tree))
+            navTrees[surface] = tree = new NavTreeBuilder();
+        configure(tree);
+        return this;
+    }
+
+    internal void NavContribute(NavContribution contribution) =>
+        navContributions.Add(contribution);
 
     public TamModelBuilder AddOperationType(Type type)
     {
@@ -368,8 +394,11 @@ public sealed class TamModelBuilder
             throw new InvalidOperationException(
                 $"PLG002: plugin '{duplicateGate.Key.PluginId}' gates '{duplicateGate.Key.OperationId}' more than once.");
 
+        var mergedNav = MergeNav(gridDefs);
+
         var model = new TamModel
         {
+            Nav = mergedNav,
             DefaultCulture = defaultCulture,
             Locales = catalogs,
             Operations = operations,
@@ -393,8 +422,125 @@ public sealed class TamModelBuilder
         };
 
         VerifyPluginNamespaces(model);
+        VerifyNav(model);
         VerifyLocalization(model, catalogs);
         return model;
+    }
+
+    /// <summary>
+    /// The docs/30 merge, per surface: the host tree verbatim; placement markers resolved to
+    /// contributions; sections whose id matches contributions' SUGGEST slugs collect them after
+    /// explicit children; on the "web" surface, everything left over — uncollected contributions
+    /// and plugins with grids no node references — lands under the well-known "more" section in
+    /// the LAST mode, so nothing can be authored into invisibility (D-N1).
+    /// </summary>
+    private IReadOnlyDictionary<string, IReadOnlyList<NavNode>> MergeNav(
+        IReadOnlyDictionary<string, GridDefinition> gridDefs)
+    {
+        var result = new Dictionary<string, IReadOnlyList<NavNode>>();
+        foreach (var (surface, tree) in navTrees)
+        {
+            var consumed = new HashSet<NavContribution>();
+            var byId = navContributions.ToDictionary(c => c.Page.Id);
+
+            NavNode Resolve(NavNode node)
+            {
+                if (ReferenceEquals(node.Target, NavNodeBuilder.PlacementMarker))
+                {
+                    if (!byId.TryGetValue(node.Id, out var placed))
+                        throw new InvalidOperationException(
+                            $"NAV003: Place('{node.Id}') matches no contributed nav node.");
+                    consumed.Add(placed);
+                    // Placement is the HOST's — including position: the marker's order (host-
+                    // supplied, default none) replaces the contribution's suggestion-tier order.
+                    return placed.Page with { Order = node.Order };
+                }
+                var children = node.Children.Select(Resolve).ToList();
+                if (node.Kind == NavNodeKind.Section)
+                {
+                    foreach (var c in navContributions.Where(c => c.Suggest == node.Id && consumed.Add(c)))
+                        children.Add(c.Page);
+                }
+                // Stable order-then-declaration sort: contributions from many registrants
+                // interleave predictably; undeclared orders append.
+                children = children
+                    .Select((c, i) => (c, i))
+                    .OrderBy(x => x.c.Order ?? int.MaxValue).ThenBy(x => x.i)
+                    .Select(x => x.c).ToList();
+                return node with { Children = children };
+            }
+
+            var modes = tree.Modes.Select(Resolve).ToList();
+
+            if (surface == "web" && modes.Count > 0)
+            {
+                var referenced = new HashSet<string>();
+                void Walk(NavNode n)
+                {
+                    if (n.Target?.Grid is { } g) referenced.Add(g);
+                    foreach (var c in n.Children) Walk(c);
+                }
+                foreach (var m in modes) Walk(m);
+
+                var leftovers = new List<NavNode>();
+                leftovers.AddRange(navContributions.Where(c => !consumed.Contains(c)).Select(c => c.Page));
+                // Plugins whose grids no node references get the generic per-plugin page —
+                // exactly the pre-nav behavior, now as the declared model's safety net. A plugin
+                // that declared ANY nav contribution has graduated (docs/30 D-N1): its
+                // declaration is authoritative and it never also gets the mechanical page.
+                var declared = navContributions.Select(c => c.Plugin).ToHashSet();
+                foreach (var plugin in gridDefs.Values
+                             .Where(g => g.Plugin is not null && !referenced.Contains(g.Id))
+                             .Select(g => g.Plugin!).Distinct().Order())
+                {
+                    if (declared.Contains(plugin)) continue;
+                    leftovers.Add(new NavNode(plugin, NavNodeKind.Page, $"plugins.{plugin}.title",
+                        null, null, new NavTarget(Plugin: plugin), null, plugin, []));
+                }
+
+                if (leftovers.Count > 0)
+                {
+                    var last = modes[^1];
+                    var more = new NavNode(NavNode.More, NavNodeKind.Section, $"nav.{NavNode.More}",
+                        null, null, null, null, null, leftovers);
+                    modes[^1] = last with { Children = [.. last.Children, more] };
+                }
+            }
+            result[surface] = modes;
+        }
+        return result;
+    }
+
+    /// <summary>NAV001 duplicate ids, NAV002 depth cap (mode + 3), NAV004 unknown grid target,
+    /// NAV005 page targets need an EXISTING catalogue atom. Contribution ids are namespace-
+    /// checked with everything else in <see cref="VerifyPluginNamespaces"/>.</summary>
+    private static void VerifyNav(TamModel model)
+    {
+        var permissions = model.Permissions.ToHashSet();
+        foreach (var (surface, modes) in model.Nav)
+        {
+            var seen = new HashSet<string>();
+            void Walk(NavNode node, int depth)
+            {
+                if (!seen.Add(node.Id))
+                    throw new InvalidOperationException(
+                        $"NAV001: duplicate nav node id '{node.Id}' on surface '{surface}'.");
+                if (depth > 3)
+                    throw new InvalidOperationException(
+                        $"NAV002: nav node '{node.Id}' exceeds the depth cap (mode + 3) on surface '{surface}'.");
+                if (node.Target?.Grid is { } grid && !model.Grids.ContainsKey(grid))
+                    throw new InvalidOperationException(
+                        $"NAV004: nav node '{node.Id}' targets unknown grid '{grid}'.");
+                if (node.Target?.Page is { } && node.Permission is null)
+                    throw new InvalidOperationException(
+                        $"NAV005: nav node '{node.Id}' has a page target and needs an explicit permission.");
+                if (node.Permission is { } atom && !permissions.Contains(atom))
+                    throw new InvalidOperationException(
+                        $"NAV005: nav node '{node.Id}' permission '{atom}' is not in the compiled catalogue.");
+                foreach (var child in node.Children) Walk(child, depth + 1);
+            }
+            foreach (var mode in modes) Walk(mode, 0);
+        }
     }
 
     /// <summary>
@@ -448,6 +594,16 @@ public sealed class TamModelBuilder
         }
         foreach (var f in model.Forms.Values) Check("form", f.Id, f.Plugin);
         foreach (var g in model.Grids.Values) Check("grid", g.Id, g.Plugin);
+        foreach (var nodes in model.Nav.Values)
+        {
+            void Walk(NavNode n)
+            {
+                if (n.Plugin is not null && n.Target?.Plugin is null)
+                    Check("nav node", n.Id, n.Plugin);
+                foreach (var c in n.Children) Walk(c);
+            }
+            foreach (var n in nodes) Walk(n);
+        }
 
         if (violations.Count > 0)
             throw new InvalidOperationException(
@@ -457,10 +613,13 @@ public sealed class TamModelBuilder
     /// <summary>L10N001: every label key the model references must exist in the default culture.</summary>
     private static void VerifyLocalization(TamModel model, LocaleCatalogs catalogs)
     {
+        static IEnumerable<string> NavLabels(NavNode node) =>
+            new[] { node.LabelKey }.Concat(node.Children.SelectMany(NavLabels));
         var required = model.Operations.Values.SelectMany(o => o.InputFields.Select(f => f.LabelKey))
             .Concat(model.Operations.Values.Select(o => o.TitleKey))
             .Concat(model.Views.Values.SelectMany(v => v.ResultFields.Select(f => f.LabelKey)))
-            .Concat(model.Plugins.Values.Select(p => p.TitleKey));
+            .Concat(model.Plugins.Values.Select(p => p.TitleKey))
+            .Concat(model.Nav.Values.SelectMany(nodes => nodes.SelectMany(NavLabels)));
 
         var missing = catalogs.MissingKeys(required, catalogs.DefaultCulture);
         if (missing.Count > 0)
