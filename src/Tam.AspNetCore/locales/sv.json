@@ -161,5 +161,6 @@
   "auth.invite-body": "Följ länken för att välja lösenord och aktivera ditt konto: {link}",
   "auth.added-subject": "Du har fått tillgång till en ny organisation",
   "auth.added-body": "Logga in som vanligt och välj organisationen vid inloggning.",
-  "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; ändringarna av anpassade fält kunde inte knytas till en."
+  "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; ändringarna av anpassade fält kunde inte knytas till en.",
+  "pipeline.replay-actor-unavailable": "Den ursprungliga beställarens konto är inte längre tillgängligt; den parkerade begäran kan inte utföras."
 }

@@ -99,13 +99,31 @@ public sealed class OperationExecutor(
         // Plugin gates (docs/22 P2): declared preconditions, run only for tenants with the
         // owning plugin active — INSIDE the transaction, so the state a gate checked cannot
         // change underneath the handler it guards. Wire input only, never host CLR types.
-        if (model.Gates.TryGetValue(operationId, out var gates))
+        // Operation-specific gates run first, then wildcard gates (docs/28 approvals seam 1):
+        // a wildcard gate sees every operation and decides from its own config whether to act.
+        var specificGates = model.Gates.GetValueOrDefault(operationId, []);
+        var wildcardGates = operationId == GateDefinition.Wildcard
+            ? []
+            : model.Gates.GetValueOrDefault(GateDefinition.Wildcard, []);
+        if (specificGates.Count > 0 || wildcardGates.Count > 0)
         {
             var activePlugins = await ActivationCache.ForAsync(services, db, context.TenantId.Value, ct);
-            foreach (var gate in gates.Where(g => activePlugins.Contains(g.PluginId)))
+            foreach (var gate in specificGates.Concat(wildcardGates)
+                         .Where(g => activePlugins.Contains(g.PluginId)))
             {
-                var gateResult = await gate.Handler(new GateContext(body, context, services), ct);
-                if (gateResult.IsError) return Fail(context, [.. gateResult.Findings]);
+                var gateContext = new GateContext(operationId, body, payloadHash, context, services);
+                var gateResult = await gate.Handler(gateContext, ct);
+                if (!gateResult.IsError) continue;
+
+                // Parking (docs/28 approvals seam 2): the blocking gate may have deferred writes
+                // — the envelope it wants to keep. Everything else about this attempt rolls back
+                // FIRST; the parked work then runs in a fresh scope pinned to the same tenant, so
+                // its commit is independent of the discarded attempt. A parking failure propagates:
+                // answering "parked for approval" without a durable envelope would be a lie.
+                await transaction.RollbackAsync(ct);
+                foreach (var work in gateContext.ParkedWork)
+                    await PinnedScope.RunAsync(services, context.TenantId.Value, work, ct);
+                return Fail(context, [.. gateResult.Findings]);
             }
         }
 

@@ -161,5 +161,6 @@
   "auth.invite-body": "Follow this link to set your password and activate your account: {link}",
   "auth.added-subject": "You have been given access to a new organization",
   "auth.added-body": "Sign in as usual and pick the organization at login.",
-  "pipeline.ambiguous-extension-target": "The operation tracked several records of this type; the custom-field changes could not be attributed to one."
+  "pipeline.ambiguous-extension-target": "The operation tracked several records of this type; the custom-field changes could not be attributed to one.",
+  "pipeline.replay-actor-unavailable": "The original requester's account is no longer available; the parked request cannot be executed."
 }

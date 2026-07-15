@@ -27,9 +27,10 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              91 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              97 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
-                             specs, reserved permissions, SSRF egress policy
+                             specs, reserved permissions, SSRF egress policy, approvals seams
+                             (wildcard gates, park-across-rollback, envelope replay)
 ```
 
 ### Run it
@@ -283,9 +284,17 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   Ownership is the paired-atom capability pattern (see the record-scopes entry); `where`/`shared`
   are domain patterns (assignment tables keyed by actor id, one predicate enforced on both read
   and write); generic groups, if ever, arrive as one more source in the actor-resolution union
-  (profiles → flat groups → nesting never in core); approval flows are plugin territory —
-  tutorial Step 16 drafts the approvals-plugin scenario and names the three seams it demands
-  (config-driven gate targets, park-across-rollback, sanctioned envelope replay).
+  (profiles → flat groups → nesting never in core); approval flows are plugin territory.
+- **The three approvals seams are BUILT** (docs/28 D-AG4, tutorial Step 16): a wildcard gate
+  (`GateDefinition.Wildcard`) runs on every operation with `gate.OperationId` + the pipeline's
+  payload hash, so its target set is the plugin's own config; `gate.Park(work)` keeps a blocked
+  envelope — domain transaction rolls back first, parked work commits in a fresh scope pinned to
+  the tenant, and work parked by an ALLOWING gate is discarded; `EnvelopeReplay` re-executes a
+  parked envelope through the full pipeline as the original initiator (grants re-resolved as of
+  now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
+  audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
+  redelivery. Six pipeline-level tests prove all of it on SQLite; the vendor-style approvals
+  sample plugin is next.
 - **Extension-channel targeting is deterministic and fail-closed** (the old review medium): the
   executor no longer binds `extensions` changes to whichever tracked instance of the extensible
   type came FIRST — one tracked instance is the target; among several, the single Added/Modified

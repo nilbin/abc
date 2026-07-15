@@ -60,16 +60,30 @@ public sealed class ClaimsActorProvider : IActorProvider
             || !Guid.TryParse(accountClaim, out var accountId))
             return Anonymous;
 
-        var db = http.RequestServices.GetRequiredService<ITamDb>().Db;
+        // The active tenant comes from the pinned ambient scope, so an act-as rebind (D-H4)
+        // yields Cap_eff(target) automatically.
+        return Resolve(
+            http.RequestServices.GetRequiredService<ITamDb>().Db,
+            http.RequestServices.GetRequiredService<TamModel>(),
+            accountId,
+            TamTenant.Resolve(http).Value) ?? Anonymous;
+    }
 
+    /// <summary>
+    /// The HTTP-free core: grants for one account at one node, re-read fresh — shared by the
+    /// per-request path above and by envelope replay (docs/28 approvals seam 3), where a parked
+    /// operation re-executes as its original initiator and must see that account's grants AS OF
+    /// NOW, never a snapshot taken when the envelope was parked. Null when the account does not
+    /// exist or is deactivated — replay of a departed initiator's envelope must fail, not run.
+    /// </summary>
+    public static Actor? Resolve(DbContext db, TamModel model, Guid accountId, string activeId)
+    {
         // The account is global (not tenant-scoped), so this lookup isn't filtered.
         var account = db.Set<AccountEntity>().FirstOrDefault(a => a.Id == accountId && a.Active);
-        if (account is null) return Anonymous;
+        if (account is null) return null;
 
         // The active node and its ancestor chain, from the materialized path. An active node with no
-        // TenantEntity row degrades to single-node behavior (the pre-hierarchy shape). Resolved via
-        // the pinned ambient scope, so an act-as rebind (D-H4) yields Cap_eff(target) automatically.
-        var activeId = TamTenant.Resolve(http).Value;
+        // TenantEntity row degrades to single-node behavior (the pre-hierarchy shape).
         var activeNode = db.Set<TenantEntity>().FirstOrDefault(t => t.Id == activeId);
         var chainIds = (activeNode?.AncestorIds() ?? [activeId]).ToArray();
 
@@ -82,7 +96,6 @@ public sealed class ClaimsActorProvider : IActorProvider
         // unfiltered once, then match per (tenant, name) — names never merge across levels. A role's grants are its explicit atoms plus its access levels expanded at load
         // time (docs/27 D-A1), so a new action on a resource flows into existing Manage roles
         // without a role edit.
-        var model = http.RequestServices.GetRequiredService<TamModel>();
         var roleRows = db.Set<RoleEntity>().IgnoreQueryFilters()
             .Where(r => chainIds.Contains(r.TenantId))
             .ToList();

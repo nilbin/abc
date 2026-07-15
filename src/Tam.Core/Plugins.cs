@@ -33,19 +33,47 @@ public sealed record PluginDefinition(string Id)
 /// </summary>
 public sealed record PackagedFieldDefinition(string PluginId, string EntityKey, ExtensionFieldSpec Spec);
 
-/// <summary>What a gate sees: the raw wire input (a plugin couples to the host's wire
-/// contract, never its CLR types), the execution context, and scoped services.</summary>
+/// <summary>What a gate sees: the operation being guarded (so a WILDCARD gate can decide from its
+/// own config which operations it applies to — docs/28 approvals seam 1), the raw wire input (a
+/// plugin couples to the host's wire contract, never its CLR types), the pipeline's SHA-256 hash
+/// of that input (the idempotency hash — the natural dedupe/integrity key for a parked envelope),
+/// the execution context, and scoped services.</summary>
 public sealed record GateContext(
+    string OperationId,
     System.Text.Json.JsonElement Input,
+    string PayloadHash,
     OperationContext Context,
-    IServiceProvider Services);
+    IServiceProvider Services)
+{
+    private List<Func<IServiceProvider, CancellationToken, Task>>? parked;
+
+    /// <summary>
+    /// Defers work to run only if THIS gate's result blocks the operation — after the domain
+    /// transaction has rolled back, in a FRESH service scope pinned to the same tenant (docs/28
+    /// approvals seam 2). The one sanctioned way for a gate to keep state from a blocked attempt:
+    /// writes inside the gate body itself die with the rollback, and a gate that wrote before
+    /// deciding could leak state from attempts it allowed. Park the envelope here; if the gate
+    /// returns success the parked work is discarded.
+    /// </summary>
+    public void Park(Func<IServiceProvider, CancellationToken, Task> work) =>
+        (parked ??= []).Add(work);
+
+    /// <summary>The deferred work, drained by the pipeline when the gate blocks. Empty otherwise.</summary>
+    public IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>> ParkedWork =>
+        parked ?? (IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>>)[];
+}
 
 public delegate Task<Result> OperationGate(GateContext gate, CancellationToken ct);
 
-/// <summary>A typed precondition a plugin declares on a host operation (docs/22 P2): runs
-/// after authorization and structural validation, before the handler. Visible in the manifest
-/// as GatedBy — the coupling is declared, never magic.</summary>
-public sealed record GateDefinition(string OperationId, string PluginId, OperationGate Handler);
+/// <summary>A typed precondition a plugin declares (docs/22 P2): runs after authorization and
+/// structural validation, before the handler. An operation-specific gate names one operation id;
+/// a WILDCARD gate (<see cref="OperationId"/> = "*") runs on EVERY operation and decides from its
+/// own config whether to act — the approvals seam (docs/28 tutorial Step 16), where the set of
+/// gated operations is tenant data, not compile-time. Visible in the manifest as GatedBy.</summary>
+public sealed record GateDefinition(string OperationId, string PluginId, OperationGate Handler)
+{
+    public const string Wildcard = "*";
+}
 
 public sealed record EffectEvent(
     string TenantId,

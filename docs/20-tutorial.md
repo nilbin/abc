@@ -759,7 +759,7 @@ A year in, Norrservice buys a company in Kiruna. Nothing about Orders changes �
 
 The pattern of Steps 1–14 holds: the tree, the memberships, the roles, the policies, the invites are all *data behind operations* — no deploy moves a company, grants a scope, or seats a user.
 
-## Step 16 — Approvals arrive as a plugin — and the domains never notice *(design — the next stress test for [22-plugins.md](22-plugins.md))*
+## Step 16 — Approvals arrive as a plugin — and the domains never notice *(framework seams built; the vendor package is the remaining exercise)*
 
 Norrservice's group buys an add-on from a workflow vendor: purchase approvals. Orders above a
 threshold need a manager's sign-off; time corrections need the team lead. The point of this step
@@ -810,28 +810,34 @@ The domain wrote none of this. `CreateOrder` still doesn't know approvals exist 
 without the plugin, nothing changed; for tenants with it, the manifest says `orders.create` is
 gated and the impact report shows it, exactly like Step 13.
 
-**What this scenario proves — and the three seams it demands.** This is the sharpest stress test
-of the plugin architecture so far, and it is honest about where today's machinery falls short:
+**What this scenario proves — and the three seams it demanded.** This is the sharpest stress
+test of the plugin architecture so far. The three gaps it exposed are now framework seams, each
+proven end to end through the real pipeline in the test suite:
 
-1. **Config-driven gate targets.** Gates today bind to operation ids at plugin-compile time; the
-   approvals gate must attach to whatever `ApprovalRule` rows say. The executor's gate loop needs
-   a wildcard bucket ("run for every operation, decide from config") — small mechanically, but
-   the manifest's `gatedBy` transparency becomes per-tenant, which the effective-manifest overlay
-   already knows how to express.
-2. **Parking must survive the rollback.** A blocking gate rolls the transaction back — that is
-   its contract — but the `ApprovalRequest` row must COMMIT anyway, or nothing was parked. The
-   pipeline needs a "park" outcome distinct from plain blocking: capture-and-commit the plugin's
-   rows while discarding the domain's, likely via a separate unit of work for the gate's own
-   writes (the same isolation the outbox dispatcher already practices).
-3. **Sanctioned envelope replay.** Re-executing a stored envelope as the original actor is
-   powerful and must be a framework seam, not an impersonation hack: replay is only valid for an
-   envelope the pipeline itself parked, the payload hash must match, and the audit row carries
-   dual attribution (initiator + releaser). The pieces exist — in-process execution, payload
-   hashing, actor construction — but the seam must own the rules.
+1. **Config-driven gate targets — built.** A gate registered as `plugin.Gate(GateDefinition.Wildcard, …)`
+   runs on EVERY operation (after the operation-specific gates) and receives `gate.OperationId`,
+   so which operations it actually blocks is a lookup in the plugin's own `ApprovalRule` rows —
+   tenant data, not compile time. Every other gate contract is unchanged: wire input only,
+   activation-gated, inside the transaction.
+2. **Parking survives the rollback — built.** A blocking gate calls `gate.Park(work)`; the
+   pipeline rolls the domain transaction back FIRST, then runs the parked work in a fresh
+   service scope pinned to the same tenant — its own DbContext, its own commit (the same
+   isolation the outbox dispatcher practices). Work parked by a gate that ends up *allowing*
+   the operation is discarded, so nothing leaks from attempts that went through. The
+   `gate.PayloadHash` (the pipeline's idempotency hash) is the natural envelope key.
+3. **Sanctioned envelope replay — built.** `EnvelopeReplay.ReplayAsync` re-executes a stored
+   envelope through the FULL pipeline — authorization, validation, rules, gates, audit — as the
+   ORIGINAL initiator, whose grants are re-resolved *as of now* (a revoked role or deactivated
+   account fails the replay closed; approval releases a block, it never escalates). The run is
+   marked `InvocationSource.Workflow` — the parking gate lets it pass while every other gate
+   still runs — and the envelope id rides `CorrelationId` into the audit entry and doubles as
+   the initiator-scoped idempotency key, so a redelivered approval replays the stored outcome
+   instead of executing twice. Dual attribution falls out: the operation's audit names the
+   initiator and correlates to the envelope, whose own trail names the releaser.
 
-When these three land, "an opinionated nested-group approval system for existing domains, without
-the domains knowing" stops being a slogan and becomes a package. That is the bar docs/22 set for
-the plugin architecture; this step is how we will know it has been met.
+With the seams in place, "an opinionated nested-group approval system for existing domains,
+without the domains knowing" is a package a vendor can actually write — the sketch above compiles
+against real machinery. Shipping that package is the remaining exercise of this step.
 
 ---
 

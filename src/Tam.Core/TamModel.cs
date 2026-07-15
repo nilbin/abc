@@ -303,8 +303,10 @@ public sealed class TamModelBuilder
                 labels, null, r.Options, ExtensionFieldState.Active));
         }).ToList();
 
+        // A wildcard gate (docs/28 approvals seam 1) names no operation by design — its target
+        // set is tenant config, resolved at execution time — so only concrete ids are checked.
         foreach (var gate in gates)
-            if (!operations.ContainsKey(gate.OperationId))
+            if (gate.OperationId != GateDefinition.Wildcard && !operations.ContainsKey(gate.OperationId))
                 throw new InvalidOperationException(
                     $"PLG002: plugin '{gate.PluginId}' gates unknown operation '{gate.OperationId}'.");
         foreach (var integration in integrations)

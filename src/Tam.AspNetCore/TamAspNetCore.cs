@@ -85,6 +85,10 @@ public static class TamAspNetCore
         services.AddScoped<IExtensionRegistry>(sp => new PluginAwareExtensionRegistry(
             new EfExtensionRegistry(sp.GetRequiredService<TDbContext>()), model, sp.GetRequiredService<TDbContext>(), sp));
         services.AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<TDbContext>()));
+        // Sanctioned envelope replay (docs/28 approvals seam 3): singleton because it always
+        // executes in a fresh pinned scope of its own — never the caller's (whose transaction
+        // may be the very one the parked envelope must be independent of).
+        services.AddSingleton(sp => new EnvelopeReplay(model, sp, s => s.GetRequiredService<TDbContext>()));
         // Ambient tenant for the EF global query filter (docs: tenant isolation is enforced once at
         // the model, not re-filtered at every call site). Set per request by UseTamTenantScope.
         services.AddScoped<TenantScope>();

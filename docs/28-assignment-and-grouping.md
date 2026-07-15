@@ -96,9 +96,16 @@ workflow in core collides with the "not a low-code platform" non-goal — but it
 subscribers, locales and per-tenant activation, and the email seam gives them notifications. An
 opinionated nested-group + approvals system can therefore exist as something a tenant *installs*,
 gating existing domain operations **without the domains knowing** — which doubles as the sharpest
-stress test of the plugin architecture. The scenario, and the three genuine gaps it exposes
-(config-driven gate targets, parking a blocked envelope across the rollback, sanctioned envelope
-replay with dual-attribution audit), are drafted as tutorial Step 16
+stress test of the plugin architecture. The three genuine gaps that scenario exposed are now
+framework seams, each proven through the real pipeline in the test suite: **config-driven gate
+targets** (`GateDefinition.Wildcard` — the gate runs on every operation, receives
+`gate.OperationId`, and decides from its own rules), **parking a blocked envelope across the
+rollback** (`gate.Park(work)` — the domain transaction rolls back first, then the parked work
+commits in a fresh scope pinned to the same tenant; discarded if the gate allows), and
+**sanctioned envelope replay** (`EnvelopeReplay` — full-pipeline re-execution as the original
+initiator with grants re-resolved as of now, `InvocationSource.Workflow` as the sanction, the
+envelope id as both audit correlation and initiator-scoped idempotency key — dual attribution
+without a second actor field). The walkthrough is tutorial Step 16
 ([20-tutorial.md](20-tutorial.md)).
 
 ## Decisions
@@ -113,4 +120,5 @@ replay with dual-attribution audit), are drafted as tutorial Step 16
 - **D-AG3 — groups, if ever, are an authoring-side indirection resolved into the existing actor
   union** — profiles first, flat groups on real cross-domain demand, nesting never in core.
 - **D-AG4 — approval flows are never core.** They are a plugin's product, built on gates, parked
-  envelopes and replay (tutorial Step 16 defines the required seams).
+  envelopes and replay. The seams themselves ARE core and are built: `GateDefinition.Wildcard`,
+  `GateContext.Park`, `EnvelopeReplay` (tutorial Step 16 walks the scenario).
