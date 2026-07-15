@@ -131,7 +131,10 @@ public static class TenantScopeMiddleware
         {
             var ambient = http.RequestServices.GetRequiredService<ITenantProvider>().GetTenant(http).Value;
 
+            // Header first; query-string fallback for transports that cannot set headers (the SSE
+            // EventSource) — same validation either way.
             var actAs = http.Request.Headers[TenantScopeMiddleware.ActAsHeader].ToString();
+            if (actAs.Length == 0) actAs = http.Request.Query["actAs"].ToString();
             if (actAs.Length > 0 && actAs != ambient)
             {
                 var accountClaim = http.User.FindFirst(ClaimsActorProvider.AccountClaim)?.Value;
