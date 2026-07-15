@@ -9,8 +9,8 @@ reality still falls short of [docs/20-tutorial.md](docs/20-tutorial.md).
 ```
 src/Tam.Core                 contracts, findings+args, Change<T>, semantic types, portable AST,
                              model builder, manifest, locale catalogs (L10N001 gate at startup)
-src/Tam.Compiler             Roslyn analyzer: TAM001-003 model-shape checks and L10N001 locale
-                             coverage as build errors (locales via AdditionalFiles)
+src/Tam.Compiler             Roslyn analyzer: TAM001-006 (model shape, tenant filters, query
+                             composition, paired-atom scoping) + L10N001/EDIT001 as build errors
 src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effects, idempotency,
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
@@ -27,7 +27,7 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              82 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              87 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy
 ```
@@ -94,10 +94,17 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 - **Roles as tenant data (D1 back half)**: roles live in the database, managed via `roles.define`
   which validates grants against the compiled permission catalogue at definition time (typo'd
   permission → localized finding); a runtime-defined role works as an actor immediately.
-- **Record scopes (D1 complete)**: grants may carry `:own` (e.g. `orders.complete:own`); views
-  scope declaratively (`.ScopedTo(context, permission, x => x.AssignedToActorId)`) and operations
-  re-check ownership authoritatively. Verified: the technician role sees only assigned orders and
-  is rejected (localized) when completing others.
+- **Record scopes — the PAIRED-ATOM pattern** (docs/28, superseding D1's `:own` suffix): the base
+  atom (`orders.read`) is own-scoped by default and a declared widening atom
+  (`[Widens("orders.read-all")]`) lifts it — views scope with
+  `.ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId)`, operations re-check with
+  `CheckOwnershipUnless`, levels expand `X-all` on X's tier, and TAM006 enforces BOTH directions at
+  compile time (undeclared atom at a call site; unscoped view over a widened resource — verified
+  fired on both). Verified on the wire (13/13, SQLite + PG): the technician sees own rows on every
+  read surface — list, overview AND detail, the last two fail-open under the old suffix model —
+  and is rejected editing/completing foreign orders (edit had no check at all before); dispatcher
+  (-all atoms), viewer (level `view` ⇒ read-all) and admin (`*`) see all; roles.define grants the
+  widening atom and rejects the retired `:own` suffix.
 - **D4 baseline in CI**: `manifest` export mode + committed baseline + additive-only checker;
   removed members, type changes, optional→required flips, and new required inputs fail CI until
   the baseline is consciously re-committed. GitHub Actions runs build/tests/baseline/frontend.
@@ -264,10 +271,10 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   row action) with the invite form on the toolbar — roles/policies authored through an app-owned
   "string-list" renderer. Verified headless: an invite submitted through the UI lands and the
   grid live-refreshes with the new member.
-- **Assignment & grouping settled** ([docs/28](docs/28-assignment-and-grouping.md), D-AG1…D-AG4,
-  superseding the earlier actor-attributes draft): the policy scope set is CLOSED at
-  `all`/`own`/`subtree`/`inherited` — a framework scope kind requires a framework-owned
-  subject-side fact (identity or tree position), and there are no more of those. `where`/`shared`
+- **Assignment & grouping settled AND BUILT** ([docs/28](docs/28-assignment-and-grouping.md),
+  D-AG1…D-AG4): framework row scopes are the tenancy dimension only (the framework must own BOTH
+  ends of a scope; tenancy — tree position + stamped TenantId — is the only such dimension).
+  Ownership is the paired-atom capability pattern (see the record-scopes entry); `where`/`shared`
   are domain patterns (assignment tables keyed by actor id, one predicate enforced on both read
   and write); generic groups, if ever, arrive as one more source in the actor-resolution union
   (profiles → flat groups → nesting never in core); approval flows are plugin territory —
@@ -318,19 +325,12 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   toolbar action. (5) ScopeMap renderer: toggling all|own no longer reorders rows; adding an
   already-listed resource is disabled instead of silently resetting it to `own`. Policies never
   narrow a `*` role grant — documented as deliberate in docs/27 and at the narrowing site.
-- **Access policies (docs/27 Axis 2, v1 `all`|`own`)**: `AccessPolicyEntity` is a tenant-scoped named
-  resource→scope map, managed by `policies.define`/`policies.list` (validated against the same
-  resource catalogue as levels; unknown resource/scope → localized findings); a membership lists
-  policy names (`users.define … policies`, unknown → `users.unknown-policy`), resolved in the
-  membership's OWN tenant like role names. Actor resolution narrows each membership's grants by ITS
-  policies before the union: `own` suffixes that membership's unsuffixed atoms for the resource with
-  `:own` (role-authored `:own` kept as written; broadest scope wins across a membership's policies;
-  plain union across memberships per D-A5). Enforcement is the existing `:own` machinery — no
-  downstream changes. Verified on the wire: didrik (dispatcher + own-orders policy) lists 0 orders
-  while mcp-agent's identical role stays unrestricted; tekla's role-authored `:own` unchanged (2);
-  vera/alva unaffected (5); didrik's create still passes the gate via the suffixed grant and lands
-  in the tenant; a user defined live with the policy is narrowed immediately; validation findings
-  fire. 82 tests; baseline + typed client regenerated (policies.define/list).
+- **Access policies (docs/27 Axis 2 v1) — BUILT, wire-verified, then RETIRED** by the ownership
+  surgery (docs/28): policy-authored `own` structurally could not be made fail-closed (whether a
+  grant carried the scope was runtime data no analyzer could tie to per-view discipline). The
+  registry, operations, membership field, admin page and the whole `:own` suffix machinery were
+  removed; the paired-atom pattern above replaces them with the same runtime admin power and a
+  compile-time guarantee. Kept lesson: prefer encodings an analyzer can verify.
 - **Postgres parity for the policy + lifecycle stack**: all four new suites re-run on PostgreSQL 16
   (fresh DB) with zero code changes — access policies (11/11), tenant lifecycle (11/11), scope
   canonicalization fail-closed, rename + guards. The `tenants.Version` concurrency column is live

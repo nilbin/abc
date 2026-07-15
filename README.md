@@ -6,7 +6,7 @@ The system lets developers define business behavior once and derive all predicta
 
 > **Write typed business behavior and read models once. Use derivations to resolve reactive interaction state. Bind operations and views to each boundary. Persist only explicit changes. Derive every mechanical representation and reject contradictions at compile time.**
 
-**Status: working vertical implementation.** The framework packages (`src/Tam.*`), the TypeScript/React runtime (`packages/`), and a demo ERP (`samples/erp` + `apps/web`) run end to end — reactive forms, conflict-safe edits, runtime tenant custom fields, localization, MCP, plugins, subscriptions, and the full multi-tenant story: hierarchical tenant trees with act-as, platform-global accounts with per-tenant memberships and email invites, roles as access levels, per-membership data-scope policies, field masking, and the framework's own PKCE token server (rotation, reuse detection with family revocation, immediate revocation). See [STATUS.md](STATUS.md) for what's verified and the honest gap list against the design, and [docs/screenshots/](docs/screenshots/) for the app.
+**Status: working vertical implementation.** The framework packages (`src/Tam.*`), the TypeScript/React runtime (`packages/`), and a demo ERP (`samples/erp` + `apps/web`) run end to end — reactive forms, conflict-safe edits, runtime tenant custom fields, localization, MCP, plugins, subscriptions, and the full multi-tenant story: hierarchical tenant trees with act-as, platform-global accounts with per-tenant memberships and email invites, roles as access levels, paired-atom row scoping (TAM006-enforced), field masking, and the framework's own PKCE token server (rotation, reuse detection with family revocation, immediate revocation). See [STATUS.md](STATUS.md) for what's verified and the honest gap list against the design, and [docs/screenshots/](docs/screenshots/) for the app.
 
 ```bash
 cd samples/erp && dotnet run     # API + web app on http://localhost:5100
@@ -56,7 +56,7 @@ A sixth cross-cutting concern, **tenant extensibility** (runtime custom fields d
 | [24 Subscriptions](docs/24-subscriptions.md) | Plans, seats, plugin entitlements; billing as data, gates in the pipeline |
 | [25 External integrations](docs/25-external-integrations.md) | Outbound seam: triggers, retries, dead-letter, scheduling |
 | [26 Tenancy & identity](docs/26-tenancy-hierarchy-and-identity.md) | **Hierarchical tenants** (materialized paths, act-as, lifecycle, invites) and platform-global accounts with per-tenant memberships |
-| [27 Authorization](docs/27-authorization-model.md) | **Capability × data scope**: access levels, field masking, access policies, the fan-out/fan-in write model |
+| [27 Authorization](docs/27-authorization-model.md) | **Capability, levels, field masking**, tree scopes, the fan-out/fan-in write model |
 | [28 Assignment & grouping](docs/28-assignment-and-grouping.md) | The closed scope set; domain assignment in domain tables; groups ladder; approvals as a plugin |
 | [Review notes](docs/review-notes.md) | Design risks, refinements, and open questions |
 

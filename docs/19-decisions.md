@@ -8,10 +8,11 @@ Answers to the open questions raised in [review-notes.md](review-notes.md). Each
 
 ## D1 — Authorization: compiled permission catalogue + tenant-defined roles + scoped grants
 
-> **Extended by [27-authorization-model.md](27-authorization-model.md)** (built): roles are now
-> authored as access levels over the same atoms, data scope became a second axis (per-membership
-> access policies), and fields can be masked. D1's substrate — the compiled catalogue and flat
-> grant set — is unchanged underneath.
+> **Extended by [27-authorization-model.md](27-authorization-model.md) and settled by
+> [28-assignment-and-grouping.md](28-assignment-and-grouping.md)** (built): roles are authored as
+> access levels over the same atoms, fields can be masked, and D1's ":own" scope qualifier was
+> RETIRED for the paired-atom pattern (base atom own-scoped, "-all" atom widens; TAM006-enforced).
+> D1's substrate — the compiled catalogue and flat grant set — is unchanged underneath.
 
 **Decision.** Three layers, matching the framework's static/dynamic split:
 

@@ -21,7 +21,7 @@ express that without a combinatorial explosion of strings, and it has no home fo
 ```
 Tenant isolation   → which tenant's data exists for you at all      (global query filter, done)
 Capability         → which actions on which resource types          (roles / permission sets)   AXIS 1
-Data scope         → which ROWS of a resource each capability hits   (access policies)            AXIS 2
+Data scope         → which ROWS of a resource each capability hits   (tree scopes + paired atoms) AXIS 2
 Field visibility   → which FIELDS of a row you may read/write        (capability field masks)     (opt-in)
 ```
 
@@ -77,7 +77,11 @@ A **scope** is a declarative row rule attached to a (resource, capability). Kind
 
 - **all** — every row of the **active node** (node-local; today's default). "All" never means the
   whole tree — tree breadth is what `subtree`/`inherited` add explicitly.
-- **own** — rows the actor owns; the resource declares what "own" means (today's `:own`, unchanged).
+- **own** — rows the actor owns, expressed as the **paired-atom pattern** (docs/28 D-AG2, TAM006):
+  the base atom (`orders.read`) is own-scoped by default and the declared `-all` atom widens.
+  The resource declares what "own" means (`ScopedUnless(context, "orders.read-all", selector)`)
+  and the write side re-checks with `CheckOwnershipUnless`. Row reach is thereby CAPABILITY —
+  granted through roles like any atom — not a separate registry.
 - **subtree** — rows owned at or **below** the active node in the hierarchy — the *downward* roll-up
   (a region manager over all its companies). Implemented as a semi-join against the (tiny) tenants
   table: `row.TenantId IN (SELECT Id FROM tenants WHERE Path LIKE active.Path || '%')` — rows carry
@@ -94,28 +98,28 @@ A **scope** is a declarative row rule attached to a (resource, capability). Kind
   policy scope kinds. The set above is closed.
 
 Scope is **per (resource, capability)**, so "view all Orders but manage only your own" is two grants
-with different scopes on the same resource. Scopes **union** (broadest wins) when several grants cover
-the same capability — `all ⊇ subtree ⊇ own`.
+on the same resource — the base atoms plus, or minus, the widening atoms.
 
-### Grouping: access policies (the separate axis)
+### RETIRED: access policies as a second registry
 
-Scopes group into named **access policies**, assigned per membership independently of roles:
-
-- `own-only` = every resource scoped to `own`.
-- `regional` = Customers/Orders scoped to `subtree` of the member's tenant.
-- `full` = everything `all`.
-
-So the two groupings are: **roles** (capability) and **access policies** (data scope). A membership
-picks from each menu — the same role reused with different policies across memberships.
+An earlier revision grouped scopes into named **access policies** assigned per membership (a v1 for
+`all`|`own` was built and wire-verified). It was retired ([docs/28](28-assignment-and-grouping.md)):
+policy-authored `own` structurally could not be made fail-closed — whether a grant carried the scope
+was runtime data no analyzer could tie to per-view discipline, so a policy toggled over an
+undisciplined resource silently showed every row. The paired-atom pattern gives the tenant admin the
+same runtime power (grant a role with or without the widening atom) while TAM006 verifies at compile
+time that every view over a widened resource applies its scope. One axis fewer; fail-closed by
+construction.
 
 ### Enforcement
 
-- **Reads**: the view's declarative scope (generalizing today's `ScopedTo`) compiles the resolved
-  scope into the query — `own` → owner predicate, `subtree` → path prefix. One line per view, same
-  as today; domain assignment predicates (docs/28) join through domain tables the same way.
-- **Writes**: the operation re-checks the scope on the target row authoritatively (generalizing
-  today's `CheckOwnership`) — a stale/forged id can't escape scope.
-- Both ride the existing pipeline; the row rules live in one resolver, not per operation.
+- **Reads**: `ScopedUnless(context, wideningAtom, owner)` — one line per view; `subtree`/`inherited`
+  are the per-view tree declarations; domain assignment predicates (docs/28) join through domain
+  tables the same way.
+- **Writes**: `CheckOwnershipUnless(wideningAtom, ownerId)` re-checks authoritatively on the target
+  row — a stale/forged id can't escape scope.
+- **Compile time**: TAM006 requires the widening atom to be declared (`[Widens]` → catalogue) and
+  every view on the base atom to apply the scope.
 
 ## The hierarchy write model (settled): grants fan out, writes fan in
 
@@ -226,32 +230,26 @@ must be *bound*; data-scope (a predicate over existing rows) cannot bind it. The
   while reaching its whole subtree — one region membership over 50 companies is one seat. Acknowledged
   and accepted for now; if pricing should track reach rather than attachment, that is a docs/24 change
   (e.g. counting cascaded reach), not an authorization change.
-- **Access policies BUILT for `all`|`own` (v1).** `AccessPolicyEntity` is a tenant-scoped named
-  resource→scope map (`policies.define` / `policies.list`, validated against the same resource
-  catalogue as levels); a membership lists policy names (`users.define … policies`), resolved in the
-  membership's OWN tenant like role names. At actor resolution each membership's grants are narrowed
-  by ITS policies before the union: an `own` scope suffixes that membership's unsuffixed atoms for
-  the resource with `:own`, while an atom the role author already suffixed is kept as written; across
-  a membership's policies the broadest scope wins per resource, and across memberships plain union
-  applies (D-A5) — one unrestricted membership makes the grant unrestricted. Downstream nothing
-  changed: the existing `:own` grant machinery (gate acceptance + `ScopedTo` query narrowing) does
-  the enforcement. Scope values are stored canonical (lower-cased at define time) because
-  enforcement compares ordinal — a control that could be authored in a casing enforcement ignores
-  would fail open. Policies never narrow a `*` role grant (no resource prefix): like reserved
-  atoms, `*` means the full app surface — scope a user by granting resources, not `*`.
-  `subtree`/`inherited`/`where` policy kinds remain to be wired onto the same seam.
+- **Access policies were BUILT for `all`|`own` (v1), then RETIRED** — see "RETIRED: access
+  policies as a second registry" above and docs/28. The paired-atom pattern replaced them:
+  `[Widens]` atoms in the catalogue, `ScopedUnless`/`CheckOwnershipUnless` at the seams, level
+  expansion carrying `X-all` on X's tier, and TAM006 making the whole pattern fail-closed at
+  compile time. The lesson that survives from the policy round: a runtime-authorable control whose
+  enforcement depends on undetectable per-view discipline is structurally fail-open — prefer
+  encodings an analyzer can verify.
 
 ## How it binds to identity (docs/26)
 
 ```
-Account ──< TenantMembership(account, tenant) ──┬── roles          (capability)
-                                                └── access policies (data scope)
+Account ──< TenantMembership(account, tenant) ──── roles   (capability, incl. widening atoms)
 ```
 
-A membership is the join of an account to a tenant, carrying **both** axes. Different tenants → different
-roles and scopes for the same person. The hierarchy (docs/26): a membership attached at a parent node
-plus `subtree` scope is exactly the roll-up a regional manager needs; a membership at a leaf with `own`
-scope is a line worker. Seats (docs/24) count memberships per tenant.
+A membership is the join of an account to a tenant, carrying roles. Different tenants → different
+roles for the same person. The hierarchy (docs/26): a membership attached at a parent node with a
+cascading role is exactly the roll-up a regional manager needs; a membership at a leaf whose role
+carries only base atoms is a line worker (own-scoped by construction). Seats (docs/24) count
+memberships per tenant. The membership is also the documented extension seam: actor resolution
+unions grants across sources, so groups/profiles (docs/28), if ever, add a source — never an axis.
 
 ## Backward compatibility
 
@@ -266,19 +264,17 @@ scope is a line worker. Seats (docs/24) count memberships per tenant.
 
 - **D-A1 — access levels: YES.** `None/View/Edit/Manage` presets are the authoring model over the
   existing permission atoms (sugar; nothing downstream changes).
-- **D-A2 — row-scope kinds: `all`, `own`, `subtree`, `inherited` — and that set is CLOSED
-  (docs/28 D-AG1; `where`/`shared` settled out as domain patterns).** `inherited` (upward,
-  ancestor-owned shared data) was added at the hierarchy review.
-  Per-record sharing is a per-domain design later, not a framework primitive yet. Policies are BUILT
-  for `all`|`own` (see implementation notes). SETTLED in [docs/28](28-assignment-and-grouping.md):
-  the policy scope set is CLOSED at `all`/`own`/`subtree`/`inherited` (a framework scope kind
-  requires a framework-owned subject-side fact — identity or tree position); `where` and `shared`
-  are domain patterns on the existing seams, and rich grouping/approval systems are plugin
-  territory (tutorial Step 16).
+- **D-A2 — row-scope kinds: `all`, `own` (as the paired-atom capability pattern), `subtree`,
+  `inherited` — CLOSED** ([docs/28](28-assignment-and-grouping.md)): the tree scopes are the only
+  ones the framework owns end to end; ownership rides the capability axis (base atom own-scoped,
+  `-all` atom widens, TAM006-enforced); `where`/`shared` are domain patterns; rich
+  grouping/approval systems are plugin territory (tutorial Step 16). The access-policy registry
+  was built for `all`|`own` and RETIRED (see implementation notes).
 - **D-A3 — field-level: FULL now (read + write masking).** Resources opt a field in as sensitive; a
   grant can hide it from views/manifest (read) AND reject a `Change` to it (write).
 - **D-A4 — deny rules: NO.** Union-grant only.
-- **D-A5 — scope combination: UNION** (broadest wins) for the same capability.
+- **D-A5 — combination: UNION** across roles and memberships — with row reach as atoms, this is
+  simply capability union (holding any grant of the widening atom widens).
 
 ## Sequencing note
 

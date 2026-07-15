@@ -37,7 +37,7 @@ each tagged with a `customObject: "{key}"` origin marker (the fourth origin, aft
 
 ## Permissions: the D1 tension, resolved
 
-D1 commits to a *compiled* permission catalogue; runtime-defined objects cannot mint compiled permissions. The resolution mirrors D1's own scope-qualifier design (`:own`):
+D1 commits to a *compiled* permission catalogue; runtime-defined objects cannot mint compiled permissions. The resolution mirrors the paired-atom ownership design (docs/28):
 
 - **Two compiled umbrella permissions** govern the channel: `custom.read` and `custom.manage` (plus the existing `extensions.manage` for defining objects/fields).
 - **Per-object access is a grant qualifier, not a permission**: `custom.read:coolingUnit` grants read on that object only; unqualified `custom.read` grants all. `roles.define` already trims qualifiers for catalogue validation; it additionally validates object qualifiers against the object registry — the registry-as-compiler pattern again.
