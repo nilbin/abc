@@ -99,8 +99,14 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (`[Widens("orders.read-all")]`) lifts it — views scope with
   `.ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId)`, operations re-check with
   `CheckOwnershipUnless`, levels expand `X-all` on X's tier, and TAM006 enforces BOTH directions at
-  compile time (undeclared atom at a call site; unscoped view over a widened resource — verified
-  fired on both). Verified on the wire (13/13, SQLite + PG): the technician sees own rows on every
+  compile time for views AND operations (undeclared atom at a call site; unscoped view/operation
+  over a widened resource — verified fired on all: the write-side operation hole a foreign id would
+  drive is now a build error too). A review round hardened three edges: the reserved-atom carve-out
+  (docs/24) covers the `-all` twin — `Actor.IsReserved` blocks `subscriptions.manage-all` from
+  wildcard grants, level expansion and `roles.define`; PLG001 validates `[Widens]` atoms against
+  the plugin namespace so a plugin can't mint a host widening atom; the analyzer reads the atom by
+  position (not first-literal) and records nothing for a non-literal atom (fail-closed, no false
+  (b)). Verified on the wire (13/13, SQLite + PG): the technician sees own rows on every
   read surface — list, overview AND detail, the last two fail-open under the old suffix model —
   and is rejected editing/completing foreign orders (edit had no check at all before); dispatcher
   (-all atoms), viewer (level `view` ⇒ read-all) and admin (`*`) see all; roles.define grants the

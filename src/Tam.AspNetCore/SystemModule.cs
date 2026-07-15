@@ -210,7 +210,7 @@ public static class RoleRules
         // whether authored directly or shipped in a package — closes the wildcard-admin bypass.
         // (Access levels can't smuggle them either: AccessLevels.Expand never yields a reserved atom.)
         findings.AddRange(permissions
-            .Where(p => Actor.Reserved.Contains(p))
+            .Where(p => Actor.IsReserved(p))
             .Select(p => RoleFindings.ReservedPermission.With(("permission", p)).At(field)));
         // Access levels (docs/27 D-A1): the resource must exist in the compiled catalogue and the
         // level must be one of the ordered presets — same registry-as-compiler rule as the atoms.

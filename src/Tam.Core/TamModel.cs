@@ -359,6 +359,14 @@ public sealed class TamModelBuilder
     /// view, form and grid ids, and the permissions they declare. Collisions between plugins and
     /// host (or each other) are thereby impossible by construction.
     /// </summary>
+    /// <summary>The widening atoms (docs/28) a type declares — checked against the plugin
+    /// namespace like any other permission, so a plugin can't mint a HOST widening atom
+    /// (e.g. [Widens("orders.read-all")]) into the compiled catalogue.</summary>
+    private static IEnumerable<string> Widens(Type declaringType) =>
+        declaringType.GetCustomAttributes(typeof(WidensAttribute), inherit: false)
+            .Cast<WidensAttribute>()
+            .Select(w => w.Permission);
+
     private static void VerifyPluginNamespaces(TamModel model)
     {
         var violations = new List<string>();
@@ -373,8 +381,16 @@ public sealed class TamModelBuilder
                 violations.Add($"{kind} '{id}' permission '{permission}' is not under '{prefix}'");
         }
 
-        foreach (var o in model.Operations.Values) Check("operation", o.Id, o.Plugin, o.Permission);
-        foreach (var v in model.Views.Values) Check("view", v.Id, v.Plugin, v.Permission);
+        foreach (var o in model.Operations.Values)
+        {
+            Check("operation", o.Id, o.Plugin, o.Permission);
+            foreach (var w in Widens(o.DeclaringType)) Check("operation", o.Id, o.Plugin, w);
+        }
+        foreach (var v in model.Views.Values)
+        {
+            Check("view", v.Id, v.Plugin, v.Permission);
+            foreach (var w in Widens(v.DeclaringType)) Check("view", v.Id, v.Plugin, w);
+        }
         foreach (var f in model.Forms.Values) Check("form", f.Id, f.Plugin);
         foreach (var g in model.Grids.Values) Check("grid", g.Id, g.Plugin);
 

@@ -56,7 +56,7 @@ public static class AccessLevels
         foreach (var action in actions)
         {
             var atom = $"{resource}.{action}";
-            if (Actor.Reserved.Contains(atom)) continue;
+            if (Actor.IsReserved(atom)) continue;
             // Widening atoms (docs/28, "read-all") ride their base action's tier: a View-level
             // role sees the resource broadly (read ⇒ read-all), while an atom-authored role must
             // name the widening explicitly — which is how own-scoped roles are written.

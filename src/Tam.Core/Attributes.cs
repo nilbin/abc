@@ -85,9 +85,18 @@ public sealed record Actor(string Id, string Name, IReadOnlySet<string> Permissi
     public static readonly IReadOnlySet<string> Reserved =
         new HashSet<string> { "subscriptions.manage" };
 
+    /// <summary>True for a reserved atom OR its widening twin (docs/28): "subscriptions.manage" is
+    /// reserved, and so is "subscriptions.manage-all" — otherwise a widening atom on a reserved
+    /// base would slip past the wildcard carve-out and the role-definition guard. Use this wherever
+    /// the plain <see cref="Reserved"/> set was, so the twin can never be granted or expanded.</summary>
+    public static bool IsReserved(string permission) =>
+        Reserved.Contains(permission)
+        || (permission.EndsWith("-all", StringComparison.Ordinal)
+            && Reserved.Contains(permission[..^4]));
+
     public bool Can(string permission) =>
         Permissions.Contains(permission)
-        || (Permissions.Contains("*") && !Reserved.Contains(permission));
+        || (Permissions.Contains("*") && !IsReserved(permission));
 }
 
 /// <summary>

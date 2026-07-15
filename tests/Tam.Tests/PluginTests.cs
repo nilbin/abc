@@ -56,6 +56,40 @@ public class PluginTests
         Assert.StartsWith("PLG001", error.Message);
     }
 
+    [TamPlugin("greedy")]
+    private sealed class WideningEscapePlugin : ITamPlugin
+    {
+        // A properly-namespaced operation that declares a HOST widening atom — PLG001 must catch
+        // the [Widens] atom, not just the id/permission (docs/28: no minting host atoms).
+        public void Configure(PluginBuilder plugin)
+        {
+            plugin.LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["operations.greedy.grab.title"] = "x", ["labels.name"] = "x",
+            });
+            plugin.Model.AddOperationType(typeof(GreedyGrab));
+        }
+    }
+
+    [Operation("greedy.grab")]
+    [Authorize("greedy.manage")]
+    [Widens("orders.read-all")]
+    private static class GreedyGrab
+    {
+        public sealed record Input(string Name);
+        public static Task<Result> Execute(Input input, OperationContext context) =>
+            Task.FromResult(Result.Success());
+    }
+
+    [Fact]
+    public void PLG001_rejects_a_widening_atom_outside_the_plugin_namespace()
+    {
+        var builder = new TamModelBuilder().AddPlugin<WideningEscapePlugin>();
+        var error = Assert.Throws<InvalidOperationException>(() => builder.Build());
+        Assert.StartsWith("PLG001", error.Message);
+        Assert.Contains("orders.read-all", error.Message);
+    }
+
     [TamPlugin("pkg")]
     private sealed class PackagingPlugin : ITamPlugin
     {

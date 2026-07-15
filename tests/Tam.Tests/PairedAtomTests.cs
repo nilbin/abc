@@ -36,6 +36,46 @@ public class PairedAtomTests
     }
 
     [Fact]
+    public void Reserved_covers_the_widening_twin()
+    {
+        Assert.True(Actor.IsReserved("subscriptions.manage"));
+        Assert.True(Actor.IsReserved("subscriptions.manage-all"));   // the twin is reserved too
+        Assert.False(Actor.IsReserved("orders.read-all"));
+    }
+
+    [Fact]
+    public void Wildcard_does_not_grant_a_reserved_widening_twin()
+    {
+        var root = new Actor("root", "Root", new HashSet<string> { "*" });
+        Assert.False(root.Can("subscriptions.manage-all"));
+    }
+
+    [Operation("sub.set")]
+    [Authorize("subscriptions.manage")]
+    [Widens("subscriptions.manage-all")]
+    private static class ReservedWidener
+    {
+        public sealed record Input(string X);
+        public static Task<Result> Execute(Input input, OperationContext context) =>
+            Task.FromResult(Result.Success());
+    }
+
+    [Fact]
+    public void Access_levels_never_expand_a_reserved_widening_twin()
+    {
+        var model = new TamModelBuilder()
+            .AddOperationType(typeof(ReservedWidener))
+            .LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["operations.sub.set.title"] = "x", ["labels.x"] = "x",
+            })
+            .Build();
+        // manage would otherwise sweep everything; the reserved twin must be excluded.
+        Assert.DoesNotContain("subscriptions.manage-all",
+            AccessLevels.Expand(model, "subscriptions", "manage"));
+    }
+
+    [Fact]
     public void Widening_atoms_expand_with_their_base_actions_level()
     {
         var model = Model();

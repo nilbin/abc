@@ -110,7 +110,7 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
     {
         private readonly System.Collections.Concurrent.ConcurrentBag<string> declaredAtoms = [];
         private readonly System.Collections.Concurrent.ConcurrentDictionary<
-            INamedTypeSymbol, (string Permission, Location Location)> views =
+            INamedTypeSymbol, (string Kind, string Permission, Location Location)> scoped =
             new(SymbolEqualityComparer.Default);
         private readonly System.Collections.Concurrent.ConcurrentBag<
             (string Atom, INamedTypeSymbol? Enclosing, Location Location)> unlessCalls = [];
@@ -127,16 +127,22 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
                     declaredAtoms.Add(atom);
             }
 
-            var isView = type.GetAttributes().Any(a =>
-                a.AttributeClass?.ToDisplayString() == "Tam.ViewAttribute");
-            if (!isView) return;
+            // A view scopes reads (ScopedUnless); an operation scopes writes (CheckOwnershipUnless).
+            // Both must apply the scope when their authorized base atom has a declared widening twin
+            // — the write side is where the fail-open hole actually bites (a foreign id in the body).
+            var kind = type.GetAttributes().Any(a =>
+                a.AttributeClass?.ToDisplayString() == "Tam.ViewAttribute") ? "View"
+                : type.GetAttributes().Any(a =>
+                    a.AttributeClass?.ToDisplayString() == "Tam.OperationAttribute") ? "Operation"
+                : null;
+            if (kind is null) return;
             var authorize = type.GetAttributes()
                 .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "Tam.AuthorizeAttribute");
             var permission = authorize is not null
                 && authorize.ConstructorArguments.Length == 1
                 && authorize.ConstructorArguments[0].Value is string p ? p : null;
             if (permission is not null)
-                views[type] = (permission, type.Locations.FirstOrDefault() ?? Location.None);
+                scoped[type] = (kind, permission, type.Locations.FirstOrDefault() ?? Location.None);
         }
 
         public void CollectUnlessCall(SyntaxNodeAnalysisContext ctx)
@@ -145,13 +151,18 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
             if (invocation.Expression is not
                 Microsoft.CodeAnalysis.CSharp.Syntax.MemberAccessExpressionSyntax member) return;
             var methodName = member.Name.Identifier.Text;
-            if (methodName is not ("ScopedUnless" or "CheckOwnershipUnless")) return;
-
-            var atom = invocation.ArgumentList.Arguments
-                .Select(a => a.Expression)
-                .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.LiteralExpressionSyntax>()
-                .FirstOrDefault(l => l.IsKind(SyntaxKind.StringLiteralExpression))
+            // The widening atom is a fixed positional argument: source.ScopedUnless(context, ATOM,
+            // selector) → index 1; context.CheckOwnershipUnless(ATOM, ownerId) → index 0. Reading
+            // the position (not "first string literal anywhere") avoids recording the ownerId.
+            var atomIndex = methodName switch { "ScopedUnless" => 1, "CheckOwnershipUnless" => 0, _ => -1 };
+            if (atomIndex < 0) return;
+            var args = invocation.ArgumentList.Arguments;
+            if (args.Count <= atomIndex) return;
+            var atom = (args[atomIndex].Expression as
+                Microsoft.CodeAnalysis.CSharp.Syntax.LiteralExpressionSyntax)
                 ?.Token.ValueText;
+            // A non-literal atom (const/nameof) can't be verified statically — record nothing so it
+            // neither false-declares (a) nor false-satisfies (b); the runtime path stays fail-closed.
             if (atom is null) return;
 
             var enclosing = ctx.SemanticModel.GetEnclosingSymbol(
@@ -184,20 +195,24 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
                         "role could grant it and the scope would never widen."));
             }
 
-            // (b) Every view on a base whose widening atom exists must apply the scope.
-            foreach (var entry in views)
+            // (b) Every view AND operation authorized on a base whose widening atom exists must
+            // apply the scope — reads via ScopedUnless, writes via CheckOwnershipUnless. Omitting
+            // it on the write side is the fail-open hole a foreign id in the request body drives.
+            foreach (var entry in scoped)
             {
-                var view = entry.Key;
-                var (permission, location) = entry.Value;
+                var type = entry.Key;
+                var (kind, permission, location) = entry.Value;
                 var widening = permission + "-all";
                 if (!declared.Contains(widening)) continue;
-                var applied = appliedByType.TryGetValue(view, out var set) && set.Contains(widening);
-                if (!applied)
-                    ctx.ReportDiagnostic(Diagnostic.Create(Tam006, location,
-                        $"View '{view.Name}' is authorized on '{permission}' whose widening atom " +
-                        $"'{widening}' is declared elsewhere, but never applies " +
-                        $"ScopedUnless(context, \"{widening}\", …) — actors without the widening " +
-                        "would silently see every row (fail-open)."));
+                var applied = appliedByType.TryGetValue(type, out var set) && set.Contains(widening);
+                if (applied) continue;
+                var call = kind == "View"
+                    ? $"ScopedUnless(context, \"{widening}\", …)"
+                    : $"context.CheckOwnershipUnless(\"{widening}\", …)";
+                ctx.ReportDiagnostic(Diagnostic.Create(Tam006, location,
+                    $"{kind} '{type.Name}' is authorized on '{permission}' whose widening atom " +
+                    $"'{widening}' is declared, but never applies {call} — actors without the " +
+                    "widening would silently reach every row (fail-open)."));
             }
         }
     }
