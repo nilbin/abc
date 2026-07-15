@@ -158,17 +158,26 @@ public static class TamOpenIddict
         var account = await tam.Db.Set<AccountEntity>().FirstOrDefaultAsync(a => a.Id == accountId && a.Active);
         if (account is null) return Html(AuthPages.Message(model, culture, "auth.no-access"));
 
-        var identity = new ClaimsIdentity(
-            TokenValidationConstants.AuthenticationType, Claims.Name, Claims.Role);
-        identity.SetClaim(Claims.Subject, accountId.ToString());
-        identity.SetClaim(Claims.Name, account.DisplayName);
-        identity.SetClaim(ClaimsActorProvider.AccountClaim, accountId.ToString());
-        identity.SetClaim(ClaimsActorProvider.ActiveTenantClaim, chosen);
         // Always grant offline_access for an interactive human login so a refresh token is issued and
         // the client can renew the short-lived access token silently — the library handles it.
-        identity.SetScopes(request.GetScopes().Append(Scopes.OfflineAccess).Distinct());
-        identity.SetDestinations(_ => [Destinations.AccessToken]);
+        return SignInAsAccount(account, chosen,
+            request.GetScopes().Append(Scopes.OfflineAccess).Distinct());
+    }
 
+    /// <summary>The ONE token-principal shape (docs/26): subject = the global account, the active
+    /// tenant claim selects context (access is still proven by membership per request), everything
+    /// destined for the access token. Both the human login and machine clients issue through here.</summary>
+    private static IResult SignInAsAccount(AccountEntity account, string? tenant, IEnumerable<string> scopes)
+    {
+        var identity = new ClaimsIdentity(
+            TokenValidationConstants.AuthenticationType, Claims.Name, Claims.Role);
+        identity.SetClaim(Claims.Subject, account.Id.ToString());
+        identity.SetClaim(Claims.Name, account.DisplayName);
+        identity.SetClaim(ClaimsActorProvider.AccountClaim, account.Id.ToString());
+        if (tenant is not null)
+            identity.SetClaim(ClaimsActorProvider.ActiveTenantClaim, tenant);
+        identity.SetScopes(scopes);
+        identity.SetDestinations(_ => [Destinations.AccessToken]);
         return Results.SignIn(new ClaimsPrincipal(identity), properties: null,
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
@@ -229,20 +238,10 @@ public static class TamOpenIddict
                 .FirstOrDefaultAsync(a => a.Email == request.ClientId && a.Active);
             if (account is null) return Deny();
 
-            var identity = new ClaimsIdentity(
-                TokenValidationConstants.AuthenticationType, Claims.Name, Claims.Role);
-            identity.SetClaim(Claims.Subject, account.Id.ToString());
-            identity.SetClaim(Claims.Name, account.DisplayName);
-            identity.SetClaim(ClaimsActorProvider.AccountClaim, account.Id.ToString());
             // A machine acts in the single tenant it is a member of; the membership check still guards.
             var membership = await tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
                 .FirstOrDefaultAsync(m => m.AccountId == account.Id && m.Active);
-            if (membership is not null)
-                identity.SetClaim(ClaimsActorProvider.ActiveTenantClaim, membership.TenantId);
-            identity.SetScopes(request.GetScopes());
-            identity.SetDestinations(_ => [Destinations.AccessToken]);
-            return Results.SignIn(new ClaimsPrincipal(identity), properties: null,
-                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            return SignInAsAccount(account, membership?.TenantId, request.GetScopes());
         }
 
         return Deny();

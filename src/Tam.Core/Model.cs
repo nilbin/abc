@@ -19,30 +19,40 @@ public sealed record FieldModel(
     public bool IsMaskedFor(Actor actor) =>
         SensitivePermission is { } atom && !actor.Can(atom);
 
-    public static FieldModel From(ParameterInfo parameter, NullabilityInfoContext nullability)
+    // Record positional params surface [property:]-targeted attributes on the generated property,
+    // so the parameter overload searches both; the property overload has one source.
+    public static FieldModel From(ParameterInfo parameter, NullabilityInfoContext nullability) =>
+        Build(parameter.Name!, parameter.ParameterType,
+            hasDefault: parameter.HasDefaultValue,
+            writeState: nullability.Create(parameter).WriteState,
+            attributeSources: [parameter, parameter.Member.DeclaringType?.GetProperty(parameter.Name!)]);
+
+    public static FieldModel From(PropertyInfo property, NullabilityInfoContext nullability) =>
+        Build(property.Name, property.PropertyType,
+            hasDefault: false,
+            writeState: nullability.Create(property).WriteState,
+            attributeSources: [property]);
+
+    private static FieldModel Build(
+        string name, Type clr, bool hasDefault, NullabilityState writeState,
+        ICustomAttributeProvider?[] attributeSources)
     {
-        var clr = parameter.ParameterType;
         var isChange = clr.IsGenericType && clr.GetGenericTypeDefinition() == typeof(Change<>);
         var effective = isChange ? clr.GetGenericArguments()[0] : clr;
         var nonNullable = Nullable.GetUnderlyingType(effective) ?? effective;
 
         var required = !isChange
-            && !parameter.HasDefaultValue
+            && !hasDefault
             && Nullable.GetUnderlyingType(effective) is null
-            && (effective.IsValueType || nullability.Create(parameter).WriteState == NullabilityState.NotNull);
+            && (effective.IsValueType || writeState == NullabilityState.NotNull);
 
-        // Record positional params surface [property:]-targeted attributes on the generated property.
-        var property = parameter.Member.DeclaringType?.GetProperty(parameter.Name!);
-        var labelKey = parameter.GetCustomAttribute<LabelKeyAttribute>()?.Key
-            ?? property?.GetCustomAttribute<LabelKeyAttribute>()?.Key
+        var labelKey = Attr<LabelKeyAttribute>(attributeSources)?.Key
             ?? nonNullable.GetCustomAttribute<LabelKeyAttribute>()?.Key
-            ?? $"labels.{Naming.Kebab(parameter.Name!)}";
-        var sensitive = parameter.GetCustomAttribute<SensitiveAttribute>()?.Permission
-            ?? property?.GetCustomAttribute<SensitiveAttribute>()?.Permission;
+            ?? $"labels.{Naming.Kebab(name)}";
 
         return new FieldModel(
-            parameter.Name!,
-            Naming.Camel(parameter.Name!),
+            name,
+            Naming.Camel(name),
             clr,
             effective,
             isChange,
@@ -50,36 +60,13 @@ public sealed record FieldModel(
             SemanticTypes.For(nonNullable),
             labelKey,
             nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null,
-            sensitive);
+            Attr<SensitiveAttribute>(attributeSources)?.Permission);
     }
 
-    public static FieldModel From(PropertyInfo property, NullabilityInfoContext nullability)
-    {
-        var clr = property.PropertyType;
-        var isChange = clr.IsGenericType && clr.GetGenericTypeDefinition() == typeof(Change<>);
-        var effective = isChange ? clr.GetGenericArguments()[0] : clr;
-        var nonNullable = Nullable.GetUnderlyingType(effective) ?? effective;
-
-        var required = !isChange
-            && Nullable.GetUnderlyingType(effective) is null
-            && (effective.IsValueType || nullability.Create(property).WriteState == NullabilityState.NotNull);
-
-        var labelKey = property.GetCustomAttribute<LabelKeyAttribute>()?.Key
-            ?? nonNullable.GetCustomAttribute<LabelKeyAttribute>()?.Key
-            ?? $"labels.{Naming.Kebab(property.Name)}";
-
-        return new FieldModel(
-            property.Name,
-            Naming.Camel(property.Name),
-            clr,
-            effective,
-            isChange,
-            required,
-            SemanticTypes.For(nonNullable),
-            labelKey,
-            nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null,
-            property.GetCustomAttribute<SensitiveAttribute>()?.Permission);
-    }
+    private static T? Attr<T>(ICustomAttributeProvider?[] sources) where T : Attribute =>
+        sources.Where(s => s is not null)
+            .SelectMany(s => s!.GetCustomAttributes(typeof(T), inherit: true).OfType<T>())
+            .FirstOrDefault();
 
     /// <summary>Positional records use the ctor; init-property records (EF projection DTOs) use properties.</summary>
     public static IReadOnlyList<FieldModel> FromRecord(Type recordType)
