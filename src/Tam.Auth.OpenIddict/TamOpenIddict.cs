@@ -125,7 +125,7 @@ public static class TamOpenIddict
     {
         var request = http.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenIddict request cannot be retrieved.");
-        var culture = Culture(http, model);
+        var culture = TamAspNetCore.ResolveCulture(http, model);
 
         var login = await http.AuthenticateAsync(LoginScheme);
         if (login.Principal?.FindFirst(ClaimsActorProvider.AccountClaim)?.Value is not { } subject
@@ -182,7 +182,7 @@ public static class TamOpenIddict
         var returnUrl = form["returnUrl"].ToString();
         // Only ever return inside the app — never to an attacker-supplied absolute URL.
         if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Relative)) returnUrl = "/";
-        var culture = Culture(http, model);
+        var culture = TamAspNetCore.ResolveCulture(http, model);
 
         // The account is platform-global: authenticate the Email/handle across the platform. The
         // active tenant is chosen next, at the authorization endpoint, from its memberships.
@@ -263,13 +263,6 @@ public static class TamOpenIddict
 
     private static IResult Html(string html) => Results.Content(html, "text/html; charset=utf-8");
 
-    private static string Culture(HttpContext http, TamModel model)
-    {
-        var header = http.Request.Headers.AcceptLanguage.ToString();
-        var first = header.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .FirstOrDefault()?.Split(';')[0].Trim();
-        return string.IsNullOrEmpty(first) ? model.DefaultCulture : first;
-    }
 
     /// <summary>Registers the OpenIddict tables on the application's DbContext.</summary>
     public static ModelBuilder UseTamOpenIddict(this ModelBuilder modelBuilder)

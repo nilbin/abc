@@ -153,7 +153,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         // the rows — for that actor the column does not exist, matching the masked manifest. Costs
         // a node conversion only when the view actually has masked fields for this actor.
         var masked = view.ResultFields
-            .Where(f => f.SensitivePermission is { } atom && !context.Actor.Can(atom))
+            .Where(f => f.IsMaskedFor(context.Actor))
             .Select(f => f.WireName)
             .ToList();
         if (masked.Count > 0)

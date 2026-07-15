@@ -286,20 +286,28 @@ public static class TamAspNetCore
         return app;
     }
 
+    /// <summary>The one request-culture resolver — explicit ?culture, else Accept-Language,
+    /// validated against the model's catalogues, else the default. Shared by the API pipeline and
+    /// the auth pages so an unknown culture can't slip past one of them (it did: the auth pages
+    /// used to skip the whitelist).</summary>
+    public static string ResolveCulture(HttpContext http, TamModel model)
+    {
+        var requested = http.Request.Query.TryGetValue("culture", out var q) && q.Count > 0
+            ? q[0]
+            : http.Request.Headers.AcceptLanguage.ToString().Split(',').FirstOrDefault()?.Split(';')[0].Trim();
+        return requested is { Length: > 0 } &&
+            model.Locales.Cultures.Contains(requested, StringComparer.OrdinalIgnoreCase)
+                ? requested
+                : model.DefaultCulture;
+    }
+
     public static OperationContext BuildContext(HttpContext http, TamModel model)
     {
         var actor = http.RequestServices.GetRequiredService<IActorProvider>().GetActor(http);
         // The pinned ambient tenant — includes an act-as rebind (docs/26 D-H4), so the context,
         // the actor above and the DbContext filter all agree on the node this request acts in.
         var tenant = TamTenant.Resolve(http);
-
-        var requested = http.Request.Query.TryGetValue("culture", out var q) && q.Count > 0
-            ? q[0]
-            : http.Request.Headers.AcceptLanguage.ToString().Split(',').FirstOrDefault()?.Split(';')[0].Trim();
-        var culture = requested is { Length: > 0 } &&
-            model.Locales.Cultures.Contains(requested, StringComparer.OrdinalIgnoreCase)
-                ? requested
-                : model.DefaultCulture;
+        var culture = ResolveCulture(http, model);
 
         return new OperationContext
         {

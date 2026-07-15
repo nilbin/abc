@@ -14,6 +14,11 @@ public sealed record FieldModel(
     IReadOnlyList<string>? EnumOptions,
     string? SensitivePermission = null)   // docs/27 D-A3: field masked behind this atom
 {
+    /// <summary>docs/27 D-A3: is this field hidden/blocked for the actor? The ONE predicate the
+    /// operation and view masking sites share, so they can never disagree.</summary>
+    public bool IsMaskedFor(Actor actor) =>
+        SensitivePermission is { } atom && !actor.Can(atom);
+
     public static FieldModel From(ParameterInfo parameter, NullabilityInfoContext nullability)
     {
         var clr = parameter.ParameterType;

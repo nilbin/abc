@@ -37,7 +37,7 @@ public sealed class OperationExecutor(
         // touch is rejected outright — the masked manifest never offered the field, so its presence
         // is either a stale client or a forged request. Checked on the raw body, before binding.
         var maskedWrites = operation.InputFields
-            .Where(f => f.SensitivePermission is { } atom && !context.Actor.Can(atom))
+            .Where(f => f.IsMaskedFor(context.Actor))
             .Where(f => body.ValueKind == JsonValueKind.Object && body.TryGetProperty(f.WireName, out _))
             .Select(f => PipelineFindings.FieldNotAuthorized
                 .With(("field", f.WireName), ("permission", f.SensitivePermission!)).At(f.MemberName))
