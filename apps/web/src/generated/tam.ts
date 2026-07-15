@@ -384,27 +384,13 @@ export interface OrdersListRow {
   status: "open" | "completed" | "cancelled";
   requestedDate?: string;
   estimatedTotal?: number;
+  tenantId: string;
   version: number;
   extensions: Record<string, unknown>;
 }
 
 export interface OrdersListQuery {
   search?: string;
-}
-
-export interface OrdersOverviewRow {
-  id: string;
-  number: string;
-  company: string;
-  description: string;
-  type: "service" | "project";
-  status: "open" | "completed" | "cancelled";
-  requestedDate?: string;
-  estimatedTotal?: number;
-}
-
-export interface OrdersOverviewQuery {
-
 }
 
 export interface ExtensionsFieldsRow {
@@ -773,11 +759,6 @@ export class TypedTamClient {
   /** view orders.list (requires orders.read) */
   ordersList(query?: OrdersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersListRow[] }> {
     return this.client.view("orders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersListRow[] }>;
-  }
-
-  /** view orders.overview (requires orders.read) */
-  ordersOverview(query?: OrdersOverviewQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersOverviewRow[] }> {
-    return this.client.view("orders.overview", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersOverviewRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

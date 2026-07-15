@@ -33,6 +33,24 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         if (!context.Actor.Can(view.Permission))
             return (null, PipelineFindings.NotAuthorized.With(("permission", view.Permission)));
 
+        // SubtreeRead (docs/26 D-H1): widen the ambient READ scope to the acting node's
+        // validated subtree for this view execution. The set derives server-side from the
+        // tenants table, never from client input, and every ITenantScoped source in the view's
+        // query widens coherently — no per-source IgnoreQueryFilters composition to get wrong.
+        // Writes never see this: the operation pipeline and stamp interceptor use Current alone.
+        if (view.Capabilities.SubtreeTenantField is not null
+            && services.GetService(typeof(TenantScope)) is TenantScope scope
+            && services.GetService(typeof(ITamDb)) is ITamDb subtreeDb)
+        {
+            var activePath = await subtreeDb.Db.Set<TenantEntity>()
+                .Where(t => t.Id == context.TenantId.Value)
+                .Select(t => t.Path).FirstOrDefaultAsync(ct) ?? context.TenantId.Value;
+            var prefix = activePath + ".";
+            scope.WidenRead(await subtreeDb.Db.Set<TenantEntity>()
+                .Where(t => t.Path == activePath || t.Path.StartsWith(prefix))
+                .Select(t => t.Id).ToListAsync(ct));
+        }
+
         object queryRecord;
         List<FieldFilter> fieldFilters;
         try

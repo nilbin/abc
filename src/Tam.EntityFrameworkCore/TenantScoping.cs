@@ -21,6 +21,12 @@ public interface ITenantScopeContext
     /// <summary>The tenant every query is scoped to, or null in a cross-tenant background scope
     /// (where callers must <c>IgnoreQueryFilters()</c> and filter by row explicitly).</summary>
     string? CurrentTenantId { get; }
+
+    /// <summary>Additional tenants this request may READ (docs/26 D-H1: subtree views): the
+    /// pipeline widens this to the acting node's validated subtree for a SubtreeRead view and
+    /// nothing else. Empty everywhere else — including every write path: the stamp interceptor
+    /// and operation pipeline use <see cref="CurrentTenantId"/> alone (D-H4).</summary>
+    IReadOnlyList<string> TenantReadSet { get; }
 }
 
 public static class TamTenantFilter
@@ -38,6 +44,11 @@ public static class TamTenantFilter
         // context.CurrentTenantId, rooted at the DbContext so EF parameterizes it per execution.
         var currentTenant = Expression.Property(
             Expression.Constant(context), nameof(ITenantScopeContext.CurrentTenantId));
+        var readSet = Expression.Property(
+            Expression.Constant(context), nameof(ITenantScopeContext.TenantReadSet));
+        var contains = typeof(Enumerable).GetMethods()
+            .Single(m => m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2)
+            .MakeGenericMethod(typeof(string));
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -45,9 +56,13 @@ public static class TamTenantFilter
 
             var e = Expression.Parameter(entityType.ClrType, "e");
             var tenantId = Expression.Property(e, nameof(ITenantScoped.TenantId));
-            // e => e.TenantId == context.CurrentTenantId  — a null current tenant matches nothing,
-            // so an unset (cross-tenant) scope sees no rows unless it opts out of the filter.
-            var body = Expression.Equal(tenantId, currentTenant);
+            // e => e.TenantId == ctx.CurrentTenantId || ctx.TenantReadSet.Contains(e.TenantId)
+            // A null current tenant matches nothing, so an unset (cross-tenant) scope sees no
+            // rows unless it opts out. The read set is empty except during a SubtreeRead view,
+            // where it is the acting node's validated subtree — reads widen, writes never do.
+            var body = Expression.OrElse(
+                Expression.Equal(tenantId, currentTenant),
+                Expression.Call(contains, readSet, tenantId));
             modelBuilder.Entity(entityType.ClrType).HasQueryFilter(Expression.Lambda(body, e));
         }
     }

@@ -128,4 +128,7 @@ Done:
       catalogs once). The invite-accept item was already satisfied — the handlers render via
       `AuthPages` and no inline markup remained.
 
+- [x] `orders.overview` retired: the standard `orders.list` carries `SubtreeRead` (docs/26
+      D-H1 evolved) — one view per aggregate again; roll-up is a capability, not a twin view.
+
 Open: nothing — new debts get a checkbox here when they appear.

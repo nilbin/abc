@@ -16,6 +16,13 @@ namespace Tam.AspNetCore;
 public sealed class TenantScope
 {
     public string? Current { get; set; }
+
+    /// <summary>Extra tenants this request may READ (docs/26 D-H1). Set ONLY by the view
+    /// executor for a SubtreeRead view — the acting node's validated subtree; empty otherwise.
+    /// The write side (stamping, operations, outbox) never consults it.</summary>
+    public IReadOnlyList<string> ReadSet { get; private set; } = [];
+
+    public void WidenRead(IEnumerable<string> tenantIds) => ReadSet = [.. tenantIds];
 }
 
 public static class TamTenant

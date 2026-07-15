@@ -259,7 +259,6 @@
       "customers.credit-blocked": "The customer is credit blocked.",
       "customers.duplicate-name": "A customer with that name already exists.",
       "labels.company": "Company",
-      "nav.overview": "Group overview",
       "nav.work": "Work",
       "nav.admin": "Administration",
       "nav.administration": "General"
@@ -521,7 +520,6 @@
       "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
       "customers.duplicate-name": "Det finns redan en kund med det namnet.",
       "labels.company": "Bolag",
-      "nav.overview": "Koncern\u00F6versikt",
       "nav.work": "Arbete",
       "nav.admin": "Administration",
       "nav.administration": "Allm\u00E4nt"
@@ -2408,6 +2406,15 @@
           "extension": false
         },
         {
+          "name": "tenantId",
+          "labelKey": "labels.company",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
           "name": "version",
           "labelKey": "labels.version",
           "type": "integer",
@@ -2436,110 +2443,13 @@
         "type",
         "customerName",
         "requestedDate",
-        "estimatedTotal"
+        "estimatedTotal",
+        "tenantId"
       ],
       "defaultSort": "number",
       "defaultSortDescending": true,
-      "extensibleEntity": "order"
-    },
-    "orders.overview": {
-      "permission": "orders.read",
-      "queryFields": [],
-      "resultFields": [
-        {
-          "name": "id",
-          "labelKey": "labels.id",
-          "type": "reference",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "number",
-          "labelKey": "labels.number",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "company",
-          "labelKey": "labels.company",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "description",
-          "labelKey": "labels.description",
-          "type": "multiline-text",
-          "wireKind": "string",
-          "format": "multiline",
-          "required": true,
-          "maxLength": 1000,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "type",
-          "labelKey": "labels.type",
-          "type": "selection",
-          "wireKind": "string",
-          "required": true,
-          "options": [
-            "Service",
-            "Project"
-          ],
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "status",
-          "labelKey": "labels.status",
-          "type": "selection",
-          "wireKind": "string",
-          "required": true,
-          "options": [
-            "Open",
-            "Completed",
-            "Cancelled"
-          ],
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "requestedDate",
-          "labelKey": "labels.requested-date",
-          "type": "date",
-          "wireKind": "date",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        },
-        {
-          "name": "estimatedTotal",
-          "labelKey": "labels.estimated-total",
-          "type": "number",
-          "wireKind": "number",
-          "required": false,
-          "changeSet": false,
-          "extension": false
-        }
-      ],
-      "sortable": [
-        "number",
-        "company"
-      ],
-      "filterable": [
-        "status",
-        "type"
-      ],
-      "defaultSort": "number",
-      "defaultSortDescending": true
+      "extensibleEntity": "order",
+      "subtree": "tenantId"
     },
     "extensions.fields": {
       "permission": "extensions.manage",
@@ -4336,6 +4246,7 @@
       "view": "orders.list",
       "columns": [
         "number",
+        "tenantId",
         "customerName",
         "type",
         "status",
@@ -4349,21 +4260,6 @@
         "orders.create"
       ],
       "includeExtensions": true
-    },
-    "web.orders.overview": {
-      "view": "orders.overview",
-      "columns": [
-        "number",
-        "company",
-        "description",
-        "type",
-        "status",
-        "requestedDate",
-        "estimatedTotal"
-      ],
-      "rowActions": [],
-      "toolbarActions": [],
-      "includeExtensions": false
     },
     "web.customers.list": {
       "view": "customers.list",
@@ -4450,16 +4346,6 @@
               "page": "orders"
             },
             "permission": "orders.read",
-            "children": []
-          },
-          {
-            "id": "overview",
-            "kind": "page",
-            "labelKey": "nav.overview",
-            "order": 20,
-            "target": {
-              "grid": "web.orders.overview"
-            },
             "children": []
           },
           {

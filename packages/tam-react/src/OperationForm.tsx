@@ -9,6 +9,8 @@ import { rendererFor } from './renderers';
 
 export interface OperationFormProps {
   form: string;
+  /** Execute in another standable node (docs/26 D-H4) — a subtree grid editing a child row. */
+  actAs?: string;
   initialValues?: Record<string, unknown>;
   initialExtensions?: Record<string, unknown>;
   onSuccess?: (response: OperationResponse) => void;
@@ -132,7 +134,8 @@ export function OperationForm(props: OperationFormProps) {
       }
       if (Object.keys(extensions).length > 0) body.extensions = extensions;
 
-      const result = await client.operation(formDef.operation, body);
+      const result = await client.operation(formDef.operation, body,
+        props.actAs ? { actAs: props.actAs } : undefined);
       setResponse(result);
       if (!result.findings.some(f => f.severity === 'error') && !result.conflicts?.length) {
         props.onSuccess?.(result);

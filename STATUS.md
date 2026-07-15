@@ -32,7 +32,7 @@ samples/fortnox              a plugin whose whole job is one inbound integration
 samples/approvals            Step 16: nested approver groups + tenant-configured rules gating
                              host operations via the wildcard gate, park, replay seams
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              117 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              122 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge

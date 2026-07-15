@@ -42,8 +42,13 @@ export class TamClient {
     return await response.json();
   }
 
-  async view(viewId: string, params?: Record<string, unknown>): Promise<ViewResponse> {
-    const response = await this.send(this.url(`/api/views/${viewId}`, params));
+  async view(
+    viewId: string, params?: Record<string, unknown>,
+    options?: { actAs?: string },
+  ): Promise<ViewResponse> {
+    const response = await this.send(this.url(`/api/views/${viewId}`, params), {
+      ...(options?.actAs ? { headers: { 'X-Tam-Tenant': options.actAs } } : {}),
+    });
     if (!response.ok) throw new Error(`view ${viewId}: ${response.status}`);
     return await response.json();
   }
@@ -51,13 +56,16 @@ export class TamClient {
   async operation(
     operationId: string,
     body: Record<string, unknown>,
-    options?: { idempotencyKey?: string },
+    options?: { idempotencyKey?: string; actAs?: string },
   ): Promise<OperationResponse> {
     const response = await this.send(this.url(`/api/operations/${operationId}`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(options?.idempotencyKey ? { 'X-Idempotency-Key': options.idempotencyKey } : {}),
+        // Per-call act-as (docs/26 D-H4): a subtree grid's row action executes in the ROW's
+        // node. Server-validated against the standable set like any act-as.
+        ...(options?.actAs ? { 'X-Tam-Tenant': options.actAs } : {}),
       },
       body: JSON.stringify(body),
     });

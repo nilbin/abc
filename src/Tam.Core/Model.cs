@@ -120,7 +120,8 @@ public sealed record ViewCapability(
     IReadOnlyList<string> Sortable,
     IReadOnlyList<string> Filterable,
     string? DefaultSort,
-    bool DefaultSortDescending);
+    bool DefaultSortDescending,
+    string? SubtreeTenantField = null);
 
 public sealed record ViewDefinition(
     string Id,
@@ -171,6 +172,7 @@ public sealed class ViewCapabilitiesBuilder
     private readonly List<string> filterable = [];
     private string? defaultSort;
     private bool defaultSortDescending;
+    private string? subtreeTenantField;
 
     public ViewCapabilitiesBuilder Sortable(params string[] members)
     {
@@ -191,7 +193,23 @@ public sealed class ViewCapabilitiesBuilder
         return this;
     }
 
-    public ViewCapability Build() => new(sortable, filterable, defaultSort, defaultSortDescending);
+    /// <summary>
+    /// Opts this view into SUBTREE breadth (docs/26 D-H1 evolved): standing at a node with
+    /// descendants, the pipeline widens the ambient READ scope to the validated subtree — the
+    /// view's authored query is untouched. Breadth stays a deliberate per-view choice, never a
+    /// default. <paramref name="tenantFieldMember"/> names the Result field carrying each row's
+    /// TenantId; it becomes the mechanical company column, the tenant filter, and the act-as
+    /// target for row actions. Writes never widen (D-H4: writes fan into one node).
+    /// </summary>
+    public ViewCapabilitiesBuilder SubtreeRead(string tenantFieldMember)
+    {
+        subtreeTenantField = Naming.Camel(tenantFieldMember);
+        if (!filterable.Contains(subtreeTenantField)) filterable.Add(subtreeTenantField);
+        return this;
+    }
+
+    public ViewCapability Build() =>
+        new(sortable, filterable, defaultSort, defaultSortDescending, subtreeTenantField);
 }
 
 public sealed record DerivationDefinition(

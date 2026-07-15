@@ -90,6 +90,11 @@ public sealed record ManifestView(
     string? ExtensibleEntity)
 {
     public string? Plugin { get; init; }
+
+    /// <summary>When set, the view reads across the acting node's SUBTREE and this names the
+    /// result field carrying each row's tenant id (docs/26 D-H1) — the client renders it as the
+    /// company column + tenant filter and targets row actions at the row's own node.</summary>
+    public string? Subtree { get; init; }
 }
 
 public sealed record ManifestForm(
@@ -162,6 +167,7 @@ public static class ManifestBuilder
                 kv.Value.ExtensibleEntity is { } e ? TamModel.EntityKey(e) : null)
             {
                 Plugin = kv.Value.Plugin,
+                Subtree = kv.Value.Capabilities.SubtreeTenantField,
             });
 
         var forms = model.Forms

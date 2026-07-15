@@ -43,8 +43,11 @@ function OrdersPage() {
 
   const openEdit = async (row: Record<string, unknown>) => {
     if (!can('orders.edit')) return;
-    const detail = await client.view('orders.detail', { orderId: row.id });
-    setEditing(detail.rows[0] ?? null);
+    // A subtree grid may hand us a child company's row: read + edit in the ROW's node.
+    const actAs = typeof row.tenantId === 'string' ? row.tenantId : undefined;
+    const detail = await client.view('orders.detail', { orderId: row.id }, actAs ? { actAs } : undefined);
+    const detailRow = detail.rows[0] ?? null;
+    setEditing(detailRow ? { ...detailRow, tenantId: row.tenantId } : null);
   };
 
   return (
@@ -64,6 +67,7 @@ function OrdersPage() {
         {editing && (
           <OperationForm
             form="web.orders.edit"
+            actAs={typeof editing.tenantId === 'string' ? editing.tenantId : undefined}
             initialValues={{
               orderId: editing.id,
               description: editing.description,

@@ -54,6 +54,25 @@ export function ViewGrid(props: ViewGridProps) {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const pageSize = props.pageSize ?? 15;
 
+  // Subtree views (docs/26 D-H1): the manifest names the result field carrying each row's
+  // tenant. The standable list supplies display names + the acting node; the company column
+  // and tenant filter appear only when there is more than one company to tell apart, and row
+  // actions execute in the ROW's node via per-call act-as (validated server-side).
+  const subtreeField = view.subtree;
+  const [companies, setCompanies] = useState<{ id: string; display: string }[]>([]);
+  const [acting, setActing] = useState<string | null>(null);
+  useEffect(() => {
+    if (!subtreeField) return;
+    let cancelled = false;
+    client.standable()
+      .then(info => { if (!cancelled) { setCompanies(info.nodes); setActing(info.active); } })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [client, subtreeField]);
+  const grouped = subtreeField !== undefined && companies.length > 1;
+  const companyName = (id: unknown) =>
+    companies.find(c => c.id === id)?.display ?? String(id ?? '');
+
   // Declared-filterable fields render controls mechanically — the control set derives from the
   // field's wire kind exactly as the server derives the operators: equality for enums/booleans,
   // from/to ranges for dates and numbers, substring for strings. Extension string fields filter
@@ -110,6 +129,7 @@ export function ViewGrid(props: ViewGridProps) {
       ? (row.extensions as Record<string, unknown> | undefined)?.[field.name]
       : row[field.name];
     if (value === null || value === undefined) return <Text c="dimmed" size="sm">—</Text>;
+    if (field.name === subtreeField) return <Text size="sm">{companyName(value)}</Text>;
     if (field.options) {
       return <Badge variant="light" color={badgeColor(String(value))}>{enumLabel(manifest, culture, value)}</Badge>;
     }
@@ -128,7 +148,8 @@ export function ViewGrid(props: ViewGridProps) {
   const columns: ManifestField[] = [
     ...gridDef.columns
       .map(c => resultByName.get(c))
-      .filter((f): f is ManifestField => f !== undefined),
+      .filter((f): f is ManifestField => f !== undefined)
+      .filter(f => f.name !== subtreeField || grouped),
     ...extensionColumns,
   ];
 
@@ -144,7 +165,9 @@ export function ViewGrid(props: ViewGridProps) {
       if (!field.required) continue;
       body[field.name] = row[field.name] ?? row.id;
     }
-    await client.operation(operationId, body);
+    const rowTenant = subtreeField ? (row[subtreeField] as string | undefined) : undefined;
+    await client.operation(operationId, body,
+      rowTenant && rowTenant !== acting ? { actAs: rowTenant } : undefined);
     refresh();
   };
 
@@ -152,8 +175,14 @@ export function ViewGrid(props: ViewGridProps) {
     <Stack gap="sm">
       <Group justify="space-between" align="flex-end">
         <Group gap="xs">
-          {filterFields.map(field => <FilterControl key={field.name} field={field}
-            filters={filters} setFilter={setFilter} />)}
+          {filterFields.map(field => field.name === subtreeField
+            ? (grouped ? <Select key={field.name} size="xs" clearable searchable
+                placeholder={t(field.labelKey)}
+                data={companies.map(c => ({ value: c.id, label: c.display }))}
+                value={filters[field.name] ?? null}
+                onChange={v => setFilter(field.name, v)} /> : null)
+            : <FilterControl key={field.name} field={field}
+                filters={filters} setFilter={setFilter} />)}
           {extensionFilterFields.map(field => <FilterControl key={`ext.${field.name}`}
             field={field} filterKey={`ext.${field.name}`}
             filters={filters} setFilter={setFilter} />)}

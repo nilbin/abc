@@ -27,6 +27,19 @@ public static class TamTreeScopes
     public static IQueryable<T> InNode<T>(this IQueryable<T> source, TenantId active)
         where T : class, ITenantScoped
         => source.IgnoreQueryFilters().Where(e => e.TenantId == active.Value);
+
+    /// <summary>
+    /// The AMBIENT scope, made explicit: the acting node plus the request's read set (non-empty
+    /// only inside a SubtreeRead view — docs/26 D-H1). Use instead of <see cref="InNode{T}"/>
+    /// when a query composes a widened source AND the view opts into subtree breadth: the same
+    /// query then answers both the strict and the widened request correctly.
+    /// </summary>
+    public static IQueryable<T> InScope<T>(this IQueryable<T> source, DbContext db, TenantId active)
+        where T : class, ITenantScoped
+    {
+        var ids = ScopeIds(db, active);
+        return source.IgnoreQueryFilters().Where(e => ids.Contains(e.TenantId));
+    }
     /// <summary>
     /// subtree (downward roll-up): rows owned at or BELOW the active node — the region manager's
     /// dashboard over all its companies. Semi-join against the tenants table on a segment-safe
@@ -52,9 +65,18 @@ public static class TamTreeScopes
     public static IQueryable<T> WithInherited<T>(this IQueryable<T> source, DbContext db, TenantId active)
         where T : class, ITenantScoped
     {
-        var ancestorIds = PathOf(db, active).Split('.');
-        return source.IgnoreQueryFilters().Where(e => ancestorIds.Contains(e.TenantId));
+        // Ancestors ∪ the ambient read scope: under strict scope this is exactly the old
+        // ancestors-or-self set; inside a SubtreeRead view it also spans the subtree, so a
+        // child row's reference to a child-owned record still joins (the widened read and the
+        // widened reference move together, docs/27).
+        var ids = PathOf(db, active).Split('.').Concat(ScopeIds(db, active)).Distinct().ToArray();
+        return source.IgnoreQueryFilters().Where(e => ids.Contains(e.TenantId));
     }
+
+    private static string[] ScopeIds(DbContext db, TenantId active) =>
+        db is ITenantScopeContext ctx && ctx.TenantReadSet.Count > 0
+            ? [active.Value, .. ctx.TenantReadSet]
+            : [active.Value];
 
     /// <summary>An active node without a TenantEntity row degrades to itself (single-node behavior).</summary>
     private static string PathOf(DbContext db, TenantId active) =>

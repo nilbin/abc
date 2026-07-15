@@ -55,7 +55,7 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
 
     public static readonly DiagnosticDescriptor Tam005 = Rule(
         "TAM005", "Widened query composes an implicitly-filtered source",
-        "EF's IgnoreQueryFilters is query-wide: composing a widened source (InSubtree/WithInherited/IgnoreQueryFilters) strips the global tenant filter from EVERY source in this query. Scope this side explicitly — .InNode(tenant) for strict, or its own InSubtree/WithInherited (docs/27, the composition rule).");
+        "EF's IgnoreQueryFilters is query-wide: composing a widened source (InSubtree/WithInherited/IgnoreQueryFilters) strips the global tenant filter from EVERY source in this query. Scope this side explicitly — .InNode(tenant) for strict, .InScope(db, tenant) for the ambient (possibly subtree-widened) scope, or its own InSubtree/WithInherited (docs/27, the composition rule).");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006];
@@ -245,7 +245,7 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         operation is IPropertyReferenceOperation { Property.Name: "TenantId" } p ? p.Property : null;
 
     private static readonly string[] WideningCalls = { "IgnoreQueryFilters", "InSubtree", "WithInherited" };
-    private static readonly string[] ExplicitScopeCalls = { "IgnoreQueryFilters", "InSubtree", "WithInherited", "InNode" };
+    private static readonly string[] ExplicitScopeCalls = { "IgnoreQueryFilters", "InSubtree", "WithInherited", "InNode", "InScope" };
     private static readonly string[] ComposingMethods = { "Join", "GroupJoin", "Concat", "Union", "Except", "Intersect" };
 
     private static void AnalyzeQueryComposition(SyntaxNodeAnalysisContext context)

@@ -43,7 +43,6 @@
   "customers.credit-blocked": "The customer is credit blocked.",
   "customers.duplicate-name": "A customer with that name already exists.",
   "labels.company": "Company",
-  "nav.overview": "Group overview",
   "nav.work": "Work",
   "nav.admin": "Administration",
   "nav.administration": "General"

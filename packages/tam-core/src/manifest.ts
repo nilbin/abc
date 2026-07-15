@@ -58,6 +58,10 @@ export interface Manifest {
     defaultSortDescending: boolean;
     extensibleEntity?: string;
     plugin?: string;
+    /** Set when the view reads across the acting node's subtree: the result field carrying
+     *  each row's tenant id — render it as the company column + tenant filter, and target
+     *  row actions at the row's own node. */
+    subtree?: string;
   }>;
   forms: Record<string, {
     operation: string;

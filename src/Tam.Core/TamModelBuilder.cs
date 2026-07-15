@@ -342,6 +342,7 @@ public sealed partial class TamModelBuilder
 
         VerifyPluginNamespaces(model);
         VerifyNav(model);
+        VerifySubtreeViews(model);
         VerifyLocalization(model, catalogs);
         return model;
     }

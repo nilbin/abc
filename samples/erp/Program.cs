@@ -25,7 +25,6 @@ var model = new TamModelBuilder()
     .Nav("web", nav => nav
         .Mode("work", m => m
             .Page("orders", page: "orders", permission: "orders.read", order: 10)
-            .Page("overview", grid: "web.orders.overview", order: 20)
             .Page("customers", grid: "web.customers.list", order: 30))
         .Mode("admin", m => m
             .Section("administration")))
@@ -66,6 +65,7 @@ var model = new TamModelBuilder()
     .Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
     {
         grid.Column(x => x.Number);
+        grid.Column(x => x.TenantId);   // the company column — rendered only when acting above a leaf
         grid.Column(x => x.CustomerName);
         grid.Column(x => x.Type);
         grid.Column(x => x.Status);
@@ -76,17 +76,6 @@ var model = new TamModelBuilder()
         grid.ToolbarAction("orders.create");
     })
 
-    // The group roll-up (docs/26 D-H1): read-only by design — writes fan in to one node (D-H4).
-    .Grid<OrderOverview.Result>("web.orders.overview", "orders.overview", grid =>
-    {
-        grid.Column(x => x.Number);
-        grid.Column(x => x.Company);
-        grid.Column(x => x.Description);
-        grid.Column(x => x.Type);
-        grid.Column(x => x.Status);
-        grid.Column(x => x.RequestedDate);
-        grid.Column(x => x.EstimatedTotal);
-    })
 
     .Grid<CustomerList.Result>("web.customers.list", "customers.list", grid =>
     {

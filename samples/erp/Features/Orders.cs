@@ -203,16 +203,19 @@ public static class OrderList
         public OrderStatus Status { get; init; }
         public DateOnly? RequestedDate { get; init; }
         public decimal? EstimatedTotal { get; init; }
+        [LabelKey("labels.company")]
+        public string TenantId { get; init; } = "";
         public long Version { get; init; }
         public ExtensionData Extensions { get; init; } = new();
     }
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
-        // InNode: this query composes a WIDENED source (the customer join below), and EF's
-        // IgnoreQueryFilters is query-wide — without the explicit node scope the orders side would
-        // silently lose its strict filter too (the TamTreeScopes composition rule).
-        var orders = db.Orders.InNode(context.TenantId)
+        // InScope: this query composes a WIDENED source (the customer join below), and EF's
+        // IgnoreQueryFilters is query-wide — the orders side must scope itself explicitly (the
+        // TamTreeScopes composition rule). InScope = the acting node plus the SubtreeRead set,
+        // so this one query serves both the strict and the group-wide request.
+        var orders = db.Orders.InScope(db, context.TenantId)
             .ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId);
         if (!string.IsNullOrWhiteSpace(query.Search))
             orders = orders.Where(x =>
@@ -228,68 +231,20 @@ public static class OrderList
             {
                 Id = o.Id, Number = o.Number, CustomerName = c.Name, Type = o.Type,
                 Status = o.Status, RequestedDate = o.RequestedDate,
-                EstimatedTotal = o.EstimatedTotal, Version = o.Version, Extensions = o.Extensions,
+                EstimatedTotal = o.EstimatedTotal, TenantId = o.TenantId,
+                Version = o.Version, Extensions = o.Extensions,
             });
     }
 
+    // SubtreeRead (docs/26 D-H1): THE orders list is also the group roll-up — standing at a
+    // parent shows every descendant company's orders with a mechanical company column + tenant
+    // filter; standing at a leaf it behaves exactly as before. The dedicated overview view this
+    // replaces is retired (docs/29 ledger).
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Number), nameof(Result.CustomerName), nameof(Result.RequestedDate))
         .Filterable(nameof(Result.Status), nameof(Result.Type), nameof(Result.CustomerName),
             nameof(Result.RequestedDate), nameof(Result.EstimatedTotal))
-        .DefaultSort(nameof(Result.Number), descending: true);
-}
-
-/// <summary>
-/// The group roll-up (docs/26 D-H1): the one purpose-built view that opts into the SUBTREE read
-/// scope — standing at a parent node shows its own and every descendant company's orders, labeled by
-/// company. Transactional lists (orders.list) stay strict; breadth is always a deliberate choice in
-/// the view, never a default. Read-only by design: writes fan in to one node (D-H4).
-/// </summary>
-[View("orders.overview")]
-[Authorize("orders.read")]
-[Widens("orders.read-all")]
-public static class OrderOverview
-{
-    public sealed record Query();
-
-    public sealed record Result
-    {
-        public OrderId Id { get; init; }
-        public OrderNumber Number { get; init; }
-        [LabelKey("labels.company")]
-        public string Company { get; init; } = "";
-        public OrderDescription Description { get; init; }
-        public OrderType Type { get; init; }
-        public OrderStatus Status { get; init; }
-        public DateOnly? RequestedDate { get; init; }
-        public decimal? EstimatedTotal { get; init; }
-    }
-
-    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
-    {
-        // Roll-up breadth (subtree) and row reach (own-unless-widened) compose: a technician
-        // standing at the region sees THEIR orders across the group, an office role sees all.
-        var orders = db.Orders.InSubtree(db, context.TenantId)
-            .ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId);
-        return from o in orders
-               join node in db.Set<TenantEntity>() on o.TenantId equals node.Id into nodes
-               from node in nodes.DefaultIfEmpty()
-               select new Result
-               {
-                   Id = o.Id,
-                   Number = o.Number,
-                   Company = node != null ? node.DisplayName : o.TenantId,
-                   Description = o.Description,
-                   Type = o.Type,
-                   Status = o.Status,
-                   RequestedDate = o.RequestedDate,
-                   EstimatedTotal = o.EstimatedTotal,
-               };
-    }
-
-    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
-        .Sortable(nameof(Result.Number), nameof(Result.Company))
-        .Filterable(nameof(Result.Status), nameof(Result.Type))
+        .SubtreeRead(nameof(Result.TenantId))
         .DefaultSort(nameof(Result.Number), descending: true);
 }
 

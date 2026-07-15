@@ -89,6 +89,17 @@ this is the D-H4 create-target invariant (grants fan out, writes fan in).
 **Decision D-H1 — default scope.** Strict by default; `subtree`/`inherited` are opt-in per view,
 because silent roll-up is a data-exposure footgun and a view should ask for breadth explicitly.
 
+**D-H1 evolved — SubtreeRead is a capability of the STANDARD view, not a twin view.** The first
+build gave roll-up its own hand-written view (`orders.overview`); that duplicated the real list
+and the two drifted. Now `caps.SubtreeRead(tenantField)` on the standard view widens the ambient
+READ scope (`TenantScope.ReadSet` → the tenant filter's set side) to the acting node's validated
+subtree for that execution — the authored query is untouched, every `ITenantScoped` source in it
+widens coherently, and the named result field becomes the mechanical company column, tenant
+filter, and per-row act-as target in the client. Breadth stays opt-in per view; writes still
+never widen (the stamp and the operation pipeline read only `Current`). A leaf actor sees
+exactly the old strict behavior. Explicit composition (`InScope` beside `WithInherited`) covers
+queries that must opt out of the global filter (the TAM005 rule).
+
 ### Permissions across the hierarchy
 
 A grant made at *T* can be declared to **cascade** to descendants or not — the same strict/inherited

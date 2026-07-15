@@ -93,6 +93,19 @@ public sealed partial class TamModelBuilder
     /// <summary>NAV001 duplicate ids, NAV002 depth cap (mode + 3), NAV004 unknown grid target,
     /// NAV005 page targets need an EXISTING catalogue atom. Contribution ids are namespace-
     /// checked with everything else in <see cref="VerifyPluginNamespaces"/>.</summary>
+    /// <summary>SUB001: a subtree-read view's tenant field must be a real result field —
+    /// the client renders the company column, tenant filter and row-action targeting off it.</summary>
+    private static void VerifySubtreeViews(TamModel model)
+    {
+        foreach (var view in model.Views.Values)
+        {
+            if (view.Capabilities.SubtreeTenantField is not { } field) continue;
+            if (!view.ResultFields.Any(f => f.WireName == field))
+                throw new InvalidOperationException(
+                    $"SUB001: view '{view.Id}' declares SubtreeRead over '{field}', which is not a result field.");
+        }
+    }
+
     private static void VerifyNav(TamModel model)
     {
         var permissions = model.Permissions.ToHashSet();

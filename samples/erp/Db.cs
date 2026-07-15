@@ -15,6 +15,9 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
     // background or startup-seed scope — those opt out explicitly with IgnoreQueryFilters.
     public string? CurrentTenantId => tenantScope.Current;
 
+    // Subtree-read widening (docs/26 D-H1): non-empty only while a SubtreeRead view executes.
+    public IReadOnlyList<string> TenantReadSet => tenantScope.ReadSet;
+
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Order> Orders => Set<Order>();
