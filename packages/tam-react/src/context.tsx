@@ -44,12 +44,12 @@ export function TamProvider(props: {
   useEffect(() => {
     // EventSource cannot set headers, so the acting-company header (docs/26 D-H4) rides a query
     // param instead — the server applies the same standable validation either way.
-    const actAs = props.client.headers['X-Tam-Tenant'];
+    const actAs = props.client.actingAs;
     const query = actAs ? `?actAs=${encodeURIComponent(actAs)}` : '';
     const source = new EventSource(`${props.client.baseUrl}/api/events${query}`);
     source.onmessage = () => effectListeners.current.forEach(listener => listener());
     return () => source.close();
-  }, [props.client.baseUrl, props.client.headers['X-Tam-Tenant']]);
+  }, [props.client.baseUrl, props.client.actingAs]);
 
   const subscribeEffects = useCallback((callback: () => void) => {
     effectListeners.current.add(callback);

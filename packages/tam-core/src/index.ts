@@ -284,6 +284,31 @@ export class TamClient {
     if (!response.ok) throw new Error(`resolve ${formId}: ${response.status}`);
     return await response.json();
   }
+
+  /** The account's standable companies (docs/26 D-H3): memberships + cascaded descendants. Routed
+   *  through send(), so it gets the same 401→refresh→retry behavior as every other call. */
+  async standable(): Promise<StandableInfo> {
+    const response = await this.send(this.url('/api/tenants/standable'));
+    if (!response.ok) throw new Error(`standable: ${response.status}`);
+    return await response.json();
+  }
+
+  /** Acting company (docs/26 D-H4): sets/clears the act-as header on every subsequent request.
+   *  The server validates the node against the account's standable set. */
+  actAs(tenantId: string | null): void {
+    if (tenantId) this.headers['X-Tam-Tenant'] = tenantId;
+    else delete this.headers['X-Tam-Tenant'];
+  }
+
+  /** The currently acting company, or null when acting as the token's own node. */
+  get actingAs(): string | null {
+    return this.headers['X-Tam-Tenant'] ?? null;
+  }
+}
+
+export interface StandableInfo {
+  active: string;
+  nodes: { id: string; display: string }[];
 }
 
 // ---- Auth (Authorization Code + PKCE, docs/26) ----
@@ -391,21 +416,13 @@ export class TamAuth {
     const state = query.get('state');
     try {
       if (!code || !state || state !== sessionStorage.getItem(this.stateKey)) return null;
-      const response = await fetch(`${this.client.baseUrl}${this.tokenPath}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: this.redirectUri,
-          client_id: this.clientId,
-          code_verifier: sessionStorage.getItem(this.verifierKey) ?? '',
-        }),
+      return await this.tokenRequest({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: this.redirectUri,
+        client_id: this.clientId,
+        code_verifier: sessionStorage.getItem(this.verifierKey) ?? '',
       });
-      const data = await response.json().catch(() => ({}));
-      return typeof data.access_token === 'string'
-        ? this.adopt(data.access_token, data.refresh_token)
-        : null;
     } finally {
       sessionStorage.removeItem(this.verifierKey);
       sessionStorage.removeItem(this.stateKey);
@@ -425,25 +442,33 @@ export class TamAuth {
   private async doRefresh(): Promise<boolean> {
     const refreshToken = typeof window === 'undefined' ? null : sessionStorage.getItem(this.refreshKey);
     if (!refreshToken) { this.endSession(); return false; }
-    let response: Response;
+    let session: TamSession | null;
     try {
-      response = await fetch(`${this.client.baseUrl}${this.tokenPath}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-          client_id: this.clientId,
-        }),
+      // Refresh tokens rotate (the server issues a new one and revokes the old); tokenRequest
+      // stores the rotated pair via adopt().
+      session = await this.tokenRequest({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: this.clientId,
       });
     } catch {
       return false;   // network hiccup: keep the session, let the original request's failure surface
     }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || typeof data.access_token !== 'string') { this.endSession(); return false; }
-    // Refresh tokens rotate (the server issues a new one and revokes the old), so store the new one.
-    this.adopt(data.access_token, data.refresh_token);
+    if (!session) { this.endSession(); return false; }
     return true;
+  }
+
+  /** The one token-endpoint POST both grant flows share; adopts the returned token pair. */
+  private async tokenRequest(params: Record<string, string>): Promise<TamSession | null> {
+    const response = await fetch(`${this.client.baseUrl}${this.tokenPath}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(params),
+    });
+    const data = await response.json().catch(() => ({}));
+    return response.ok && typeof data.access_token === 'string'
+      ? this.adopt(data.access_token, data.refresh_token)
+      : null;
   }
 
   /** Forget the tokens and unwire the client. (Re-auth is a fresh signIn.) */

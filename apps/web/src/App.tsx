@@ -3,7 +3,7 @@ import {
   AppShell, Button, Center, Group, Loader, Modal, NavLink, SegmentedControl, Select, Stack, Text,
   TextInput, Title,
 } from '@mantine/core';
-import { TamClient } from '@tam/core';
+import { TamClient, type StandableInfo } from '@tam/core';
 import {
   FieldRendererProps, LookupSelect, OperationForm, TamProvider, ViewGrid, registerRenderer,
   useTam, useTamAuth,
@@ -140,11 +140,6 @@ function PluginPage(props: { plugin: string }) {
   );
 }
 
-interface StandableInfo {
-  active: string;
-  nodes: { id: string; display: string }[];
-}
-
 function Shell(props: {
   userName: string;
   onLogout: () => void;
@@ -271,16 +266,14 @@ export function App() {
   // The account's standable companies (docs/26 D-H3): memberships + cascaded descendants.
   useEffect(() => {
     if (auth.status !== 'authenticated') { setStandable(null); setActAs(null); return; }
-    fetch(`${client.baseUrl}/api/tenants/standable`, { headers: client.headers })
-      .then(r => (r.ok ? r.json() : null))
+    client.standable()
       .then(d => setStandable(d))
       .catch(() => setStandable(null));
   }, [auth.status]);
 
   // Acting company (docs/26 D-H4): the act-as header rebinds every request server-side after
   // validation — views, lookups and creates all land in the chosen node, no re-login.
-  if (actAs) client.headers['X-Tam-Tenant'] = actAs;
-  else delete client.headers['X-Tam-Tenant'];
+  client.actAs(actAs);
 
   if (auth.status === 'loading') return <Center pt={160}><Loader /></Center>;
 
