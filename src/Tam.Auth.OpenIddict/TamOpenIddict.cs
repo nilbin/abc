@@ -157,31 +157,10 @@ public static class TamOpenIddict
             // The picker offers the full STANDABLE set (docs/26 D-H3): membership nodes plus every
             // descendant of a membership carrying a cascading role — labeled by their path so "Demo AB
             // ▸ Norrservice Nord AB" reads as the drill-down it is. Never collapsed to "the highest":
-            // different nodes mean different effective grants. (The tenants table is small; a very
-            // large tree would page/search here instead of listing.)
-            var memberNodeIds = memberships.Select(m => m.TenantId).ToHashSet();
-            var allTenants = await tam.Db.Set<TenantEntity>().ToListAsync();
-            var byId = allTenants.ToDictionary(t => t.Id);
-            var cascadingRootPaths = memberships
-                .Where(m => m.Roles().Any(a => a.Cascade))
-                .Select(m => byId.TryGetValue(m.TenantId, out var root) ? root.Path : null)
-                .OfType<string>()
+            // different nodes mean different effective grants.
+            var options = TenantTree.StandableNodes(tam.Db, accountId)
+                .Select(n => (n.Id, n.Display))
                 .ToList();
-
-            static string PathLabel(TenantEntity node, IReadOnlyDictionary<string, TenantEntity> byId) =>
-                string.Join(" ▸ ", node.AncestorIds()
-                    .Select(id => byId.TryGetValue(id, out var t) ? t.DisplayName : id));
-
-            var options = allTenants
-                .Where(t => memberNodeIds.Contains(t.Id)
-                    || cascadingRootPaths.Any(p => TenantEntity.IsSelfOrDescendant(p, t.Path)))
-                .OrderBy(t => t.Path, StringComparer.Ordinal)
-                .Select(t => (t.Id, Display: PathLabel(t, byId)))
-                .ToList();
-            // A membership node with no TenantEntity row (pre-hierarchy data) still gets an option.
-            options.AddRange(memberships
-                .Where(m => !byId.ContainsKey(m.TenantId))
-                .Select(m => (Id: m.TenantId, Display: m.TenantId)));
             return Html(AuthPages.TenantPicker(model, culture, http.Request.Query, options));
         }
 

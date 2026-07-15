@@ -193,7 +193,8 @@
       "nav.plugins": "Till\u00E4gg",
       "nav.packages": "Paket",
       "nav.rules": "Regler",
-      "labels.company": "Bolag"
+      "labels.company": "Bolag",
+      "nav.overview": "Koncern\u00F6versikt"
     },
     "en": {
       "operations.extensions.define-field.title": "New custom field",
@@ -386,7 +387,8 @@
       "nav.plugins": "Plugins",
       "nav.packages": "Packages",
       "nav.rules": "Rules",
-      "labels.company": "Company"
+      "labels.company": "Company",
+      "nav.overview": "Group overview"
     }
   },
   "operations": {
@@ -3174,6 +3176,21 @@
         "orders.create"
       ],
       "includeExtensions": true
+    },
+    "web.orders.overview": {
+      "view": "orders.overview",
+      "columns": [
+        "number",
+        "company",
+        "description",
+        "type",
+        "status",
+        "requestedDate",
+        "estimatedTotal"
+      ],
+      "rowActions": [],
+      "toolbarActions": [],
+      "includeExtensions": false
     },
     "web.customers.list": {
       "view": "customers.list",

@@ -50,5 +50,6 @@
   "auth.sign-in": "Logga in",
   "auth.sign-out": "Logga ut",
   "auth.failed": "Fel e-post eller lösenord.",
-  "labels.company": "Bolag"
+  "labels.company": "Bolag",
+  "nav.overview": "Koncernöversikt"
 }

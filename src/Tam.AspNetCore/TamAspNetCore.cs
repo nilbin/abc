@@ -263,6 +263,22 @@ public static class TamAspNetCore
         app.MapGet("/api/events", (HttpContext http, EffectBroadcaster broadcaster, CancellationToken ct) =>
             broadcaster.Stream(http, ct));
 
+        // The account's standable nodes (docs/26 D-H3/D-H4): memberships + cascaded descendants,
+        // labeled by path. Backs the SPA's company/create-target pickers; the login picker uses the
+        // same TenantTree set server-side. Identity-gated only — the list is the account's own reach.
+        app.MapGet("/api/tenants/standable", (HttpContext http, ITamDb tam) =>
+        {
+            var accountClaim = http.User.FindFirst(ClaimsActorProvider.AccountClaim)?.Value;
+            if (!Guid.TryParse(accountClaim, out var accountId)) return Results.Unauthorized();
+            var active = TamTenant.Resolve(http).Value;
+            return Results.Json(new
+            {
+                active,
+                nodes = TenantTree.StandableNodes(tam.Db, accountId)
+                    .Select(n => new { id = n.Id, display = n.Display }),
+            }, TamJson.Options);
+        });
+
         app.MapGet("/openapi.json", (HttpContext http) => OpenApiEndpoint.Handle(http, model));
 
         return app;

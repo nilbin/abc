@@ -71,6 +71,18 @@ var model = new TamModelBuilder()
         grid.ToolbarAction("orders.create");
     })
 
+    // The group roll-up (docs/26 D-H1): read-only by design — writes fan in to one node (D-H4).
+    .Grid<OrderOverview.Result>("web.orders.overview", "orders.overview", grid =>
+    {
+        grid.Column(x => x.Number);
+        grid.Column(x => x.Company);
+        grid.Column(x => x.Description);
+        grid.Column(x => x.Type);
+        grid.Column(x => x.Status);
+        grid.Column(x => x.RequestedDate);
+        grid.Column(x => x.EstimatedTotal);
+    })
+
     .Grid<CustomerList.Result>("web.customers.list", "customers.list", grid =>
     {
         grid.Column(x => x.Name);

@@ -50,5 +50,6 @@
   "auth.sign-in": "Sign in",
   "auth.sign-out": "Sign out",
   "auth.failed": "Incorrect email or password.",
-  "labels.company": "Company"
+  "labels.company": "Company",
+  "nav.overview": "Group overview"
 }
