@@ -137,3 +137,15 @@ If a future compliance requirement demands tamper-*evidence* (not just tamper-re
 **Consequences.** The extension overlay gains origins (compiled / plugin / tenant) with key prefixes; the pipeline gains a gate stage and per-tenant activation checks; the registry compiler grows package/object/rule validation (`RUL###`). Custom objects wait on typed JSON predicates, index promotion, and D2's RLS.
 
 **Revisit when.** A partner ecosystem genuinely needs to ship logic without a host redeploy — the first answer is external apps over the integration channel (scoped actors + API + outbox webhooks, the marketplace's third tier); the researched escalation for hot-path in-process logic is a capability-based WebAssembly sandbox (fuel-metered, data-in/data-out, host functions only — see the trust-boundary section of [22-plugins.md](22-plugins.md)). Never raw tenant assemblies in-process: modern .NET has no isolation for them.
+
+---
+
+## D9 — Cross-domain plugins: contribution seams into surfaces you don't own
+
+**Decision.** A plugin extends ANOTHER domain (the invoicing-over-orders case) through declared, build-validated, wire-key contributions — never host CLR types, never host edits beyond the storage opt-in ([31-cross-domain-plugins.md](31-cross-domain-plugins.md)): grid ACTION contributions with declared input↔column binds (D-X1, PLG006), a plugin-scoped packaged-field WRITER with structural prefix/declaration enforcement and plugin-attributed audit (D-X2), and declared read dependencies on host VIEWS (`RequiresView`, D-X3, PLG008) backed by a two-mode reader (actor mode in requests; service mode in effect handlers, restricted to the declared list). Detail-page slots and event contracts are phase 2 (D-X4/D-X5).
+
+**Why.** The existing seams (entities, gates, subscribers, packaged fields, nav) cover the back half of a cross-domain story; the front half — appearing INSIDE the host's surfaces and writing the fields you declared — had no sanctioned path, so real plugins would either fork host grids or reach around the trust model (fortnox already casts ViewExecutor out of DI, unblessed). Making the three seams declared model facts keeps the capability manifest derived, not claimed.
+
+**Consequences.** PLG006/PLG008 join the Build() gates; the manifest gains `contributedActions` per grid and per-plugin `requiresViews`; audit gains plugin-attributed field changes; `samples/invoicing` becomes the fourth exemplar and tutorial Step 17.
+
+**Revisit when.** Slots land (with framework-composed pages), or a plugin needs to contribute to another PLUGIN's surface — currently out of scope on purpose.

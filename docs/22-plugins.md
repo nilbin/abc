@@ -40,7 +40,8 @@ public sealed class InspectionPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.RequiresHostEntity<Order>();               // declared dependency, checked at build
+        plugin.RequiresView("orders.detail", "id", "status"); // declared dependency, checked at build (docs/31 D-X3;
+                                                          // the earlier RequiresHostEntity<Order> sketch was CLR-shaped and never built)
         plugin.LocaleDefaults("Inspect.locales");         // embedded sv/en, overridable by the app
     }
 }

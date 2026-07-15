@@ -1,0 +1,192 @@
+# 31 — Cross-domain plugins: extending a domain you don't own
+
+Status: **design settled, unbuilt**. Decisions D-X1…D-X6. The driving case is an **Invoicing
+plugin that becomes part of the host's Orders domain** — create-invoice from the orders grid,
+invoice status on the order row, drafts written by order events — without the plugin ever
+referencing a host CLR type, and without the host ever naming the plugin. Step 17 of the
+tutorial builds it.
+
+## The bar
+
+Steps 13/16 set it: *the host adds one line (`AddPlugin<T>` + the storage opt-in); the domain
+never notices.* An audit against the invoicing case shows the back half of the story already
+clears that bar with existing seams, and the front half — the plugin appearing **inside the
+host's own surfaces** — does not. What exists, mapped:
+
+| Invoicing needs | Seam | Status |
+| --- | --- | --- |
+| Invoice/InvoiceLine entities in the host DB | plugin entities + host `AddInvoicing(modelBuilder)` (inspect/approvals shape) | works today |
+| Operations keyed by order id | plain `Guid OrderId` input — ids are wire data | works today |
+| Draft invoice when an order completes | `OnEffect("order-completed")`, post-commit, tenant-pinned, activation-filtered | works today |
+| Block `orders.complete` until invoiced | `plugin.Gate<T>("orders.complete")` — the one in-transaction seam | works today |
+| `invoiceStatus` column/filter on the host's orders grid | `plugin.ExtensionField("order", …)` — READ side is mechanical | declare+read today; **no writer** (D-X2) |
+| Invoices page in nav | `plugin.Nav(…)` contribution | works today |
+| Push invoices to the accounting provider; poll payments | outbound integrations (fortnox shape) | works today |
+| Priced, per-tenant switchable | entitlement gate + activation + manifest omission | works today |
+| "Create invoice" ON the host's orders grid | — | **gap → D-X1** |
+| Validate "this order exists, is completed, is mine to see" | fortnox casts ViewExecutor out of DI — unblessed, undeclared | **gap → D-X3** |
+| Invoice panel on the order detail | — | deferred → D-X4 |
+| `order-completed` payload shape as a contract | stringly, unchecked | deferred → D-X5 |
+
+The two REQUIRED seams are D-X1 and D-X2: without the grid action the user must navigate to a
+plugin page and hand-enter an order id; without the field writer the plugin can declare
+`invoiceStatus` but never set it — a column that is a lie. D-X3's declaration half is required
+for honesty (the read dependency should be a build-time fact, not folklore); its runtime facade
+is formalization of what fortnox already does.
+
+## D-X1 — Grid action contributions
+
+```csharp
+plugin.GridAction("web.orders.list", "invoicing.create-from-order",
+    bind => bind.Field("orderId").FromColumn("id"));
+```
+
+A plugin attaches **its own operation** as a row action on a **host grid**, with a DECLARED
+input↔column binding — wire names on both sides. Placement mirrors nav (D-N2): the plugin says
+"this action belongs on that grid"; activation decides whether the tenant sees it; permission
+decides whether the user does.
+
+- **Model**: `GridActionContribution(GridId, OperationId, PluginId, IReadOnlyList<(Input, Column)> Bind)`,
+  collected beside gates on the builder — a `PluginBuilder`-only seam (PLG005 pattern).
+- **Build() — PLG006**: the target grid exists; the operation is the CONTRIBUTING plugin's own
+  (a plugin never re-points host actions or another plugin's); every bound input field exists on
+  the operation; every bound column exists on the target grid's view Result; duplicate
+  (grid, operation) rejected like PLG002.
+- **Manifest**: `ManifestGrid` gains `contributedActions: [{operation, plugin, bind}]`, merged
+  per tenant exactly like `GatedBy` — the host's declared `rowActions` stay byte-identical
+  (additive, D4-safe). The client renders them after host actions through the same
+  permission/existence filter, and the declared bind replaces the name-convention input mapping
+  for contributed actions (the convention hack stays for host actions until they migrate — a
+  noted follow-up, not part of this milestone).
+- **No veto in v1** (owner call): activation is the tenant's switch and permissions are the
+  user's — a tenant that doesn't want the button doesn't activate the plugin. A host-level
+  `Suppress(pluginId)` and per-tenant hiding ride the nav-override registry pattern later,
+  additively. The marketplace capability line — "adds an action to your orders list" — is
+  derived from the model, not claimed.
+
+## D-X2 — The packaged-field writer
+
+```csharp
+// ctor-injected into gates / effect handlers / the plugin's own operations:
+await fields.SetAsync("order", orderId, "invoiceStatus", "invoiced", ct);
+```
+
+The missing write half of P2's packaged fields. `IPackagedFieldWriter` is constructed
+**plugin-scoped** by `TamActivator` (the activator already knows the owning plugin id from the
+gate/subscriber definition), so enforcement is structural, not policed:
+
+- only keys under the calling plugin's prefix, only on (entity, field) pairs that plugin
+  DECLARED — checked at runtime against the compiled `PackagedFields` (the same facts PLG004
+  verified at build);
+- the value passes the existing extension spec validation path (type, options, maxLength);
+- the write lands in the entity's `ExtensionData` column addressed by **(entity wire key,
+  row id)** — no host CLR type in the plugin's hands; tenant isolation stays ambient;
+- audited as a field-level change with the PLUGIN as the attributed actor
+  (`plugin:invoicing`, operation `effect:{eventType}` or the invoking operation id) —
+  provenance is docs/22's "deterministic composition" promise, kept on the write side;
+- an entity-modified effect is published so open grids live-refresh like any other write.
+
+Explicitly NOT: writes to compiled host fields or another plugin's keys (state transitions
+belong to host operations — EDIT001's philosophy), and no cross-operation transaction seam.
+The gate remains the only in-transaction hook; everything else composes through the outbox.
+
+## D-X3 — Declared read dependencies + the host view reader
+
+```csharp
+plugin.RequiresView("orders.detail", "id", "number", "status");
+```
+
+- **Build() — PLG008**: the named view exists and exposes the named result fields. The
+  plugin's compatibility with a host becomes a compile-time fact, an impact-report line, and a
+  capability-manifest line ("reads your orders: id, number, status"). This is the wire-key
+  redemption of docs/22's abandoned `RequiresHostEntity<Order>()` sketch.
+- **Runtime**: `IHostViewReader.RowsAsync(viewId, filters, ct)` — a thin blessing of the
+  fortnox pattern (it casts `ViewExecutor` out of `IServiceProvider` today). Two modes matching
+  the two contexts a plugin runs in:
+  - **actor mode** (gates, operations, integration mappers — a request exists): executes as
+    the actor, permission-checked and masked, exactly today's fortnox semantics;
+  - **service mode** (effect handlers — no actor): permitted ONLY for views the plugin
+    declared with `RequiresView`, tenant-ambient. The `ITamDirectory` shape — narrow,
+    tenant-anchored, framework-owned — generalized to declared domain reads. No general
+    "plugin superuser": the readable surface is exactly the declared list the install screen
+    shows.
+- **NOT composable queries**: no cross-boundary IQueryable joins — that would smuggle host CLR
+  shapes back through the query provider. Grid-time "order number on the invoice list" stays
+  denormalize-at-event-time (the payload carries it); service reads cover validation and
+  backfill/repair.
+
+## D-X4 — Detail slots (deferred to phase 2)
+
+The record-bound panel ("invoices on the order detail modal") needs a host-declared SLOT — a
+wire contract carrying record context — that plugins bind panels to:
+
+```csharp
+model.Slot("web.orders.detail", context => context.Key("orderId", "guid"));      // host
+plugin.Panel("web.orders.detail", grid: "invoicing.web.invoices",
+    bind => bind.Query("orderId").FromContext("orderId"));                        // plugin
+```
+
+PLG007 validates slot existence + bind shape; the manifest gains `slots`; `@tam/react` ships
+`<PluginSlot id context>`; the host's custom page drops one line in and every current and
+future plugin lands there unnamed. **Deferred** because Step 17 degrades gracefully without it
+(the host can `Place()` the plugin's invoices page as a tab beside Orders today) and because
+slots are the first brick of "framework-composed pages" — worth designing together with that,
+not rushed here. D4: slot ids are permanent host wire names from day one.
+
+## D-X5 — Event contracts (deferred to phase 2)
+
+`OnEffect("order-completed")` targets are unchecked and payload shapes are folklore
+(`TryGetProperty` defensive reads everywhere). Phase 2: the host (or the generator, derived
+from `EventPublished` usages) declares published events + payload fields; PLG009 validates
+subscriber/trigger targets at Build(); the manifest gains `publishes` and the impact report a
+`SubscribedBy` symmetric with `GatedBy`. `plugin.RequiresEvent("order-completed", "orderId",
+"number")` hangs off the D-X3 declaration family.
+
+## D-X6 — The exemplar is a real vendor plugin
+
+`samples/invoicing` joins inspect/fortnox/approvals as the fourth plugin shape: **the one that
+extends another domain**. It ships: `Invoice` entity (loose `OrderId` + denormalized
+`OrderNumber`), `invoicing.create-from-order` / `invoicing.finalize` / `invoicing.mark-paid`,
+the `order-completed` draft subscriber, an `UninvoicedGate` on `orders.complete` driven by the
+plugin's own policy, `ExtensionField("order", "invoiceStatus", choice: draft|invoiced|paid)`
+written via D-X2, the grid action via D-X1, `RequiresView("orders.detail", …)` via D-X3, nav
+contribution suggesting `work`, and the outbound push/poll pair against the mock provider.
+Wire verification: a subtree-grid interaction test rides free (create invoice on a child
+company's order from the parent's grid — the D-X1 action composes with per-row act-as).
+
+## Step 17 — "Invoicing arrives as a plugin — and Orders still doesn't know"
+
+The chapter's narrative order (each beat names its seam; NEW = built in this milestone):
+
+1. **The vendor's aggregate** — `Invoice` with a wire-key `OrderId`, host opt-in one-liner.
+2. **Its own vertical** — operations, list view (Query takes `Guid? OrderId`), form/grid,
+   locales, nav suggestion.
+3. **Compatibility, stated at build time** — `RequiresView` + actor-mode read validating
+   "exists, completed, visible to me" (NEW: D-X3).
+4. **The draft writes itself** — the `order-completed` subscriber, idempotent, order number
+   harvested from the payload.
+5. **Invoicing pushes back** — the gate on `orders.complete`; manifest shows `gatedBy`.
+6. **The order wears its invoice status** — packaged field + the writer (NEW: D-X2); the
+   column/filter appear on the host grid with zero host changes.
+7. **"Create invoice" where the user lives** — the grid action (NEW: D-X1); the button shows
+   only for entitled+activated tenants and permitted users — and works from the parent's
+   subtree grid on a child's row.
+8. **Money leaves the building** — outbound push + payment poll (fortnox reprise).
+9. **The tenant clicks Activate** — entitlement, manifest omission, and the DERIVED
+   capability manifest: "reads orders (id, number, status); adds field order.invoiceStatus;
+   gates orders.complete; adds an action to your orders list; subscribes to order-completed."
+10. **What we didn't need** — the honest close: no host CLR types, no host edits beyond the
+    storage opt-in, no plugin front-end code; the detail panel arrives with slots (phase 2).
+
+## Phasing
+
+1. **This milestone**: D-X1 (PLG006 + manifest + client), D-X2 (writer + audit attribution +
+   live-refresh), D-X3 (PLG008 + reader, both modes), `samples/invoicing`, Step 17 chapter,
+   wire + UI verification, baseline/typed-client regen.
+2. **Phase 2**: D-X4 slots (with the framework-composed-pages design), D-X5 event contracts,
+   host-action migration to declared binds, host/tenant action suppression.
+
+## Non-goals
+
+Cross-boundary IQueryable composition; plugin-shipped front-end code; writes to compiled host
+fields or foreign plugin keys; a cross-operation transaction seam; plugin-to-plugin calls.
