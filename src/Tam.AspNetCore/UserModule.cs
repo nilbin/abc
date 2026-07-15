@@ -82,16 +82,26 @@ public static class DefineUser
         var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
             tam, input.UserName, ct);
 
-        if (membership is null)
+        if (membership is null || !membership.Active)
         {
-            // Seat gate (docs/24): a NEW membership in this tenant consumes a seat; reactivating or
-            // editing an existing one does not. Over the plan's ceiling → a localized upsell.
+            // Seat gate (docs/24): this define turns a non-active membership ACTIVE — brand new or
+            // reactivated alike — so it consumes a seat; editing an already-active member does not.
+            // (Gating only brand-new rows would let deactivate/reactivate churn breach the ceiling.)
+            // Over the plan's ceiling → a localized upsell.
             var subscription = await Subscriptions.ForAsync(tam.Db, context.TenantId.Value, ct);
             var activeMembers = await tam.Db.Set<TenantMembershipEntity>()
                 .CountAsync(m => m.Active, ct);
             if (activeMembers >= subscription.Seats)
                 return SubscriptionFindings.SeatLimit
                     .With(("seats", subscription.Seats)).At(nameof(Input.UserName));
+
+            // Seat lease: consuming a seat writes the subscription row, so two defines racing past
+            // the count above conflict at SaveChanges (version token / duplicate key) instead of
+            // both slipping under the ceiling. The free default has no row yet — materialize it.
+            if (tam.Db.Entry(subscription).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
+                tam.Db.Add(subscription);
+            else
+                subscription.Version++;
         }
 
         if (account is null)

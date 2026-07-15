@@ -293,6 +293,12 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   status) driven by subscriptions.set-plan (service-actor only) with a subscriptions.current
   view; plugins.activate is gated by plan entitlement and users.define by the seat ceiling —
   both localized upsell findings, both degrading to a free-plan default when no row exists.
+  The seat gate now covers REACTIVATION too (users.define on a deactivated membership consumes a
+  seat like a new one — gating only brand-new rows let deactivate/reactivate churn breach the
+  ceiling; found and fixed on the wire), and consuming a seat takes a SEAT LEASE — the subscription
+  row is IVersioned and gets written (or materialized, for the free default) in the same
+  transaction, so two defines racing past the count check conflict at SaveChanges instead of both
+  slipping under the ceiling.
   Verified: entitled activation succeeds, free plan blocks it, seats=5 blocks the 6th user,
   raising seats admits it, non-admin cannot set-plan (403).
 

@@ -270,7 +270,7 @@ public sealed class OutboxRecord : ITenantScoped
 /// provider drives through subscriptions.set-plan. One row per tenant; its absence means the
 /// free default, so the framework is fully usable without any billing system wired up.
 /// </summary>
-public sealed class SubscriptionEntity : ITenantScoped
+public sealed class SubscriptionEntity : ITenantScoped, IVersioned
 {
     public string TenantId { get; set; } = "";
     public string Plan { get; set; } = "free";
@@ -278,6 +278,11 @@ public sealed class SubscriptionEntity : ITenantScoped
     public string EntitlementsJson { get; set; } = "[]";
     public string Status { get; set; } = "active";
     public string? RenewsAtIso { get; set; }
+
+    /// <summary>Concurrency token: consuming a seat bumps this (the "seat lease"), so two
+    /// users.define racing past the count check conflict at SaveChanges instead of both
+    /// slipping under the ceiling.</summary>
+    public long Version { get; set; }
 
     public IReadOnlyList<string> Entitlements() =>
         System.Text.Json.JsonSerializer.Deserialize<List<string>>(EntitlementsJson) ?? [];
