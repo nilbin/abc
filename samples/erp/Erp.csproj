@@ -7,6 +7,7 @@
     <ProjectReference Include="..\..\src\Tam.AspNetCore.Postgres\Tam.AspNetCore.Postgres.csproj" />
     <ProjectReference Include="..\inspect\Inspect.csproj" />
     <ProjectReference Include="..\approvals\Approvals.csproj" />
+    <ProjectReference Include="..\invoicing\Invoicing.csproj" />
     <ProjectReference Include="..\fortnox\Fortnox.csproj" />
     <ProjectReference Include="..\..\src\Tam.Auth.OpenIddict\Tam.Auth.OpenIddict.csproj" />
   </ItemGroup>

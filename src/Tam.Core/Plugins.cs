@@ -155,6 +155,28 @@ public sealed record EffectEvent(
 /// outbox after the operation's transaction, never by patching host handlers.</summary>
 public sealed record SubscriberDefinition(string EventType, string PluginId, Type HandlerType);
 
+/// <summary>A plugin's row action on a HOST grid (docs/31 D-X1): the plugin's own operation,
+/// with a DECLARED input↔column bind — wire names both sides, validated at Build (PLG006).</summary>
+public sealed record GridActionContribution(
+    string GridId, string OperationId, string PluginId,
+    IReadOnlyList<(string Input, string Column)> Bind);
+
+/// <summary>A plugin's declared read dependency on a host VIEW (docs/31 D-X3): compatibility
+/// as a build-time fact (PLG008) and the service-mode read whitelist for effect handlers.</summary>
+public sealed record ViewRequirement(string ViewId, string PluginId, IReadOnlyList<string> Fields);
+
+/// <summary>Declared-bind author for <see cref="PluginBuilder.GridAction"/>.</summary>
+public sealed class GridActionBindBuilder
+{
+    internal List<(string Input, string Column)> Binds { get; } = [];
+
+    public GridActionBindBuilder Field(string input, string fromColumn)
+    {
+        Binds.Add((Naming.Camel(input), Naming.Camel(fromColumn)));
+        return this;
+    }
+}
+
 /// <summary>The stable idempotency key of one source row (e.g. the vendor's document number).
 /// Cheap and pure over the source — computed at receive time to dedupe.</summary>
 public delegate string IntegrationKeySelector(System.Text.Json.JsonElement sourceRow);
@@ -320,6 +342,32 @@ public sealed class PluginBuilder
         configure(builder);
         foreach (var contribution in builder.Contributions)
             Model.NavContribute(contribution);
+        return this;
+    }
+
+    /// <summary>
+    /// Attaches one of THIS plugin's operations as a row action on a HOST grid (docs/31 D-X1),
+    /// with a declared input↔column bind. Placement mirrors nav: the plugin suggests, tenant
+    /// activation and user permission decide visibility. Validated at Build (PLG006).
+    /// </summary>
+    public PluginBuilder GridAction(string gridId, string operationId,
+        Action<GridActionBindBuilder> bind)
+    {
+        var builder = new GridActionBindBuilder();
+        bind(builder);
+        Model.GridAction(gridId, operationId, builder.Binds);
+        return this;
+    }
+
+    /// <summary>
+    /// Declares a read dependency on a host VIEW (docs/31 D-X3): the view and the result fields
+    /// this plugin reads, verified to exist at Build (PLG008) — compatibility is a compile-time
+    /// fact and a capability-manifest line. Also the whitelist for service-mode reads
+    /// (<c>IHostViewReader</c>) in effect handlers, where no actor exists.
+    /// </summary>
+    public PluginBuilder RequiresView(string viewId, params string[] fields)
+    {
+        Model.RequireView(viewId, fields.Select(Naming.Camel).ToArray());
         return this;
     }
 

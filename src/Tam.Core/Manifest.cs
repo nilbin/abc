@@ -114,7 +114,15 @@ public sealed record ManifestGrid(
     bool IncludeExtensions)
 {
     public string? Plugin { get; init; }
+
+    /// <summary>Plugin row actions on this grid (docs/31 D-X1) — activation-filtered like
+    /// GatedBy; the host's own RowActions stay untouched. Bind maps operation input wire
+    /// names to row column wire names.</summary>
+    public IReadOnlyList<ManifestGridAction> ContributedActions { get; init; } = [];
 }
+
+public sealed record ManifestGridAction(
+    string Operation, string Plugin, IReadOnlyDictionary<string, string> Bind);
 
 public static class ManifestBuilder
 {
@@ -207,6 +215,12 @@ public static class ManifestBuilder
                 kv.Value.ToolbarActions, kv.Value.IncludeExtensions)
             {
                 Plugin = kv.Value.Plugin,
+                ContributedActions = model.GridActions.TryGetValue(kv.Key, out var contributed)
+                    ? contributed.Where(a => Included(a.PluginId))
+                        .Select(a => new ManifestGridAction(a.OperationId, a.PluginId,
+                            a.Bind.ToDictionary(b => b.Input, b => b.Column)))
+                        .ToList()
+                    : [],
             });
 
         var extensions = extensionOverlay.ToDictionary(

@@ -118,6 +118,8 @@ public sealed class OutboxDispatcher(
             try
             {
                 // Constructed per delivery with ctor injection, in the record-pinned scope.
+                if (services.GetService(typeof(PluginContext)) is PluginContext plugin)
+                    plugin.PluginId = subscriber.PluginId;
                 await ((IEffectHandler)activator.Create(subscriber.HandlerType)).HandleAsync(effect, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)

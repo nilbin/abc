@@ -168,7 +168,7 @@ public static class Seed
             TenantId = Tenant,
             Plan = "standard",
             Seats = 10,
-            EntitlementsJson = """["inspect","fortnox","approvals"]""",
+            EntitlementsJson = """["inspect","fortnox","approvals","invoicing"]""",
             Status = "active",
         });
 

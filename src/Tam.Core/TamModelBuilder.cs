@@ -14,6 +14,8 @@ public sealed partial class TamModelBuilder
     private readonly Dictionary<string, PackageDefinition> packages = [];
     private readonly List<(string EntityKey, string Key, string Type, bool Required, int? MaxLength, IReadOnlyList<string>? Options, string Plugin)> packagedFields = [];
     private readonly List<GateDefinition> gates = [];
+    private readonly List<GridActionContribution> gridActions = [];
+    private readonly List<ViewRequirement> viewRequirements = [];
     private readonly Dictionary<string, NavTreeBuilder> navTrees = [];
     private readonly List<NavContribution> navContributions = [];
     private readonly List<SubscriberDefinition> subscribers = [];
@@ -175,6 +177,21 @@ public sealed partial class TamModelBuilder
         gates.Add(new GateDefinition(operationId, currentPlugin, handlerType, pure));
     }
 
+    internal void GridAction(string gridId, string operationId,
+        IReadOnlyList<(string Input, string Column)> bind)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: grid actions can only be contributed by a plugin.");
+        gridActions.Add(new GridActionContribution(gridId, operationId, currentPlugin, bind));
+    }
+
+    internal void RequireView(string viewId, IReadOnlyList<string> fields)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: view requirements can only be declared by a plugin.");
+        viewRequirements.Add(new ViewRequirement(viewId, currentPlugin, fields));
+    }
+
     internal void OnEffect(string eventType, Type handlerType)
     {
         if (currentPlugin is null)
@@ -329,6 +346,9 @@ public sealed partial class TamModelBuilder
             Packages = packages,
             PackagedFields = packaged,
             ExtensibleEntityKeys = extensibleKeys,
+            GridActions = gridActions.GroupBy(a => a.GridId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<GridActionContribution>)g.ToList()),
+            ViewRequirements = viewRequirements,
             Gates = gates.GroupBy(g => g.OperationId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<GateDefinition>)g.ToList()),
             Subscribers = subscribers,
@@ -343,6 +363,7 @@ public sealed partial class TamModelBuilder
         VerifyPluginNamespaces(model);
         VerifyNav(model);
         VerifySubtreeViews(model);
+        VerifyContributions(model);
         VerifyLocalization(model, catalogs);
         return model;
     }

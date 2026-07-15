@@ -4,6 +4,7 @@
     <Project Path="samples/erp/Erp.csproj" />
     <Project Path="samples/inspect/Inspect.csproj" />
     <Project Path="samples/approvals/Approvals.csproj" />
+  <Project Path="samples/invoicing/Invoicing.csproj" />
     <Project Path="samples/fortnox/Fortnox.csproj" />
   </Folder>
   <Folder Name="/src/">

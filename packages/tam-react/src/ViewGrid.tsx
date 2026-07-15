@@ -32,6 +32,9 @@ export function ViewGrid(props: ViewGridProps) {
   };
   const toolbarActions = gridDef.toolbarActions.filter(allowed);
   const rowActions = gridDef.rowActions.filter(allowed);
+  // Plugin-contributed actions (docs/31 D-X1): rendered after host actions, same permission
+  // gate; the DECLARED bind replaces the name-convention input mapping below.
+  const contributedActions = (gridDef.contributedActions ?? []).filter(a => allowed(a.operation));
 
   const resultByName = useMemo(
     () => new Map(view.resultFields.map(f => [f.name, f])),
@@ -171,6 +174,18 @@ export function ViewGrid(props: ViewGridProps) {
     refresh();
   };
 
+  const runContributedAction = async (
+    action: { operation: string; bind: Record<string, string> },
+    row: Record<string, unknown>,
+  ) => {
+    const body: Record<string, unknown> = {};
+    for (const [input, column] of Object.entries(action.bind)) body[input] = row[column];
+    const rowTenant = subtreeField ? (row[subtreeField] as string | undefined) : undefined;
+    await client.operation(action.operation, body,
+      rowTenant && rowTenant !== acting ? { actAs: rowTenant } : undefined);
+    refresh();
+  };
+
   return (
     <Stack gap="sm">
       <Group justify="space-between" align="flex-end">
@@ -220,7 +235,7 @@ export function ViewGrid(props: ViewGridProps) {
                   </Table.Th>
                 );
               })}
-              {rowActions.length > 0 && <Table.Th />}
+              {(rowActions.length > 0 || contributedActions.length > 0) && <Table.Th />}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -236,13 +251,19 @@ export function ViewGrid(props: ViewGridProps) {
                 {columns.map(field => (
                   <Table.Td key={field.name}>{cell(row, field)}</Table.Td>
                 ))}
-                {rowActions.length > 0 && (
+                {(rowActions.length > 0 || contributedActions.length > 0) && (
                   <Table.Td onClick={e => e.stopPropagation()}>
                     <Group gap="xs" justify="flex-end">
                       {rowActions.map(action => (
                         <Button key={action} size="compact-xs" variant="light"
                           onClick={() => void runRowAction(action, row)}>
                           {t(`operations.${action}.title`)}
+                        </Button>
+                      ))}
+                      {contributedActions.map(action => (
+                        <Button key={action.operation} size="compact-xs" variant="light"
+                          onClick={() => void runContributedAction(action, row)}>
+                          {t(`operations.${action.operation}.title`)}
                         </Button>
                       ))}
                     </Group>

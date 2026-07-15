@@ -1,0 +1,23 @@
+{
+  "plugins.invoicing.title": "Invoicing",
+  "operations.invoicing.create-from-order.title": "Create invoice",
+  "operations.invoicing.finalize.title": "Finalize invoice",
+  "operations.invoicing.mark-paid.title": "Mark paid",
+  "invoicing.labels.order-id": "Order",
+  "invoicing.labels.invoice-id": "Invoice",
+  "invoicing.labels.order-number": "Order number",
+  "invoicing.labels.amount": "Amount",
+  "invoicing.labels.created": "Created",
+  "ext.invoicing.invoiceStatus": "Invoice status",
+  "nav.invoicing.invoices": "Invoices",
+  "invoicing.order-not-found": "The order could not be found.",
+  "invoicing.already-invoiced": "The order already has an invoice.",
+  "invoicing.not-draft": "The invoice is not a draft.",
+  "invoicing.not-invoiced": "The invoice is not finalized.",
+  "invoicing.draft-pending": "The order has a draft invoice that must be finalized first.",
+  "enums.draft": "Draft",
+  "enums.invoiced": "Invoiced",
+  "enums.paid": "Paid",
+  "labels.status": "Status",
+  "labels.id": "Id"
+}

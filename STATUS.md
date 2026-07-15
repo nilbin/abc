@@ -31,8 +31,10 @@ samples/inspect              inspection-checklists plugin (packaged field, gate,
 samples/fortnox              a plugin whose whole job is one inbound integration
 samples/approvals            Step 16: nested approver groups + tenant-configured rules gating
                              host operations via the wildcard gate, park, replay seams
+samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
+                             packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              122 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              125 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -343,6 +345,26 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   tracking each tenant's OWN activation set — nord sees only inspect where demo sees
   approvals+inspect, catalog coverage in both cultures) plus rendered-UI screenshots of both
   modes and the fallback plugin page. 117 tests; manifest change additive (nav + packages).
+- **Cross-domain plugins — Step 17 BUILT** (docs/31 D-X1..3, decisions ledger D9): a plugin
+  now extends a domain it doesn't own. `plugin.GridAction(gridId, operationId, bind)` puts the
+  plugin's operation ON the host's grid with a DECLARED input↔column bind (PLG006: grid exists,
+  operation is the plugin's own, bind names real fields; manifest `contributedActions` is
+  additive and activation-filtered; the client renders them behind the same permission gate and
+  routes through the subtree per-row act-as). `IPackagedFieldWriter` is the write half P2 never
+  had: plugin-scoped structurally (the pipeline stamps `PluginContext` around every handler
+  construction — including the operation's own handler, which must CLEAR a prior gate's stamp:
+  the wire suite caught tam.rules' wildcard stamp leaking into the invoicing handler),
+  prefix+declaration enforced at runtime against the compiled model, semantically validated,
+  audited with the plugin as actor, live-refreshing. `plugin.RequiresView(viewId, fields)` makes
+  read compatibility a Build() fact (PLG008) and whitelists SERVICE-MODE reads
+  (`IHostViewReader`: actor mode in requests, declared-only synthetic actor in effect handlers).
+  `samples/invoicing` is the fourth exemplar and tutorial Step 17: create-from-order via the
+  contributed button (actor-mode read validates + denormalizes), draft-on-completion subscriber
+  (service-mode backfill), draft-pending gate on orders.complete, invoiceStatus riding the host
+  grid as column+filter with plugin-attributed audit. Verified: 125 unit tests (PLG006/PLG008 +
+  manifest filtering) and a 23-check wire suite (inactive → nothing exists; activate; the whole
+  lifecycle; sibling tenant still sees nothing), full regression matrix green, UI screenshot of
+  the host grid carrying the plugin's button, column and filter.
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

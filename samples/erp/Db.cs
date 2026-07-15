@@ -46,6 +46,7 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
         // migrate with it (docs/22). One line per installed plugin.
         Inspect.InspectionPlugin.AddInspect(modelBuilder);
         Approvals.ApprovalsPlugin.AddApprovals(modelBuilder);
+        Invoicing.InvoicingPlugin.AddInvoicing(modelBuilder);
 
         modelBuilder.UseTam(Database.ProviderName);
         modelBuilder.UseTamOpenIddict();   // token/client storage for the embedded auth server

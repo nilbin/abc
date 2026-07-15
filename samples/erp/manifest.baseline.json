@@ -220,6 +220,24 @@
       "approvals.unknown-member": "No active user with that email address in this organization.",
       "approvals.email.requested-subject": "Approval required",
       "approvals.email.requested-body": "A request ({operation}) is awaiting your approval.",
+      "plugins.invoicing.title": "Invoicing",
+      "operations.invoicing.create-from-order.title": "Create invoice",
+      "operations.invoicing.finalize.title": "Finalize invoice",
+      "operations.invoicing.mark-paid.title": "Mark paid",
+      "invoicing.labels.order-id": "Order",
+      "invoicing.labels.invoice-id": "Invoice",
+      "invoicing.labels.order-number": "Order number",
+      "invoicing.labels.amount": "Amount",
+      "invoicing.labels.created": "Created",
+      "ext.invoicing.invoiceStatus": "Invoice status",
+      "nav.invoicing.invoices": "Invoices",
+      "invoicing.order-not-found": "The order could not be found.",
+      "invoicing.already-invoiced": "The order already has an invoice.",
+      "invoicing.not-draft": "The invoice is not a draft.",
+      "invoicing.not-invoiced": "The invoice is not finalized.",
+      "invoicing.draft-pending": "The order has a draft invoice that must be finalized first.",
+      "enums.invoiced": "Invoiced",
+      "enums.paid": "Paid",
       "app.title": "Norrservice ERP",
       "nav.orders": "Orders",
       "nav.customers": "Customers",
@@ -481,6 +499,24 @@
       "approvals.unknown-member": "Ingen aktiv anv\u00E4ndare med den e-postadressen i denna organisation.",
       "approvals.email.requested-subject": "Godk\u00E4nnande kr\u00E4vs",
       "approvals.email.requested-body": "En beg\u00E4ran ({operation}) v\u00E4ntar p\u00E5 ditt godk\u00E4nnande.",
+      "plugins.invoicing.title": "Fakturering",
+      "operations.invoicing.create-from-order.title": "Skapa faktura",
+      "operations.invoicing.finalize.title": "Slutf\u00F6r faktura",
+      "operations.invoicing.mark-paid.title": "Markera betald",
+      "invoicing.labels.order-id": "Order",
+      "invoicing.labels.invoice-id": "Faktura",
+      "invoicing.labels.order-number": "Ordernummer",
+      "invoicing.labels.amount": "Belopp",
+      "invoicing.labels.created": "Skapad",
+      "ext.invoicing.invoiceStatus": "Fakturastatus",
+      "nav.invoicing.invoices": "Fakturor",
+      "invoicing.order-not-found": "Ordern kunde inte hittas.",
+      "invoicing.already-invoiced": "Ordern har redan en faktura.",
+      "invoicing.not-draft": "Fakturan \u00E4r inte ett utkast.",
+      "invoicing.not-invoiced": "Fakturan \u00E4r inte slutf\u00F6rd.",
+      "invoicing.draft-pending": "Ordern har ett fakturautkast som m\u00E5ste slutf\u00F6ras f\u00F6rst.",
+      "enums.invoiced": "Fakturerad",
+      "enums.paid": "Betald",
       "app.title": "Norrservice ERP",
       "nav.orders": "Ordrar",
       "nav.customers": "Kunder",
@@ -552,7 +588,8 @@
         }
       ],
       "gatedBy": [
-        "inspect"
+        "inspect",
+        "invoicing"
       ]
     },
     "customers.create": {
@@ -2054,6 +2091,90 @@
       ],
       "plugin": "approvals",
       "gatedBy": []
+    },
+    "invoicing.create-from-order": {
+      "permission": "invoicing.manage",
+      "titleKey": "operations.invoicing.create-from-order.title",
+      "fields": [
+        {
+          "name": "orderId",
+          "labelKey": "invoicing.labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "invoiceId",
+          "labelKey": "labels.invoice-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "invoicing",
+      "gatedBy": []
+    },
+    "invoicing.finalize": {
+      "permission": "invoicing.manage",
+      "titleKey": "operations.invoicing.finalize.title",
+      "fields": [
+        {
+          "name": "invoiceId",
+          "labelKey": "invoicing.labels.invoice-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "invoiceId",
+          "labelKey": "labels.invoice-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "invoicing",
+      "gatedBy": []
+    },
+    "invoicing.mark-paid": {
+      "permission": "invoicing.manage",
+      "titleKey": "operations.invoicing.mark-paid.title",
+      "fields": [
+        {
+          "name": "invoiceId",
+          "labelKey": "invoicing.labels.invoice-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "invoiceId",
+          "labelKey": "labels.invoice-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "invoicing",
+      "gatedBy": []
     }
   },
   "views": {
@@ -3463,6 +3584,77 @@
       "defaultSort": "createdAtIso",
       "defaultSortDescending": true,
       "plugin": "approvals"
+    },
+    "invoicing.invoices.list": {
+      "permission": "invoicing.read",
+      "queryFields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "orderNumber",
+          "labelKey": "invoicing.labels.order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "invoicing.labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "created",
+          "labelKey": "invoicing.labels.created",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "orderNumber",
+        "created"
+      ],
+      "filterable": [
+        "status"
+      ],
+      "defaultSort": "created",
+      "defaultSortDescending": true,
+      "plugin": "invoicing"
     }
   },
   "forms": {
@@ -4100,7 +4292,8 @@
         "extensions.define-field"
       ],
       "includeExtensions": false,
-      "plugin": "tam.extensions"
+      "plugin": "tam.extensions",
+      "contributedActions": []
     },
     "web.roles": {
       "view": "roles.list",
@@ -4114,7 +4307,8 @@
         "roles.define"
       ],
       "includeExtensions": false,
-      "plugin": "tam.roles"
+      "plugin": "tam.roles",
+      "contributedActions": []
     },
     "web.audit.list": {
       "view": "audit.entries",
@@ -4130,7 +4324,8 @@
       "rowActions": [],
       "toolbarActions": [],
       "includeExtensions": false,
-      "plugin": "tam.audit"
+      "plugin": "tam.audit",
+      "contributedActions": []
     },
     "web.plugins": {
       "view": "plugins.list",
@@ -4144,7 +4339,8 @@
       ],
       "toolbarActions": [],
       "includeExtensions": false,
-      "plugin": "tam.plugins"
+      "plugin": "tam.plugins",
+      "contributedActions": []
     },
     "web.packages": {
       "view": "packages.list",
@@ -4160,7 +4356,8 @@
         "packages.install"
       ],
       "includeExtensions": false,
-      "plugin": "tam.tenantpackages"
+      "plugin": "tam.tenantpackages",
+      "contributedActions": []
     },
     "web.rules": {
       "view": "rules.list",
@@ -4176,7 +4373,8 @@
         "rules.define"
       ],
       "includeExtensions": false,
-      "plugin": "tam.rules"
+      "plugin": "tam.rules",
+      "contributedActions": []
     },
     "web.tenants": {
       "view": "tenants.list",
@@ -4192,7 +4390,8 @@
         "tenants.rename"
       ],
       "includeExtensions": false,
-      "plugin": "tam.tenancy"
+      "plugin": "tam.tenancy",
+      "contributedActions": []
     },
     "web.users": {
       "view": "users.list",
@@ -4209,7 +4408,8 @@
         "users.invite"
       ],
       "includeExtensions": false,
-      "plugin": "tam.users"
+      "plugin": "tam.users",
+      "contributedActions": []
     },
     "inspect.web.checklists": {
       "view": "inspect.checklists.list",
@@ -4224,7 +4424,8 @@
         "inspect.checklists.create"
       ],
       "includeExtensions": false,
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "contributedActions": []
     },
     "approvals.web.requests": {
       "view": "approvals.requests.list",
@@ -4240,7 +4441,25 @@
       ],
       "toolbarActions": [],
       "includeExtensions": false,
-      "plugin": "approvals"
+      "plugin": "approvals",
+      "contributedActions": []
+    },
+    "invoicing.web.invoices": {
+      "view": "invoicing.invoices.list",
+      "columns": [
+        "orderNumber",
+        "status",
+        "amount",
+        "created"
+      ],
+      "rowActions": [
+        "invoicing.finalize",
+        "invoicing.mark-paid"
+      ],
+      "toolbarActions": [],
+      "includeExtensions": false,
+      "plugin": "invoicing",
+      "contributedActions": []
     },
     "web.orders.list": {
       "view": "orders.list",
@@ -4259,7 +4478,16 @@
       "toolbarActions": [
         "orders.create"
       ],
-      "includeExtensions": true
+      "includeExtensions": true,
+      "contributedActions": [
+        {
+          "operation": "invoicing.create-from-order",
+          "plugin": "invoicing",
+          "bind": {
+            "orderId": "id"
+          }
+        }
+      ]
     },
     "web.customers.list": {
       "view": "customers.list",
@@ -4274,7 +4502,8 @@
       "toolbarActions": [
         "customers.create"
       ],
-      "includeExtensions": false
+      "includeExtensions": false,
+      "contributedActions": []
     }
   },
   "extensions": {},
@@ -4289,6 +4518,8 @@
     "inspect.checklists.manage",
     "inspect.checklists.read",
     "integrations.manage",
+    "invoicing.manage",
+    "invoicing.read",
     "orders.complete",
     "orders.complete-all",
     "orders.create",
@@ -4315,7 +4546,8 @@
   "plugins": [
     "approvals",
     "fortnox",
-    "inspect"
+    "inspect",
+    "invoicing"
   ],
   "packages": [
     "tam.audit",
@@ -4465,6 +4697,17 @@
             "kind": "section",
             "labelKey": "nav.more",
             "children": [
+              {
+                "id": "invoicing.invoices",
+                "kind": "page",
+                "labelKey": "nav.invoicing.invoices",
+                "order": 40,
+                "target": {
+                  "grid": "invoicing.web.invoices"
+                },
+                "plugin": "invoicing",
+                "children": []
+              },
               {
                 "id": "approvals",
                 "kind": "page",

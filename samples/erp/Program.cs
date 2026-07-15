@@ -18,6 +18,7 @@ var model = new TamModelBuilder()
     .AddPlugin<Inspect.InspectionPlugin>()   // compiled in; each tenant activates at runtime (docs/22)
     .AddPlugin<Fortnox.FortnoxPlugin>()      // a plugin that ships an inbound integration (docs/10 + docs/22)
     .AddPlugin<Approvals.ApprovalsPlugin>()  // Step 16: approval flows over the three seams (docs/28 D-AG4)
+    .AddPlugin<Invoicing.InvoicingPlugin>()  // Step 17: extends the Orders domain (docs/31)
 
     // The web nav tree (docs/30): the HOST owns layout — modes at the top, the administration
     // section collects every package/plugin page that SUGGESTS it; anything uncollected lands

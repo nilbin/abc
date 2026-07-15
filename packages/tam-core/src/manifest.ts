@@ -77,6 +77,9 @@ export interface Manifest {
     toolbarActions: string[];
     includeExtensions: boolean;
     plugin?: string;
+    /** Plugin row actions contributed onto this grid (docs/31 D-X1), activation-filtered.
+     *  bind maps operation input wire names to row column wire names. */
+    contributedActions?: { operation: string; plugin: string; bind: Record<string, string> }[];
   }>;
   extensions: Record<string, ManifestField[]>;
   permissions: string[];

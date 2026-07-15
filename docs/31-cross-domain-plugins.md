@@ -1,6 +1,8 @@
 # 31 — Cross-domain plugins: extending a domain you don't own
 
-Status: **design settled, unbuilt**. Decisions D-X1…D-X6. The driving case is an **Invoicing
+Status: **phase 1 BUILT** (D-X1 grid actions, D-X2 field writer, D-X3 RequiresView + reader,
+`samples/invoicing`, tutorial Step 17); D-X4 slots + D-X5 event contracts remain phase 2.
+Decisions D-X1…D-X6. The driving case is an **Invoicing
 plugin that becomes part of the host's Orders domain** — create-invoice from the orders grid,
 invoice status on the order row, drafts written by order events — without the plugin ever
 referencing a host CLR type, and without the host ever naming the plugin. Step 17 of the

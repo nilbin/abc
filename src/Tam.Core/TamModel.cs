@@ -45,6 +45,14 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, IReadOnlyList<NavNode>> Nav { get; init; } =
         new Dictionary<string, IReadOnlyList<NavNode>>();
 
+    /// <summary>Plugin row actions on HOST grids, by grid id (docs/31 D-X1).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<GridActionContribution>> GridActions { get; init; } =
+        new Dictionary<string, IReadOnlyList<GridActionContribution>>();
+
+    /// <summary>Plugins' declared read dependencies on host views (docs/31 D-X3) — build-checked
+    /// (PLG008) and the service-mode read whitelist per plugin.</summary>
+    public IReadOnlyList<ViewRequirement> ViewRequirements { get; init; } = [];
+
     /// <summary>Plugin gates by target operation id (docs/22 P2).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<GateDefinition>> Gates { get; init; } =
         new Dictionary<string, IReadOnlyList<GateDefinition>>();

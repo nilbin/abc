@@ -110,6 +110,7 @@ public sealed class OperationExecutor(
         foreach (var gate in orderedGates.Where(g => g.Pure && activePlugins.Contains(g.PluginId)))
         {
             var gateContext = new GateContext(operationId, body, payloadHash, context);
+            StampPlugin(gate.PluginId);
             var gateResult = await ((IOperationGate)activator.Create(gate.HandlerType))
                 .CheckAsync(gateContext, ct);
             if (!gateResult.IsError)
@@ -130,6 +131,7 @@ public sealed class OperationExecutor(
         foreach (var gate in orderedGates.Where(g => !g.Pure && activePlugins.Contains(g.PluginId)))
         {
             var gateContext = new GateContext(operationId, body, payloadHash, context);
+            StampPlugin(gate.PluginId);
             var handler = (IOperationGate)activator.Create(gate.HandlerType);
             var gateResult = await handler.CheckAsync(gateContext, ct);
             if (!gateResult.IsError)
@@ -152,6 +154,10 @@ public sealed class OperationExecutor(
         Result result;
         try
         {
+            // The handler runs on behalf of the operation's OWNING plugin (null for host
+            // operations) — never a gate that happened to run before it. Clearing the stamp
+            // here is what keeps the plugin-scoped seams (docs/31) structurally honest.
+            StampPlugin(operation.Plugin);
             result = await InvokeHandler(operation, input, context, ct);
         }
         catch (DbUpdateConcurrencyException)
@@ -322,6 +328,14 @@ public sealed class OperationExecutor(
                 findings.Add(invalid.At(field.WireName));
         }
         return findings;
+    }
+
+    /// <summary>Marks the CURRENT scope's handler construction as owned by a plugin, so the
+    /// plugin-scoped seams (field writer, host view reader — docs/31) enforce structurally.</summary>
+    private void StampPlugin(string? pluginId)
+    {
+        if (services.GetService(typeof(PluginContext)) is PluginContext plugin)
+            plugin.PluginId = pluginId;
     }
 
     private static bool IsEmpty(object? value)

@@ -93,6 +93,51 @@ public sealed partial class TamModelBuilder
     /// <summary>NAV001 duplicate ids, NAV002 depth cap (mode + 3), NAV004 unknown grid target,
     /// NAV005 page targets need an EXISTING catalogue atom. Contribution ids are namespace-
     /// checked with everything else in <see cref="VerifyPluginNamespaces"/>.</summary>
+    /// <summary>PLG006: grid action contributions — target grid exists, the operation is the
+    /// CONTRIBUTING plugin's own, every bound input exists on the operation and every bound
+    /// column on the target grid's view Result. PLG008: declared view requirements name a real
+    /// view and real result fields. Duplicates rejected like PLG002.</summary>
+    private static void VerifyContributions(TamModel model)
+    {
+        var seen = new HashSet<(string, string)>();
+        foreach (var action in model.GridActions.Values.SelectMany(a => a))
+        {
+            if (!seen.Add((action.GridId, action.OperationId)))
+                throw new InvalidOperationException(
+                    $"PLG006: plugin '{action.PluginId}' contributes '{action.OperationId}' to grid '{action.GridId}' more than once.");
+            if (!model.Grids.TryGetValue(action.GridId, out var grid))
+                throw new InvalidOperationException(
+                    $"PLG006: grid action targets unknown grid '{action.GridId}'.");
+            if (!model.Operations.TryGetValue(action.OperationId, out var operation))
+                throw new InvalidOperationException(
+                    $"PLG006: grid action names unknown operation '{action.OperationId}'.");
+            if (operation.Plugin != action.PluginId)
+                throw new InvalidOperationException(
+                    $"PLG006: plugin '{action.PluginId}' may only contribute ITS OWN operations as grid actions — '{action.OperationId}' is not.");
+            var view = model.Views[grid.ViewId];
+            foreach (var (input, column) in action.Bind)
+            {
+                if (!operation.InputFields.Any(fld => fld.WireName == input))
+                    throw new InvalidOperationException(
+                        $"PLG006: grid action '{action.OperationId}' binds unknown input '{input}'.");
+                if (column != "id" && !view.ResultFields.Any(fld => fld.WireName == column))
+                    throw new InvalidOperationException(
+                        $"PLG006: grid action '{action.OperationId}' binds column '{column}', not on view '{grid.ViewId}'.");
+            }
+        }
+
+        foreach (var requirement in model.ViewRequirements)
+        {
+            if (!model.Views.TryGetValue(requirement.ViewId, out var view))
+                throw new InvalidOperationException(
+                    $"PLG008: plugin '{requirement.PluginId}' requires unknown view '{requirement.ViewId}'.");
+            foreach (var field in requirement.Fields)
+                if (field != "id" && !view.ResultFields.Any(fld => fld.WireName == field))
+                    throw new InvalidOperationException(
+                        $"PLG008: plugin '{requirement.PluginId}' requires field '{field}' which view '{requirement.ViewId}' does not expose.");
+        }
+    }
+
     /// <summary>SUB001: a subtree-read view's tenant field must be a real result field —
     /// the client renders the company column, tenant filter and row-action targeting off it.</summary>
     private static void VerifySubtreeViews(TamModel model)

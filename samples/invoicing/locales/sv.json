@@ -1,0 +1,23 @@
+{
+  "plugins.invoicing.title": "Fakturering",
+  "operations.invoicing.create-from-order.title": "Skapa faktura",
+  "operations.invoicing.finalize.title": "Slutför faktura",
+  "operations.invoicing.mark-paid.title": "Markera betald",
+  "invoicing.labels.order-id": "Order",
+  "invoicing.labels.invoice-id": "Faktura",
+  "invoicing.labels.order-number": "Ordernummer",
+  "invoicing.labels.amount": "Belopp",
+  "invoicing.labels.created": "Skapad",
+  "ext.invoicing.invoiceStatus": "Fakturastatus",
+  "nav.invoicing.invoices": "Fakturor",
+  "invoicing.order-not-found": "Ordern kunde inte hittas.",
+  "invoicing.already-invoiced": "Ordern har redan en faktura.",
+  "invoicing.not-draft": "Fakturan är inte ett utkast.",
+  "invoicing.not-invoiced": "Fakturan är inte slutförd.",
+  "invoicing.draft-pending": "Ordern har ett fakturautkast som måste slutföras först.",
+  "enums.draft": "Utkast",
+  "enums.invoiced": "Fakturerad",
+  "enums.paid": "Betald",
+  "labels.status": "Status",
+  "labels.id": "Id"
+}

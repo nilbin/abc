@@ -24,6 +24,11 @@ public static partial class TamAspNetCore
         // Plugin handler construction (gates, effect handlers, parked work): ctor injection from
         // the resolving scope — request scope for gates, tenant-pinned scopes for the rest.
         services.AddScoped<ITamActivator, TamActivator>();
+        // Cross-domain plugin seams (docs/31): plugin identity stamped per handler; the field
+        // writer and view reader enforce off it structurally.
+        services.AddScoped<PluginContext>();
+        services.AddScoped<IPackagedFieldWriter, PackagedFieldWriter>();
+        services.AddScoped<IHostViewReader, HostViewReader>();
         // People lookups for plugins (assign/notify): the sanctioned seam over identity tables.
         services.AddScoped<ITamDirectory, TamDirectory>();
         // Sanctioned envelope replay (docs/28 approvals seam 3): singleton because it always

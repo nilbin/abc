@@ -335,6 +335,30 @@ export interface ApprovalsRejectOutput {
   status: string;
 }
 
+export interface InvoicingCreateFromOrderInput {
+  orderId: string;
+}
+
+export interface InvoicingCreateFromOrderOutput {
+  invoiceId: string;
+}
+
+export interface InvoicingFinalizeInput {
+  invoiceId: string;
+}
+
+export interface InvoicingFinalizeOutput {
+  invoiceId: string;
+}
+
+export interface InvoicingMarkPaidInput {
+  invoiceId: string;
+}
+
+export interface InvoicingMarkPaidOutput {
+  invoiceId: string;
+}
+
 export interface CustomersListRow {
   id: string;
   name: string;
@@ -578,6 +602,18 @@ export interface ApprovalsRequestsListQuery {
   status?: string;
 }
 
+export interface InvoicingInvoicesListRow {
+  id: string;
+  orderNumber: string;
+  status: string;
+  amount: number;
+  created: string;
+}
+
+export interface InvoicingInvoicesListQuery {
+  orderId?: string;
+}
+
 export class TypedTamClient {
   constructor(readonly client: TamClient) {}
 
@@ -741,6 +777,21 @@ export class TypedTamClient {
     return this.client.operation("approvals.reject", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsRejectOutput>>;
   }
 
+  /** invoicing.create-from-order (requires invoicing.manage) */
+  invoicingCreateFromOrder(input: InvoicingCreateFromOrderInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InvoicingCreateFromOrderOutput>> {
+    return this.client.operation("invoicing.create-from-order", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InvoicingCreateFromOrderOutput>>;
+  }
+
+  /** invoicing.finalize (requires invoicing.manage) */
+  invoicingFinalize(input: InvoicingFinalizeInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InvoicingFinalizeOutput>> {
+    return this.client.operation("invoicing.finalize", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InvoicingFinalizeOutput>>;
+  }
+
+  /** invoicing.mark-paid (requires invoicing.manage) */
+  invoicingMarkPaid(input: InvoicingMarkPaidInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InvoicingMarkPaidOutput>> {
+    return this.client.operation("invoicing.mark-paid", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InvoicingMarkPaidOutput>>;
+  }
+
   /** view customers.list (requires customers.read) */
   customersList(query?: CustomersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersListRow[] }> {
     return this.client.view("customers.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersListRow[] }>;
@@ -839,5 +890,10 @@ export class TypedTamClient {
   /** view approvals.requests.list (requires approvals.review) */
   approvalsRequestsList(query?: ApprovalsRequestsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }> {
     return this.client.view("approvals.requests.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }>;
+  }
+
+  /** view invoicing.invoices.list (requires invoicing.read) */
+  invoicingInvoicesList(query?: InvoicingInvoicesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InvoicingInvoicesListRow[] }> {
+    return this.client.view("invoicing.invoices.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InvoicingInvoicesListRow[] }>;
   }
 }
