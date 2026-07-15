@@ -5,6 +5,7 @@
     <ProjectReference Include="..\..\src\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Tam.AspNetCore\Tam.AspNetCore.csproj" />
     <ProjectReference Include="..\inspect\Inspect.csproj" />
+    <ProjectReference Include="..\approvals\Approvals.csproj" />
     <ProjectReference Include="..\fortnox\Fortnox.csproj" />
     <ProjectReference Include="..\..\src\Tam.Auth.OpenIddict\Tam.Auth.OpenIddict.csproj" />
   </ItemGroup>

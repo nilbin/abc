@@ -42,6 +42,7 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
         // Plugin storage opts in here: the plugin's tables live in the host database and
         // migrate with it (docs/22). One line per installed plugin.
         Inspect.InspectionPlugin.AddInspect(modelBuilder);
+        Approvals.ApprovalsPlugin.AddApprovals(modelBuilder);
 
         modelBuilder.UseTam(Database.ProviderName);
         modelBuilder.UseTamOpenIddict();   // token/client storage for the embedded auth server
@@ -214,7 +215,7 @@ public static class Seed
             TenantId = Tenant,
             Plan = "standard",
             Seats = 10,
-            EntitlementsJson = """["inspect","fortnox"]""",
+            EntitlementsJson = """["inspect","fortnox","approvals"]""",
             Status = "active",
         });
 

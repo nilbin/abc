@@ -286,6 +286,55 @@ export interface InspectChecklistsPassOutput {
   checklistId: string;
 }
 
+export interface ApprovalsApproveInput {
+  requestId: string;
+}
+
+export interface ApprovalsApproveOutput {
+  requestId: string;
+  status: string;
+}
+
+export interface ApprovalsGroupsAssignInput {
+  groupId: string;
+  email: string;
+}
+
+export interface ApprovalsGroupsAssignOutput {
+  groupId: string;
+  actorId: string;
+}
+
+export interface ApprovalsGroupsDefineInput {
+  name: string;
+  parentGroupId?: string;
+}
+
+export interface ApprovalsGroupsDefineOutput {
+  groupId: string;
+}
+
+export interface ApprovalsRulesDefineInput {
+  operationId: string;
+  groupId: string;
+  thresholdField?: string;
+  threshold?: number;
+}
+
+export interface ApprovalsRulesDefineOutput {
+  ruleId: string;
+}
+
+export interface ApprovalsRejectInput {
+  requestId: string;
+  note?: string;
+}
+
+export interface ApprovalsRejectOutput {
+  requestId: string;
+  status: string;
+}
+
 export interface CustomersListRow {
   id: string;
   name: string;
@@ -519,6 +568,29 @@ export interface InspectChecklistsListQuery {
   search?: string;
 }
 
+export interface ApprovalsGroupsListRow {
+  id: string;
+  name: string;
+  parentGroupId?: string;
+}
+
+export interface ApprovalsGroupsListQuery {
+
+}
+
+export interface ApprovalsRequestsListRow {
+  id: string;
+  operationId: string;
+  initiator: string;
+  status: string;
+  createdAtIso: string;
+  outcome?: string;
+}
+
+export interface ApprovalsRequestsListQuery {
+  status?: string;
+}
+
 export class TypedTamClient {
   constructor(readonly client: TamClient) {}
 
@@ -657,6 +729,31 @@ export class TypedTamClient {
     return this.client.operation("inspect.checklists.pass", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsPassOutput>>;
   }
 
+  /** approvals.approve (requires approvals.review) */
+  approvalsApprove(input: ApprovalsApproveInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ApprovalsApproveOutput>> {
+    return this.client.operation("approvals.approve", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsApproveOutput>>;
+  }
+
+  /** approvals.groups.assign (requires approvals.manage) */
+  approvalsGroupsAssign(input: ApprovalsGroupsAssignInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ApprovalsGroupsAssignOutput>> {
+    return this.client.operation("approvals.groups.assign", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsGroupsAssignOutput>>;
+  }
+
+  /** approvals.groups.define (requires approvals.manage) */
+  approvalsGroupsDefine(input: ApprovalsGroupsDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ApprovalsGroupsDefineOutput>> {
+    return this.client.operation("approvals.groups.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsGroupsDefineOutput>>;
+  }
+
+  /** approvals.rules.define (requires approvals.manage) */
+  approvalsRulesDefine(input: ApprovalsRulesDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ApprovalsRulesDefineOutput>> {
+    return this.client.operation("approvals.rules.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsRulesDefineOutput>>;
+  }
+
+  /** approvals.reject (requires approvals.review) */
+  approvalsReject(input: ApprovalsRejectInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ApprovalsRejectOutput>> {
+    return this.client.operation("approvals.reject", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsRejectOutput>>;
+  }
+
   /** view customers.list (requires customers.read) */
   customersList(query?: CustomersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersListRow[] }> {
     return this.client.view("customers.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersListRow[] }>;
@@ -750,5 +847,15 @@ export class TypedTamClient {
   /** view inspect.checklists.list (requires inspect.checklists.read) */
   inspectChecklistsList(query?: InspectChecklistsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InspectChecklistsListRow[] }> {
     return this.client.view("inspect.checklists.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InspectChecklistsListRow[] }>;
+  }
+
+  /** view approvals.groups.list (requires approvals.manage) */
+  approvalsGroupsList(query?: ApprovalsGroupsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsGroupsListRow[] }> {
+    return this.client.view("approvals.groups.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsGroupsListRow[] }>;
+  }
+
+  /** view approvals.requests.list (requires approvals.review) */
+  approvalsRequestsList(query?: ApprovalsRequestsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }> {
+    return this.client.view("approvals.requests.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }>;
   }
 }

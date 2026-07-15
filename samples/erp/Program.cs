@@ -14,6 +14,7 @@ var model = new TamModelBuilder()
     .AddTamSystem()    // framework operations/views: custom fields, roles, audit, plugins
     .AddPlugin<Inspect.InspectionPlugin>()   // compiled in; each tenant activates at runtime (docs/22)
     .AddPlugin<Fortnox.FortnoxPlugin>()      // a plugin that ships an inbound integration (docs/10 + docs/22)
+    .AddPlugin<Approvals.ApprovalsPlugin>()  // Step 16: approval flows over the three seams (docs/28 D-AG4)
 
     .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
     {

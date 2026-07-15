@@ -166,6 +166,7 @@
       "auth.added-subject": "Du har f\u00E5tt tillg\u00E5ng till en ny organisation",
       "auth.added-body": "Logga in som vanligt och v\u00E4lj organisationen vid inloggning.",
       "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; \u00E4ndringarna av anpassade f\u00E4lt kunde inte knytas till en.",
+      "pipeline.replay-actor-unavailable": "Den ursprungliga best\u00E4llarens konto \u00E4r inte l\u00E4ngre tillg\u00E4ngligt; den parkerade beg\u00E4ran kan inte utf\u00F6ras.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -176,6 +177,35 @@
       "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
       "inspect.checklist-incomplete": "Ordern har en checklista som inte \u00E4r godk\u00E4nd.",
       "plugins.fortnox.title": "Fortnox",
+      "plugins.approvals.title": "Godk\u00E4nnandefl\u00F6den",
+      "operations.approvals.groups.define.title": "Ny godk\u00E4nnandegrupp",
+      "operations.approvals.groups.assign.title": "L\u00E4gg till godk\u00E4nnare",
+      "operations.approvals.rules.define.title": "Ny godk\u00E4nnanderegel",
+      "operations.approvals.approve.title": "Godk\u00E4nn",
+      "operations.approvals.reject.title": "Avsl\u00E5",
+      "approvals.labels.name": "Namn",
+      "approvals.labels.parent-group": "\u00D6verordnad grupp",
+      "approvals.labels.group": "Grupp",
+      "approvals.labels.email": "E-post",
+      "approvals.labels.operation": "\u00C5tg\u00E4rd",
+      "approvals.labels.threshold-field": "Beloppsf\u00E4lt",
+      "approvals.labels.threshold": "Beloppsgr\u00E4ns",
+      "approvals.labels.request": "Beg\u00E4ran",
+      "approvals.labels.note": "Anteckning",
+      "approvals.labels.initiator": "Beg\u00E4rd av",
+      "approvals.labels.status": "Status",
+      "approvals.labels.created": "Skapad",
+      "approvals.labels.outcome": "Utfall",
+      "approvals.pending": "Skickad f\u00F6r godk\u00E4nnande ({operation}).",
+      "approvals.not-pending": "Beg\u00E4ran v\u00E4ntar inte p\u00E5 beslut.",
+      "approvals.not-approver": "Du ing\u00E5r inte i regelns godk\u00E4nnandegrupp.",
+      "approvals.self-approval": "En beg\u00E4ran kan inte godk\u00E4nnas av den som skickade den.",
+      "approvals.unknown-group": "Ok\u00E4nd godk\u00E4nnandegrupp.",
+      "approvals.unknown-target": "Ok\u00E4nd \u00E5tg\u00E4rd.",
+      "approvals.not-gateable": "Godk\u00E4nnandefl\u00F6dets egna \u00E5tg\u00E4rder kan inte kr\u00E4va godk\u00E4nnande.",
+      "approvals.unknown-member": "Ingen aktiv anv\u00E4ndare med den e-postadressen i denna organisation.",
+      "approvals.email.requested-subject": "Godk\u00E4nnande kr\u00E4vs",
+      "approvals.email.requested-body": "En beg\u00E4ran ({operation}) v\u00E4ntar p\u00E5 ditt godk\u00E4nnande.",
       "app.title": "Norrservice ERP",
       "nav.orders": "Ordrar",
       "nav.customers": "Kunder",
@@ -389,6 +419,7 @@
       "auth.added-subject": "You have been given access to a new organization",
       "auth.added-body": "Sign in as usual and pick the organization at login.",
       "pipeline.ambiguous-extension-target": "The operation tracked several records of this type; the custom-field changes could not be attributed to one.",
+      "pipeline.replay-actor-unavailable": "The original requester\u0027s account is no longer available; the parked request cannot be executed.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -399,6 +430,35 @@
       "ext.inspect.requiresInspection": "Requires inspection",
       "inspect.checklist-incomplete": "The order has an unpassed checklist.",
       "plugins.fortnox.title": "Fortnox",
+      "plugins.approvals.title": "Approval flows",
+      "operations.approvals.groups.define.title": "New approver group",
+      "operations.approvals.groups.assign.title": "Add approver",
+      "operations.approvals.rules.define.title": "New approval rule",
+      "operations.approvals.approve.title": "Approve",
+      "operations.approvals.reject.title": "Reject",
+      "approvals.labels.name": "Name",
+      "approvals.labels.parent-group": "Parent group",
+      "approvals.labels.group": "Group",
+      "approvals.labels.email": "Email",
+      "approvals.labels.operation": "Operation",
+      "approvals.labels.threshold-field": "Amount field",
+      "approvals.labels.threshold": "Threshold",
+      "approvals.labels.request": "Request",
+      "approvals.labels.note": "Note",
+      "approvals.labels.initiator": "Requested by",
+      "approvals.labels.status": "Status",
+      "approvals.labels.created": "Created",
+      "approvals.labels.outcome": "Outcome",
+      "approvals.pending": "Submitted for approval ({operation}).",
+      "approvals.not-pending": "The request is not awaiting a decision.",
+      "approvals.not-approver": "You are not in the rule\u0027s approver group.",
+      "approvals.self-approval": "A request cannot be approved by the person who submitted it.",
+      "approvals.unknown-group": "Unknown approver group.",
+      "approvals.unknown-target": "Unknown operation.",
+      "approvals.not-gateable": "The approval flow\u0027s own operations cannot require approval.",
+      "approvals.unknown-member": "No active user with that email address in this organization.",
+      "approvals.email.requested-subject": "Approval required",
+      "approvals.email.requested-body": "A request ({operation}) is awaiting your approval.",
       "app.title": "Norrservice ERP",
       "nav.orders": "Orders",
       "nav.customers": "Customers",
@@ -1735,6 +1795,227 @@
         }
       ],
       "plugin": "inspect",
+      "gatedBy": []
+    },
+    "approvals.approve": {
+      "permission": "approvals.review",
+      "titleKey": "operations.approvals.approve.title",
+      "fields": [
+        {
+          "name": "requestId",
+          "labelKey": "approvals.labels.request",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "requestId",
+          "labelKey": "labels.request-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "approvals",
+      "gatedBy": []
+    },
+    "approvals.groups.assign": {
+      "permission": "approvals.manage",
+      "titleKey": "operations.approvals.groups.assign.title",
+      "fields": [
+        {
+          "name": "groupId",
+          "labelKey": "approvals.labels.group",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "email",
+          "labelKey": "approvals.labels.email",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "groupId",
+          "labelKey": "labels.group-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "actorId",
+          "labelKey": "labels.actor-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "approvals",
+      "gatedBy": []
+    },
+    "approvals.groups.define": {
+      "permission": "approvals.manage",
+      "titleKey": "operations.approvals.groups.define.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "approvals.labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "parentGroupId",
+          "labelKey": "approvals.labels.parent-group",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "groupId",
+          "labelKey": "labels.group-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "approvals",
+      "gatedBy": []
+    },
+    "approvals.rules.define": {
+      "permission": "approvals.manage",
+      "titleKey": "operations.approvals.rules.define.title",
+      "fields": [
+        {
+          "name": "operationId",
+          "labelKey": "approvals.labels.operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "groupId",
+          "labelKey": "approvals.labels.group",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "thresholdField",
+          "labelKey": "approvals.labels.threshold-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "threshold",
+          "labelKey": "approvals.labels.threshold",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "ruleId",
+          "labelKey": "labels.rule-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "approvals",
+      "gatedBy": []
+    },
+    "approvals.reject": {
+      "permission": "approvals.review",
+      "titleKey": "operations.approvals.reject.title",
+      "fields": [
+        {
+          "name": "requestId",
+          "labelKey": "approvals.labels.request",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "note",
+          "labelKey": "approvals.labels.note",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "requestId",
+          "labelKey": "labels.request-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "plugin": "approvals",
       "gatedBy": []
     }
   },
@@ -3091,6 +3372,126 @@
       "defaultSort": "title",
       "defaultSortDescending": false,
       "plugin": "inspect"
+    },
+    "approvals.groups.list": {
+      "permission": "approvals.manage",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "name",
+          "labelKey": "approvals.labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "parentGroupId",
+          "labelKey": "approvals.labels.parent-group",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "name"
+      ],
+      "filterable": [],
+      "defaultSort": "name",
+      "defaultSortDescending": false,
+      "plugin": "approvals"
+    },
+    "approvals.requests.list": {
+      "permission": "approvals.review",
+      "queryFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "operationId",
+          "labelKey": "approvals.labels.operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "initiator",
+          "labelKey": "approvals.labels.initiator",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "status",
+          "labelKey": "approvals.labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "createdAtIso",
+          "labelKey": "approvals.labels.created",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "outcome",
+          "labelKey": "approvals.labels.outcome",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "createdAtIso"
+      ],
+      "filterable": [
+        "status",
+        "operationId"
+      ],
+      "defaultSort": "createdAtIso",
+      "defaultSortDescending": true,
+      "plugin": "approvals"
     }
   },
   "forms": {
@@ -3110,6 +3511,103 @@
       "includeExtensions": false,
       "serverDependencies": [],
       "plugin": "inspect"
+    },
+    "approvals.web.groups.define": {
+      "operation": "approvals.groups.define",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "approvals.labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "parentGroupId",
+          "labelKey": "approvals.labels.parent-group",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "approvals"
+    },
+    "approvals.web.groups.assign": {
+      "operation": "approvals.groups.assign",
+      "fields": [
+        {
+          "name": "groupId",
+          "labelKey": "approvals.labels.group",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "email",
+          "labelKey": "approvals.labels.email",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "approvals"
+    },
+    "approvals.web.rules.define": {
+      "operation": "approvals.rules.define",
+      "fields": [
+        {
+          "name": "operationId",
+          "labelKey": "approvals.labels.operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "groupId",
+          "labelKey": "approvals.labels.group",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "thresholdField",
+          "labelKey": "approvals.labels.threshold-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "threshold",
+          "labelKey": "approvals.labels.threshold",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "money"
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "approvals"
     },
     "web.orders.create": {
       "operation": "orders.create",
@@ -3624,6 +4122,22 @@
       "includeExtensions": false,
       "plugin": "inspect"
     },
+    "approvals.web.requests": {
+      "view": "approvals.requests.list",
+      "columns": [
+        "operationId",
+        "initiator",
+        "status",
+        "createdAtIso"
+      ],
+      "rowActions": [
+        "approvals.approve",
+        "approvals.reject"
+      ],
+      "toolbarActions": [],
+      "includeExtensions": false,
+      "plugin": "approvals"
+    },
     "web.orders.list": {
       "view": "orders.list",
       "columns": [
@@ -3792,6 +4306,8 @@
   },
   "extensions": {},
   "permissions": [
+    "approvals.manage",
+    "approvals.review",
     "audit.read",
     "customers.create",
     "customers.read",
@@ -3824,6 +4340,7 @@
   "revision": 0,
   "actorPermissions": [],
   "plugins": [
+    "approvals",
     "fortnox",
     "inspect"
   ]

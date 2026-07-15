@@ -759,7 +759,7 @@ A year in, Norrservice buys a company in Kiruna. Nothing about Orders changes �
 
 The pattern of Steps 1–14 holds: the tree, the memberships, the roles, the policies, the invites are all *data behind operations* — no deploy moves a company, grants a scope, or seats a user.
 
-## Step 16 — Approvals arrive as a plugin — and the domains never notice *(framework seams built; the vendor package is the remaining exercise)*
+## Step 16 — Approvals arrive as a plugin — and the domains never notice *(BUILT — the seams and the package, `samples/approvals`)*
 
 Norrservice's group buys an add-on from a workflow vendor: purchase approvals. Orders above a
 threshold need a manager's sign-off; time corrections need the team lead. The point of this step
@@ -768,43 +768,35 @@ approval engine in the framework. Groups and workflows are exactly the things do
 of core — so they arrive the way inspection checklists did in Step 13: as a package the tenant
 activates.
 
-What the vendor ships, using only plugin machinery that exists today:
+What the vendor ships — `samples/approvals`, ~400 lines all told: its OWN aggregates in the host
+database like inspect's checklists (`ApprovalGroup` — nested, and nesting semantics are the
+PLUGIN's problem, the framework never learns about groups — `ApprovalGroupMember`,
+`ApprovalRule` over host *wire* operation ids with optional thresholds, `ApprovalRequest` — the
+parked envelope keyed by its payload hash); `approvals.*` operations and views (rules and group
+admin, request list, approve/reject) — each an ordinary operation: authorized, audited,
+localized, in the manifest, an MCP tool; `OnEffect("approvals.requested")` mailing the effective
+approver set through `ITamEmail`; and ONE wildcard gate.
 
-```csharp
-[TamPlugin("approvals")]
-public sealed class ApprovalsPlugin : ITamPlugin
-{
-    public void Configure(PluginBuilder plugin)
-    {
-        plugin.Model.AddDiscovered();
-        // Its OWN aggregates, in the host database like inspect's checklists: ApprovalGroup
-        // (nested if the vendor wants — nesting semantics are the PLUGIN's problem, the
-        // framework never learns about groups), GroupMember, ApprovalRule (which operation ids
-        // need sign-off, thresholds), ApprovalRequest (the parked envelope + its payload hash).
-        // Plus approvals.* operations/views: request lists, approve/reject, group admin — each
-        // an ordinary operation: authorized, audited, localized, in the manifest, an MCP tool.
-        // OnEffect("approvals.requested") → ITamEmail: the approver gets a link. (Exists today.)
-    }
-}
-```
-
-The interesting part is the gate. Step 13's gate was declared against one known operation id;
-approvals must intercept operation ids *the tenant configures at runtime*, park the request, and
-later run it for real. Walking through one order:
+The interesting part is that gate. Step 13's gate was declared against one known operation id;
+approvals intercepts operation ids *the tenant configures at runtime*, parks the request, and
+later runs it for real. Walking through one order, exactly as the wire verification replays it:
 
 1. Didrik submits `orders.create` for 180 000 kr. The approvals gate (running inside the
    pipeline, before the handler's effects commit) consults its `ApprovalRule` table: this
-   operation + this threshold ⇒ sign-off required, and no approval ticket accompanies the
-   request. The gate **parks the envelope** — operation id, wire body, actor, tenant, culture —
-   as an `ApprovalRequest`, and blocks with `approvals.pending` (a localized finding the form
+   operation + this threshold ⇒ sign-off required. The gate **parks the envelope** — operation
+   id, wire body, payload hash, actor, culture — as an `ApprovalRequest` via `gate.Park` (the
+   domain transaction rolls back; the envelope commits; an identical resubmit re-blocks but
+   dedupes on the hash), and blocks with `approvals.pending` (a localized finding the form
    renders as "submitted for approval", not as an error).
-2. The team-lead group resolves (however the plugin defines resolution — flat, nested, quorum),
+2. The rule's group resolves — members of the group plus every nested subgroup —
    `OnEffect` mails the approvers, and the pending request sits in the plugin's grid.
-3. A lead runs `approvals.approve`. The plugin **replays the parked envelope** through the real
-   pipeline — the same executor every caller uses — as the *original* actor, with the approval
-   ticket attached. The gate sees a ticket whose payload hash matches the parked body (the same
-   hash the idempotency machinery already computes) and passes; the order is created; the audit
-   trail shows both facts: requested by Didrik, released by the lead.
+3. A lead runs `approvals.approve` (four-eyes: never the initiator; membership checked through
+   the nesting). On commit, the plugin **replays the parked envelope** through the real
+   pipeline — the same executor every caller uses — as the *original* actor with grants
+   re-resolved as of now, marked `InvocationSource.Workflow` (the gate's pass condition, settable
+   only by compiled code). The order is created; the audit trail shows both facts: the
+   `orders.create` entry reads actor Didrik / source Workflow / correlation = the request id,
+   and the `approvals.approve` entry names the lead who released it.
 
 The domain wrote none of this. `CreateOrder` still doesn't know approvals exist — for tenants
 without the plugin, nothing changed; for tenants with it, the manifest says `orders.create` is
@@ -836,8 +828,10 @@ proven end to end through the real pipeline in the test suite:
    initiator and correlates to the envelope, whose own trail names the releaser.
 
 With the seams in place, "an opinionated nested-group approval system for existing domains,
-without the domains knowing" is a package a vendor can actually write — the sketch above compiles
-against real machinery. Shipping that package is the remaining exercise of this step.
+without the domains knowing" stopped being a slogan: `samples/approvals` is that package, and
+the whole scenario above — activate, configure, block, park, notify, approve through a nested
+group, replay, reject, dedupe — is verified on the wire against the running sample. `CreateOrder`
+was not touched. That is the bar docs/22 set for the plugin architecture, met.
 
 ---
 

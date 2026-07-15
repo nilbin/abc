@@ -26,6 +26,8 @@ samples/erp                  Customers/Projects/Orders + extension/plugin/packag
                              admin, sv+en locales, seed (users, subscription)
 samples/inspect              inspection-checklists plugin (packaged field, gate, subscriber)
 samples/fortnox              a plugin whose whole job is one inbound integration
+samples/approvals            Step 16: nested approver groups + tenant-configured rules gating
+                             host operations via the wildcard gate, park, replay seams
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
 tests/Tam.Tests              97 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
@@ -293,8 +295,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   parked envelope through the full pipeline as the original initiator (grants re-resolved as of
   now, fail-closed on a deactivated account), marked `InvocationSource.Workflow`, envelope id as
   audit `CorrelationId` + initiator-scoped idempotency key — dual attribution, replay-safe under
-  redelivery. Six pipeline-level tests prove all of it on SQLite; the vendor-style approvals
-  sample plugin is next.
+  redelivery. Six pipeline-level tests prove all of it on SQLite.
+- **The approvals package exists** (`samples/approvals`, tutorial Step 16 BUILT): nested
+  `ApprovalGroup`s (subgroup members approve for ancestors — plugin semantics, framework-blind),
+  `ApprovalRule` rows over host wire ids with optional thresholds (`orders.create` ≥ 100 000),
+  the parked `ApprovalRequest` keyed by payload hash, approve/reject with four-eyes +
+  through-nesting membership checks, approver notification via the outbox + `ITamEmail`, and
+  post-commit replay-as-initiator. Wire-verified 23/23 on a fresh seed: block+park+rollback,
+  nested-group release, dual-attributed audit (initiator/Workflow/correlation on the replayed
+  op; releaser on the approve op), reject-never-executes, identical-resubmit dedupe, no
+  re-decision. The host domain (`CreateOrder`) was not touched. Also fixed en route: the outbox
+  dispatcher now pins the ambient tenant per record, so effect subscribers' tenant-filtered
+  queries (idempotency checks, envelope lookups) actually see rows.
 - **Extension-channel targeting is deterministic and fail-closed** (the old review medium): the
   executor no longer binds `extensions` changes to whichever tracked instance of the extensible
   type came FIRST — one tracked instance is the target; among several, the single Added/Modified

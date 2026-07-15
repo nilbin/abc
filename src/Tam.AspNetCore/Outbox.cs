@@ -47,6 +47,13 @@ public sealed class OutboxDispatcher(
 
         foreach (var record in pending)
         {
+            // Pin the ambient tenant to THIS record before its subscribers run: they query
+            // tenant-scoped tables through the global filter, and with no ambient tenant the
+            // filter matches nothing — every filtered read (an idempotency check, an envelope
+            // lookup) would come back empty. The scope's DbContext reads the pin live, so one
+            // scope serves records from many tenants, re-pinned per record.
+            scope.ServiceProvider.GetRequiredService<TenantScope>().Current = record.TenantId;
+
             // Claim under the concurrency token before dispatching: only one instance delivers a
             // given row. A racing instance collides on ClaimedUntilIso and skips.
             record.ClaimedUntilIso = IsoTime.From(now.Add(Lease));

@@ -121,4 +121,5 @@ without a second actor field). The walkthrough is tutorial Step 16
   union** — profiles first, flat groups on real cross-domain demand, nesting never in core.
 - **D-AG4 — approval flows are never core.** They are a plugin's product, built on gates, parked
   envelopes and replay. The seams themselves ARE core and are built: `GateDefinition.Wildcard`,
-  `GateContext.Park`, `EnvelopeReplay` (tutorial Step 16 walks the scenario).
+  `GateContext.Park`, `EnvelopeReplay` — and `samples/approvals` is the product proving them
+  (tutorial Step 16 walks the scenario end to end).
