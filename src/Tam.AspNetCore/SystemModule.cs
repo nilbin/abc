@@ -27,6 +27,7 @@ public static class SystemModule
             .AddOperationType(typeof(DefineExtensionField))
             .AddOperationType(typeof(RetireExtensionField))
             .AddOperationType(typeof(DefineRole))
+            .AddOperationType(typeof(DefinePolicy))
             .AddOperationType(typeof(ActivatePlugin))
             .AddOperationType(typeof(DeactivatePlugin))
             .AddOperationType(typeof(InstallPackage))
@@ -49,6 +50,7 @@ public static class SystemModule
             .AddViewType(typeof(DeadLetterList))
             .AddViewType(typeof(ExtensionFieldList))
             .AddViewType(typeof(RoleList))
+            .AddViewType(typeof(PolicyList))
             .AddViewType(typeof(AuditLog))
             .AddViewType(typeof(PluginList))
             .AddViewType(typeof(PackageList))
@@ -219,6 +221,82 @@ public static class RoleRules
         }
         return findings;
     }
+}
+
+public static class PolicyFindings
+{
+    public static readonly FindingFactory UnknownResource = Finding.Error("policies.unknown-resource");
+    public static readonly FindingFactory UnknownScope = Finding.Error("policies.unknown-scope");
+    public static readonly FindingFactory InvalidName = Finding.Error("policies.invalid-name");
+}
+
+/// <summary>
+/// Access policies (docs/27 Axis 2): a named resource → scope map ("orders" → "own"), the DATA-SCOPE
+/// menu memberships pick from independently of roles. v1 scope kinds: all | own — `where`/`shared`
+/// stay design-deferred (attribute predicates need the actor-attributes design; D-A2 note).
+/// </summary>
+[Operation("policies.define")]
+[Authorize("roles.manage")]
+public static class DefinePolicy
+{
+    public sealed record Input(
+        string Name,
+        [property: LabelKey("labels.scopes")] Dictionary<string, string> Scopes);
+
+    public sealed record Output(Guid PolicyId);
+
+    private static readonly HashSet<string> Known = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "all", "own",
+    };
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
+    {
+        var findings = new List<Finding>();
+        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
+            findings.Add(PolicyFindings.InvalidName.At(nameof(Input.Name)));
+        foreach (var (resource, scope) in input.Scopes)
+        {
+            if (!AccessLevels.Catalog(model).ContainsKey(resource))
+                findings.Add(PolicyFindings.UnknownResource.With(("resource", resource)).At(nameof(Input.Scopes)));
+            if (!Known.Contains(scope))
+                findings.Add(PolicyFindings.UnknownScope.With(("scope", scope)).At(nameof(Input.Scopes)));
+        }
+        if (findings.Count > 0) return new Result<Output> { Findings = findings };
+
+        var policy = await tam.Db.Set<AccessPolicyEntity>().SingleOrDefaultAsync(
+            x => x.Name == input.Name, ct);
+        if (policy is null)
+        {
+            policy = new AccessPolicyEntity { Id = Guid.NewGuid(), Name = input.Name };
+            tam.Db.Add(policy);
+        }
+        policy.ScopesJson = JsonSerializer.Serialize(input.Scopes);
+        return new Output(policy.Id);
+    }
+}
+
+[View("policies.list")]
+[Authorize("roles.manage")]
+public static class PolicyList
+{
+    public sealed record Query();
+
+    public sealed record Result
+    {
+        public Guid Id { get; init; }
+        public string Name { get; init; } = "";
+        [LabelKey("labels.scopes")]
+        public string Scopes { get; init; } = "";
+    }
+
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
+        tam.Db.Set<AccessPolicyEntity>()
+            .Select(x => new Result { Id = x.Id, Name = x.Name, Scopes = x.ScopesJson });
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) =>
+        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
 }
 
 /// <summary>

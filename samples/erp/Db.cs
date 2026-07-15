@@ -156,7 +156,17 @@ public static class Seed
         // Alva's admin CASCADES (D-H5 shape): one membership at "demo" reaches every descendant node.
         // The others keep the legacy flat shape (reads as cascade: false) — exercising back-compat.
         User("alva", "Alva Andersson", "admin").RolesJson = """[{"name":"admin","cascade":true}]""";
-        User("didrik", "Didrik Berg", "dispatcher");
+        // Didrik carries the "own-orders" access policy (docs/27 Axis 2): his dispatcher role's
+        // unsuffixed orders atoms narrow to ":own" at actor resolution — same role as mcp-agent
+        // below, different data scope, no role fork.
+        db.Add(new AccessPolicyEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            Name = "own-orders",
+            ScopesJson = """{"orders":"own"}""",
+        });
+        User("didrik", "Didrik Berg", "dispatcher").PoliciesJson = """["own-orders"]""";
         User("tekla", "Tekla Nilsson", "technician");
         User("vera", "Vera Lund", "viewer");
         User("mcp-agent", "MCP Agent", "dispatcher");

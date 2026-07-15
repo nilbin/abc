@@ -144,6 +144,13 @@
       "roles.unknown-level": "Ok\u00E4nd beh\u00F6righetsniv\u00E5: {level}.",
       "labels.levels": "Beh\u00F6righetsniv\u00E5er",
       "pipeline.field-not-authorized": "Du saknar beh\u00F6righet att ange f\u00E4ltet {field} ({permission}).",
+      "operations.policies.define.title": "Definiera \u00E5tkomstpolicy",
+      "labels.scopes": "Omf\u00E5ng",
+      "labels.policies": "\u00C5tkomstpolicyer",
+      "policies.unknown-resource": "Ok\u00E4nd resurs: {resource}.",
+      "policies.unknown-scope": "Ok\u00E4nt omf\u00E5ng: {scope}.",
+      "policies.invalid-name": "Ogiltigt policynamn (gemener, siffror och bindestreck).",
+      "users.unknown-policy": "Ok\u00E4nd policy: {policy}.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -342,6 +349,13 @@
       "roles.unknown-level": "Unknown access level: {level}.",
       "labels.levels": "Access levels",
       "pipeline.field-not-authorized": "You lack permission to set the field {field} ({permission}).",
+      "operations.policies.define.title": "Define access policy",
+      "labels.scopes": "Scopes",
+      "labels.policies": "Access policies",
+      "policies.unknown-resource": "Unknown resource: {resource}.",
+      "policies.unknown-scope": "Unknown scope: {scope}.",
+      "policies.invalid-name": "Invalid policy name (lowercase letters, digits and hyphens).",
+      "users.unknown-policy": "Unknown policy: {policy}.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -812,6 +826,42 @@
       ],
       "gatedBy": []
     },
+    "policies.define": {
+      "permission": "roles.manage",
+      "titleKey": "operations.policies.define.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "scopes",
+          "labelKey": "labels.scopes",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "policyId",
+          "labelKey": "labels.policy-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "gatedBy": []
+    },
     "plugins.activate": {
       "permission": "plugins.manage",
       "titleKey": "operations.plugins.activate.title",
@@ -1119,6 +1169,15 @@
           "type": "object",
           "wireKind": "object",
           "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "policies",
+          "labelKey": "labels.policies",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
           "changeSet": false,
           "extension": false
         }
@@ -2469,6 +2528,45 @@
         {
           "name": "levels",
           "labelKey": "labels.levels",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        }
+      ],
+      "sortable": [
+        "name"
+      ],
+      "filterable": [],
+      "defaultSort": "name",
+      "defaultSortDescending": false
+    },
+    "policies.list": {
+      "permission": "roles.manage",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false
+        },
+        {
+          "name": "scopes",
+          "labelKey": "labels.scopes",
           "type": "text",
           "wireKind": "string",
           "required": true,

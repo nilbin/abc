@@ -139,5 +139,12 @@
   "roles.unknown-resource": "Unknown resource: {resource}.",
   "roles.unknown-level": "Unknown access level: {level}.",
   "labels.levels": "Access levels",
-  "pipeline.field-not-authorized": "You lack permission to set the field {field} ({permission})."
+  "pipeline.field-not-authorized": "You lack permission to set the field {field} ({permission}).",
+  "operations.policies.define.title": "Define access policy",
+  "labels.scopes": "Scopes",
+  "labels.policies": "Access policies",
+  "policies.unknown-resource": "Unknown resource: {resource}.",
+  "policies.unknown-scope": "Unknown scope: {scope}.",
+  "policies.invalid-name": "Invalid policy name (lowercase letters, digits and hyphens).",
+  "users.unknown-policy": "Unknown policy: {policy}."
 }

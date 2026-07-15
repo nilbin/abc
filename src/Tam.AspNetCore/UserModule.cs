@@ -10,6 +10,7 @@ public static class UserFindings
 {
     public static readonly FindingFactory UnknownRole = Finding.Error("users.unknown-role");
     public static readonly FindingFactory InvalidName = Finding.Error("users.invalid-name");
+    public static readonly FindingFactory UnknownPolicy = Finding.Error("users.unknown-policy");
 }
 
 internal static class UserLookup
@@ -38,7 +39,8 @@ public static class DefineUser
         [property: LabelKey("labels.user-name")] string UserName,
         [property: LabelKey("labels.display-name")] string DisplayName,
         [property: LabelKey("labels.password")] string? Password,
-        [property: LabelKey("labels.roles")] List<string> Roles);
+        [property: LabelKey("labels.roles")] List<string> Roles,
+        [property: LabelKey("labels.policies")] List<string>? Policies = null);
 
     public sealed record Output(Guid UserId);
 
@@ -59,6 +61,22 @@ public static class DefineUser
                 Findings = unknown.Select(r =>
                     UserFindings.UnknownRole.With(("role", r)).At(nameof(Input.Roles))).ToList(),
             };
+        }
+
+        // Access policies (docs/27 Axis 2) are validated against the registry like roles are.
+        if (input.Policies is { Count: > 0 })
+        {
+            var knownPolicies = await tam.Db.Set<AccessPolicyEntity>()
+                .Select(x => x.Name).ToListAsync(ct);
+            var unknownPolicies = input.Policies.Where(x => !knownPolicies.Contains(x)).ToList();
+            if (unknownPolicies.Count > 0)
+            {
+                return new Result<Output>
+                {
+                    Findings = unknownPolicies.Select(x =>
+                        UserFindings.UnknownPolicy.With(("policy", x)).At(nameof(Input.Policies))).ToList(),
+                };
+            }
         }
 
         var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
@@ -97,6 +115,7 @@ public static class DefineUser
             tam.Db.Add(membership);
         }
         membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
+        membership.PoliciesJson = System.Text.Json.JsonSerializer.Serialize(input.Policies ?? []);
         membership.Active = true;
 
         return new Output(account.Id);

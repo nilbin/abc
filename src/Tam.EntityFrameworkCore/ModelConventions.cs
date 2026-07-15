@@ -44,6 +44,12 @@ public static class TamModelConventions
             b.HasKey(x => x.Id);
             b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
         });
+        modelBuilder.Entity<AccessPolicyEntity>(b =>
+        {
+            b.ToTable("access_policies");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+        });
         modelBuilder.Entity<InboxRecord>(b =>
         {
             b.ToTable("integration_inbox");
@@ -320,7 +326,13 @@ public sealed class TenantMembershipEntity : ITenantScoped
     public string TenantId { get; set; } = "";
     public Guid AccountId { get; set; }
     public string RolesJson { get; set; } = "[]";
+    public string PoliciesJson { get; set; } = "[]";
     public bool Active { get; set; } = true;
+
+    /// <summary>Named access policies (docs/27 Axis 2): the DATA-SCOPE side of the membership,
+    /// narrowing which rows its role grants reach. Empty = today's behavior (all).</summary>
+    public IReadOnlyList<string> Policies() =>
+        System.Text.Json.JsonSerializer.Deserialize<List<string>>(PoliciesJson) ?? [];
 
     /// <summary>Role assignments; accepts both shapes — `["admin"]` (legacy flat, cascade: false)
     /// and `[{"name":"admin","cascade":true}]` (D-H5) — so existing rows keep working.</summary>
@@ -381,6 +393,22 @@ public sealed class RoleEntity : ITenantScoped
 
     public IReadOnlyDictionary<string, string> Levels() =>
         System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(LevelsJson) ?? [];
+}
+
+/// <summary>
+/// A named data-scope grouping (docs/27 Axis 2): resource → scope kind ("orders" → "own"), assigned
+/// per membership independently of roles. Scopes narrow which ROWS a capability reaches; several
+/// policies on one membership union with broadest-wins (D-A5). Managed only through operations.
+/// </summary>
+public sealed class AccessPolicyEntity : ITenantScoped
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string ScopesJson { get; set; } = "{}";
+
+    public IReadOnlyDictionary<string, string> Scopes() =>
+        System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(ScopesJson) ?? [];
 }
 
 /// <summary>Per-tenant plugin activation (docs/22): the row's existence IS the activation.

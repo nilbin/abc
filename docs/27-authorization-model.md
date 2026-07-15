@@ -225,6 +225,16 @@ must be *bound*; data-scope (a predicate over existing rows) cannot bind it. The
   while reaching its whole subtree — one region membership over 50 companies is one seat. Acknowledged
   and accepted for now; if pricing should track reach rather than attachment, that is a docs/24 change
   (e.g. counting cascaded reach), not an authorization change.
+- **Access policies BUILT for `all`|`own` (v1).** `AccessPolicyEntity` is a tenant-scoped named
+  resource→scope map (`policies.define` / `policies.list`, validated against the same resource
+  catalogue as levels); a membership lists policy names (`users.define … policies`), resolved in the
+  membership's OWN tenant like role names. At actor resolution each membership's grants are narrowed
+  by ITS policies before the union: an `own` scope suffixes that membership's unsuffixed atoms for
+  the resource with `:own`, while an atom the role author already suffixed is kept as written; across
+  a membership's policies the broadest scope wins per resource, and across memberships plain union
+  applies (D-A5) — one unrestricted membership makes the grant unrestricted. Downstream nothing
+  changed: the existing `:own` grant machinery (gate acceptance + `ScopedTo` query narrowing) does
+  the enforcement. `subtree`/`inherited`/`where` policy kinds remain to be wired onto the same seam.
 
 ## How it binds to identity (docs/26)
 
@@ -253,7 +263,8 @@ scope is a line worker. Seats (docs/24) count memberships per tenant.
   existing permission atoms (sugar; nothing downstream changes).
 - **D-A2 — row-scope kinds: `all`, `own`, `subtree`, `inherited`, `where` now; DEFER `shared`
   (record ACLs).** `inherited` (upward, ancestor-owned shared data) was added at the hierarchy review.
-  Per-record sharing is a per-domain design later, not a framework primitive yet.
+  Per-record sharing is a per-domain design later, not a framework primitive yet. Policies are BUILT
+  for `all`|`own` (see implementation notes); `where` also waits on the actor-attributes design.
 - **D-A3 — field-level: FULL now (read + write masking).** Resources opt a field in as sensitive; a
   grant can hide it from views/manifest (read) AND reject a `Change` to it (write).
 - **D-A4 — deny rules: NO.** Union-grant only.

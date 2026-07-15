@@ -238,6 +238,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   email/phone in rows and manifest while alva ("*") sees values; didrik's create WITH email is
   rejected at the field and passes without it; {customers:manage} grants the atom (stina reads and
   writes email); {subscriptions:manage} still cannot reach set-plan. 82 tests; baseline + types regen.
+- **Access policies (docs/27 Axis 2, v1 `all`|`own`)**: `AccessPolicyEntity` is a tenant-scoped named
+  resource→scope map, managed by `policies.define`/`policies.list` (validated against the same
+  resource catalogue as levels; unknown resource/scope → localized findings); a membership lists
+  policy names (`users.define … policies`, unknown → `users.unknown-policy`), resolved in the
+  membership's OWN tenant like role names. Actor resolution narrows each membership's grants by ITS
+  policies before the union: `own` suffixes that membership's unsuffixed atoms for the resource with
+  `:own` (role-authored `:own` kept as written; broadest scope wins across a membership's policies;
+  plain union across memberships per D-A5). Enforcement is the existing `:own` machinery — no
+  downstream changes. Verified on the wire: didrik (dispatcher + own-orders policy) lists 0 orders
+  while mcp-agent's identical role stays unrestricted; tekla's role-authored `:own` unchanged (2);
+  vera/alva unaffected (5); didrik's create still passes the gate via the suffixed grant and lands
+  in the tenant; a user defined live with the policy is narrowed immediately; validation findings
+  fire. 82 tests; baseline + typed client regenerated (policies.define/list).
 - **Postgres parity for the hierarchy/capability stack**: the full suite re-verified on PostgreSQL 16
   (fresh DB, `Host=` connection string, LISTEN/NOTIFY backplane registered): cascade login at a
   descendant, subtree roll-up (tenants-table semi-join / LIKE), inherited customers (ancestor
