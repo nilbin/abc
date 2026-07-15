@@ -26,8 +26,24 @@ public sealed record CoveringSubscription(SubscriptionEntity Subscription, strin
 /// the framework works fully without billing, but a tree is one commercial standing (creating child
 /// nodes never mints fresh free seats).
 /// </summary>
+/// <summary>
+/// The enforcement baseline when a tree has NO subscription anywhere on its chain — not a
+/// product tier, but the answer to "what does the gate do when billing is silent". The shipped
+/// default is conservative (bootstrap-sized: enough to create an admin and evaluate, capped so
+/// ignoring billing is never a bypass). A deployment that simply doesn't do billing sets
+/// <see cref="Unlimited"/> at startup: it has no vendor to bypass.
+/// </summary>
+public sealed record SubscriptionDefaults(string Plan, int Seats, IReadOnlyList<string> Entitlements)
+{
+    /// <summary>No caps, all entitlements — for self-hosted deployments without billing.</summary>
+    public static SubscriptionDefaults Unlimited { get; } = new("self-hosted", int.MaxValue, ["*"]);
+}
+
 public static class Subscriptions
 {
+    /// <summary>Host-configurable no-billing baseline; set once at startup, before traffic.</summary>
+    public static SubscriptionDefaults Defaults { get; set; } = new("free", 2, []);
+
     public static async Task<CoveringSubscription> CoveringAsync(
         DbContext db, string tenantId, CancellationToken ct)
     {
@@ -84,7 +100,13 @@ public static class Subscriptions
             if (byNode.TryGetValue(chain[i], out var hit))
                 return new CoveringSubscription(hit, chain[i]);
         }
-        return new CoveringSubscription(new SubscriptionEntity { TenantId = chain[0] }, chain[0]);
+        return new CoveringSubscription(new SubscriptionEntity
+        {
+            TenantId = chain[0],
+            Plan = Defaults.Plan,
+            Seats = Defaults.Seats,
+            EntitlementsJson = System.Text.Json.JsonSerializer.Serialize(Defaults.Entitlements),
+        }, chain[0]);
     }
 
     private static List<string> Covered(

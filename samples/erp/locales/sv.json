@@ -1,4 +1,9 @@
 {
+  "labels.id": "Id",
+  "labels.name": "Namn",
+  "labels.type": "Typ",
+  "labels.status": "Status",
+  "labels.version": "Version",
   "app.title": "Norrservice ERP",
   "nav.orders": "Ordrar",
   "nav.customers": "Kunder",

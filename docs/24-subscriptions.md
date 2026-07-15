@@ -82,6 +82,12 @@ nearer anchor shadows it. No schema change — anchorship is implicit in which n
   subscription plus `anchorTenantId` and the pooled `seatsUsed`. The entity and `set-plan` are
   unchanged (set-plan at a non-root node *is* sub-anchor creation).
 
+The free default, stated precisely: it is NOT a product tier — it is the enforcement answer to
+"what do the gates do when billing is silent". Unlimited would make ignoring billing a bypass
+(fail-open); zero would make the framework unusable without a billing provider (no first user).
+The shipped baseline is bootstrap-sized and host-configurable: `Subscriptions.Defaults`, with
+`SubscriptionDefaults.Unlimited` for self-hosted deployments that have no vendor to bypass.
+
 Deferred: `subscriptions.detach` (removing a sub-anchor when a subsidiary is re-absorbed into
 group billing) — deliberately unbuilt until the scenario is real.
 
