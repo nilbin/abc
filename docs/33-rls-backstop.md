@@ -103,6 +103,33 @@ policy matches nothing.
   stamp interceptor's job, docs/26 D-H4) and double the provisioning surface. The backstop
   mirrors; it does not editorialize.
 
+## Read-set scaling, MEASURED (docs/34 M5)
+
+Fixture: a 200-node subtree under `demo`, 20 000 project rows spread across it, PostgreSQL 
+local. The question deferred at build time: what does the GUC-array policy cost when the 
+read set gets wide?
+
+| Shape | Time |
+| --- | --- |
+| Single-tenant request (read set empty), policy active, 20k rows scanned | ~10 ms |
+| Subtree request, 201-id read set, `count(*)` over the subtree | ~240 ms |
+| Same but PAGED (limit 25) — all candidate rows still pass the policy | ~250 ms |
+| Hoisting `string_to_array` into an InitPlan | no change (~250 ms) |
+| The same subtree question as a REGISTRY SEMI-JOIN (`TenantId IN (SELECT Id FROM tenants WHERE Path LIKE 'demo.%')`) | **~0.2 ms** |
+
+Diagnosis: the policy's `= ANY(string_to_array(...))` is a LINEAR array scan per candidate
+row — cost ≈ rows × |read set| string compares (20k × 201 ≈ 4M ≈ 240 ms), and hoisting the
+array does not help because the comparisons themselves are the cost. The registry semi-join
+wins by three orders of magnitude because the planner drives the `(TenantId, …)` index from
+the small tenant set instead of testing an array against every row.
+
+Candidate fix (NOT yet built — awaiting the M5 triage): replace the policy's read-set arm
+with a semi-join on the tenants registry keyed by a path GUC (`app.tenant_path`), keeping
+the sentinel and current-tenant arms as they are. The interceptor then syncs a PATH instead
+of an id LIST — constant-size GUC regardless of tree width. Until then: the backstop is
+correct at any scale and cheap for single-tenant traffic; subtree-heavy hosts with hundreds
+of nodes pay ~1 ms per 100 rows × 100 nodes on subtree reads.
+
 ## Non-goals
 
 Database-per-tenant routing (D2's escape valve, unchanged); RLS on `[GlobalData]` tables

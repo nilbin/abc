@@ -110,8 +110,12 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
       walks the park → release → replay loop when fieldm3's approval rule gates
       time.approve. Verified: 14-check fieldm4 + full 15-suite matrix on SQLite AND
       Postgres.
-- [ ] M5 — Postgres + RLS pass over the whole slice; read-set scaling measured;
-      friction-log triage → fixes or explicit deferrals.
+- [~] M5 — Postgres + RLS pass over the whole slice (CONTINUOUSLY DONE — every milestone
+      ran the full matrix on Postgres with RLS provisioned); read-set scaling MEASURED
+      (docs/33: the GUC-array policy costs rows × |read set| — 240 ms for a 200-node
+      subtree over 20k rows even paged; a registry semi-join answers the same question in
+      0.2 ms — candidate policy change recorded, not yet built). Remaining: the friction-log
+      triage → fixes or explicit deferrals (decision pending).
 
 ## Friction log
 
