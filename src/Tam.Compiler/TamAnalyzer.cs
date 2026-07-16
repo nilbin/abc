@@ -235,7 +235,8 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         // A deliberate cross-tenant read opts out with .IgnoreQueryFilters() somewhere in the chain.
         if (syntax.Ancestors()
             .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax>()
-            .Any(inv => inv.ToString().Contains("IgnoreQueryFilters")))
+            .Any(inv => inv.ToString().Contains("IgnoreQueryFilters")
+                || inv.ToString().Contains("AcrossTenants")))
             return;
 
         context.ReportDiagnostic(Diagnostic.Create(Tam004, syntax.GetLocation()));
@@ -244,8 +245,8 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
     private static IPropertySymbol? TenantIdProperty(IOperation operation) =>
         operation is IPropertyReferenceOperation { Property.Name: "TenantId" } p ? p.Property : null;
 
-    private static readonly string[] WideningCalls = { "IgnoreQueryFilters", "InSubtree", "WithInherited" };
-    private static readonly string[] ExplicitScopeCalls = { "IgnoreQueryFilters", "InSubtree", "WithInherited", "InNode", "InScope" };
+    private static readonly string[] WideningCalls = { "IgnoreQueryFilters", "AcrossTenants", "InSubtree", "WithInherited" };
+    private static readonly string[] ExplicitScopeCalls = { "IgnoreQueryFilters", "AcrossTenants", "InSubtree", "WithInherited", "InNode", "InScope" };
     private static readonly string[] ComposingMethods = { "Join", "GroupJoin", "Concat", "Union", "Except", "Intersect" };
 
     private static void AnalyzeQueryComposition(SyntaxNodeAnalysisContext context)

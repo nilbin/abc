@@ -36,6 +36,12 @@ Field-level read/write permissions (already designed for extension fields in [15
 > (built): tenants now form trees (materialized paths in the tenants registry; rows still carry
 > exactly one `TenantId`), accounts are platform-global with per-tenant memberships, and the
 > active node is chosen at login / act-as. D2's storage shape is unchanged underneath.
+>
+> **The RLS backstop is BUILT** ([33-rls-backstop.md](33-rls-backstop.md)): `TamRls` in
+> Tam.AspNetCore.Postgres provisions ENABLE+FORCE policies over every ITenantScoped table and
+> keeps `app.tenant_id`/`app.tenant_read_set` true to the ambient scope; sanctioned
+> cross-tenant reads carry a query tag (`AcrossTenants()`), the auth branch escalates
+> explicitly, and the tenants registry is exempt (D-R6..R8).
 
 **Decision.** One PostgreSQL database, one schema. Every tenant-owned aggregate carries `TenantId`; EF Core global query filters bind it from the execution envelope; writes stamp it in the pipeline, never in handlers. Tables are either tenant-scoped or explicitly marked `[GlobalData]` — anything unmarked and missing `TenantId` is a compiler error (`DB0xx`).
 

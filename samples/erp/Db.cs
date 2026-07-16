@@ -18,6 +18,9 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
     // Subtree-read widening (docs/26 D-H1): non-empty only while a SubtreeRead view executes.
     public IReadOnlyList<string> TenantReadSet => tenantScope.ReadSet;
 
+    // Sanctioned request-wide cross-tenant escalation (docs/33 D-R8) — the RLS backstop's '*'.
+    public bool CrossTenantScope => tenantScope.AllTenants;
+
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Order> Orders => Set<Order>();

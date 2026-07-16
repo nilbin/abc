@@ -60,7 +60,7 @@ public sealed class ClaimsActorProvider : IActorProvider
         var chainIds = (activeNode?.AncestorIds() ?? [activeId]).ToArray();
 
         // Memberships along the chain are cross-tenant by nature — deliberate filter opt-out.
-        var memberships = db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+        var memberships = db.Set<TenantMembershipEntity>().AcrossTenants()
             .Where(m => m.AccountId == accountId && m.Active && chainIds.Contains(m.TenantId))
             .ToList();
 
@@ -68,7 +68,7 @@ public sealed class ClaimsActorProvider : IActorProvider
         // unfiltered once, then match per (tenant, name) — names never merge across levels. A role's grants are its explicit atoms plus its access levels expanded at load
         // time (docs/27 D-A1), so a new action on a resource flows into existing Manage roles
         // without a role edit.
-        var roleRows = db.Set<RoleEntity>().IgnoreQueryFilters()
+        var roleRows = db.Set<RoleEntity>().AcrossTenants()
             .Where(r => chainIds.Contains(r.TenantId))
             .ToList();
         var byNodeAndName = roleRows.ToDictionary(r => (r.TenantId, r.Name));

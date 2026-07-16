@@ -17,7 +17,7 @@ public static class TenantTree
     /// </summary>
     public static IReadOnlyList<StandableNode> StandableNodes(DbContext db, Guid accountId)
     {
-        var memberships = db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+        var memberships = db.Set<TenantMembershipEntity>().AcrossTenants()
             .Where(m => m.AccountId == accountId && m.Active)
             .ToList();
         if (memberships.Count == 0) return [];

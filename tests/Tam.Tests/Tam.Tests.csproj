@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\Tam.Core\Tam.Core.csproj" />
     <ProjectReference Include="..\..\src\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Tam.AspNetCore\Tam.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\Tam.AspNetCore.Postgres\Tam.AspNetCore.Postgres.csproj" />
     <ProjectReference Include="..\..\samples\erp\Erp.csproj" />
   </ItemGroup>
 

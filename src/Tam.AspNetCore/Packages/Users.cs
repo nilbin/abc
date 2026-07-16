@@ -62,7 +62,7 @@ internal static class MembershipRules
         // (a child row would silently shadow any future root plan).
         var covering = await Subscriptions.CoveringAsync(tam.Db, tenantId, ct);
         var covered = await Subscriptions.CoveredTenantsAsync(tam.Db, covering.AnchorTenantId, ct);
-        var activeMembers = await tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+        var activeMembers = await tam.Db.Set<TenantMembershipEntity>().AcrossTenants()
             .CountAsync(m => m.Active && covered.Contains(m.TenantId), ct);
         if (activeMembers >= covering.Subscription.Seats)
             return SubscriptionFindings.SeatLimit.With(("seats", covering.Subscription.Seats));

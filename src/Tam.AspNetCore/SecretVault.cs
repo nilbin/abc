@@ -25,7 +25,7 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
     // global tenant filter and rely on the explicit predicate, correct in request and job scopes.
     public async Task SetAsync(string tenantId, string key, string plaintext, CancellationToken ct)
     {
-        var entity = await tam.Db.Set<TenantSecretEntity>().IgnoreQueryFilters().SingleOrDefaultAsync(
+        var entity = await tam.Db.Set<TenantSecretEntity>().AcrossTenants().SingleOrDefaultAsync(
             x => x.TenantId == tenantId && x.Key == key, ct);
         if (entity is null)
         {
@@ -39,7 +39,7 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
     /// longer unprotect it (rotated-away key); callers treat that as "not configured".</summary>
     public async Task<string?> GetAsync(string tenantId, string key, CancellationToken ct)
     {
-        var entity = await tam.Db.Set<TenantSecretEntity>().IgnoreQueryFilters().AsNoTracking()
+        var entity = await tam.Db.Set<TenantSecretEntity>().AcrossTenants().AsNoTracking()
             .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Key == key, ct);
         if (entity is null) return null;
         try { return Protector(tenantId).Unprotect(entity.ProtectedValue); }
@@ -48,7 +48,7 @@ public sealed class SecretVault(IDataProtectionProvider provider, ITamDb tam)
 
     public async Task<string?> SettingAsync(string tenantId, string key, CancellationToken ct)
     {
-        var entity = await tam.Db.Set<TenantSettingEntity>().IgnoreQueryFilters().AsNoTracking()
+        var entity = await tam.Db.Set<TenantSettingEntity>().AcrossTenants().AsNoTracking()
             .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Key == key, ct);
         return entity?.Value;
     }

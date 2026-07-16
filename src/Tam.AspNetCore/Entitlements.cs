@@ -49,7 +49,7 @@ public static class Subscriptions
     {
         var chain = Chain(await db.Set<TenantEntity>().FindAsync([tenantId], ct), tenantId);
         // Subscription rows along the chain are cross-tenant by nature — deliberate filter opt-out.
-        var rows = await db.Set<SubscriptionEntity>().IgnoreQueryFilters()
+        var rows = await db.Set<SubscriptionEntity>().AcrossTenants()
             .Where(s => chain.Contains(s.TenantId)).ToListAsync(ct);
         return Pick(chain, rows);
     }
@@ -58,7 +58,7 @@ public static class Subscriptions
     public static CoveringSubscription Covering(DbContext db, string tenantId)
     {
         var chain = Chain(db.Set<TenantEntity>().Find(tenantId), tenantId);
-        var rows = db.Set<SubscriptionEntity>().IgnoreQueryFilters()
+        var rows = db.Set<SubscriptionEntity>().AcrossTenants()
             .Where(s => chain.Contains(s.TenantId)).ToList();
         return Pick(chain, rows);
     }
@@ -72,7 +72,7 @@ public static class Subscriptions
         DbContext db, string anchorId, CancellationToken ct)
     {
         var tenants = await db.Set<TenantEntity>().ToListAsync(ct);   // registry: not tenant-scoped
-        var anchors = (await db.Set<SubscriptionEntity>().IgnoreQueryFilters()
+        var anchors = (await db.Set<SubscriptionEntity>().AcrossTenants()
             .Select(s => s.TenantId).ToListAsync(ct)).ToHashSet();
         return Covered(tenants, anchors, anchorId);
     }
@@ -81,7 +81,7 @@ public static class Subscriptions
     public static IReadOnlyList<string> CoveredTenants(DbContext db, string anchorId)
     {
         var tenants = db.Set<TenantEntity>().ToList();
-        var anchors = db.Set<SubscriptionEntity>().IgnoreQueryFilters()
+        var anchors = db.Set<SubscriptionEntity>().AcrossTenants()
             .Select(s => s.TenantId).ToList().ToHashSet();
         return Covered(tenants, anchors, anchorId);
     }

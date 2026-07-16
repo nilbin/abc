@@ -124,6 +124,16 @@ public static class TamOpenIddict
         // filter and actor resolution both run off this. Before authn the principal is empty and the
         // tenant would always fall back. This is why the tenant scope lives here, not before MapTamAuth.
         app.UseTamTenantScope();
+        // The auth branch is a sanctioned cross-tenant scope (docs/33 D-R8): login enumerates
+        // an account's memberships across arbitrary tenants and writes token/lease rows for the
+        // CHOSEN tenant while the ambient scope still holds the fallback. The EF filter is
+        // untouched (auth queries opt out explicitly); this feeds the RLS backstop's sentinel.
+        app.Use(async (http, next) =>
+        {
+            if (http.Request.Path.StartsWithSegments("/connect"))
+                http.RequestServices.GetRequiredService<TenantScope>().EscalateCrossTenant();
+            await next(http);
+        });
         app.UseAuthorization();
         app.MapMethods("/connect/authorize", ["GET", "POST"], Authorize);
         app.MapPost("/connect/authorize/login", LoginSubmit);
@@ -256,7 +266,7 @@ public static class TamOpenIddict
             if (account is null) return Deny();
 
             // A machine acts in the single tenant it is a member of; the membership check still guards.
-            var membership = await tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+            var membership = await tam.Db.Set<TenantMembershipEntity>().AcrossTenants()
                 .FirstOrDefaultAsync(m => m.AccountId == account.Id && m.Active);
             return SignInAsAccount(account, membership?.TenantId, request.GetScopes());
         }
@@ -272,7 +282,7 @@ public static class TamOpenIddict
         if (token is not { Length: > 0 }) return null;
         var hash = Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
-        var invite = await tam.Db.Set<InviteEntity>().IgnoreQueryFilters()
+        var invite = await tam.Db.Set<InviteEntity>().AcrossTenants()
             .FirstOrDefaultAsync(i => i.TokenHash == hash && i.AcceptedAtIso == null);
         if (invite is null) return null;
         return IsoTime.TryParse(invite.ExpiresAtIso, out var expires)

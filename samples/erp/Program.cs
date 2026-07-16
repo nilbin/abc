@@ -111,7 +111,12 @@ builder.Services.AddDbContext<ErpDbContext>(options =>
 {
     // Provider by connection-string shape: "Host=..." → PostgreSQL (jsonb), else SQLite dev file.
     if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+    {
         options.UseNpgsql(connectionString);
+        // The RLS backstop (docs/33): keeps app.tenant_id/app.tenant_read_set true to the
+        // ambient scope so the database-side policies mirror the EF filter.
+        options.AddTamRls();
+    }
     else
         options.UseSqlite(connectionString);
     // Framework DbContext conventions (tenant auto-stamp) — one call, never forgotten.
@@ -158,6 +163,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ErpDbContext>();
     Seed.Run(db);
+    // Row-level security policies over every tenant-scoped table (docs/33) — Postgres only;
+    // throws if the connecting role would silently bypass RLS (superuser/BYPASSRLS).
+    if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+        await TamRls.ProvisionAsync(db);
     // Machine client for agents/integrations: authenticates with client credentials and acts
     // as the same-named framework user (seeded with the dispatcher role) — audited like anyone.
     await Tam.Auth.TamOpenIddict.EnsureClientAsync(scope.ServiceProvider, "mcp-agent", "agent-secret");

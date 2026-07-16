@@ -26,7 +26,7 @@ public static class TamTreeScopes
     /// </summary>
     public static IQueryable<T> InNode<T>(this IQueryable<T> source, TenantId active)
         where T : class, ITenantScoped
-        => source.IgnoreQueryFilters().Where(e => e.TenantId == active.Value);
+        => source.AcrossTenants().Where(e => e.TenantId == active.Value);
 
     /// <summary>
     /// The AMBIENT scope, made explicit: the acting node plus the request's read set (non-empty
@@ -38,7 +38,7 @@ public static class TamTreeScopes
         where T : class, ITenantScoped
     {
         var ids = ScopeIds(db, active);
-        return source.IgnoreQueryFilters().Where(e => ids.Contains(e.TenantId));
+        return source.AcrossTenants().Where(e => ids.Contains(e.TenantId));
     }
     /// <summary>
     /// subtree (downward roll-up): rows owned at or BELOW the active node — the region manager's
@@ -53,7 +53,7 @@ public static class TamTreeScopes
         var nodeIds = db.Set<TenantEntity>()
             .Where(t => t.Path == activePath || t.Path.StartsWith(prefix))
             .Select(t => t.Id);
-        return source.IgnoreQueryFilters().Where(e => nodeIds.Contains(e.TenantId));
+        return source.AcrossTenants().Where(e => nodeIds.Contains(e.TenantId));
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ public static class TamTreeScopes
         // child row's reference to a child-owned record still joins (the widened read and the
         // widened reference move together, docs/27).
         var ids = PathOf(db, active).Split('.').Concat(ScopeIds(db, active)).Distinct().ToArray();
-        return source.IgnoreQueryFilters().Where(e => ids.Contains(e.TenantId));
+        return source.AcrossTenants().Where(e => ids.Contains(e.TenantId));
     }
 
     private static string[] ScopeIds(DbContext db, TenantId active) =>

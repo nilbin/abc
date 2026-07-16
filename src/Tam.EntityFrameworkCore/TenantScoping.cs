@@ -27,10 +27,32 @@ public interface ITenantScopeContext
     /// nothing else. Empty everywhere else — including every write path: the stamp interceptor
     /// and operation pipeline use <see cref="CurrentTenantId"/> alone (D-H4).</summary>
     IReadOnlyList<string> TenantReadSet { get; }
+
+    /// <summary>True when this scope has been EXPLICITLY escalated to cross-tenant (docs/33
+    /// D-R8: the auth branch, registry-mutating framework operations). The RLS backstop maps
+    /// it to the '*' sentinel; hosts without RLS can ignore it — the EF filter never reads it
+    /// (cross-tenant queries still opt out per query with <see cref="TamTenantFilter.AcrossTenants"/>).</summary>
+    bool CrossTenantScope => false;
 }
 
 public static class TamTenantFilter
 {
+    /// <summary>The query tag carried by every sanctioned cross-tenant READ (docs/33 D-R7).
+    /// EF renders it as a leading SQL comment, which the RLS interceptor recognizes and runs
+    /// that one command under the cross-tenant sentinel — the database-visible half of the
+    /// IgnoreQueryFilters-plus-explicit-row-filter pattern.</summary>
+    public const string CrossTenantQueryTag = "tam:cross-tenant";
+
+    /// <summary>
+    /// THE sanctioned cross-tenant read: <c>IgnoreQueryFilters</c> (the EF opt-out) plus the
+    /// <see cref="CrossTenantQueryTag"/> (the database opt-out, docs/33). Every framework call
+    /// site that deliberately reads across tenants uses this — never raw IgnoreQueryFilters —
+    /// so the two layers opt out TOGETHER and the pairing is greppable. Callers still filter
+    /// rows explicitly; the composition rule (docs/27) is unchanged.
+    /// </summary>
+    public static IQueryable<T> AcrossTenants<T>(this IQueryable<T> source) where T : class =>
+        source.IgnoreQueryFilters().TagWith(CrossTenantQueryTag);
+
     /// <summary>
     /// Applies the tenant global query filter to every <see cref="ITenantScoped"/> entity in the
     /// model, comparing each row's TenantId to the context's <see cref="ITenantScopeContext.CurrentTenantId"/>.

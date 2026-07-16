@@ -180,7 +180,7 @@ public static class MoveTenant
         ITamDb tam, List<TenantEntity> nodes, TenantEntity moved, CancellationToken ct)
     {
         var findings = new List<Finding>();
-        var anchors = await tam.Db.Set<SubscriptionEntity>().IgnoreQueryFilters().ToListAsync(ct);
+        var anchors = await tam.Db.Set<SubscriptionEntity>().AcrossTenants().ToListAsync(ct);
         var byId = nodes.ToDictionary(t => t.Id);
 
         // Post-move covering anchors, computed over the ALREADY-REWRITTEN in-memory paths.
@@ -192,7 +192,7 @@ public static class MoveTenant
         var subtreeIds = nodes
             .Where(t => TenantEntity.IsSelfOrDescendant(moved.Path, t.Path))
             .Select(t => t.Id).ToList();
-        var activations = await tam.Db.Set<PluginActivationEntity>().IgnoreQueryFilters()
+        var activations = await tam.Db.Set<PluginActivationEntity>().AcrossTenants()
             .Where(a => subtreeIds.Contains(a.TenantId)).ToListAsync(ct);
         foreach (var activation in activations)
         {
@@ -210,7 +210,7 @@ public static class MoveTenant
                 && TenantEntity.IsSelfOrDescendant(anchor.Path, t.Path)
                 && !Shadowed(t, covering.AnchorTenantId, anchorIds))
             .Select(t => t.Id).ToList();
-        var used = await tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+        var used = await tam.Db.Set<TenantMembershipEntity>().AcrossTenants()
             .CountAsync(m => m.Active && covered.Contains(m.TenantId), ct);
         if (used > covering.Subscription.Seats)
             findings.Add(SubscriptionFindings.SeatOverflow

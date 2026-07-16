@@ -18,8 +18,9 @@ src/Tam.AspNetCore           execution pipeline, view executor, batched resolve,
                              system, and the framework admin surface as TWELVE always-active
                              [TamPackage] modules (users/roles/audit/tenancy/rules/nav/... with
                              their forms, grids and embedded sv/en locales)
-src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane as a real package
-                             (was sample code — multi-node live refresh is one reference now)
+src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane + the RLS backstop
+                             (TamRls: policies over every tenant-scoped table, scope-synced
+                             session settings — docs/33)
 src/Tam.Auth.OpenIddict      embedded OpenIddict token server + ClaimsActorProvider (the
                              framework's own auth, behind the IActorProvider seam)
 packages/tam-core            manifest types, portable AST evaluator, localization, HTTP client
@@ -34,7 +35,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              140 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              143 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -439,6 +440,24 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   fingerprint stability), 14-check wire suite (validation findings, ETag movement, per-tenant
   isolation via act-as, admin grid rows, retire restores the baseline tree byte-for-byte),
   full matrix green on a fresh DB.
+- **The RLS backstop (docs/19 D2 → docs/33, D-R1..R8)**: PostgreSQL row-level security now
+  mirrors the EF tenant filter — `TamRls.ProvisionAsync` walks the EF model and puts
+  ENABLE+FORCE RLS plus one FOR ALL policy (current tenant ∨ subtree read set ∨ the explicit
+  cross-tenant sentinel) on every ITenantScoped table, refusing to run as a role that would
+  silently bypass RLS; `TamRlsInterceptor` (one class, three EF interceptor roles) keeps
+  `app.tenant_id`/`app.tenant_read_set` true to the ambient scope per command, re-syncing
+  after pool resets and transaction rollbacks (set_config is transactional). The first
+  Postgres run was the design input: sanctioned cross-tenant reads fail closed unless the
+  database can SEE the sanction — so `AcrossTenants()` (IgnoreQueryFilters + a query tag the
+  interceptor honors only in EF's leading comment block) replaces raw opt-outs at every
+  framework site, the auth branch escalates its requests explicitly
+  (`TenantScope.EscalateCrossTenant`, `/connect/*`), and the tenants REGISTRY is exempt as
+  bootstrap topology. The analyzer accepts AcrossTenants everywhere it accepted
+  IgnoreQueryFilters. SQLite dev path untouched. Verified: 143 unit tests; the FULL wire
+  matrix green on PostgreSQL with policies active AND again on SQLite; a psql probe as the
+  demoted app role proves the backstop directly — no setting → 0 rows (the forgotten-filter
+  case), demo scope → demo rows only, read set widens, sentinel spans, cross-tenant
+  INSERT/UPDATE rejected by policy; 26 tables covered, registry exempt.
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

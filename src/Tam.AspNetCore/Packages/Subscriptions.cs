@@ -85,7 +85,7 @@ public static class CurrentSubscription
         // usage is the anchor's whole pool — active memberships across every covered node.
         var covering = Subscriptions.Covering(tam.Db, context.TenantId.Value);
         var covered = Subscriptions.CoveredTenants(tam.Db, covering.AnchorTenantId);
-        var used = tam.Db.Set<TenantMembershipEntity>().IgnoreQueryFilters()
+        var used = tam.Db.Set<TenantMembershipEntity>().AcrossTenants()
             .Count(m => m.Active && covered.Contains(m.TenantId));
 
         return new[]

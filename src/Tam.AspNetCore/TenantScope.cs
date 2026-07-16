@@ -23,6 +23,15 @@ public sealed class TenantScope
     public IReadOnlyList<string> ReadSet { get; private set; } = [];
 
     public void WidenRead(IEnumerable<string> tenantIds) => ReadSet = [.. tenantIds];
+
+    /// <summary>True after <see cref="EscalateCrossTenant"/>: this request is a sanctioned
+    /// cross-tenant scope for its REMAINDER (docs/33 D-R8) — the auth branch (login enumerates
+    /// arbitrary memberships and writes token rows for the chosen tenant) and registry-mutating
+    /// framework operations whose changes flush at the pipeline's SaveChanges. The RLS backstop
+    /// maps it to '*'; the EF filter is unaffected (queries still opt out per query).</summary>
+    public bool AllTenants { get; private set; }
+
+    public void EscalateCrossTenant() => AllTenants = true;
 }
 
 public static class TamTenant

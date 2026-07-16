@@ -58,7 +58,7 @@ public static class PluginActivations
         // Runs in request AND background scopes and filters by an explicit tenantId, so it opts out
         // of the ambient global filter (which would return nothing when no request tenant is set).
         var active = await db.Set<PluginActivationEntity>()
-            .IgnoreQueryFilters()
+            .AcrossTenants()
             .Where(x => x.TenantId == tenantId)
             .Select(x => x.PluginId)
             .ToListAsync(ct);
