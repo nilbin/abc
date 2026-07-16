@@ -449,11 +449,11 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
-- **The docs SITE (GitHub Pages)**: MkDocs Material over docs/, deployed by
-  .github/workflows/docs.yml on every push to main — https://nilbin.github.io/abc/ once
-  Pages is enabled for the repo (one-time: Settings → Pages → Source: GitHub Actions; a
-  PRIVATE repo additionally needs a plan with Pages — the workflow builds strictly on every
-  push either way and starts deploying automatically after enablement). The
+- **The docs SITE (GitHub Pages) — LIVE at https://nilbin.github.io/abc/**: MkDocs Material
+  over docs/, rebuilt and republished by .github/workflows/docs.yml on every push to main.
+  Deployment is `mkdocs gh-deploy` onto the gh-pages branch — the Actions token can push a
+  branch but can never CREATE a Pages site through the API (that needs repo-admin rights),
+  which is why the configure-pages/artifact flow kept skipping. The
   tutorial is split one page per step (docs/tutorial/step-00..18 + tally; docs/20-tutorial.md
   stays as a pointer so inbound links survive), docs/index.md is the landing page, THIS file
   publishes as /status (the progress page), and docs/llms.txt is the machine-readable index
