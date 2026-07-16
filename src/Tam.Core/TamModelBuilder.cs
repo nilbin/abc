@@ -366,6 +366,19 @@ public sealed partial class TamModelBuilder
 
         var mergedNav = MergeNav(gridDefs);
 
+        // Placement IS declaration (docs/34 M5 fix 9): a slot placed on a declared page
+        // auto-declares itself — a record slot provides the record's context key, a
+        // page-level slot provides none. Standalone model.Slot() remains for external
+        // slots placed by app React, and for overriding the auto-derived context keys.
+        foreach (var page in pages.Values)
+        {
+            if (page.Record is { } record)
+                foreach (var section in record.Sections.Where(x => x.Kind == RecordSection.SlotKind))
+                    slots.TryAdd(section.Id, new SlotDefinition(section.Id, [record.ContextKey]));
+            foreach (var section in page.Sections.Where(x => x.Kind == PageSection.SlotKind))
+                slots.TryAdd(section.Id, new SlotDefinition(section.Id, []));
+        }
+
         var model = new TamModel
         {
             Nav = mergedNav,

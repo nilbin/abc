@@ -29,9 +29,9 @@ public static class ErpModel
         .PublishesEvent("order-completed", "orderId", "number")
         .PublishesEvent("work-order-completed", "workOrderId", "number")
 
-        // The order detail is a CONTRIBUTION POINT (docs/31 D-X4): declared once, with the record
-        // context it provides — every current and future plugin lands panels here unnamed.
-        .Slot("web.orders.detail", slot => slot.Key("orderId"))
+        // The order detail is a CONTRIBUTION POINT (docs/31 D-X4): placing it on the record
+        // below DECLARES it (docs/34 M5 — placement is declaration; the record's key is its
+        // context). model.Slot() would only be needed for external slots or a custom key.
 
         // The orders page is a DECLARED COMPOSITION (docs/32): grid + record surface (detail →
         // edit form → plugin panels). The hand-written OrdersPage React component is gone.
