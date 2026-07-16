@@ -121,6 +121,9 @@ reorders, relabels, additions) is free to evolve.
   Derivation-from-grids becomes the safety net, not the design: it cannot express hierarchy,
   ordering, or cross-plugin grouping.
 - **D-N2 — contribution is not placement.** Plugin suggests; host places; tenant overrides.
+  A suggestion slug collects into the matching SECTION or MODE (review round 4: two docs-only
+  implementers suggested "work" — the mode — and silently landed under "more"; the semantic
+  slug matches whatever grouping the host gave that name).
 - **D-N3 — the model carries pure depth + kind; the renderer maps depth to slot.** Slot names in
   the wire model would freeze one web layout into the contract. Depth cap mode + 3.
 - **D-N4 — modes are the top level of the tree, presentation-only,** orthogonal to act-as.

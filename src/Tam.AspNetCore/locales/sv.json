@@ -185,5 +185,17 @@
   "labels.order": "Ordning",
   "nav.unknown-node": "Ingen menypunkt har detta id.",
   "nav.invalid-parent": "Endast sidor kan flyttas, och endast in i en sektion.",
-  "labels.node-id": "Menypunkt"
+  "labels.node-id": "Menypunkt",
+  "labels.applied": "Tillämpad",
+  "labels.fields-added": "Fält tillagda",
+  "labels.fields-retired": "Fält avvecklade",
+  "labels.integration-id": "Integration",
+  "labels.invite-sent": "Inbjudan skickad",
+  "labels.kind": "Typ",
+  "labels.next-run-iso": "Nästa körning",
+  "labels.override-id": "Anpassning",
+  "labels.role-id": "Roll",
+  "labels.roles-defined": "Roller definierade",
+  "labels.rule-id": "Regel",
+  "labels.user-id": "Användare"
 }

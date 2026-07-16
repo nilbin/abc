@@ -46,5 +46,6 @@
   "nav.work": "Work",
   "nav.admin": "Administration",
   "nav.administration": "General",
-  "operations.customers.edit-contact.title": "Edit customer"
+  "operations.customers.edit-contact.title": "Edit customer",
+  "labels.customer-id": "Customer"
 }

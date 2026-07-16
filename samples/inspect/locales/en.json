@@ -8,5 +8,6 @@
   "inspect.labels.checklist-id": "Checklist",
   "labels.id": "Id",
   "ext.inspect.requiresInspection": "Requires inspection",
-  "inspect.checklist-incomplete": "The order has an unpassed checklist."
+  "inspect.checklist-incomplete": "The order has an unpassed checklist.",
+  "labels.checklist-id": "Checklist"
 }

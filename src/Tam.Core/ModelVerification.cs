@@ -35,7 +35,12 @@ public sealed partial class TamModelBuilder
                     return placed.Page with { Order = node.Order };
                 }
                 var children = node.Children.Select(Resolve).ToList();
-                if (node.Kind == NavNodeKind.Section)
+                // A suggestion slug collects into a matching SECTION or MODE (review round 4:
+                // both docs-only implementers suggested "work" — the mode — and silently landed
+                // under "more"; the semantic slug should match whatever grouping the host named
+                // that way, D-N2 spirit). Sections resolve first only by tree order: Resolve
+                // recurses depth-first, so a section named like its mode still wins its own pass.
+                if (node.Kind is NavNodeKind.Section or NavNodeKind.Mode)
                 {
                     foreach (var c in navContributions.Where(c => c.Suggest == node.Id && consumed.Add(c)))
                         children.Add(c.Page);
@@ -374,6 +379,12 @@ public sealed partial class TamModelBuilder
         static IEnumerable<string> NavLabels(NavNode node) =>
             new[] { node.LabelKey }.Concat(node.Children.SelectMany(NavLabels));
         var required = model.Operations.Values.SelectMany(o => o.InputFields.Select(f => f.LabelKey))
+            // Output fields ride the manifest with label keys too (agents/result rendering) —
+            // ungated they were the one hole in "no missing text in the default culture"
+            // (review round 4: a docs-only implementer shipped one and nothing failed).
+            .Concat(model.Operations.Values.SelectMany(o => o.OutputType is { } output
+                ? FieldModel.FromRecord(output).Select(f => f.LabelKey)
+                : []))
             .Concat(model.Operations.Values.Select(o => o.TitleKey))
             .Concat(model.Views.Values.SelectMany(v => v.ResultFields.Select(f => f.LabelKey)))
             .Concat(model.Plugins.Values.Select(p => p.TitleKey))
@@ -384,7 +395,7 @@ public sealed partial class TamModelBuilder
         {
             throw new InvalidOperationException(
                 $"L10N001: {missing.Count} key(s) missing in default culture '{catalogs.DefaultCulture}': " +
-                string.Join(", ", missing.Take(10)) + (missing.Count > 10 ? ", …" : string.Empty));
+                string.Join(", ", missing));   // ALL of them — nobody fixes keys one crash at a time
         }
     }
 

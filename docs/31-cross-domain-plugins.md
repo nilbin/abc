@@ -44,7 +44,7 @@ is formalization of what fortnox already does.
 
 ```csharp
 plugin.GridAction("web.orders.list", "invoicing.create-from-order",
-    bind => bind.Field("orderId").FromColumn("id"));
+    bind => bind.Field("orderId", fromColumn: "id"));
 ```
 
 A plugin attaches **its own operation** as a row action on a **host grid**, with a DECLARED
@@ -129,7 +129,7 @@ wire contract carrying record context — that plugins bind panels to:
 ```csharp
 model.Slot("web.orders.detail", context => context.Key("orderId", "guid"));      // host
 plugin.Panel("web.orders.detail", grid: "invoicing.web.invoices",
-    bind => bind.Query("orderId").FromContext("orderId"));                        // plugin
+    bind => bind.Query("orderId", fromContext: "orderId"));                        // plugin
 ```
 
 PLG007 validates slot existence + bind shape; the manifest gains `slots`; `@tam/react` ships

@@ -16,14 +16,7 @@ public sealed class FortnoxPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        foreach (var culture in new[] { "sv", "en" })
-        {
-            using var stream = typeof(FortnoxPlugin).Assembly
-                .GetManifestResourceStream($"Fortnox.locales.{culture}.json");
-            if (stream is null) continue;
-            plugin.LocaleDefaults(
-                culture, JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? []);
-        }
+        plugin.LocaleDefaults();   // embedded locales/{culture}.json, by convention
 
         // D-X3: the read footprint is a BUILD-TIME fact — the mapper resolves customers through
         // the host lookup view, and the install screen can show exactly that.

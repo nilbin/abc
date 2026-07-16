@@ -19,5 +19,6 @@
   "enums.invoiced": "Fakturerad",
   "enums.paid": "Betald",
   "labels.status": "Status",
-  "labels.id": "Id"
+  "labels.id": "Id",
+  "labels.invoice-id": "Faktura"
 }

@@ -323,4 +323,27 @@ public class NavTests
 
     private static IEnumerable<NavNode> Flatten(NavNode node) =>
         new[] { node }.Concat(node.Children.SelectMany(Flatten));
+
+    [Fact]
+    public void A_suggestion_matching_a_mode_collects_under_the_mode()
+    {
+        // Review round 4: both docs-only implementers suggested "work" — the MODE — and
+        // silently landed under "more". A semantic slug now matches section OR mode.
+        // The plugin suggests "administration"; the host declares it as a MODE (no section).
+        var model = HostWithGrid(new Dictionary<string, string>
+        {
+            ["plugins.demo.title"] = "Demo",
+            ["demo.labels.name"] = "Name",
+            ["nav.demo.things"] = "Demo things",
+            ["nav.administration"] = "Administration",
+        })
+            .AddPlugin<ContributingPlugin>()
+            .Nav("web", nav => nav
+                .Mode("administration", m => m.Page("things", grid: "web.things", order: 10)))
+            .Build();
+
+        var work = model.Nav["web"].Single(n => n.Id == "administration");
+        Assert.Equal(["things", "demo.things"], work.Children.Select(c => c.Id));
+        Assert.DoesNotContain(model.Nav["web"], n => n.Id == "more");
+    }
 }

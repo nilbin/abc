@@ -28,5 +28,8 @@
   "approvals.not-gateable": "The approval flow's own operations cannot require approval.",
   "approvals.unknown-member": "No active user with that email address in this organization.",
   "approvals.email.requested-subject": "Approval required",
-  "approvals.email.requested-body": "A request ({operation}) is awaiting your approval."
+  "approvals.email.requested-body": "A request ({operation}) is awaiting your approval.",
+  "labels.group-id": "Group",
+  "labels.request-id": "Request",
+  "labels.actor-id": "Actor"
 }

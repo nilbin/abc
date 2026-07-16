@@ -46,5 +46,6 @@
   "nav.work": "Arbete",
   "nav.admin": "Administration",
   "nav.administration": "Allmänt",
-  "operations.customers.edit-contact.title": "Redigera kund"
+  "operations.customers.edit-contact.title": "Redigera kund",
+  "labels.customer-id": "Kund"
 }

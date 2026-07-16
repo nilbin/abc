@@ -53,12 +53,16 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         "TAM006", "Ownership scoping is incomplete",
         "{0}");
 
+    public static readonly DiagnosticDescriptor Tam007 = Rule(
+        "TAM007", "Constructor projection in a view",
+        "View '{0}' projects its Result through a constructor — EF cannot rewrite the mechanical sort/filter through positional arguments and every sorted/filtered request fails at runtime. Project with member initializers: new Result {{ Id = x.Id, ... }} (init-property record).");
+
     public static readonly DiagnosticDescriptor Tam005 = Rule(
         "TAM005", "Widened query composes an implicitly-filtered source",
         "EF's IgnoreQueryFilters is query-wide: composing a widened source (InSubtree/WithInherited/IgnoreQueryFilters) strips the global tenant filter from EVERY source in this query. Scope this side explicitly — .InNode(tenant) for strict, .InScope(db, tenant) for the ambient (possibly subtree-widened) scope, or its own InSubtree/WithInherited (docs/27, the composition rule).");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006];
+        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006, Tam007];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -98,6 +102,13 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
             // enters the compiled catalogue and no role could ever grant it. (b) Once a widening
             // atom "R.A-all" is declared ANYWHERE, every view authorized on "R.A" must apply
             // ScopedUnless with it — the fail-closed guarantee policy-authored scopes never had.
+            // TAM007: found by BOTH docs-only implementers on day one — a positional-record
+            // projection builds green everywhere (analyzer, model verification, manifest) and
+            // 500s on the first sorted request, because the sort composer inlines the projection
+            // and EF can only reduce member-init bindings. The framework's promise is compile-
+            // time truth; this is the missing half of that promise for views.
+            start.RegisterSyntaxNodeAction(AnalyzeViewProjection, SyntaxKind.ObjectCreationExpression);
+
             var ownership = new OwnershipScopeState();
             start.RegisterSymbolAction(ctx => ownership.CollectType(ctx), SymbolKind.NamedType);
             start.RegisterSyntaxNodeAction(
@@ -248,6 +259,35 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
     private static readonly string[] WideningCalls = { "IgnoreQueryFilters", "AcrossTenants", "InSubtree", "WithInherited" };
     private static readonly string[] ExplicitScopeCalls = { "IgnoreQueryFilters", "AcrossTenants", "InSubtree", "WithInherited", "InNode", "InScope" };
     private static readonly string[] ComposingMethods = { "Join", "GroupJoin", "Concat", "Union", "Except", "Intersect" };
+
+    /// <summary>TAM007: inside a [View] class, creating the nested Result type with CONSTRUCTOR
+    /// ARGUMENTS is flagged — the mechanical sort/filter rewrites member-init bindings only.
+    /// Member-init creations (zero ctor args) pass; Results built outside views are untouched.</summary>
+    private static void AnalyzeViewProjection(SyntaxNodeAnalysisContext context)
+    {
+        var creation = (Microsoft.CodeAnalysis.CSharp.Syntax.ObjectCreationExpressionSyntax)context.Node;
+        if (creation.ArgumentList is null || creation.ArgumentList.Arguments.Count == 0) return;
+
+        if (context.SemanticModel.GetSymbolInfo(creation.Type).Symbol is not INamedTypeSymbol created)
+            return;
+        if (created.Name != "Result") return;
+
+        // The Result must be NESTED in a [View]-attributed class, and the creation must sit
+        // inside that same class (its Execute/projection code).
+        if (created.ContainingType is not { } view
+            || !view.GetAttributes().Any(a => a.AttributeClass?.Name == "ViewAttribute"))
+            return;
+        var enclosing = context.ContainingSymbol?.ContainingType;
+        var inside = false;
+        for (var t = enclosing; t is not null; t = t.ContainingType)
+            if (SymbolEqualityComparer.Default.Equals(t, view)) { inside = true; break; }
+        if (!inside) return;
+
+        var viewId = view.GetAttributes()
+            .First(a => a.AttributeClass?.Name == "ViewAttribute")
+            .ConstructorArguments.FirstOrDefault().Value?.ToString() ?? view.Name;
+        context.ReportDiagnostic(Diagnostic.Create(Tam007, creation.GetLocation(), viewId));
+    }
 
     private static void AnalyzeQueryComposition(SyntaxNodeAnalysisContext context)
     {

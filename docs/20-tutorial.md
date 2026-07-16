@@ -1,44 +1,154 @@
 # 20 — Tutorial: A Complete Feature, End to End
 
-This walkthrough builds a complete **Work Orders** feature for a fictional field-service company. It shows every file a developer writes and, after each step, what the framework derives from it. It is written as if the framework exists; treat it as the executable specification of the developer experience — if implementing a phase makes this document untrue, the implementation is wrong.
+This walkthrough builds a complete **Work Orders** feature for a fictional field-service company. It shows every file a developer writes and, after each step, what the framework derives from it. It began life as the executable specification of the developer experience; the framework now exists, and the code samples in Steps 0–10 are lifted from the running sample (`samples/erp` and its sibling plugins) — if a sample here drifts from the source, the document is wrong. Where something is still design rather than code, the step says so: **BUILT** means verified against the source; *(designed, not built)* means the vision is stated but nothing enforces it yet.
 
 **The scenario.** Customers call in service jobs. An order is created for a customer, optionally linked to a project, carries a work address and description, and is eventually completed. Back-office staff use the web app, technicians use mobile, the Fortnox integration imports orders, and agents create orders over MCP. One tenant wants a "Machine serial number" field on orders.
 
-**What we will write:** one domain file, four feature folders, one integration mapping. **What we will not write:** controllers, DTOs, validators, API clients, form schemas, grid schemas, MCP wrappers, audit code, or conflict handling.
+**What we will write:** one domain file, one feature file, a composition root, one integration plugin. **What we will not write:** controllers, DTOs, validators, API clients, form schemas, grid schemas, MCP wrappers, audit code, or conflict handling.
 
 ```
-Product.Domain/Orders/Order.cs
-Product.Application/Orders/
-  Create/       Operation.cs  Derivations.cs  Bindings.cs  Tests.cs
-  EditDetails/  Operation.cs  Bindings.cs     Tests.cs
-  Complete/     Operation.cs  Tests.cs
-  List/         View.cs       Bindings.cs     Tests.cs
-Product.Integrations/Fortnox/ImportFortnoxOrder.cs
-Product.Application/locales/  sv.json  en.json
+samples/erp/
+  Erp.csproj             the build contract                    (Step 0)
+  Db.cs                  the DbContext                         (Step 0)
+  Program.cs             the composition root: model + host    (Steps 0, 4, 5, 18)
+  Domain.cs              entities, value types, findings       (Step 1)
+  Features/Orders.cs     operations, derivations, views        (Steps 2–7)
+  Features/Customers.cs  the same pattern, smaller
+  locales/               sv.json  en.json                      (Step 1)
+samples/fortnox/         the Fortnox integration, as a plugin  (Step 10)
 ```
+
+Note what is absent: no per-feature `Bindings.cs`. Bindings — forms, grids, nav, pages — are declared in the composition root, one screen apart from each other and from the pipeline that serves them (docs/29).
 
 ---
 
-## Step 1 — Domain state
+## Step 0 — A new host from nothing *(BUILT — `samples/erp`)*
 
-Plain C#. Semantic value types carry intrinsic meaning once; everything downstream reuses it. Note what is *absent*: no display text anywhere — labels and messages resolve by key from the locale files ([21-localization.md](21-localization.md)), and a hardcoded string in a display position is build error `L10N000`.
+Three files make a Tam host. Everything else in this tutorial lands inside them.
+
+**The project file** is the build contract: the three framework references, the compiler as an analyzer, and the locale catalogs as analyzer inputs — which is what makes missing keys *build errors* rather than runtime surprises:
+
+```xml
+<!-- samples/erp/Erp.csproj  (Sdk="Microsoft.NET.Sdk.Web") -->
+<ItemGroup>
+  <ProjectReference Include="..\..\src\Tam.Core\Tam.Core.csproj" />
+  <ProjectReference Include="..\..\src\Tam.EntityFrameworkCore\Tam.EntityFrameworkCore.csproj" />
+  <ProjectReference Include="..\..\src\Tam.AspNetCore\Tam.AspNetCore.csproj" />
+  <ProjectReference Include="..\..\src\Tam.Compiler\Tam.Compiler.csproj"
+                    OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+</ItemGroup>
+<ItemGroup>
+  <AdditionalFiles Include="locales/**/*.json" />
+  <CompilerVisibleProperty Include="TamDefaultCulture" />
+</ItemGroup>
+<PropertyGroup>
+  <TamDefaultCulture>sv</TamDefaultCulture>
+</PropertyGroup>
+```
+
+A plugin project uses the same shape plus `<EmbeddedResource Include="locales/*.json" />` — its catalogs travel inside the package (Step 13).
+
+**The DbContext** is ordinary EF Core wearing the framework's contracts:
 
 ```csharp
-// Product.Domain/Orders/Order.cs
+// samples/erp/Db.cs (trimmed)
 
+public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantScope tenantScope)
+    : DbContext(options),
+      Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.IDataProtectionKeyContext,
+      ITenantScopeContext
+{
+    public string? CurrentTenantId => tenantScope.Current;             // drives the global filter
+    public IReadOnlyList<string> TenantReadSet => tenantScope.ReadSet; // subtree reads (Step 15)
+    public bool CrossTenantScope => tenantScope.AllTenants;            // sanctioned escalation (docs/33)
+
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<Order> Orders => Set<Order>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Order>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Description).HasMaxLength(1000);
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+        });
+
+        // Plugin storage opts in here — one line per installed plugin that ships entities (Step 13).
+        Inspect.InspectionPlugin.AddInspect(modelBuilder);
+
+        modelBuilder.UseTam(Database.ProviderName);   // framework tables + semantic value conversions
+        modelBuilder.UseTamOpenIddict();              // token/client storage for the auth server (Step 14)
+        modelBuilder.ApplyTenantFilter(this);         // ONE tenant boundary for the entire model
+    }
+}
+```
+
+`ITenantScopeContext` is the whole tenancy handshake: the framework reads the ambient scope off the context, and `ApplyTenantFilter` turns it into a global query filter over every `ITenantScoped` entity — framework and domain alike — so isolation is a property of the model, not a `Where` clause fifty call sites have to remember. `IDataProtectionKeyContext` (one `DbSet`) keeps the secrets vault's key ring in the shared database (Step 10).
+
+**The composition root** builds the model, then the host — in an order that matters:
+
+```csharp
+// samples/erp/Program.cs (trimmed)
+
+var model = new TamModelBuilder()
+    .DefaultCulture("sv")
+    .Locales(Path.Combine(AppContext.BaseDirectory, "locales"))
+    .AddDiscovered()   // compile-time discovery from Tam.Compiler — no runtime assembly scan
+    .AddTamSystem()    // framework packages: users, roles, audit, extensions, plugins, …
+    // …forms, grids, nav, pages: Steps 4, 5 and 18…
+    .Build();
+
+// Manifest export mode (D4): `dotnet run -- manifest [path]` for the CI baseline check.
+if (TamManifestExport.TryHandle(model, args)) return;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<ErpDbContext>(options =>
+{
+    options.UseSqlite(connectionString);   // or UseNpgsql + options.AddTamRls() — Step 15
+    options.UseTamConventions();           // tenant auto-stamp — one call, never forgotten
+});
+builder.Services.AddTam<ErpDbContext>(model);
+builder.Services.AddTamOpenIddict<ErpDbContext>(fallbackTenant: Seed.Tenant);   // Step 14
+
+var app = builder.Build();
+app.MapTamAuth();   // pins the request's active tenant right after authentication…
+app.MapTam();       // …then everything else: /api/operations/*, /api/views/*,
+                    // /api/forms/{id}/resolve, /api/manifest, /api/mcp, /api/events, /openapi.json
+app.Run();
+```
+
+`MapTamAuth` before `MapTam`, always: the token's active-tenant claim must be honored before any endpoint touches data, so that every view, operation and lookup runs under the global tenant filter the DbContext declared above. And the manifest-export line is not ceremony — CI exports the manifest and diffs it against the committed baseline (`scripts/check_manifest.py`): additions are free, breaking changes (a removed field, a new required input) fail the build until a human commits the new baseline in the same PR (D4).
+
+---
+
+## Step 1 — Domain state *(BUILT)*
+
+Plain C#. Semantic value types carry intrinsic meaning once; everything downstream reuses it. Note what is *absent*: no display text anywhere — labels and messages resolve by key from the locale files ([21-localization.md](21-localization.md)). *(Designed, not built: the `L10N000` analyzer rule that makes a hardcoded display string a build error. What the build enforces today is the reverse direction — `L10N001`, below.)*
+
+```csharp
+// samples/erp/Domain.cs
+
+public readonly record struct OrderId(Guid Value);
 public readonly record struct OrderNumber(string Value);
+public readonly record struct CustomerName(string Value);
 
 [Multiline, MaxLength(1000)]
 public readonly record struct OrderDescription(string Value);
+
+public readonly record struct Address(string Value);
 
 public enum OrderType { Service, Project }
 
 public enum OrderStatus { Open, Completed, Cancelled }
 
-public sealed class Order : IExtensible
+public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam.EntityFrameworkCore.ITenantScoped
 {
+    private Order() { }   // EF materializes; everyone else goes through Create
+
     public OrderId Id { get; private set; }
-    public TenantId TenantId { get; private set; }
+    public string TenantId { get; private set; } = "";
     public OrderNumber Number { get; private set; }
     public CustomerId CustomerId { get; private set; }
     public OrderType Type { get; private set; }
@@ -46,133 +156,143 @@ public sealed class Order : IExtensible
     public Address WorkAddress { get; private set; }
     public OrderDescription Description { get; private set; }
     public DateOnly? RequestedDate { get; private set; }
-    public Money? EstimatedTotal { get; private set; }
+    public decimal? EstimatedTotal { get; private set; }
     public OrderStatus Status { get; private set; }
-    public ExtensionData Extensions { get; private set; }
+    public string? AssignedToActorId { get; private set; }
+    public long Version { get; set; }                       // IVersioned: stamped by the pipeline
+    public ExtensionData Extensions { get; set; } = new();  // IExtensible: tenant fields (Step 9)
 
     public static Order Create(
-        OrderNumber number, CustomerId customerId, OrderType type,
+        string tenantId, OrderNumber number, CustomerId customerId, OrderType type,
         ProjectId? projectId, Address workAddress, OrderDescription description,
-        DateOnly? requestedDate, Money? estimatedTotal) { /* ... */ }
-
-    public void ChangeDescription(OrderDescription description)
-        => Description = description;
+        DateOnly? requestedDate, decimal? estimatedTotal) { /* assigns; Status = Open */ }
 
     public Result Complete()
     {
-        if (Status == OrderStatus.Completed)
-            return OrderErrors.AlreadyCompleted;
-        if (Status == OrderStatus.Cancelled)
-            return OrderErrors.CannotCompleteCancelled;
-
+        if (Status == OrderStatus.Completed) return OrderErrors.AlreadyCompleted;
+        if (Status == OrderStatus.Cancelled) return OrderErrors.CannotCompleteCancelled;
         Status = OrderStatus.Completed;
         return Result.Success();
     }
 }
 ```
 
+Three interface contracts, no base class: `ITenantScoped` (a plain `string TenantId` the pipeline stamps and the global filter scopes), `IVersioned` (a `long Version` the audit interceptor increments on every modification), `IExtensible` (the JSON-backed container tenant-defined fields live in). And note what money is: `EstimatedTotal` is a `decimal?` that a *binding* renders with `.Renderer("money")` (Step 4) — there is no `Money` CLR type, and search input is likewise a plain `string?` on the view's Query (Step 5). Semantic value types are for meaning the domain owns (`OrderNumber`, `OrderDescription`), not for formatting.
+
 Domain errors are **finding factories** — a stable code, no prose; the code doubles as the message key:
 
 ```csharp
 public static class OrderErrors
 {
-    public static readonly FindingFactory AlreadyCompleted =
-        Finding.Error("orders.already-completed");
-    public static readonly FindingFactory CannotCompleteCancelled =
-        Finding.Error("orders.cannot-complete-cancelled");
-    public static readonly FindingFactory InvalidCustomer =
-        Finding.Error("orders.invalid-customer");
+    public static readonly FindingFactory AlreadyCompleted = Finding.Error("orders.already-completed");
+    public static readonly FindingFactory CannotCompleteCancelled = Finding.Error("orders.cannot-complete-cancelled");
+    public static readonly FindingFactory InvalidCustomer = Finding.Error("orders.invalid-customer");
+    public static readonly FindingFactory NotFound = Finding.Error("orders.not-found");
+    public static readonly FindingFactory NotEditable = Finding.Error("orders.not-editable");
 }
 ```
 
 Every word a human will read lives in the locale files, per culture, reviewed like code:
 
 ```jsonc
-// locales/sv.json
+// locales/sv.json (excerpt)
 {
-  "orders.order.number": "Ordernummer",
-  "orders.order.description": "Arbetsbeskrivning",
+  "labels.number": "Ordernummer",
+  "labels.description": "Arbetsbeskrivning",
+  "labels.customer": "Kund",
+  "enums.service": "Service",
+  "enums.completed": "Slutförd",
+  "operations.orders.create.title": "Ny order",
   "orders.already-completed": "Ordern är redan slutförd.",
   "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar."
 }
-// locales/en.json — same keys; gaps are CI warnings with a completeness report
+// locales/en.json — same keys; gaps outside the default culture are CI warnings with a report
 ```
 
-Operation inputs, view columns, and forms all inherit these keys by convention — `CreateOrder.Input.Description` displays `orders.order.description`'s text with zero authoring.
+> **The locale key grammar.** Keys are derived, flat, and — for labels — global:
+>
+> - `labels.{kebab(member)}` — derived from the member name, so `labels.description` labels *every* `Description` field in the model. Sharing is the default; when the derived key would be wrong, `[LabelKey]` overrides it — `CreateOrder.Input.CustomerId` carries `[LabelKey("labels.customer")]` (Step 2) so the picker reads "Kund", not a raw "Customer id".
+> - `enums.{kebab(value)}` — `OrderStatus.Completed` → `enums.completed`. Global, like labels.
+> - `operations.{id}.title` — one title per operation; forms, modals and grid actions reuse it.
+> - `nav.{id}` — navigation nodes (Step 18).
+> - Findings resolve by their **code** (`orders.already-completed` above).
+> - `ext.{key}` — tenant field labels, merged into the catalogs per tenant from the registry (Step 9); a plugin's packaged field ships its label as `ext.{pluginId}.{key}` in the plugin's own catalogs.
+>
+> The catalogs are analyzer inputs (`AdditionalFiles`, Step 0), so a key the model references but the default culture lacks is build error `L10N001` — in the IDE, before the app boots. Plugins embed `locales/*.json` as `EmbeddedResource` and register them with `plugin.LocaleDefaults()`; application locale files override plugin defaults.
 
-EF Core mapping is ordinary EF Core; `Tam.EntityFrameworkCore` conventions handle semantic value conversions, and the JSONB `Extensions` column comes from `IExtensible`:
+EF Core mapping is ordinary EF Core, in the DbContext from Step 0 — no per-feature configuration classes:
 
 ```csharp
-public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
+// Db.cs (from Step 0)
+modelBuilder.Entity<Order>(b =>
 {
-    public void Configure(EntityTypeBuilder<Order> b)
-    {
-        b.Property(x => x.Description).HasMaxLength(1000);   // matches [MaxLength(1000)]
-        b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
-        // TenantId query filter, concurrency token, Extensions JSONB: applied by convention
-    }
-}
+    b.HasKey(x => x.Id);
+    b.Property(x => x.Description).HasMaxLength(1000);   // matches [MaxLength(1000)]
+    b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+});
 ```
 
-> **Consistency is verified, not assumed.** If the column were `HasMaxLength(500)`, the build fails:
-> `DB001: CreateOrder.Input.Description permits 1,000 characters but Order.Description is persisted as varchar(500).`
+Semantic value conversions, the tenant filter, the version stamp and the `Extensions` JSON column all come from Step 0's three calls (`UseTam`, `ApplyTenantFilter`, `UseTamConventions`) — never per entity. *(Designed, not built: a `DB001` diagnostic cross-checking `[MaxLength]` against the mapped column length; today the two `1000`s are kept honest by review.)*
 
 ---
 
-## Step 2 — The create operation
+## Step 2 — The create operation *(BUILT)*
 
 The only way an order comes into existence, no matter who calls.
 
 ```csharp
-// Product.Application/Orders/Create/Operation.cs
+// samples/erp/Features/Orders.cs
 
 [Operation("orders.create")]
 [Authorize("orders.create")]
-[AcceptsExtensions(For<Order>())]
-public static partial class CreateOrder
+[AcceptsExtensions(typeof(Order))]
+public static class CreateOrder
 {
     public sealed record Input(
-        CustomerId CustomerId,
+        [property: LabelKey("labels.customer")] CustomerId CustomerId,
         OrderType OrderType,
-        ProjectId? ProjectId,
         Address WorkAddress,
         OrderDescription Description,
+        [property: LabelKey("labels.project")] ProjectId? ProjectId = null,
         DateOnly? RequestedDate = null,
-        Money? EstimatedTotal = null) : IExtensibleInput;
+        decimal? EstimatedTotal = null);
 
     public sealed record Output(OrderId OrderId, OrderNumber Number);
 
     public static async Task<Result<Output>> Execute(
-        Input input,
-        OperationContext context,
-        IOrderNumberSequence numbers,          // generator-wired from DI
-        CancellationToken ct)
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
         var customerCheck = await OrderRules.CustomerCanReceiveOrder(
-            input.CustomerId, context.Db, ct);
-        if (customerCheck.IsError)
-            return customerCheck;
+            input.CustomerId, context.TenantId, db, ct);
+        if (customerCheck.IsError) return customerCheck.As<Output>();
 
         if (input.OrderType == OrderType.Project)
         {
             var projectCheck = await OrderRules.ProjectBelongsToCustomer(
-                input.ProjectId, input.CustomerId, context.Db, ct);
-            if (projectCheck.IsError)
-                return projectCheck;
+                input.ProjectId, input.CustomerId, db, ct);
+            if (projectCheck.IsError) return projectCheck.As<Output>();
         }
 
+        var year = DateOnly.FromDateTime(DateTime.UtcNow).Year;
+        var sequence = await db.Orders.CountAsync(ct) + 1412;   // the demo's number series
         var order = Order.Create(
-            await numbers.NextAsync(ct),
-            input.CustomerId, input.OrderType, input.ProjectId,
-            input.WorkAddress, input.Description,
-            input.RequestedDate, input.EstimatedTotal);
+            context.TenantId.Value,
+            new OrderNumber($"{year}-{sequence:D5}"),
+            input.CustomerId,
+            input.OrderType,
+            input.OrderType == OrderType.Project ? input.ProjectId : null,
+            input.WorkAddress,
+            input.Description,
+            input.RequestedDate,
+            input.EstimatedTotal);
 
-        context.Db.Orders.Add(order);
-
+        db.Orders.Add(order);
         return new Output(order.Id, order.Number);
     }
 }
 ```
+
+The shape to notice: the handler's parameter list *is* its dependency declaration — the wire input, the ambient `OperationContext` (actor, tenant, culture, idempotency key; **no `.Db`**, no service locator), the application's own `ErpDbContext` injected like any service, and a `CancellationToken`. `[AcceptsExtensions(typeof(Order))]` opens the tenant-field channel (Step 9). A `Result` from a shared rule narrows to `Result<Output>` with `.As<Output>()`; a bare `Output` converts implicitly.
 
 The business rules live once, shared with derivations (Step 3):
 
@@ -180,11 +300,14 @@ The business rules live once, shared with derivations (Step 3):
 public static class OrderRules
 {
     public static async Task<Result> CustomerCanReceiveOrder(
-        CustomerId customerId, AppDbContext db, CancellationToken ct)
+        CustomerId customerId, TenantId tenant, ErpDbContext db, CancellationToken ct)
     {
-        var c = await db.Customers.Where(x => x.Id == customerId)
-            .Select(x => new { x.IsActive }).SingleOrDefaultAsync(ct);
-        return c is { IsActive: true } ? Result.Success() : OrderErrors.InvalidCustomer;
+        // Customers are group-shared reference data (Step 15) — hence the explicit scope.
+        var customer = await db.Customers.WithInherited(db, tenant)
+            .Where(x => x.Id == customerId)
+            .Select(x => new { x.IsActive })
+            .SingleOrDefaultAsync(ct);
+        return customer is { IsActive: true } ? Result.Success() : OrderErrors.InvalidCustomer;
     }
     // ProjectBelongsToCustomer(...) similar
 }
@@ -196,33 +319,35 @@ public static class OrderRules
 | --- | --- |
 | HTTP endpoint | `POST /api/operations/orders.create` |
 | OpenAPI + JSON Schema | Input/Output schemas from the records; nullability = requiredness |
-| TypeScript client | `client.orders.create(input): Promise<OperationResult<Output>>` — fully typed |
-| MCP tool | `orders.create` with the same schema (Step 8) |
-| Pipeline | authorization, transaction, structural validation, audit entry, idempotency, correlation, `TenantId` stamping |
-| Permission catalogue | `orders.create` appears in the manifest; unknown permission strings are build errors |
+| TypeScript client | `client.ordersCreate(input): Promise<TypedOperationResponse<OrdersCreateOutput>>` — flat camelCase methods over operation ids, generated from the manifest |
+| MCP tool | `orders_create` with the same schema (Step 8) |
+| Pipeline | authorization, transaction, structural validation, audit entry, idempotency (the `X-Idempotency-Key` header), correlation, `TenantId` stamping |
+| Permission catalogue | `orders.create` appears in the manifest's catalogue; roles validate against it at define time (Step 15) |
 
 The wire envelope every caller gets back:
 
 ```json
 {
-  "output": { "orderId": "ord_9f3k", "number": "2026-01415" },
+  "output": { "orderId": "7c9e1c1a-4b2e-4f5e-9d3a-0b54c7e3a1f2", "number": "2026-01417" },
   "findings": [],
-  "effects": [ { "type": "entity-created", "entity": "orders.order", "id": "ord_9f3k" } ],
-  "newVersion": 1,
-  "auditReference": "aud_77b21"
+  "effects": [ { "type": "entity-created", "entity": "order", "id": "7c9e1c1a-4b2e-…" } ],
+  "newVersion": 0,
+  "auditReference": "8f4c2f0b6c7d4e21a3b90d2f4a5b6c7d"
 }
 ```
 
+Effects name entities by their wire key — the kebab-cased CLR name (`order`), the same key Step 9's field registry and Step 13's packaged fields address. And `auditReference` points into `audit.entries`, which is itself an ordinary queryable view with a shipped admin grid (`web.audit.list`) — the audit trail is read through the same machinery it audits.
+
 ---
 
-## Step 3 — Derivations: reactive form behavior, written once
+## Step 3 — Derivations: reactive form behavior, written once *(BUILT)*
 
 Three facts about order creation are interactive: project fields only matter for project orders; project options depend on the chosen customer; picking a customer should validate them and suggest an address.
 
 ```csharp
-// Product.Application/Orders/Create/Derivations.cs
+// samples/erp/Features/Orders.cs
 
-public static partial class CreateOrderDerivations
+public static class CreateOrderDerivations
 {
     // Portable rules live on the FORM BINDING as expression lambdas (Step 4): lowered to the
     // wire AST, evaluated client-side instantly —
@@ -234,32 +359,33 @@ public static partial class CreateOrderDerivations
     [ServerDerivation("orders.create.available-projects")]
     [DependsOn(nameof(CreateOrder.Input.CustomerId), nameof(CreateOrder.Input.OrderType))]
     public static async Task<DerivationResult> AvailableProjects(
-        CreateOrder.Input input, DerivationContext context, CancellationToken ct)
+        CreateOrder.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
     {
-        if (input.OrderType != OrderType.Project || input.CustomerId is null)
+        if (input.OrderType != OrderType.Project || input.CustomerId.Value == Guid.Empty)
             return DerivationResult.Empty;
 
-        var options = await context.Db.Projects
+        var options = await db.Projects
             .Where(x => x.CustomerId == input.CustomerId && x.IsOpen)
-            .Select(x => Option.Create(x.Id, x.Name))
+            .OrderBy(x => x.Name)
+            .Select(x => new Option(x.Id.Value, x.Name))
             .ToListAsync(ct);
 
-        return DerivationResult.Options(nameof(CreateOrder.Input.ProjectId), options);
+        return DerivationResult.Empty.AddOptions(nameof(CreateOrder.Input.ProjectId), options);
     }
 
     [ServerDerivation("orders.create.customer-state")]
-    [DependsOn<CreateOrder.Input>(nameof(CreateOrder.Input.CustomerId))]
+    [DependsOn(nameof(CreateOrder.Input.CustomerId))]
     public static async Task<DerivationResult> CustomerState(
-        CreateOrder.Input input, DerivationContext context, CancellationToken ct)
+        CreateOrder.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
     {
-        if (input.CustomerId is null)
-            return DerivationResult.Empty;
+        if (input.CustomerId.Value == Guid.Empty) return DerivationResult.Empty;
 
-        var check = await OrderRules.CustomerCanReceiveOrder(input.CustomerId, context.Db, ct);
+        var check = await OrderRules.CustomerCanReceiveOrder(
+            input.CustomerId, context.Operation.TenantId, db, ct);
         if (check.IsError)
             return DerivationResult.From(check, target: nameof(CreateOrder.Input.CustomerId));
 
-        var customer = await context.Db.Customers
+        var customer = await db.Customers.WithInherited(db, context.Operation.TenantId)
             .Where(x => x.Id == input.CustomerId)
             .Select(x => new { x.CreditBlocked, x.VisitAddress })
             .SingleAsync(ct);
@@ -268,18 +394,18 @@ public static partial class CreateOrderDerivations
         if (customer.CreditBlocked)
             result = result.AddWarning(CustomerFindings.CreditBlocked);
 
-        return result.Suggest(nameof(CreateOrder.Input.WorkAddress), customer.VisitAddress);
+        return result.Suggest(nameof(CreateOrder.Input.WorkAddress), customer.VisitAddress.Value);
     }
 }
 ```
 
-Note `CustomerState` reuses `OrderRules.CustomerCanReceiveOrder` — the same rule the operation enforces authoritatively in Step 2. The form warns early; the transaction decides finally.
+The small print that keeps this honest: an unpicked `CustomerId` is its struct default, so the guard tests `Value == Guid.Empty`; `Option` is a wire value plus a label; `[DependsOn]` names members with `nameof` — the dependency list is what the form runtime batches and debounces on. Note `CustomerState` reuses `OrderRules.CustomerCanReceiveOrder` — the same rule the operation enforces authoritatively in Step 2. The form warns early; the transaction decides finally.
 
-**Derived:** the dependency graph (`ProjectId` visibility/requiredness ← `OrderType`; `ProjectId` options ← `CustomerId`, `OrderType`; `WorkAddress` suggestion ← `CustomerId`), cycle checking at build time, batched `/resolve` evaluation with debouncing, stale-response rejection, and the same preflight surface for MCP. If `ProjectRequired` referenced a field that `ProjectVisible` hides in all cases: `FORM001` at build time.
+**Derived:** the dependency graph (`ProjectId` visibility/requiredness ← `OrderType`; `ProjectId` options ← `CustomerId`, `OrderType`; `WorkAddress` suggestion ← `CustomerId`), batched `/api/forms/{id}/resolve` evaluation with client-side debouncing and stale-response rejection, and the same preflight surface for MCP (Step 8). *(Designed, not built: dependency-cycle detection and a `FORM001` diagnostic for rules that contradict each other.)*
 
 ---
 
-## Step 4 — Bindings: one per boundary that differs
+## Step 4 — Bindings: one per boundary that differs *(BUILT)*
 
 Bindings are declared on the model builder in the host's composition root — registration and
 implementation one screen apart, wire ids explicit (docs/29):
@@ -313,51 +439,77 @@ designed (docs/05) but not yet built — today a second surface declares its own
 The frontend, in its entirety, for both apps:
 
 ```tsx
-<OperationForm operation="orders.create" />
+<OperationForm form="web.orders.create" />
 ```
 
-The generic runtime reads the effective manifest: it renders fields in declared order with semantic-type renderers (`customer-picker`, `address`, `money`), evaluates portable rules locally as the user types (project fields appear the instant "Project" is selected), calls batched server resolution on blur for contextual derivations (options load, warnings appear, address gets suggested), and disables submit while blocking findings exist. Pixels — layout, density, components — belong to the app's registered renderers, never to the server.
+The component takes the FORM id — the operation, the fields, the rules all come from the manifest entry the id names. The generic runtime renders fields in declared order with registered renderers (`customer-picker`, `money`) and semantic-type defaults, evaluates portable rules locally as the user types (project fields appear the instant "Project" is selected), calls batched server resolution for contextual derivations (options load, warnings appear, the address gets suggested), and disables submit while blocking findings exist. Pixels — layout, density, components — belong to the app's registered renderers, never to the server.
 
 ---
 
-## Step 5 — The list: a view and its grid
+## Step 5 — The list: a view and its grid *(BUILT)*
 
 ```csharp
-// Product.Application/Orders/List/View.cs
+// samples/erp/Features/Orders.cs
 
 [View("orders.list")]
 [Authorize("orders.read")]
-public static partial class OrderList
+[Widens("orders.read-all")]
+[AcceptsExtensions(typeof(Order))]
+public static class OrderList
 {
     // Status/Type filtering is mechanical — declared below, composed by the framework (D7).
     // The Query record carries only authored logic the framework cannot derive.
-    public sealed record Query(SearchText? Search = null);
+    public sealed record Query(string? Search = null);
 
-    public sealed record Result(
-        OrderId Id,
-        OrderNumber Number,
-        CustomerName CustomerName,
-        OrderType Type,
-        OrderStatus Status,
-        DateOnly? RequestedDate,
-        long Version);
-
-    public static IQueryable<Result> Execute(Query query, AppDbContext db)
+    // Init-property record: EF composes the projection server-side; the grid binds these fields.
+    public sealed record Result
     {
-        return db.Orders.AsQueryable()
-            .Join(db.Customers, o => o.CustomerId, c => c.Id, (o, c) => new Result(
-                o.Id, o.Number, c.Name, o.Type, o.Status, o.RequestedDate, o.Version))
-            .SearchOn(query.Search, x => x.Number, x => x.CustomerName);
+        public OrderId Id { get; init; }
+        public OrderNumber Number { get; init; }
+        [LabelKey("labels.customer")]
+        public CustomerName CustomerName { get; init; }
+        public OrderType Type { get; init; }
+        public OrderStatus Status { get; init; }
+        public DateOnly? RequestedDate { get; init; }
+        public decimal? EstimatedTotal { get; init; }
+        [LabelKey("labels.company")]
+        public string TenantId { get; init; } = "";
+        public long Version { get; init; }
+        public ExtensionData Extensions { get; init; } = new();
+    }
+
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
+    {
+        var orders = db.Orders.InScope(db, context.TenantId)   // explicit scope — see below
+            .ScopedUnless(context, "orders.read-all", x => x.AssignedToActorId);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            orders = orders.Where(x =>
+                ((string)(object)x.Number).Contains(query.Search!) ||
+                ((string)(object)x.Description).Contains(query.Search!));
+
+        return orders
+            .Join(db.Customers.WithInherited(db, context.TenantId),   // group-shared lookup (Step 15)
+                o => o.CustomerId, c => c.Id, (o, c) => new Result
+            {
+                Id = o.Id, Number = o.Number, CustomerName = c.Name, Type = o.Type,
+                Status = o.Status, RequestedDate = o.RequestedDate,
+                EstimatedTotal = o.EstimatedTotal, TenantId = o.TenantId,
+                Version = o.Version, Extensions = o.Extensions,
+            });
     }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Number), nameof(Result.CustomerName), nameof(Result.RequestedDate))
-        .Filterable(nameof(Result.Status), nameof(Result.Type))
+        .Filterable(nameof(Result.Status), nameof(Result.Type), nameof(Result.CustomerName),
+            nameof(Result.RequestedDate), nameof(Result.EstimatedTotal))
+        .SubtreeRead(nameof(Result.TenantId))    // Steps 15/18: this same list is the group roll-up
         .DefaultSort(nameof(Result.Number), descending: true);
 }
 ```
 
-Declared capabilities are the contract — and the implementation: `Filterable(Status)` makes the framework compose the SQL predicate and the grid render the filter control, with no further code (D7). A binding sorting on an undeclared field is `VIEW001` at build time, and `Tam.Testing` executes every declared capability against real PostgreSQL in CI — untranslatable LINQ becomes a red test, not a production 500. Tenant custom fields filter the same way (`?ext.machineSerialNumber=…`) — necessarily mechanically, since a runtime-defined field can never appear in a compiled Query record.
+Two patterns here are enforced, not stylistic. **The paired-atom scope** (docs/28): `orders.read` is own-scoped by default, `[Widens("orders.read-all")]` declares the widening atom, and `.ScopedUnless(...)` applies it — an actor with only the base atom sees assigned orders, a dispatcher with the `-all` atom sees the board. Declaring the atom anywhere and *not* applying the scope on a view over that resource is build error `TAM006`, in both directions — fail-closed by construction. **Explicit scoping in compositions** (`InScope`, `WithInherited`): because one widened source strips EF's global filter from the whole query, composing without scoping the other side is build error `TAM005` (Step 15 explains the group semantics; at a single tenant these calls are the identity).
+
+Search is authored logic — a hand-written `Where` — while declared capabilities are contract *and* implementation: `Filterable(Status)` makes the framework compose the SQL predicate and the grid render the filter control, with no further code (D7). A sort request on an undeclared field falls back to the declared default at runtime. *(Designed, not built: a dedicated `VIEW001` build diagnostic for bindings referencing undeclared capabilities, and the `Tam.Testing` harness that executes every declared capability against real PostgreSQL in CI — today the wire suites against the running samples cover that ground.)* Tenant custom fields filter and sort the same mechanical way (`?ext.machineSerialNumber=…`) — necessarily, since a runtime-defined field can never appear in a compiled Query record.
 
 ```csharp
 // samples/erp/Program.cs — beside the form above
@@ -381,56 +533,58 @@ Same convention as forms: a grid with nothing to decide declares nothing — eve
 becomes a column in record order, minus `id`/`version` row plumbing (docs/32 D-P6). This one
 declares because it reorders and carries actions.
 
-Frontend: `<ViewGrid view="web.orders.list" />`. Paging, sorting, filtering, search, row actions with per-row availability, toolbar actions gated by the actor's permissions — all from the manifest.
+Frontend: `<ViewGrid grid="web.orders.list" />`. Paging, sorting, filtering, search, row actions with per-row availability, toolbar actions gated by the actor's permissions — all from the manifest.
 
 ---
 
-## Step 6 — Editing: partial, conflict-safe
+## Step 6 — Editing: partial, conflict-safe *(BUILT)*
 
 ```csharp
-// Product.Application/Orders/EditDetails/Operation.cs
+// samples/erp/Features/Orders.cs
 
 [Operation("orders.edit-details")]
 [Authorize("orders.edit")]
-[AcceptsExtensions(For<Order>())]
-public static partial class EditOrderDetails
+[Widens("orders.edit-all")]
+[AcceptsExtensions(typeof(Order))]
+public static class EditOrderDetails
 {
     public sealed record Input(
         OrderId OrderId,
-        Change<OrderDescription>? Description = null,
+        Change<OrderDescription?>? Description = null,
         Change<DateOnly?>? RequestedDate = null,
-        Change<Address>? WorkAddress = null,
-        Change<Money?>? EstimatedTotal = null) : IExtensibleInput;
+        Change<Address?>? WorkAddress = null,
+        Change<decimal?>? EstimatedTotal = null);
 
     public sealed record Output(long Version);
 
     public static async Task<Result<Output>> Execute(
-        Input input, OperationContext context, CancellationToken ct)
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
-        var order = await context.Db.Orders.LoadForUpdateAsync(input.OrderId, ct);
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderErrors.NotFound;
 
-        if (order.Status != OrderStatus.Open)
-            return OrderErrors.NotEditable;
+        // The write-side twin of the list's scope: base-atom holders edit only their own orders.
+        var scope = context.CheckOwnershipUnless("orders.edit-all", order.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
 
-        var merge = context.Changes.Apply(order, input);   // three-way, semantic equality
-        if (merge.HasConflicts)
-            return merge.ToConflictResult();
+        if (order.Status != OrderStatus.Open) return OrderErrors.NotEditable;
+
+        var merge = TamMerge.Apply(order, input);
+        if (merge.HasConflicts) return merge.ToConflictResult<Output>();
 
         return new Output(order.Version + 1);
     }
 }
 ```
 
-The handler states the *business* precondition (only open orders are editable). Everything mechanical — dirty detection, three-way merge with row lock, semantic equality per value type, conflict shaping, field-level audit — is the pipeline's job.
+Read the `Change` types precisely, because the convention carries meaning: `Change<OrderDescription?>?` is nullable **inside and out**. The outer `?` means *absent = untouched* — a partial edit names only what the user touched. The inner `?` lets a present change carry `value: null` — an explicit clear. Every clearable field follows this double-nullable convention; a non-clearable field would keep its inner type non-nullable. Loading is ordinary EF through the global tenant filter — `SingleOrDefaultAsync` plus a not-found finding, no special load API — and the handler states the *business* precondition (only open orders are editable). Everything mechanical — dirty detection, three-way merge, semantic equality per value type, conflict shaping, field-level audit — is `TamMerge` and the pipeline.
 
-Two dispatchers edit order `2026-01415` concurrently. Anna changes the description; Björn changed the requested date a moment earlier. Anna's submission:
+Two dispatchers edit order `2026-01415` concurrently. Anna changes the description; Björn changed the requested date a moment earlier. Anna's submission — change fields ride *flat* on the input, there is no `changes` wrapper:
 
 ```json
 {
-  "orderId": "ord_9f3k",
-  "changes": {
-    "description": { "original": "Repair pump", "value": "Replace pump" }
-  }
+  "orderId": "0b54c7e3-9d3a-4f5e-8b2e-7c9e1c1a41f2",
+  "description": { "original": "Repair pump", "value": "Replace pump" }
 }
 ```
 
@@ -453,148 +607,180 @@ Current `description` still equals Anna's original → her change applies cleanl
 
 — which the form runtime renders as *keep current / use mine / review*.
 
-The edit form binding (`EditDetails/Bindings.cs`) mirrors Step 4 and loads its initial values from a detail view; ~15 lines, omitted here.
+The edit form binding lives beside the create form in the composition root (`web.orders.edit`, Step 4's pattern, with the record key hidden); the record surface prefills it from the `orders.detail` view (Step 18).
 
 ---
 
-## Step 7 — Completing: an intent, not an edit
+## Step 7 — Completing: an intent, not an edit *(BUILT)*
 
 ```csharp
-// Product.Application/Orders/Complete/Operation.cs
+// samples/erp/Features/Orders.cs
 
 [Operation("orders.complete")]
 [Authorize("orders.complete")]
-public static partial class CompleteOrder
+[Widens("orders.complete-all")]
+public static class CompleteOrder
 {
-    public sealed record Input(OrderId OrderId, long ExpectedVersion);
+    public sealed record Input(OrderId OrderId);
+
     public sealed record Output(long Version);
 
     public static async Task<Result<Output>> Execute(
-        Input input, OperationContext context, CancellationToken ct)
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
-        var order = await context.Db.Orders.LoadForUpdateAsync(
-            input.OrderId, input.ExpectedVersion, ct);
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderErrors.NotFound;
+
+        var scope = context.CheckOwnershipUnless("orders.complete-all", order.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
 
         var result = order.Complete();
-        if (result.IsError)
-            return result;
+        if (result.IsError) return result.As<Output>();
 
-        return new Result<Output>(new Output(order.Version + 1))
-            .Effect(new OrderCompleted(order.Id, order.CustomerId));
+        return new Result<Output> { Output = new Output(order.Version + 1) }
+            .Effect(new EventPublished("order-completed",
+                new { orderId = order.Id.Value, number = order.Number.Value }));
     }
 }
 ```
 
-No `Change<T>` here, deliberately: status is consequential state, so it moves only through this intent (`EDIT001` fires if anyone exposes `Status` through a generic edit). The `OrderCompleted` effect drives the outbox event, cache invalidation, the grid's live refresh (decision D5), and the audit trail — none of it written here. Note there is no extension channel either: tenant fields never ride on intents.
+No `Change<T>` here, deliberately: status is consequential state, so it moves only through this intent — `EDIT001` fires at build time if anyone exposes an enum through a generic change-set. And note there is no extension channel either: tenant fields never ride on intents.
+
+The effect is not a typed event class — it is `EventPublished("order-completed", payload)`, an anonymous payload against a *declared* contract: the host's model carries `.PublishesEvent("order-completed", "orderId", "number")` (Step 0's builder), which is what subscribers bind against and `PLG009` verifies (Step 17.4). The event commits through the outbox if and only if the transaction commits; the inferred `entity-modified` effects drive the grid's live refresh (decision D5); the audit trail records it all — none of it written here.
 
 ---
 
-## Step 8 — What the machine callers see
+## Step 8 — What the machine callers see *(BUILT)*
 
 The same feature, no extra code:
 
-**HTTP** — `POST /api/operations/orders.create`, `orders.edit-details`, `orders.complete`; `GET /api/views/orders.list?status=Open&sort=-number&page=2`. OpenAPI documents all of it.
+**HTTP** — `POST /api/operations/orders.create`, `orders.edit-details`, `orders.complete`; `GET /api/views/orders.list?status=open&sort=number&dir=desc&page=2` — filter and sort parameters are the camelCase wire names, enum values camelCase (`status=open`), direction a separate `dir`. OpenAPI documents all of it at `/openapi.json`.
 
 **TypeScript** —
 
 ```ts
-const result = await client.orders.create({
-  customerId, orderType: "Service",
-  workAddress, description: "Replace pump",
+const result = await client.ordersCreate({
+  customerId, orderType: "service",
+  workAddress: "Industrigatan 4, Västerås",
+  description: "Byt packning på huvudpump",
 });
-// result.output?.number — typed end to end
+// result.output?.number — TypedOperationResponse<OrdersCreateOutput>, typed end to end
 ```
 
-**MCP** — an agent asked to "create a project order for Acme's pump replacement":
+The generated client (`apps/web/src/generated/tam.ts`) is flat camelCase methods over operation ids; an `{ idempotencyKey }` option becomes the `X-Idempotency-Key` header.
+
+**MCP** — tool names replace the id's dots and dashes with underscores (`orders_create`, `views_orders_list`), and the preflight tool rides the FORM id — interaction state is a form concern — so an agent asked to "create a project order for Acme's pump replacement" does:
 
 ```
-→ tool: orders.create.resolve   { "customerId": "cus_acme", "orderType": "Project" }
-← { "missingRequired": ["projectId", "workAddress", "description"],
-    "fields": { "projectId": { "options": [
-        { "value": "prj_11", "label": "Pump refurbishment 2026" },
-        { "value": "prj_14", "label": "Annual service agreement" } ] },
-      "workAddress": { "suggested": { "street": "Industrigatan 4", "city": "Västerås" } } },
-    "findings": [ { "code": "customers.credit-blocked", "severity": "warning",
-                    "message": "The customer is currently credit blocked." } ] }
+→ tool: web_orders_create_resolve   { "customerId": "…", "orderType": "project" }
+← { "fields": {
+      "projectId": { "visible": true, "enabled": true, "required": true,
+        "options": [ { "value": "…", "label": "Pumprenovering 2026" },
+                     { "value": "…", "label": "Serviceavtal årligt" } ],
+        "findings": [] },
+      "workAddress": { "visible": true, "enabled": true, "required": true,
+        "suggestedValue": "Industrigatan 4, Västerås", "findings": [] } },
+    "findings": [], "revision": 3 }
 
-→ tool: orders.create   { ...full input, "idempotencyKey": "agent-run-88f2" }
-← { "output": { "orderId": "ord_a112", "number": "2026-01416" }, "auditReference": "aud_79c02" }
+→ tool: orders_create   { …full input… }
+← { "output": { "orderId": "…", "number": "2026-01418" }, … }   ← the Step-2 envelope, verbatim
 ```
 
-The agent hit the same derivations, the same validation, the same audit trail as the web form — `resolve` is the form runtime's endpoint wearing a tool schema. The `message` text arrived resolved in the connection's culture from the same locale catalogs the web form uses; the `code` is what the agent branches on. There is no agent-specific business logic anywhere in the feature.
+Every field's resolved state carries `visible`/`enabled`/`required`/`suggestedValue`/`options`/`findings`; the suggested address is a single string because `Address` is a single-string value type. Had the agent picked the credit-blocked customer instead, a `customers.credit-blocked` warning finding would arrive with its `message` resolved in the connection's culture ("Kunden är kreditspärrad.") from the same catalogs the web form uses — the `code` is what the agent branches on. Idempotency is the same `X-Idempotency-Key` HTTP header on the MCP request, not a body property. The agent hit the same derivations, the same validation, the same audit trail as the web form — `resolve` is the form runtime's endpoint wearing a tool schema. There is no agent-specific business logic anywhere in the feature.
 
 ---
 
-## Step 9 — The tenant adds a custom field. Nobody deploys anything.
+## Step 9 — The tenant adds a custom field. Nobody deploys anything. *(BUILT)*
 
 A tenant administrator (or an agent on their behalf) calls a framework operation — the registry is itself just operations:
 
 ```json
 POST /api/operations/extensions.define-field
 {
-  "target": "orders.order",
+  "entity": "order",
   "key": "machineSerialNumber",
   "type": "text",
+  "maxLength": 40,
   "labels": { "sv": "Maskinserienummer", "en": "Machine serial number" },
   "descriptions": {
     "sv": "Serienummer för den servade maskinen, från typskylten.",
     "en": "Serial number of the serviced machine, from the type plate."
-  },
-  "constraints": { "maxLength": 40 },
-  "placement": { "after": "description", "bindingClasses": ["web", "mobile"] },
-  "permissions": { "write": ["dispatcher", "technician"] }
+  }
 }
 ```
 
-The registry runs its `EXT###` checks (key collision, visibility cycles, orphaned options — the compiler's rules, hosted at runtime), activates the field, and bumps the tenant's manifest revision. Because every binding in this tutorial opted in with `form.Extensions()` / `grid.Extensions()`, the field is **immediately**:
+The entity is the wire key from Step 2's effects (`order`); the payload is exactly the registry's surface — key, type, labels, `required?`, `maxLength?`, `options?` for selections. The registry runs its checks at definition time — unknown entity (`EXT007`), unknown type, malformed key, key collision (`EXT005`), missing default-culture label (`EXT006`, the registry twin of `L10N001`) — then activates the field and bumps the tenant's manifest revision. *(Designed, not built: declarative placement and per-field write permissions — today the field splices in wherever a binding put its `.Extensions()` marker, and writes ride the operation's own permission.)*
 
-- an input on the web and mobile create/edit forms, after Description, validated to 40 characters, rendered by the standard `text` renderer;
-- a column available in the orders grid, filterable (JSONB-translated; promotable to an expression index if it gets hot);
-- carried in `orders.edit-details` submissions as `"extensions": { "machineSerialNumber": { "original": null, "value": "MX-55012" } }` — same `Change<T>`, same three-way merge, same conflicts;
-- in the audit trail, field-level, like any compiled field;
-- in the MCP tool schema with the admin's description — agents can read and write it with elicitation;
-- mappable from Fortnox by field id, ownership-checked at configuration time.
+Because every binding in this tutorial opted in with `form.Extensions()` / `grid.Extensions()`, the field is **immediately**:
 
-What it can never do: gate `orders.complete`, appear on an intent operation, or otherwise steer compiled business decisions — the analyzer holds that line (see [15-extensibility.md](15-extensibility.md)). When serial numbers become load-bearing (warranty lookups, say), the graduation scaffold promotes the field to a compiled property with a data migration.
+- an input on the web create and edit forms at the splice point, validated to 40 characters, rendered by the standard `text` renderer;
+- a column and filter in the orders grid (`?ext.machineSerialNumber=…` — JSON-translated on the database, equality/range/contains operators derived from the declared type);
+- carried in `orders.edit-details` submissions as `"extensions": { "machineSerialNumber": { "original": null, "value": "MX-55012" } }` — the same change-set shape, three-way merged with structured conflicts;
+- in the audit trail with the operation that wrote it *(per-key audit granularity is designed, not built — today the audit entry records the extension column's change)*;
+- in the MCP tool schema with the admin's description — agents read and write it like any field.
+
+What it can never do: gate `orders.complete`, appear on an intent operation, or otherwise steer compiled business decisions — the pipeline holds that line (see [15-extensibility.md](15-extensibility.md)). *(Designed, not built: the graduation scaffold that promotes a load-bearing field to a compiled property with a data migration.)*
 
 Custom fields have a sibling: **automation rules** — the tenant's declarative logic, bounded by
 the same trust line. An admin defines "cold-chain orders need a requested date" as data: a Px
 condition over the input (compiled and extension fields alike) and a blocking finding, validated
-at definition time (`RUL###`: unknown field, type mismatch, unreachable condition), evaluated
-with a budget — no loops, no code, no HTTP — and fully audited. The executor has no rules
-special case: rules run as the `tam.rules` package's own wildcard gate, through the very seam
-Step 16's approvals plugin uses; and because Px is portable, the same condition drives
-client-side form behavior without a round trip. What rules never get is arbitrary code or
-writes to compiled fields — EDIT001's philosophy, extended to tenants.
+at definition time (`RUL001` unknown operation, `RUL002` unknown field, `RUL003` missing
+default-culture message), evaluated without loops, code, or HTTP — and fully audited. The
+executor has no rules special case: rules run as the `tam.rules` package's own wildcard gate,
+through the very seam Step 16's approvals plugin uses; and because Px is portable, the same
+condition drives client-side form behavior without a round trip. What rules never get is
+arbitrary code or writes to compiled fields — EDIT001's philosophy, extended to tenants.
 
 ---
 
-## Step 10 — The integration is a mapping, not a sync engine
+## Step 10 — The integration is a mapping, not a sync engine *(BUILT — `samples/fortnox`)*
+
+In the running system the Fortnox integration is not host code at all — it is a plugin, activation- and entitlement-gated, and its whole job is one mapping onto the `orders.create` *wire* contract:
 
 ```csharp
-// Product.Integrations/Fortnox/ImportFortnoxOrder.cs
+// samples/fortnox/FortnoxPlugin.cs (trimmed)
 
-[IntegrationBinding("fortnox.orders.import")]
-public static partial class ImportFortnoxOrder
+[TamPlugin("fortnox")]
+public sealed class FortnoxPlugin : ITamPlugin
 {
-    public static void Configure(
-        IntegrationBuilder<FortnoxOrder, CreateOrder.Input> integration)
+    public void Configure(PluginBuilder plugin)
     {
-        integration.Into(CreateOrder.Definition);
+        // The read footprint is a BUILD-TIME fact (docs/31 D-X3): the install screen shows exactly this.
+        plugin.RequiresView("customers.lookup", "id");
 
-        integration.Map(t => t.CustomerId,   s => ResolveCustomer(s.CustomerNumber));
-        integration.Map(t => t.OrderType,    s => OrderType.Service);
-        integration.Map(t => t.WorkAddress,  s => s.DeliveryAddress);
-        integration.Map(t => t.Description,  s => s.Description);
+        // POST /api/integrations/fortnox.orders.import — a JSON array of Fortnox orders.
+        plugin.Integration(
+            "orders.import", "orders.create",
+            key: row => Str(row, "documentNumber"),   // the vendor id is the idempotency key
+            map: MapOrderAsync);
+    }
 
-        integration.IdempotencyKey(s => s.DocumentNumber);
+    private static async Task<IReadOnlyDictionary<string, object?>> MapOrderAsync(
+        JsonElement row, IServiceProvider services, OperationContext context, CancellationToken ct)
+    {
+        // Resolve the vendor's customer NAME to our id through the host's customers.lookup VIEW,
+        // as the request's actor — the blessed read seam, never a host table or CLR type.
+        var views = (IHostViewReader)services.GetService(typeof(IHostViewReader))!;
+        var lookup = await views.RowsAsync(
+            "customers.lookup",
+            new Dictionary<string, string?> { ["search"] = Str(row, "customerName"), ["pageSize"] = "1" },
+            context, ct);
+        object? customerId = /* first row's "id", else null */;
+
+        return new Dictionary<string, object?>
+        {
+            ["customerId"] = customerId,   // null → orders.create's rule fails the row (see below)
+            ["orderType"] = "service",
+            ["workAddress"] = Str(row, "deliveryAddress"),
+            ["description"] = Str(row, "description"),
+        };
     }
 }
 ```
 
-Imported orders execute `orders.create` — same authorization (as the integration principal), same rules, same findings, same audit. Inbox, retries, dead-lettering, replay, and reconciliation come from `Tam.Integrations`. Forgetting to map a required field is `INT001` at build time, not a support ticket.
+Imported orders execute `orders.create` — same authorization (as the request's actor), same rules, same findings, same audit. The inbox stores each source row before processing and re-maps it on every retry, so a row that failed because the customer didn't exist yet recovers — with no re-send from the partner — once the customer is created; rows that keep failing dead-letter after bounded retries. The plugin references no host CLR type: it maps to the wire contract and reads through a *declared* view footprint. That a whole external-integration capability is a removable, per-tenant-priced plugin — over the same seams as fields and gates — is the extensibility thesis at full stretch.
 
-**Shipped as a plugin (implemented — samples/fortnox).** In the running system this integration is not host code at all — it lives in a `fortnox` plugin, activation- and entitlement-gated, mapped to `POST /api/integrations/fortnox.orders.import`. The plugin references no host CLR type: it maps to the `orders.create` *wire* contract and resolves the vendor customer name through the host's `customers.lookup` *view* (as the request's actor), and the inbox stores each source row so a customer created later recovers the failed import with no re-send. That a whole external-integration capability is a removable, per-tenant-priced plugin — over the same seams as fields and gates — is the extensibility thesis at full stretch.
+One scoping note: a host-authored integration can instead use the typed `IntegrationBuilder<TSource, TInput>`, where forgetting to map a required field fails model build with `INT001`. The plugin path above maps wire dictionaries — a missing field there surfaces as a validation finding on the row (retried from the inbox), never a 500 out of the endpoint.
 
 Traffic flows the other way too, and it needs credentials. The tenant's Fortnox API key lives
 in the **secrets vault** — `secrets.set` stores only Data-Protection ciphertext, and there is
@@ -610,70 +796,49 @@ guard blocks private-network destinations unless the host explicitly opts in.
 
 ---
 
-## Step 11 — Tests exercise the contract, not the plumbing
+## Step 11 — Tests exercise the contract, not the plumbing *(the harness: DESIGNED, NOT BUILT)*
+
+The design calls for an `OperationTest` base that runs the real pipeline — authorization, transaction, merge, audit — against a real database, with `Given.*` fixtures and assertions like `result.ShouldFailWith("orders.invalid-customer")` or `ShouldHaveEffect<EntityCreated>(e => e.Entity == "order")`, so that what's green in a feature's test file is what's true in production. **That harness does not exist yet.** Nothing ships it, and no sample uses it — treat any `OperationTest` snippet you find in older drafts as fiction.
+
+What you write today is ordinary xUnit against the framework's real seams — this one is `tests/Tam.Tests/MergeTests.cs`, verbatim:
 
 ```csharp
-// Product.Application/Orders/Create/Tests.cs  (representative cases)
-
-public sealed class CreateOrderTests : OperationTest
+[Fact]
+public void Non_overlapping_stale_edit_merges_cleanly()
 {
-    [Fact]
-    public async Task Creates_order_for_active_customer()
-    {
-        var customer = await Given.ActiveCustomer();
+    var doc = new Doc();
+    // Current Description already moved to "Replace pump" by user B:
+    TamMerge.Apply(doc, new EditInput(Description: new("Repair pump", "Replace pump")));
 
-        var result = await Execute(CreateOrder.Definition, ValidInput(customer.Id));
+    // User A, holding the old base, edits a DIFFERENT field:
+    var merge = TamMerge.Apply(doc, new EditInput(
+        RequestedDate: new(new DateOnly(2026, 7, 20), new DateOnly(2026, 7, 22))));
 
-        result.ShouldSucceed();
-        result.ShouldHaveEffect<EntityCreated>(e => e.Entity == "orders.order");
-        await Audit.ShouldContain(result.AuditReference);
-    }
-
-    [Fact]
-    public async Task Rejects_inactive_customer()
-    {
-        var customer = await Given.InactiveCustomer();
-
-        var result = await Execute(CreateOrder.Definition, ValidInput(customer.Id));
-
-        result.ShouldFailWith("orders.invalid-customer");
-    }
-
-    [Fact]
-    public async Task Concurrent_edits_to_different_fields_merge()
-    {
-        var order = await Given.OpenOrder();
-
-        await Execute(EditOrderDetails.Definition, ChangeRequestedDate(order));
-        var result = await Execute(EditOrderDetails.Definition, ChangeDescription(order));
-
-        result.ShouldSucceed();     // three-way merge, no false conflict
-    }
+    Assert.False(merge.HasConflicts);
+    Assert.Equal(["requestedDate"], merge.AppliedFields);
 }
 ```
 
-The test host runs the real pipeline (authorization, transaction, merge, audit) against a real database, so what's green here is what's true in production. Binding snapshot tests pin the manifest output; capability tests execute every declared sort/filter.
+The framework's own suite covers the pipeline at this level — merge semantics, paired-atom scoping, tenant isolation, plugin seams, RLS — and the Step 16/17 scenarios run as wire suites against the running samples. Manifest pinning exists as the D4 baseline check (Step 0), not as per-feature snapshot tests.
 
 ---
 
-## Step 12 — Six months later: change impact
+## Step 12 — Six months later: change impact *(the unified report: DESIGNED, NOT BUILT)*
 
-A developer adds `CustomerReference` to `CreateOrder.Input` as a required field. The build answers before any human review does:
+A developer adds `CustomerReference` to `CreateOrder.Input` as a required field. The design target is a single build-time answer:
 
 ```
 Added CreateOrder.Input.CustomerReference (required)
 
 ✓ HTTP + OpenAPI schema updated
-✓ Web create form: field added after Description
-✓ Mobile create form: field added (inherits from web binding)
+✓ Web create form: field added
 ✓ MCP tool schema updated
 ✓ TypeScript client regenerated
-– No database migration required (input-only, mapped to existing column)
 ✗ INT001 fortnox.orders.import does not map required field CustomerReference
 ✗ MANIFEST: non-additive change vs. release baseline — requires baseline approval (D4)
 ```
 
-Two red lines, both at compile/CI time: the Fortnox mapping must be extended, and the compatibility baseline must be consciously re-approved because a required input is a breaking change for external callers. Nothing reaches production surprised.
+**That consolidated report is not generated yet.** What exists today are its two red lines, separately: the D4 baseline check (`scripts/check_manifest.py`) fails CI on any non-additive manifest change — a new required input included — until the new baseline is consciously committed; and a *typed* integration that stops mapping a required field fails model build with `INT001` (the wire-mapped fortnox plugin instead fails per row, Step 10). The manifest's `gatedBy`/`subscribedBy` sections (Steps 13 and 17) carry the plugin-coupling half of the story. The green checkmarks above are true but silent — the derivation chain simply regenerates. What's missing is the tool that says all of this in one place.
 
 ---
 

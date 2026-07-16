@@ -190,6 +190,18 @@
       "nav.unknown-node": "No menu item has this id.",
       "nav.invalid-parent": "Only pages can move, and only into a section.",
       "labels.node-id": "Menu item",
+      "labels.applied": "Applied",
+      "labels.fields-added": "Fields added",
+      "labels.fields-retired": "Fields retired",
+      "labels.integration-id": "Integration",
+      "labels.invite-sent": "Invite sent",
+      "labels.kind": "Kind",
+      "labels.next-run-iso": "Next run",
+      "labels.override-id": "Override",
+      "labels.role-id": "Role",
+      "labels.roles-defined": "Roles defined",
+      "labels.rule-id": "Rule",
+      "labels.user-id": "User",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -199,6 +211,7 @@
       "inspect.labels.checklist-id": "Checklist",
       "ext.inspect.requiresInspection": "Requires inspection",
       "inspect.checklist-incomplete": "The order has an unpassed checklist.",
+      "labels.checklist-id": "Checklist",
       "plugins.fortnox.title": "Fortnox",
       "plugins.approvals.title": "Approval flows",
       "operations.approvals.groups.define.title": "New approver group",
@@ -229,6 +242,9 @@
       "approvals.unknown-member": "No active user with that email address in this organization.",
       "approvals.email.requested-subject": "Approval required",
       "approvals.email.requested-body": "A request ({operation}) is awaiting your approval.",
+      "labels.group-id": "Group",
+      "labels.request-id": "Request",
+      "labels.actor-id": "Actor",
       "plugins.invoicing.title": "Invoicing",
       "operations.invoicing.create-from-order.title": "Create invoice",
       "operations.invoicing.finalize.title": "Finalize invoice",
@@ -247,6 +263,7 @@
       "invoicing.draft-pending": "The order has a draft invoice that must be finalized first.",
       "enums.invoiced": "Invoiced",
       "enums.paid": "Paid",
+      "labels.invoice-id": "Invoice",
       "app.title": "Norrservice ERP",
       "nav.orders": "Orders",
       "nav.customers": "Customers",
@@ -289,7 +306,8 @@
       "nav.work": "Work",
       "nav.admin": "Administration",
       "nav.administration": "General",
-      "operations.customers.edit-contact.title": "Edit customer"
+      "operations.customers.edit-contact.title": "Edit customer",
+      "labels.customer-id": "Customer"
     },
     "sv": {
       "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
@@ -479,6 +497,18 @@
       "nav.unknown-node": "Ingen menypunkt har detta id.",
       "nav.invalid-parent": "Endast sidor kan flyttas, och endast in i en sektion.",
       "labels.node-id": "Menypunkt",
+      "labels.applied": "Till\u00E4mpad",
+      "labels.fields-added": "F\u00E4lt tillagda",
+      "labels.fields-retired": "F\u00E4lt avvecklade",
+      "labels.integration-id": "Integration",
+      "labels.invite-sent": "Inbjudan skickad",
+      "labels.kind": "Typ",
+      "labels.next-run-iso": "N\u00E4sta k\u00F6rning",
+      "labels.override-id": "Anpassning",
+      "labels.role-id": "Roll",
+      "labels.roles-defined": "Roller definierade",
+      "labels.rule-id": "Regel",
+      "labels.user-id": "Anv\u00E4ndare",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -488,6 +518,7 @@
       "inspect.labels.checklist-id": "Checklista",
       "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
       "inspect.checklist-incomplete": "Ordern har en checklista som inte \u00E4r godk\u00E4nd.",
+      "labels.checklist-id": "Checklista",
       "plugins.fortnox.title": "Fortnox",
       "plugins.approvals.title": "Godk\u00E4nnandefl\u00F6den",
       "operations.approvals.groups.define.title": "Ny godk\u00E4nnandegrupp",
@@ -518,6 +549,9 @@
       "approvals.unknown-member": "Ingen aktiv anv\u00E4ndare med den e-postadressen i denna organisation.",
       "approvals.email.requested-subject": "Godk\u00E4nnande kr\u00E4vs",
       "approvals.email.requested-body": "En beg\u00E4ran ({operation}) v\u00E4ntar p\u00E5 ditt godk\u00E4nnande.",
+      "labels.group-id": "Grupp",
+      "labels.request-id": "Beg\u00E4ran",
+      "labels.actor-id": "Akt\u00F6r",
       "plugins.invoicing.title": "Fakturering",
       "operations.invoicing.create-from-order.title": "Skapa faktura",
       "operations.invoicing.finalize.title": "Slutf\u00F6r faktura",
@@ -536,6 +570,7 @@
       "invoicing.draft-pending": "Ordern har ett fakturautkast som m\u00E5ste slutf\u00F6ras f\u00F6rst.",
       "enums.invoiced": "Fakturerad",
       "enums.paid": "Betald",
+      "labels.invoice-id": "Faktura",
       "app.title": "Norrservice ERP",
       "nav.orders": "Ordrar",
       "nav.customers": "Kunder",
@@ -578,7 +613,8 @@
       "nav.work": "Arbete",
       "nav.admin": "Administration",
       "nav.administration": "Allm\u00E4nt",
-      "operations.customers.edit-contact.title": "Redigera kund"
+      "operations.customers.edit-contact.title": "Redigera kund",
+      "labels.customer-id": "Kund"
     }
   },
   "operations": {
@@ -5407,6 +5443,17 @@
               "page": "customers"
             },
             "children": []
+          },
+          {
+            "id": "invoicing.invoices",
+            "kind": "page",
+            "labelKey": "nav.invoicing.invoices",
+            "order": 40,
+            "target": {
+              "grid": "invoicing.web.invoices"
+            },
+            "plugin": "invoicing",
+            "children": []
           }
         ]
       },
@@ -5526,17 +5573,6 @@
             "kind": "section",
             "labelKey": "nav.more",
             "children": [
-              {
-                "id": "invoicing.invoices",
-                "kind": "page",
-                "labelKey": "nav.invoicing.invoices",
-                "order": 40,
-                "target": {
-                  "grid": "invoicing.web.invoices"
-                },
-                "plugin": "invoicing",
-                "children": []
-              },
               {
                 "id": "approvals",
                 "kind": "page",

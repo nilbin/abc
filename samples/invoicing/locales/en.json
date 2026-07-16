@@ -19,5 +19,6 @@
   "enums.invoiced": "Invoiced",
   "enums.paid": "Paid",
   "labels.status": "Status",
-  "labels.id": "Id"
+  "labels.id": "Id",
+  "labels.invoice-id": "Invoice"
 }

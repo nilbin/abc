@@ -185,5 +185,17 @@
   "labels.order": "Order",
   "nav.unknown-node": "No menu item has this id.",
   "nav.invalid-parent": "Only pages can move, and only into a section.",
-  "labels.node-id": "Menu item"
+  "labels.node-id": "Menu item",
+  "labels.applied": "Applied",
+  "labels.fields-added": "Fields added",
+  "labels.fields-retired": "Fields retired",
+  "labels.integration-id": "Integration",
+  "labels.invite-sent": "Invite sent",
+  "labels.kind": "Kind",
+  "labels.next-run-iso": "Next run",
+  "labels.override-id": "Override",
+  "labels.role-id": "Role",
+  "labels.roles-defined": "Roles defined",
+  "labels.rule-id": "Rule",
+  "labels.user-id": "User"
 }

@@ -42,12 +42,12 @@ public sealed class InspectionPlugin : ITamPlugin
     {
         plugin.RequiresView("orders.detail", "id", "status"); // declared dependency, checked at build (docs/31 D-X3;
                                                           // the earlier RequiresHostEntity<Order> sketch was CLR-shaped and never built)
-        plugin.LocaleDefaults("Inspect.locales");         // embedded sv/en, overridable by the app
+        plugin.LocaleDefaults();   // embedded locales/{culture}.json by convention, app-overridable
     }
 }
 ```
 
-The host adds one line — `model.AddPlugin<InspectionPlugin>()` (the source generator emits the discovery, exactly like `AddDiscovered()`). Everything else follows from what the plugin's assembly declares.
+The host adds one line — `model.AddPlugin<InspectionPlugin>()` (the source generator emits the discovery, exactly like `AddDiscovered()`) — plus, when the plugin ships its own tables, the storage opt-in in the host DbContext: `InspectionPlugin.AddInspect(modelBuilder)`. Everything else follows from what the plugin's assembly declares.
 
 ### What a plugin may contribute
 
@@ -83,7 +83,7 @@ tier axes only:
 
 - **Always active.** Never in the activation table, never entitlement-gated; every activation
   consumer (pipeline existence check, gate filter, manifest, outbox dispatch) unions package
-  ids in. There is nothing to toggle — `plugins.activate` doesn't know packages exist, so the
+  ids in. There is nothing to toggle — `plugins.activate` (input: `{ "pluginId": ... }`) doesn't know packages exist, so the
   always-on tier can't be switched off (who activates the activator).
 - **Claimed prefixes instead of an id namespace.** Framework wire names (`users.invite`,
   `audit.entries`) are live and permanent (D4), so a package CLAIMS the prefixes it has always
@@ -189,3 +189,36 @@ Ordering note: #2 needs only machinery that exists today (audit + pipeline + ove
 5. **P5 — automation rules**: Px rule storage, RUL diagnostics, action catalog, pipeline evaluation with budgets.
 
 Each phase is independently shippable and independently valuable; nothing in P1–P3 waits on the JSONB query work that gates P4.
+
+
+## The plugin authoring reference (what the RTFM run proved must be written down)
+
+Two documentation-only implementers built plugins against this chapter; everything below is
+what they had to discover through compiler errors. Normative from now on:
+
+- **Data access**: plugin operations/views/gates take **`ITamDb`** (namespace `Tam.AspNetCore`;
+  surface `tam.Db.Set<T>()`) as an ordinary handler parameter — never a host DbContext type.
+  Host reads go through **`IHostViewReader`**: actor mode
+  `RowsAsync(viewId, IReadOnlyDictionary<string, string?> query, OperationContext, ct)`
+  (values are wire strings — `guid.ToString()` yourself), service mode drops the context and is
+  whitelisted by `RequiresView`. Both return `ViewResponse` (`Rows`, `Total`).
+- **Entities**: tenant scoping is structural — implement
+  `Tam.EntityFrameworkCore.ITenantScoped` (a settable `string TenantId`); the ambient filter
+  and the insert stamp then apply. Store timestamps you intend to SORT on as ISO-8601 strings
+  (the framework's `*Iso` convention — SQLite cannot order `DateTimeOffset`); `IsoTime.Now()`
+  produces them. Optimistic concurrency (`Version`) is opt-in via `IVersioned`.
+- **Bindings and events**: a plugin declares its own forms/grids with
+  `plugin.Model.Form<T>(...)` / `.Grid<T>(...)` (convention defaults apply, docs/32 D-P6) and
+  its events with `plugin.Model.PublishesEvent("id.event", ...fields)`; an operation publishes
+  with `result.Effect(new EventPublished("id.event", payload))`. Binding/nav/view/operation ids
+  all sit under the plugin prefix — for web bindings that means **plugin first, surface second**
+  (`invoicing.web.invoices`), the mirror of the host's `web.orders.list` (PLG001 enforces it).
+- **Locales**: ship `locales/{sv,en}.json` as `EmbeddedResource` and call
+  `plugin.LocaleDefaults()`. Required keys beyond your fields: `plugins.{id}.title`, and
+  `ext.{id}.{key}` for every packaged extension field. Every label key — inputs, OUTPUTS,
+  results, nav — is L10N-gated in the default culture at Build().
+- **csproj**: copy a sample plugin's project file — the contract is references to
+  Tam.Core/Tam.EntityFrameworkCore/Tam.AspNetCore, `Tam.Compiler` as
+  `OutputItemType="Analyzer"`, `AdditionalFiles` + `EmbeddedResource` for `locales/*.json`.
+  Build()-time PLG/L10N checks run in the HOST build — a plugin compiling green alone has not
+  been verified until a host registers it (the manifest export is the cheapest host check).

@@ -28,5 +28,8 @@
   "approvals.not-gateable": "Godkännandeflödets egna åtgärder kan inte kräva godkännande.",
   "approvals.unknown-member": "Ingen aktiv användare med den e-postadressen i denna organisation.",
   "approvals.email.requested-subject": "Godkännande krävs",
-  "approvals.email.requested-body": "En begäran ({operation}) väntar på ditt godkännande."
+  "approvals.email.requested-body": "En begäran ({operation}) väntar på ditt godkännande.",
+  "labels.group-id": "Grupp",
+  "labels.request-id": "Begäran",
+  "labels.actor-id": "Aktör"
 }
