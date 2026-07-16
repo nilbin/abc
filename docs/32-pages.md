@@ -67,6 +67,12 @@ object-shaped fields). Configure exists to DEVIATE — subset, reorder, renderer
 actions — never to enumerate what the record already states. An empty column/field list in a
 provided configure gets the same defaults, so a grid that only declares actions stays one line.
 
+**Row actions prefill the same way** (an M3 RTFM finding — the convention was only
+inferable from the sample): a grid `RowAction("op")` opens the operation's form with the
+input field whose wire name matches the ROW's id field prefilled from the clicked row (hide
+it with `.Renderer("hidden")`); every other input starts empty or from its suggestion
+derivations. That is how `time.book` rides the work-orders grid with `WorkOrderId` filled.
+
 Form prefill is the row-action convention made declarative: each form field takes the
 same-named detail result field; the record's `key` field takes the clicked row's id. The
 manifest gains a `pages` section (plugin pages activation-filtered like every contribution;

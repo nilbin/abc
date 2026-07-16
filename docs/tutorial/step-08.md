@@ -17,6 +17,17 @@ const result = await client.ordersCreate({
 
 The generated client (`samples/web/src/generated/tam.ts`) is flat camelCase methods over operation ids; an `{ idempotencyKey }` option becomes the `X-Idempotency-Key` header.
 
+Over raw HTTP the same preflight is `POST /api/forms/{formId}/resolve`, and the body is an
+ENVELOPE, not the bare input — the number-one mistake when scripting the wire by hand:
+
+```
+POST /api/forms/web.orders.create/resolve
+{ "input": { "customerId": "…", "orderType": "project" }, "changed": ["customerId"], "revision": 1 }
+```
+
+A flat body answers 400 with `pipeline.invalid-input` naming the expected shape. (The MCP
+tool below accepts the bare input because the adapter wraps it for you.)
+
 **MCP** — tool names replace the id's dots and dashes with underscores (`orders_create`, `views_orders_list`), and the preflight tool rides the FORM id — interaction state is a form concern — so an agent asked to "create a project order for Acme's pump replacement" does:
 
 ```

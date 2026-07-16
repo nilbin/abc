@@ -51,6 +51,13 @@ level is too coarse). "Full Orders, read Customers" is one role: `{ Order: Manag
 Levels expand to atoms at load time, so enforcement, the manifest, and the analyzer keep working on
 the atom set exactly as today — levels are authoring sugar over a stable substrate.
 
+Concretely, TODAY's expansion for a `{"area": "view"}` level entry against paired atoms
+(docs/28 D-AG2): `view` grants `area.read` AND `area.read-all` — a viewer role sees the whole
+board, not just own rows; grant BASE atoms individually when own-scoping is the intent (the
+technician role does exactly that). `edit` adds `area.create/edit/edit-all`; `manage` adds the
+area's intent atoms. When predicting what a role sees, read the level as "the widened tier",
+never the base tier.
+
 ### Field visibility (opt-in)
 
 A resource may mark fields **sensitive** (e.g. `Customer.creditInfo`). A capability grant then carries

@@ -98,3 +98,10 @@ EXT006:  Custom field lacks a label for enabled culture "en".     (registry, err
 ## Non-goals
 
 No machine translation, no runtime translation-editing UI (tenant label overrides are the escape hatch), no grammatical-inflection engine beyond the ICU subset. Translation files are ordinary reviewable artifacts in the repository — they flow through pull requests like code, because they are product surface.
+
+## Operational note: catalogs are copied at BUILD time
+
+`locales/*.json` reach the output directory on build. A `dotnet run --no-build` after editing
+a catalog runs against the OLD copies — the Build()-time gate then reports keys you can see in
+the source file, which looks like the fix "didn't take" (an M3 RTFM finding). Rebuild, or drop
+`--no-build`, after locale edits.

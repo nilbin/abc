@@ -1,5 +1,23 @@
 # 05 — Derivations
 
+Status: design-era doc — the CONCEPTS hold, but not every API sketch below exists. **What is
+BUILT** (an M3 RTFM finding — this box is the source of truth until the doc is rewritten):
+
+- Client-side: the portable AST rules `VisibleWhen` / `RequiredWhen` / `OnSourceChange`
+  (docs/06 bindings) — evaluated from the manifest with no server round-trip.
+- Server-side: `[ServerDerivation("id")]` + `[DependsOn(...)]` methods returning
+  `DerivationResult`, whose REAL surface is `Suggest(member, value)`,
+  `AddOptions(member, options)`, `AddWarning(factory)`, `AddFieldError(member, factory)`,
+  `Add(finding)`, `From(result, target)`, `Merge(other)` — served by
+  `POST /api/forms/{formId}/resolve` with body `{ "input": {...}, "changed": ["field"],
+  "revision": n }` (a flat body answers 400 naming the shape).
+- NOT built (kept below as design): `DerivedValue` (forced computed fields),
+  `field.DefaultOnceFrom` / `SuggestFrom` / `DerivedFrom` fluent bindings, the
+  `Preserve`/`Clear`/`ClearIfInvalid` policies (`RecomputeIfUntouched` is the one shipped
+  `DependentValuePolicy`), and dependency-cycle detection (FORM001). A computed
+  display-only value today rides a `Suggest` onto an input field the server ignores — the
+  docs/34 friction log tracks the wart.
+
 A derivation computes **interaction state** without changing durable business state.
 
 Derivations may:
