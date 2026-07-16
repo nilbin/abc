@@ -27,11 +27,14 @@ jobs:
           pip install mkdocs-material
           sed 's|(docs/|(|g' STATUS.md > docs/status.md
           mkdocs build --strict
-      # Pages must be enabled ONCE in repo settings (Settings → Pages → Source: GitHub
-      # Actions; private repos additionally need a plan that includes Pages). Until then the
-      # deploy steps SKIP — the build still validates every push, and deployment starts
-      # automatically on the first push after enablement.
-      - name: Check Pages enablement
+      # Creates the Pages site on first run (needs a PUBLIC repo or a plan with Pages) —
+      # tolerated-if-failing so the strict BUILD above still gates every push; the probe
+      # below decides whether deployment can proceed.
+      - uses: actions/configure-pages@v5
+        continue-on-error: true
+        with:
+          enablement: true
+      - name: Pages available?
         id: pages
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -40,8 +43,6 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/pages")
           echo "enabled=$([ "$code" = "200" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "Pages API returned $code"
-      - uses: actions/configure-pages@v5
-        if: steps.pages.outputs.enabled == 'true'
       - uses: actions/upload-pages-artifact@v3
         if: steps.pages.outputs.enabled == 'true'
         with:
