@@ -15,6 +15,7 @@ public static class ApprovalsFindings
     public static readonly FindingFactory UnknownTarget = Finding.Error("approvals.unknown-target");
     public static readonly FindingFactory NotGateable = Finding.Error("approvals.not-gateable");
     public static readonly FindingFactory UnknownMember = Finding.Error("approvals.unknown-member");
+    public static readonly FindingFactory UnknownRule = Finding.Error("approvals.unknown-rule");
 }
 
 [Operation("approvals.groups.define")]
@@ -119,6 +120,29 @@ public static class DefineRule
             Threshold = input.Threshold,
         };
         tam.Db.Add(rule);
+        return new Output(rule.Id);
+    }
+}
+
+/// <summary>The retire half of the rule registry (docs/34 M5 fix 4): the gate skips retired
+/// rules, so retiring UN-GATES the operation — a tenant is never locked into an approval
+/// flow it defined. Retire-don't-delete, like every registry artifact.</summary>
+[Operation("approvals.rules.retire")]
+[Authorize("approvals.manage")]
+public static class RetireRule
+{
+    public sealed record Input([property: LabelKey("approvals.labels.rule")] Guid RuleId);
+
+    public sealed record Output(Guid RuleId);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, CancellationToken ct)
+    {
+        var rule = await tam.Db.Set<ApprovalRule>()
+            .SingleOrDefaultAsync(r => r.Id == input.RuleId, ct);
+        if (rule is null) return ApprovalsFindings.UnknownRule.At(nameof(Input.RuleId));
+
+        rule.Retired = true;
         return new Output(rule.Id);
     }
 }

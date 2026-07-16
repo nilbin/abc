@@ -534,6 +534,14 @@ export interface ApprovalsRejectOutput {
   status: string;
 }
 
+export interface ApprovalsRulesRetireInput {
+  ruleId: string;
+}
+
+export interface ApprovalsRulesRetireOutput {
+  ruleId: string;
+}
+
 export interface InvoicingCreateFromOrderInput {
   orderId: string;
 }
@@ -1261,6 +1269,11 @@ export class TypedTamClient {
   /** approvals.reject (requires approvals.review) */
   approvalsReject(input: ApprovalsRejectInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ApprovalsRejectOutput>> {
     return this.client.operation("approvals.reject", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsRejectOutput>>;
+  }
+
+  /** approvals.rules.retire (requires approvals.manage) */
+  approvalsRulesRetire(input: ApprovalsRulesRetireInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ApprovalsRulesRetireOutput>> {
+    return this.client.operation("approvals.rules.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ApprovalsRulesRetireOutput>>;
   }
 
   /** invoicing.create-from-order (requires invoicing.manage) */
