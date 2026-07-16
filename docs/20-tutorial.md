@@ -509,7 +509,7 @@ public static class OrderList
 
 Two patterns here are enforced, not stylistic. **The paired-atom scope** (docs/28): `orders.read` is own-scoped by default, `[Widens("orders.read-all")]` declares the widening atom, and `.ScopedUnless(...)` applies it — an actor with only the base atom sees assigned orders, a dispatcher with the `-all` atom sees the board. Declaring the atom anywhere and *not* applying the scope on a view over that resource is build error `TAM006`, in both directions — fail-closed by construction. **Explicit scoping in compositions** (`InScope`, `WithInherited`): because one widened source strips EF's global filter from the whole query, composing without scoping the other side is build error `TAM005` (Step 15 explains the group semantics; at a single tenant these calls are the identity).
 
-Search is authored logic — a hand-written `Where` — while declared capabilities are contract *and* implementation: `Filterable(Status)` makes the framework compose the SQL predicate and the grid render the filter control, with no further code (D7). A sort request on an undeclared field falls back to the declared default at runtime. *(Designed, not built: a dedicated `VIEW001` build diagnostic for bindings referencing undeclared capabilities, and the `Tam.Testing` harness that executes every declared capability against real PostgreSQL in CI — today the wire suites against the running samples cover that ground.)* Tenant custom fields filter and sort the same mechanical way (`?ext.machineSerialNumber=…`) — necessarily, since a runtime-defined field can never appear in a compiled Query record.
+Search is authored logic — a hand-written `Where` — while declared capabilities are contract *and* implementation: `Filterable(Status)` makes the framework compose the SQL predicate and the grid render the filter control, with no further code (D7). A grid column naming a field the view doesn't produce fails model build with `VIEW001`; a sort request on an undeclared capability falls back to the declared default at runtime. *(Designed, not built: the `Tam.Testing` harness that executes every declared capability against real PostgreSQL in CI — today the wire suites against the running samples cover that ground.)* Tenant custom fields filter and sort the same mechanical way (`?ext.machineSerialNumber=…`) — necessarily, since a runtime-defined field can never appear in a compiled Query record.
 
 ```csharp
 // samples/erp/Program.cs — beside the form above
@@ -844,10 +844,11 @@ Added CreateOrder.Input.CustomerReference (required)
 
 ## Step 13 — A partner ships a plugin *(implemented — [22-plugins.md](22-plugins.md), decision D8; running in samples/inspect)*
 
-Norrservice's certification partner sells an inspection-checklist capability. It arrives as a NuGet package, and the host application adds one line:
+Norrservice's certification partner sells an inspection-checklist capability. It arrives as a NuGet package, and the host application adds two lines — one to the model and, because this plugin ships its own entities, one storage opt-in in the DbContext (Step 0's pattern):
 
 ```csharp
-model.AddPlugin<InspectionPlugin>();
+model.AddPlugin<InspectionPlugin>();               // Program.cs — the model
+InspectionPlugin.AddInspect(modelBuilder);         // Db.cs — the plugin's tables, in the host database
 ```
 
 Inside the package, the same five concepts as everywhere else — a `ChecklistTemplate` entity, `inspect.checklists.*` operations and views, forms and grids, embedded sv/en locales. Three things make it a *plugin* rather than a copy of the host's patterns:
@@ -883,7 +884,9 @@ public sealed class InspectionPlugin : ITamPlugin
     {
         public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
         {
-            var orderId = gate.Input.GetProperty("orderId").GetGuid();
+            if (!gate.Input.TryGetProperty("orderId", out var idElement)
+                || !idElement.TryGetGuid(out var orderId))
+                return Result.Success();   // malformed input is validation's problem, not the gate's
             var blocked = await tam.Db.Set<Checklist>().AnyAsync(
                 x => x.OrderId == orderId && !x.Passed, ct);
             return blocked ? InspectFindings.ChecklistIncomplete : Result.Success();
@@ -898,7 +901,7 @@ public sealed class InspectionPlugin : ITamPlugin
 }
 ```
 
-Because the packaged field rides the extension channel, it is already in every grid, form, audit trail, MCP schema, and D7 filter — none of that is plugin code. Because the gate is declared, `orders.complete` in the manifest now reads "gated by inspect", and the Step-12 impact report shows it when anyone touches `CompleteOrder`.
+Because the packaged field rides the extension channel, it is already in every grid, form, audit trail, MCP schema, and D7 filter — none of that is plugin code. Because the gate is declared, `orders.complete` in the manifest now reads "gated by inspect" — the fact Step 12's (designed) impact report will surface when anyone touches `CompleteOrder`.
 
 The tenant admin flips it on — `plugins.activate("inspect")` — an audited framework operation like any other. For tenants that haven't, the manifest simply omits everything: no nav entry, no MCP tools, no packaged field, HTTP 404 on `inspect.*`. Installing code was the vendor's deploy; enabling it was the tenant's click. And the trust line holds: the partner wrote C# through a compiler and a review; the *tenant* still authors only data — fields, roles, packages, and (later) Px-bounded automation rules (built — see Step 9) and, later, custom objects, per D8.
 
@@ -971,6 +974,8 @@ company's row acts *in* that company (Step 18).
 **People arrive by invite.** `users.invite` creates the account and membership up front (the seat is consumed immediately, so the count the admin sees is the count that bills), mails a one-shot hashed link through the `ITamEmail` seam (the dev default logs it), and the invitee sets a password on a framework page. Inviting someone who already has an account elsewhere in the platform just adds the membership — one human, many tenants, one login.
 
 The pattern of Steps 1–14 holds: the tree, the memberships, the roles, the policies, the invites are all *data behind operations* — no deploy moves a company, grants a scope, or seats a user.
+
+**And under all of it, the database holds the line too** *(BUILT — [33-rls-backstop.md](33-rls-backstop.md))*. The EF global filter is the tenant boundary, but on PostgreSQL it is mirrored in the database itself: `TamRls.ProvisionAsync(db)` at startup creates a row-level-security policy over every `ITenantScoped` table, and `options.AddTamRls()` beside `UseNpgsql` keeps the session's `app.tenant_id`/`app.tenant_read_set` settings true to the ambient scope — including the subtree read set above. Sanctioned cross-tenant reads go through `AcrossTenants()`, THE opt-out that carries both halves (EF's filter skip and the database's query tag) together. The probe that motivated it: delete the app-side filter and the forgotten-filter query returns *zero* foreign rows, because the policy fails closed — one bug no longer leaks a tenant; it now takes two independent failures.
 
 ## Step 16 — Approvals arrive as a plugin — and the domains never notice *(BUILT — the seams and the package, `samples/approvals`)*
 
@@ -1131,8 +1136,8 @@ manifest-composed — and, as always, the point is what we do NOT write.
 ```csharp
 .Nav("web", nav => nav
     .Mode("work", m => m
-        .Page("orders", page: "orders", order: 10)     // a DECLARED page (below)
-        .Page("customers", grid: "web.customers.list", order: 30))
+        .Page("orders", page: "orders", order: 10)       // DECLARED pages (below)
+        .Page("customers", page: "customers", order: 30))
     .Mode("admin", m => m
         .Section("administration")))
 ```
@@ -1185,6 +1190,8 @@ entry above needed no permission atom — a `{ page }` target naming a declared 
 visibility from the page's grid's view, exactly like a `{ grid }` target. `registerPage(key,
 component)` remains the escape hatch for genuinely custom UX, and its ratio is the architecture
 tripwire: if most pages need React, the model is decorating the app. Norrservice is at zero.
+Customers got the same treatment — a second `.Page("customers", …)` declaration in Program.cs,
+grid + record + edit form, no slot — proving the shape generalizes without ceremony.
 
 **The subtree grid.** Step 15 made Norrservice a group; here is what the group *sees*. The
 orders list — the same view, not a twin — declares one capability:
@@ -1233,17 +1240,13 @@ from Steps 13–17 landed in this shell without the shell knowing their names.
 
 | File | Approx. lines | Decisions it owns |
 | --- | --- | --- |
-| `Domain/Orders/Order.cs` | ~90 | invariants, value types, status transitions |
-| `Create/Operation.cs` | ~55 | input/output, business rules, creation |
-| `Create/Derivations.cs` | ~60 | project logic, customer feedback, address suggestion |
-| `Create/Bindings.cs` | ~45 | field order, context display, mobile differences |
-| `EditDetails/Operation.cs` + `Bindings.cs` | ~50 | which fields are patchable, editability rule |
-| `Complete/Operation.cs` | ~25 | the intent and its effect |
-| `List/View.cs` + `Bindings.cs` | ~65 | the query, capabilities, columns, actions |
-| `Fortnox/ImportFortnoxOrder.cs` | ~20 | external mapping, idempotency |
-| `locales/sv.json` + `locales/en.json` | ~30 | every word a human reads, per culture |
-| Tests | ~150 | the contract |
+| `Domain.cs` (the orders slice) | ~80 | invariants, value types, status transitions |
+| `Features/Orders.cs` | ~290 | operations, shared rules, derivations, views — every business decision |
+| `Program.cs` (composition root: model half) | ~110 | forms, grids, nav, pages, slots, event contracts |
+| `Db.cs` | ~60 | EF mapping, plugin storage opt-ins, the tenant boundary |
+| `samples/fortnox` (the plugin) | ~120 | external mapping, idempotency, outbound pushes |
+| `locales/sv.json` + `locales/en.json` | ~100 | every word a human reads, per culture |
 
-**Derived, and therefore never drifting:** four HTTP endpoints and their OpenAPI, JSON Schemas, a typed TypeScript client, web + mobile create/edit forms with reactive behavior, a grid with paging/sorting/filtering/search and gated actions, three-way merge and structured conflicts, field-level audit, idempotency, outbox events, four MCP tools plus a resolve/elicitation surface, integration inbox/retry/replay, per-tenant custom-field participation across every one of those boundaries, and a compile-time report of what any change touches.
+**Derived, and therefore never drifting:** four HTTP endpoints and their OpenAPI, JSON Schemas, a typed TypeScript client, create/edit forms with reactive behavior, a grid with paging/sorting/filtering/search and gated actions, three-way merge and structured conflicts, audit, idempotency, outbox events, the MCP tools plus a resolve surface, integration inbox/retry/replay, and per-tenant custom-field participation across every one of those boundaries.
 
-That ratio — roughly 550 handwritten lines owning every real decision, and everything mechanical derived — is the success criterion of [18-success-criteria.md](18-success-criteria.md) made concrete. When the implementation can run this document top to bottom, the framework is done enough to use.
+That ratio — roughly 750 handwritten lines owning every real decision, and everything mechanical derived — is the success criterion of [18-success-criteria.md](18-success-criteria.md) made concrete. The implementation runs this document top to bottom today: Steps 0–10 and 13–18 are the running samples; where a step is still design (the test harness of Step 11, the unified report of Step 12), it says so on the step.

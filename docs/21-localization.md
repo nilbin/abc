@@ -2,7 +2,7 @@
 
 ## The rule
 
-**No display text in code. Ever.** Labels, finding messages, descriptions, enum display names, section titles, action names — anything a human reads is authored in per-culture resource files and referenced from code by key. An analyzer enforces it: a string literal in a display-text position is build error `L10N000`.
+**No display text in code. Ever.** Labels, finding messages, descriptions, enum display names, section titles, action names — anything a human reads is authored in per-culture resource files and referenced from code by key. The enforcement that exists today is `L10N001` (a key the model references but the default culture lacks is a build error, analyzer + Build()-time gate); a literal-in-display-position analyzer (`L10N000`) is designed, not built — the convention is held by the L10N001 gate plus review.
 
 A corollary: **English is not special.** The application's default culture is configuration (`sv`, `en`, whatever the product needs). The compiler requires 100% key coverage in the default culture — whichever it is — and reports coverage gaps per additional culture. There is no implicit English fallback baked into code, because there is no text in code.
 
@@ -19,29 +19,29 @@ Product.Application/locales/
 ```jsonc
 // locales/sv.json
 {
-  "orders.order.description": "Arbetsbeskrivning",
+  "labels.description": "Arbetsbeskrivning",
   "orders.already-completed": "Ordern är redan slutförd.",
   "validation.too-long": "{label} får innehålla högst {max} tecken.",
-  "enums.order-status.completed": "Slutförd"
+  "enums.completed": "Slutförd"
 }
 ```
 
-The build fails if a key referenced in code is missing from the default culture (`L10N001`). Missing keys in other cultures are warnings with a completeness report (`L10N002`) — translation debt is visible in CI, not discovered by users.
+The build fails if a key referenced in code is missing from the default culture (`L10N001`) — the gate lists every missing key at once. A non-default-culture completeness report (`L10N002`) is designed, not built.
 
 ## Keys by convention, authored once
 
-The framework's inference principle applies to text: keys are derived, not declared.
+The framework's inference principle applies to text: keys are derived, not declared. Keys are **flat and global** — derived from the member or value name alone, never namespaced per entity or operation:
 
 | Text for | Convention key | Authored where |
 | --- | --- | --- |
-| Semantic value type | `types.order-description` | Once per type |
-| Entity member | `orders.order.requested-date` | Once per member |
-| Enum member | `enums.order-status.completed` | Once per value |
+| Field / column label | `labels.{kebab(member)}` — e.g. `labels.requested-date` | Once per member *name*, model-wide |
+| Enum member | `enums.{kebab(value)}` — e.g. `enums.completed` | Once per value name, model-wide |
 | Finding message | the finding **code** is the key | Once per code |
-| Operation title/description | `operations.orders.create.title` | Once per operation |
-| View column | inherits entity member / value type key | usually nothing |
+| Operation title | `operations.{id}.title` — e.g. `operations.orders.create.title` | Once per operation |
+| Nav node | `nav.{id}` | Once per node |
+| Tenant/packaged field | `ext.{key}` / `ext.{pluginId}.{key}` (merged from the registry / plugin catalogs) | Registry / plugin |
 
-Operation inputs and view results **inherit** label keys from the matching entity member or semantic value type — so `CreateOrder.Input.Description` and the grid column both display `orders.order.description`'s text with zero authoring. `[LabelKey("...")]` overrides the *key* (for sharing or divergence); there is no attribute that takes text.
+Because the label key derives from the member name, `CreateOrder.Input.Description`, `Order.Description` and the grid column all display `labels.description`'s text with zero authoring — sharing across the model is the default, not inheritance from an entity. `[LabelKey("...")]` overrides the *key* where the derived one would be wrong (`CustomerId` → `labels.customer`); there is no attribute that takes text.
 
 ## Findings carry args, not prose
 
@@ -87,11 +87,11 @@ Message templates use a constrained ICU MessageFormat subset: placeholders, plur
 ## Diagnostics
 
 ```
-L10N000: Hardcoded display text in a display position.            (error)
+L10N000: Hardcoded display text in a display position.            (error — designed, not built)
 L10N001: Key "orders.already-completed" missing in default
          culture "sv".                                             (error)
-L10N002: Culture "en" is missing 14 keys (report attached).       (warning)
-L10N003: Key "orders.legacy-hint" is defined but never referenced. (info)
+L10N002: Culture "en" is missing 14 keys (report attached).       (warning — designed, not built)
+L10N003: Key "orders.legacy-hint" is defined but never referenced. (info — designed, not built)
 EXT006:  Custom field lacks a label for enabled culture "en".     (registry, error)
 ```
 

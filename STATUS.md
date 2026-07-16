@@ -35,7 +35,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              143 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              145 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -449,6 +449,35 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Review round 4 — end-to-end triage with two docs-only implementers**: three review agents
+  (architecture + authoring shape, tutorial/DX fidelity, adversarial correctness on the newest
+  surfaces) plus two "RTFM" agents who each built a working plugin (timesheets: the full
+  cross-domain surface; assets: the basic path) from the DOCS ALONE — framework source
+  forbidden, compiler errors as IntelliSense. Both shipped everything; both said "with-fixes";
+  both independently hit the same walls, and those walls got fixed:
+  TAM007 (ctor projections in views — built green, 500'd on first sorted request; now a build
+  error, zero violations in-tree); nav suggestions collect into a matching section OR mode
+  (both plugins suggested "work" and silently landed in "more"); L10N001 now gates operation
+  OUTPUT labels (18 missing keys found and added) and lists every missing key at once.
+  Correctness fixes: PLG005 host-only guards (a plugin could reach AddPlugin and ESCAPE
+  namespace enforcement entirely); PackagedFieldWriter re-checks the tenant boundary after
+  FindAsync (EF Find bypasses global filters — the app must not lean on RLS, D-R1);
+  SubtreeRead widening made execution-local (a widened read no longer leaks into the write
+  path's scope); RLS interceptor fingerprint advances only after set_config succeeds + the
+  tag scan survives EF's blank-line tag rendering; PAGE001 requires the record form to carry
+  the key input; the stamp interceptor refuses blank-TenantId inserts in escalated scopes.
+  Architecture: manifest memoized by ETag (cold requests stop paying the reflective rebuild);
+  hot-path reflection memoized (MethodInvoker + accessor caches); NavOverlay extracted to
+  pipeline infrastructure (docs/29 litmus); fortnox rewired onto IHostViewReader +
+  RequiresView (the sample taught the reach-around D9 kills); inbox drain bounded server-side
+  (ReceivedAtIso). Docs: the tutorial REWRITTEN onto the built APIs — new Step 0 (host from
+  nothing, incl. MapTam which was never mentioned), the locale-key grammar box, real handler/
+  wire/client/MCP shapes throughout Steps 1-12, honest DESIGNED-NOT-BUILT markers (Step 11
+  harness, impact reports, L10N000/002/003), RLS in Step 15; docs/21 aligned to the real flat
+  key grammar; docs/22 gains the plugin authoring reference the RTFM run proved necessary.
+  Deferred with intent: the authoring reshape ([Gate]/[OnEffect] attributes + plugin parts —
+  designed, next milestone), plugin-declared pages, wildcard-gate set caching, packaged-writer
+  unification onto the operation path, RLS read-set scaling for deep trees.
 - **The RLS backstop (docs/19 D2 → docs/33, D-R1..R8)**: PostgreSQL row-level security now
   mirrors the EF tenant filter — `TamRls.ProvisionAsync` walks the EF model and puts
   ENABLE+FORCE RLS plus one FOR ALL policy (current tenant ∨ subtree read set ∨ the explicit
