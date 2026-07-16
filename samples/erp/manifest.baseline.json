@@ -181,6 +181,7 @@
       "nav.audit": "History",
       "nav.tenants": "Companies",
       "nav.more": "More",
+      "extensions.read-only-field": "This field is owned by a plugin and cannot be edited here.",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -460,6 +461,7 @@
       "nav.audit": "Historik",
       "nav.tenants": "Bolag",
       "nav.more": "Mer",
+      "extensions.read-only-field": "F\u00E4ltet \u00E4gs av ett till\u00E4gg och kan inte \u00E4ndras h\u00E4r.",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -573,7 +575,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -584,7 +587,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "gatedBy": [
@@ -603,7 +607,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "visitAddress",
@@ -612,7 +617,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "email",
@@ -623,7 +629,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "sensitive": "customers.sensitive"
+          "sensitive": "customers.sensitive",
+          "readOnly": false
         },
         {
           "name": "phone",
@@ -634,7 +641,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "sensitive": "customers.sensitive"
+          "sensitive": "customers.sensitive",
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -645,7 +653,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "gatedBy": []
@@ -661,7 +670,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "orderType",
@@ -674,7 +684,8 @@
             "Project"
           ],
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "workAddress",
@@ -683,7 +694,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "description",
@@ -694,7 +706,8 @@
           "required": true,
           "maxLength": 1000,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "projectId",
@@ -703,7 +716,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "requestedDate",
@@ -712,7 +726,8 @@
           "wireKind": "date",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "estimatedTotal",
@@ -721,7 +736,8 @@
           "wireKind": "number",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "extensibleEntity": "order",
@@ -733,7 +749,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "number",
@@ -742,7 +759,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "gatedBy": []
@@ -758,7 +776,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "description",
@@ -769,7 +788,8 @@
           "required": false,
           "maxLength": 1000,
           "changeSet": true,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "requestedDate",
@@ -778,7 +798,8 @@
           "wireKind": "date",
           "required": false,
           "changeSet": true,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "workAddress",
@@ -787,7 +808,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": true,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "estimatedTotal",
@@ -796,7 +818,8 @@
           "wireKind": "number",
           "required": false,
           "changeSet": true,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "extensibleEntity": "order",
@@ -808,7 +831,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "gatedBy": []
@@ -824,7 +848,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "key",
@@ -833,7 +858,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "type",
@@ -842,7 +868,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "labels",
@@ -851,7 +878,8 @@
           "wireKind": "object",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "required",
@@ -860,7 +888,8 @@
           "wireKind": "boolean",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "maxLength",
@@ -869,7 +898,8 @@
           "wireKind": "integer",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "descriptions",
@@ -878,7 +908,8 @@
           "wireKind": "object",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "options",
@@ -887,7 +918,8 @@
           "wireKind": "object",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -898,7 +930,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.extensions",
@@ -915,7 +948,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -926,7 +960,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.extensions",
@@ -943,7 +978,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "permissions",
@@ -952,7 +988,8 @@
           "wireKind": "object",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "levels",
@@ -961,7 +998,8 @@
           "wireKind": "object",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -972,7 +1010,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.roles",
@@ -989,7 +1028,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1000,7 +1040,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "active",
@@ -1009,7 +1050,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.plugins",
@@ -1026,7 +1068,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1037,7 +1080,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "active",
@@ -1046,7 +1090,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.plugins",
@@ -1063,7 +1108,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "dryRun",
@@ -1072,7 +1118,8 @@
           "wireKind": "boolean",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1083,7 +1130,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "version",
@@ -1092,7 +1140,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "applied",
@@ -1101,7 +1150,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "fieldsAdded",
@@ -1110,7 +1160,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "rolesDefined",
@@ -1119,7 +1170,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.tenantpackages",
@@ -1136,7 +1188,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1147,7 +1200,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "fieldsRetired",
@@ -1156,7 +1210,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.tenantpackages",
@@ -1173,7 +1228,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "onOperation",
@@ -1182,7 +1238,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "condition",
@@ -1191,7 +1248,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "messages",
@@ -1200,7 +1258,8 @@
           "wireKind": "object",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "targetField",
@@ -1209,7 +1268,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1220,7 +1280,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.rules",
@@ -1237,7 +1298,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1248,7 +1310,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.rules",
@@ -1265,7 +1328,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -1274,7 +1338,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1285,7 +1350,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "path",
@@ -1294,7 +1360,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.tenancy",
@@ -1311,7 +1378,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "newParentId",
@@ -1320,7 +1388,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1331,7 +1400,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "path",
@@ -1340,7 +1410,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.tenancy",
@@ -1357,7 +1428,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -1366,7 +1438,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1377,7 +1450,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -1386,7 +1460,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.tenancy",
@@ -1403,7 +1478,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -1412,7 +1488,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "password",
@@ -1421,7 +1498,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "roles",
@@ -1430,7 +1508,8 @@
           "wireKind": "object",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1441,7 +1520,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.users",
@@ -1458,7 +1538,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -1467,7 +1548,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "roles",
@@ -1476,7 +1558,8 @@
           "wireKind": "object",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1487,7 +1570,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "inviteSent",
@@ -1496,7 +1580,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.users",
@@ -1513,7 +1598,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1524,7 +1610,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.users",
@@ -1541,7 +1628,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "seats",
@@ -1550,7 +1638,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "entitlements",
@@ -1559,7 +1648,8 @@
           "wireKind": "object",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -1568,7 +1658,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "renewsAtIso",
@@ -1577,7 +1668,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1588,7 +1680,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "seats",
@@ -1597,7 +1690,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.subscriptions",
@@ -1614,7 +1708,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "value",
@@ -1623,7 +1718,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1634,7 +1730,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.vault",
@@ -1651,7 +1748,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "value",
@@ -1660,7 +1758,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1671,7 +1770,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.vault",
@@ -1688,7 +1788,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "spec",
@@ -1697,7 +1798,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "enabled",
@@ -1706,7 +1808,8 @@
           "wireKind": "boolean",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1717,7 +1820,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "nextRunIso",
@@ -1726,7 +1830,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.integrations",
@@ -1743,7 +1848,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1754,7 +1860,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -1763,7 +1870,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.integrations",
@@ -1780,7 +1888,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1791,7 +1900,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "kind",
@@ -1800,7 +1910,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "tam.integrations",
@@ -1817,7 +1928,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "orderId",
@@ -1826,7 +1938,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1837,7 +1950,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "inspect",
@@ -1854,7 +1968,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1865,7 +1980,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "inspect",
@@ -1882,7 +1998,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1893,7 +2010,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -1902,7 +2020,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "approvals",
@@ -1919,7 +2038,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "email",
@@ -1928,7 +2048,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1939,7 +2060,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "actorId",
@@ -1948,7 +2070,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "approvals",
@@ -1965,7 +2088,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "parentGroupId",
@@ -1974,7 +2098,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -1985,7 +2110,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "approvals",
@@ -2002,7 +2128,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "groupId",
@@ -2011,7 +2138,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "thresholdField",
@@ -2020,7 +2148,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "threshold",
@@ -2029,7 +2158,8 @@
           "wireKind": "number",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -2040,7 +2170,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "approvals",
@@ -2057,7 +2188,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "note",
@@ -2066,7 +2198,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -2077,7 +2210,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -2086,7 +2220,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "approvals",
@@ -2103,7 +2238,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -2114,7 +2250,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "invoicing",
@@ -2131,7 +2268,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -2142,7 +2280,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "invoicing",
@@ -2159,7 +2298,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
@@ -2170,7 +2310,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "plugin": "invoicing",
@@ -2188,7 +2329,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2199,7 +2341,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "name",
@@ -2208,7 +2351,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "email",
@@ -2219,7 +2363,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "sensitive": "customers.sensitive"
+          "sensitive": "customers.sensitive",
+          "readOnly": false
         },
         {
           "name": "phone",
@@ -2230,7 +2375,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "sensitive": "customers.sensitive"
+          "sensitive": "customers.sensitive",
+          "readOnly": false
         },
         {
           "name": "visitAddress",
@@ -2239,7 +2385,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "isActive",
@@ -2248,7 +2395,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2271,7 +2419,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2282,7 +2431,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "name",
@@ -2291,7 +2441,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "isActive",
@@ -2300,7 +2451,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2320,7 +2472,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2331,7 +2484,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "number",
@@ -2340,7 +2494,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "customerName",
@@ -2349,7 +2504,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "type",
@@ -2362,7 +2518,8 @@
             "Project"
           ],
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -2376,7 +2533,8 @@
             "Cancelled"
           ],
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "workAddress",
@@ -2385,7 +2543,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "description",
@@ -2396,7 +2555,8 @@
           "required": true,
           "maxLength": 1000,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "requestedDate",
@@ -2405,7 +2565,8 @@
           "wireKind": "date",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "estimatedTotal",
@@ -2414,7 +2575,8 @@
           "wireKind": "number",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "version",
@@ -2423,7 +2585,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "extensions",
@@ -2432,7 +2595,8 @@
           "wireKind": "object",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [],
@@ -2450,7 +2614,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2461,7 +2626,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "number",
@@ -2470,7 +2636,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "customerName",
@@ -2479,7 +2646,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "type",
@@ -2492,7 +2660,8 @@
             "Project"
           ],
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -2506,7 +2675,8 @@
             "Cancelled"
           ],
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "requestedDate",
@@ -2515,7 +2685,8 @@
           "wireKind": "date",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "estimatedTotal",
@@ -2524,7 +2695,8 @@
           "wireKind": "number",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "tenantId",
@@ -2533,7 +2705,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "version",
@@ -2542,7 +2715,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "extensions",
@@ -2551,7 +2725,8 @@
           "wireKind": "object",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2582,7 +2757,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2593,7 +2769,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "entity",
@@ -2602,7 +2779,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "key",
@@ -2611,7 +2789,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "type",
@@ -2620,7 +2799,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "required",
@@ -2629,7 +2809,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "state",
@@ -2644,7 +2825,8 @@
             "Retired"
           ],
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2665,7 +2847,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2676,7 +2859,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "name",
@@ -2685,7 +2869,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "permissions",
@@ -2694,7 +2879,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "levels",
@@ -2703,7 +2889,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2724,7 +2911,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "entityId",
@@ -2733,7 +2921,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2744,7 +2933,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "timestamp",
@@ -2753,7 +2943,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "operationId",
@@ -2762,7 +2953,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "actorName",
@@ -2771,7 +2963,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "entity",
@@ -2780,7 +2973,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "entityId",
@@ -2789,7 +2983,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "field",
@@ -2798,7 +2993,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "oldValue",
@@ -2807,7 +3003,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "newValue",
@@ -2816,7 +3013,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2838,7 +3036,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2849,7 +3048,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "active",
@@ -2858,7 +3058,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2879,7 +3080,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2890,7 +3092,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "package",
@@ -2899,7 +3102,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "version",
@@ -2908,7 +3112,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "installedAt",
@@ -2917,7 +3122,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2938,7 +3144,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -2949,7 +3156,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "name",
@@ -2958,7 +3166,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "onOperation",
@@ -2967,7 +3176,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "retired",
@@ -2976,7 +3186,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -2998,7 +3209,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -3007,7 +3219,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "parentId",
@@ -3016,7 +3229,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "path",
@@ -3025,7 +3239,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3046,7 +3261,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3057,7 +3273,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "userName",
@@ -3066,7 +3283,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -3075,7 +3293,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "roles",
@@ -3084,7 +3303,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "active",
@@ -3093,7 +3313,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3115,7 +3336,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "seats",
@@ -3124,7 +3346,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "seatsUsed",
@@ -3133,7 +3356,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -3142,7 +3366,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "entitlements",
@@ -3151,7 +3376,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "anchorTenantId",
@@ -3160,7 +3386,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [],
@@ -3178,7 +3405,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3189,7 +3417,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "value",
@@ -3198,7 +3427,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3219,7 +3449,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3230,7 +3461,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "isSet",
@@ -3239,7 +3471,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3260,7 +3493,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3271,7 +3505,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "integrationId",
@@ -3280,7 +3515,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "trigger",
@@ -3289,7 +3525,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -3298,7 +3535,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "detail",
@@ -3307,7 +3545,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "ranAt",
@@ -3316,7 +3555,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3341,7 +3581,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3352,7 +3593,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "kind",
@@ -3361,7 +3603,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "integrationId",
@@ -3370,7 +3613,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "reference",
@@ -3379,7 +3623,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "attempts",
@@ -3388,7 +3633,8 @@
           "wireKind": "integer",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "lastError",
@@ -3397,7 +3643,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3422,7 +3669,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3433,7 +3681,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "title",
@@ -3442,7 +3691,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "passed",
@@ -3451,7 +3701,8 @@
           "wireKind": "boolean",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3476,7 +3727,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "name",
@@ -3485,7 +3737,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "parentGroupId",
@@ -3494,7 +3747,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3515,7 +3769,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3526,7 +3781,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "operationId",
@@ -3535,7 +3791,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "initiator",
@@ -3544,7 +3801,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -3553,7 +3811,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "createdAtIso",
@@ -3562,7 +3821,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "outcome",
@@ -3571,7 +3831,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3595,7 +3856,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "resultFields": [
@@ -3606,7 +3868,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "orderNumber",
@@ -3615,7 +3878,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "status",
@@ -3624,7 +3888,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "amount",
@@ -3633,7 +3898,8 @@
           "wireKind": "number",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "created",
@@ -3642,7 +3908,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -3668,7 +3935,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "key",
@@ -3677,7 +3945,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "type",
@@ -3686,7 +3955,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "labels",
@@ -3696,7 +3966,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "culture-text"
+          "renderer": "culture-text",
+          "readOnly": false
         },
         {
           "name": "required",
@@ -3705,7 +3976,8 @@
           "wireKind": "boolean",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "maxLength",
@@ -3714,7 +3986,8 @@
           "wireKind": "integer",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3731,7 +4004,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "levels",
@@ -3741,7 +4015,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "level-map"
+          "renderer": "level-map",
+          "readOnly": false
         },
         {
           "name": "permissions",
@@ -3751,7 +4026,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "string-list"
+          "renderer": "string-list",
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3769,7 +4045,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "multiline"
+          "renderer": "multiline",
+          "readOnly": false
         },
         {
           "name": "dryRun",
@@ -3778,7 +4055,8 @@
           "wireKind": "boolean",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3795,7 +4073,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "onOperation",
@@ -3804,7 +4083,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "condition",
@@ -3814,7 +4094,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "multiline"
+          "renderer": "multiline",
+          "readOnly": false
         },
         {
           "name": "messages",
@@ -3824,7 +4105,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "culture-text"
+          "renderer": "culture-text",
+          "readOnly": false
         },
         {
           "name": "targetField",
@@ -3833,7 +4115,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3850,7 +4133,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -3859,7 +4143,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3876,7 +4161,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "newParentId",
@@ -3885,7 +4171,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3902,7 +4189,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -3911,7 +4199,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3928,7 +4217,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "displayName",
@@ -3937,7 +4227,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "roles",
@@ -3947,7 +4238,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "string-list"
+          "renderer": "string-list",
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3964,7 +4256,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -3981,7 +4274,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "parentGroupId",
@@ -3990,7 +4284,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -4007,7 +4302,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "email",
@@ -4016,7 +4312,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -4033,7 +4330,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "groupId",
@@ -4042,7 +4340,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "thresholdField",
@@ -4051,7 +4350,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "threshold",
@@ -4061,7 +4361,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "money"
+          "renderer": "money",
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -4079,7 +4380,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "customer-picker"
+          "renderer": "customer-picker",
+          "readOnly": false
         },
         {
           "name": "orderType",
@@ -4092,7 +4394,8 @@
             "Project"
           ],
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "projectId",
@@ -4125,7 +4428,8 @@
               "t": "const",
               "v": "Project"
             }
-          }
+          },
+          "readOnly": false
         },
         {
           "name": "workAddress",
@@ -4134,7 +4438,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "description",
@@ -4145,7 +4450,8 @@
           "required": true,
           "maxLength": 1000,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "requestedDate",
@@ -4154,7 +4460,8 @@
           "wireKind": "date",
           "required": false,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "estimatedTotal",
@@ -4164,7 +4471,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "money"
+          "renderer": "money",
+          "readOnly": false
         }
       ],
       "includeExtensions": true,
@@ -4184,7 +4492,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "hidden"
+          "renderer": "hidden",
+          "readOnly": false
         },
         {
           "name": "description",
@@ -4195,7 +4504,8 @@
           "required": false,
           "maxLength": 1000,
           "changeSet": true,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "requestedDate",
@@ -4204,7 +4514,8 @@
           "wireKind": "date",
           "required": false,
           "changeSet": true,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "workAddress",
@@ -4213,7 +4524,8 @@
           "wireKind": "string",
           "required": false,
           "changeSet": true,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "estimatedTotal",
@@ -4223,7 +4535,8 @@
           "required": false,
           "changeSet": true,
           "extension": false,
-          "renderer": "money"
+          "renderer": "money",
+          "readOnly": false
         }
       ],
       "includeExtensions": true,
@@ -4239,7 +4552,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "visitAddress",
@@ -4248,7 +4562,8 @@
           "wireKind": "string",
           "required": true,
           "changeSet": false,
-          "extension": false
+          "extension": false,
+          "readOnly": false
         },
         {
           "name": "email",
@@ -4259,7 +4574,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "sensitive": "customers.sensitive"
+          "sensitive": "customers.sensitive",
+          "readOnly": false
         },
         {
           "name": "phone",
@@ -4270,7 +4586,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "sensitive": "customers.sensitive"
+          "sensitive": "customers.sensitive",
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -4577,7 +4894,6 @@
             "target": {
               "page": "orders"
             },
-            "permission": "orders.read",
             "children": []
           },
           {
@@ -4733,6 +5049,20 @@
         ]
       }
     ]
+  },
+  "pages": {
+    "orders": {
+      "grid": "web.orders.list",
+      "record": {
+        "detailView": "orders.detail",
+        "key": "orderId",
+        "form": "web.orders.edit",
+        "titleField": "number",
+        "slots": [
+          "web.orders.detail"
+        ]
+      }
+    }
   },
   "slots": {
     "web.orders.detail": [

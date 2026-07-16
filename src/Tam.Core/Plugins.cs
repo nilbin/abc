@@ -333,9 +333,10 @@ public sealed class PluginBuilder
     /// </summary>
     public PluginBuilder ExtensionField(
         string entityKey, string key, string type,
-        bool required = false, int? maxLength = null, IReadOnlyList<string>? options = null)
+        bool required = false, int? maxLength = null, IReadOnlyList<string>? options = null,
+        bool readOnly = false)
     {
-        Model.PackagedField(entityKey, $"{Id}.{key}", type, required, maxLength, options);
+        Model.PackagedField(entityKey, $"{Id}.{key}", type, required, maxLength, options, readOnly);
         return this;
     }
 

@@ -197,6 +197,37 @@ public sealed partial class TamModelBuilder
         }
     }
 
+    /// <summary>PAGE001: a declared page's parts must all exist and fit together — the grid,
+    /// the record's detail view (and the context key on its Query), the form, the title field
+    /// on the detail Result, and every referenced slot.</summary>
+    private static void VerifyPages(TamModel model)
+    {
+        foreach (var page in model.Pages.Values)
+        {
+            if (!model.Grids.ContainsKey(page.GridId))
+                throw new InvalidOperationException(
+                    $"PAGE001: page '{page.Id}' names unknown grid '{page.GridId}'.");
+            if (page.Record is not { } record) continue;
+
+            if (!model.Views.TryGetValue(record.DetailViewId, out var detail))
+                throw new InvalidOperationException(
+                    $"PAGE001: page '{page.Id}' names unknown detail view '{record.DetailViewId}'.");
+            if (!detail.QueryFields.Any(f => f.WireName == record.ContextKey))
+                throw new InvalidOperationException(
+                    $"PAGE001: page '{page.Id}' key '{record.ContextKey}' is not a query field of '{record.DetailViewId}'.");
+            if (record.FormId is { } formId && !model.Forms.ContainsKey(formId))
+                throw new InvalidOperationException(
+                    $"PAGE001: page '{page.Id}' names unknown form '{formId}'.");
+            if (record.TitleField is { } title && !detail.ResultFields.Any(f => f.WireName == title))
+                throw new InvalidOperationException(
+                    $"PAGE001: page '{page.Id}' title field '{title}' is not on '{record.DetailViewId}'.");
+            foreach (var slotId in record.SlotIds)
+                if (!model.Slots.ContainsKey(slotId))
+                    throw new InvalidOperationException(
+                        $"PAGE001: page '{page.Id}' references undeclared slot '{slotId}'.");
+        }
+    }
+
     /// <summary>SUB001: a subtree-read view's tenant field must be a real result field —
     /// the client renders the company column, tenant filter and row-action targeting off it.</summary>
     private static void VerifySubtreeViews(TamModel model)
@@ -227,9 +258,10 @@ public sealed partial class TamModelBuilder
                 if (node.Target?.Grid is { } grid && !model.Grids.ContainsKey(grid))
                     throw new InvalidOperationException(
                         $"NAV004: nav node '{node.Id}' targets unknown grid '{grid}'.");
-                if (node.Target?.Page is { } && node.Permission is null)
+                if (node.Target?.Page is { } pageKey && node.Permission is null
+                    && !model.Pages.ContainsKey(pageKey))
                     throw new InvalidOperationException(
-                        $"NAV005: nav node '{node.Id}' has a page target and needs an explicit permission.");
+                        $"NAV005: nav node '{node.Id}' has a page target and needs an explicit permission (declared pages derive it from their grid).");
                 if (node.Permission is { } atom && !permissions.Contains(atom))
                     throw new InvalidOperationException(
                         $"NAV005: nav node '{node.Id}' permission '{atom}' is not in the compiled catalogue.");

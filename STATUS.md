@@ -34,7 +34,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              127 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              131 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -381,6 +381,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   filtering + slot-declaration guard), invoicing wire suite grown to 26 checks (slot panel with
   bind, event contract with subscribers, inactive tenant sees an EMPTY slot), regression matrix
   green, UI screenshot of the invoice panel inside the order edit modal.
+- **Framework-composed pages** (docs/32 D-P1..3) **+ readOnly packaged fields**: a PAGE is now
+  a declared model composition — `model.Page("orders", …)` = grid + record surface (detail view
+  by key, edit form prefilled from same-named detail fields, title field, slots) — rendered by
+  tam-react's `<ModelPage>`: row click → detail fetch (per-row act-as for subtree rows) → modal
+  with form + plugin panels. PAGE001 verifies every part; nav `{page}` targets resolve
+  registered React pages first, then declared pages, and declared pages DERIVE nav visibility
+  from their grid (NAV005 relaxed). The sample's hand-written OrdersPage React component is
+  DELETED — the app's registerPage count is zero, the tripwire metric at its floor. The
+  docs/31 wrinkle is closed: `ExtensionField(..., readOnly: true)` marks plugin-owned state —
+  grids/filters yes, forms no, wire extension writes rejected (`extensions.read-only-field`) —
+  only the owning plugin's writer sets it; invoicing's invoiceStatus uses it. Verified: 131
+  unit tests (PAGE001 gates, NAV005 both directions, readOnly spec→manifest), nav wire suite
+  asserts the declared page shape + derived permission, invoicing suite asserts readOnly on
+  the wire, full matrix green, UI screenshot of the framework-rendered record modal (form
+  without the read-only field, slot panel below, title from the declared field).
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

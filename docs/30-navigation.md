@@ -31,7 +31,8 @@ NavNode {
   order       — sort within the parent; contributions without one append
   target?     — pages only, a closed union:
                   { grid: "web.orders.list" }   — rendered generically (ViewGrid stack)
-                  { page: "orders" }            — an app-registered custom page key
+                  { page: "orders" }            — a DECLARED page (docs/32) or app-registered
+                                                    custom page key (registered wins)
                   { object: "coolingUnit" }     — custom-object standard page (docs/23, later)
   permission? — { page } targets only; an EXISTING catalogue atom, validated at build
   plugin      — contributing plugin/package id, stamped like every other contribution

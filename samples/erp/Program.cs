@@ -30,9 +30,19 @@ var model = new TamModelBuilder()
     // context it provides — every current and future plugin lands panels here unnamed.
     .Slot("web.orders.detail", slot => slot.Key("orderId"))
 
+    // The orders page is a DECLARED COMPOSITION (docs/32): grid + record surface (detail →
+    // edit form → plugin panels). The hand-written OrdersPage React component is gone.
+    .Page("orders", page => page
+        .Grid("web.orders.list")
+        .Record(record => record
+            .Detail("orders.detail", key: "orderId")
+            .Form("web.orders.edit")
+            .Title("number")
+            .Slot("web.orders.detail")))
+
     .Nav("web", nav => nav
         .Mode("work", m => m
-            .Page("orders", page: "orders", permission: "orders.read", order: 10)
+            .Page("orders", page: "orders", order: 10)   // declared page: permission derives
             .Page("customers", grid: "web.customers.list", order: 30))
         .Mode("admin", m => m
             .Section("administration")))

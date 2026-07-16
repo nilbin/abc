@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
-  AppShell, Button, Center, Group, Loader, Modal, NavLink, SegmentedControl, Select, Stack, Text,
+  AppShell, Button, Center, Group, Loader, SegmentedControl, Select, Stack, Text,
   TextInput, Title,
 } from '@mantine/core';
 import { TamClient, type StandableInfo } from '@tam/core';
 import {
   FieldRendererProps, LookupSelect, NavModeSwitcher, NavPage, NavProvider, NavSidebar, NavTabs,
-  OperationForm, PluginSlot, TamProvider, ViewGrid, registerBadgeColors, registerPage, registerRenderer,
+  TamProvider, registerBadgeColors, registerRenderer,
   useTam, useTamAuth,
 } from '@tam/react';
 
@@ -34,66 +34,9 @@ registerBadgeColors({
   open: 'blue', completed: 'green', cancelled: 'gray', project: 'grape', service: 'cyan',
 });
 
-// ---- Pages: each is a grid + modals, everything else comes from the manifest ----
-
-function OrdersPage() {
-  const { client, t, refreshManifest, can } = useTam();
-  const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const openEdit = async (row: Record<string, unknown>) => {
-    if (!can('orders.edit')) return;
-    // A subtree grid may hand us a child company's row: read + edit in the ROW's node.
-    const actAs = typeof row.tenantId === 'string' ? row.tenantId : undefined;
-    const detail = await client.view('orders.detail', { orderId: row.id }, actAs ? { actAs } : undefined);
-    const detailRow = detail.rows[0] ?? null;
-    setEditing(detailRow ? { ...detailRow, tenantId: row.tenantId } : null);
-  };
-
-  return (
-    <>
-      <ViewGrid
-        grid="web.orders.list"
-        onRowClick={row => void openEdit(row)}
-        refreshKey={refreshKey}
-        onAction={() => void refreshManifest()}
-      />
-      <Modal
-        opened={editing !== null}
-        onClose={() => setEditing(null)}
-        title={<Title order={4}>{t('operations.orders.edit-details.title')} — {String(editing?.number ?? '')}</Title>}
-        size="lg"
-      >
-        {editing && (
-          <OperationForm
-            form="web.orders.edit"
-            actAs={typeof editing.tenantId === 'string' ? editing.tenantId : undefined}
-            initialValues={{
-              orderId: editing.id,
-              description: editing.description,
-              requestedDate: editing.requestedDate,
-              workAddress: editing.workAddress,
-              estimatedTotal: editing.estimatedTotal,
-            }}
-            initialExtensions={(editing.extensions as Record<string, unknown>) ?? {}}
-            onSuccess={() => { setEditing(null); setRefreshKey(k => k + 1); }}
-          />
-        )}
-        {editing && (
-          // The host opts this surface in ONCE (docs/31 D-X4) — every active plugin's panel
-          // (invoicing's invoice list, and whatever comes next) lands here unnamed.
-          <PluginSlot id="web.orders.detail" context={{ orderId: editing.id }}
-            actAs={typeof editing.tenantId === 'string' ? editing.tenantId : undefined} />
-        )}
-      </Modal>
-    </>
-  );
-}
-
-// The one genuinely custom page: row-click loads the detail view and opens the edit form with
-// initial values — app logic, not derivable from the manifest. Registered under the key the
-// host's nav declaration binds ({ page: "orders" }).
-registerPage('orders', () => <OrdersPage />);
+// ---- Pages: the orders page is DECLARED in the model (docs/32) and rendered by the
+// framework's ModelPage — no app React left for it. registerPage() remains available for
+// genuinely custom pages; this app currently needs none.
 
 function Shell(props: {
   userName: string;

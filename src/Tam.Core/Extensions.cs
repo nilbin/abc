@@ -109,6 +109,11 @@ public sealed record ExtensionFieldSpec(
     IReadOnlyList<string>? Options,
     ExtensionFieldState State)
 {
+    /// <summary>Plugin-owned state (docs/31 D-X2): rendered in grids/filters but NOT editable
+    /// through forms, and the wire extension channel rejects writes — only the owning plugin's
+    /// IPackagedFieldWriter may set it. Tenant-defined fields are never read-only.</summary>
+    public bool ReadOnly { get; init; }
+
     public SemanticType Semantic
     {
         get
@@ -128,5 +133,6 @@ public static class ExtensionFindings
     public static readonly FindingFactory UnknownType = Finding.Error("extensions.unknown-type");
     public static readonly FindingFactory KeyConflict = Finding.Error("extensions.key-conflict");
     public static readonly FindingFactory MissingLabel = Finding.Error("extensions.missing-label");
+    public static readonly FindingFactory ReadOnlyField = Finding.Error("extensions.read-only-field");
     public static readonly FindingFactory InvalidOption = Finding.Error("extensions.invalid-option");
 }

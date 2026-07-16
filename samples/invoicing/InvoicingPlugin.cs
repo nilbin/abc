@@ -27,7 +27,7 @@ public sealed class InvoicingPlugin : ITamPlugin
         // D-X2 read half (docs/22 P2): the order wears its invoice status. The write half is
         // IPackagedFieldWriter in the operations/subscriber — structurally scoped to this key.
         plugin.ExtensionField("order", "invoiceStatus", "selection",
-            options: ["draft", "invoiced", "paid"]);
+            options: ["draft", "invoiced", "paid"], readOnly: true);
 
         // D-X1: "Create invoice" where the user lives — a row action on the HOST's orders
         // grid, with a declared input↔column bind. Entitlement+activation+permission gate it.

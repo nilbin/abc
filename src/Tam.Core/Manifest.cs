@@ -34,6 +34,11 @@ public sealed record ManifestDto(
     public IReadOnlyDictionary<string, IReadOnlyList<ManifestNavNode>> Nav { get; init; } =
         new Dictionary<string, IReadOnlyList<ManifestNavNode>>();
 
+    /// <summary>Framework-composed pages (docs/32): the client renders these mechanically;
+    /// registered custom pages take precedence on key collision (they never should collide).</summary>
+    public IReadOnlyDictionary<string, ManifestPage> Pages { get; init; } =
+        new Dictionary<string, ManifestPage>();
+
     /// <summary>Host slots and the ACTIVE plugins' panels in them (docs/31 D-X4). The client
     /// renders a slot wherever the host placed it; empty slots render nothing.</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<ManifestPanel>> Slots { get; init; } =
@@ -72,7 +77,8 @@ public sealed record ManifestField(
     Px? VisibleWhen = null,
     Px? RequiredWhen = null,
     string? Renderer = null,
-    string? Sensitive = null);   // docs/27 D-A3: present only for actors holding this atom
+    string? Sensitive = null,    // docs/27 D-A3: present only for actors holding this atom
+    bool ReadOnly = false);      // docs/31 D-X2: plugin-owned state — grids yes, forms no
 
 public sealed record ManifestOperation(
     string Permission,
@@ -141,6 +147,11 @@ public sealed record ManifestPanel(
 
 public sealed record ManifestEvent(
     IReadOnlyList<string> Fields, IReadOnlyList<string> SubscribedBy);
+
+public sealed record ManifestPage(string Grid, ManifestRecord? Record);
+
+public sealed record ManifestRecord(
+    string DetailView, string Key, string? Form, string? TitleField, IReadOnlyList<string> Slots);
 
 public static class ManifestBuilder
 {
@@ -272,6 +283,11 @@ public static class ManifestBuilder
                 kv => kv.Key,
                 kv => (IReadOnlyList<ManifestNavNode>)kv.Value
                     .Select(NavOf).OfType<ManifestNavNode>().ToList()),
+            Pages = model.Pages.ToDictionary(
+                kv => kv.Key,
+                kv => new ManifestPage(kv.Value.GridId, kv.Value.Record is { } r
+                    ? new ManifestRecord(r.DetailViewId, r.ContextKey, r.FormId, r.TitleField, r.SlotIds)
+                    : null)),
             Slots = model.Slots.Keys.ToDictionary(
                 slotId => slotId,
                 slotId => (IReadOnlyList<ManifestPanel>)(model.Panels.TryGetValue(slotId, out var contributed)
@@ -344,5 +360,6 @@ public static class ManifestBuilder
         spec.MaxLength,
         spec.Options,
         ChangeSet: false,
-        Extension: true);
+        Extension: true,
+        ReadOnly: spec.ReadOnly);
 }

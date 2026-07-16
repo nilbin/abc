@@ -3,6 +3,7 @@ import { NavLink, SegmentedControl, Stack, Tabs } from '@mantine/core';
 import type { Manifest, NavNode } from '@tam/core';
 import { useTam } from './context';
 import { ViewGrid } from './ViewGrid';
+import { ModelPage } from './ModelPage';
 
 // Navigation runtime (docs/30): the model carries pure depth + kind; THESE components map depth
 // to UI slots (mode switcher → sidebar → tabs). Visibility derives from the bound surface's
@@ -19,7 +20,13 @@ function visible(node: NavNode, manifest: Manifest, can: (p: string) => boolean)
     const view = manifest.grids[node.target.grid]?.view;
     return view ? can(manifest.views[view]?.permission ?? '') : false;
   }
-  if (node.target?.page) return node.permission ? can(node.permission) : false;
+  if (node.target?.page) {
+    if (node.permission) return can(node.permission);
+    // A DECLARED page (docs/32) derives visibility from its grid's view, like grid targets.
+    const declared = manifest.pages?.[node.target.page];
+    const view = declared ? manifest.grids[declared.grid]?.view : undefined;
+    return view ? can(manifest.views[view]?.permission ?? '') : false;
+  }
   if (node.target?.plugin) {
     return Object.values(manifest.grids).some(g =>
       g.plugin === node.target!.plugin && can(manifest.views[g.view]?.permission ?? ''));
@@ -154,7 +161,13 @@ export function NavPage() {
   const nav = useNav();
   const node = nav.activeSub ?? nav.active;
   if (!node?.target) return null;
-  if (node.target.page) return <>{pages.get(node.target.page)?.() ?? null}</>;
+  if (node.target.page) {
+    const registered = pages.get(node.target.page);
+    if (registered) return <>{registered()}</>;
+    // Framework-composed page (docs/32): grid + record surface, zero app React.
+    if (manifest.pages?.[node.target.page]) return <ModelPage page={node.target.page} />;
+    return null;
+  }
   // Generic pages refresh the manifest after any action (one GET): activation, role edits,
   // tenant moves and field definitions all flip the effective manifest.
   const onAction = () => void refreshManifest();

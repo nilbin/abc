@@ -33,6 +33,7 @@ export function OperationForm(props: OperationFormProps) {
     const own = formDef.fields.map(f => ({ field: f, key: f.name }));
     const extension = formDef.includeExtensions && operation.extensibleEntity
       ? (manifest.extensions[operation.extensibleEntity] ?? [])
+          .filter(f => !f.readOnly)   // plugin-owned state (docs/31 D-X2): grids yes, forms no
           .map(f => ({ field: f, key: `ext:${f.name}` }))
       : [];
     return [...own, ...extension];

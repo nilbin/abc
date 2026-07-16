@@ -12,11 +12,12 @@ public sealed partial class TamModelBuilder
     private readonly Dictionary<string, (object Builder, string ViewId, string? Plugin)> grids = [];
     private readonly Dictionary<string, PluginDefinition> plugins = [];
     private readonly Dictionary<string, PackageDefinition> packages = [];
-    private readonly List<(string EntityKey, string Key, string Type, bool Required, int? MaxLength, IReadOnlyList<string>? Options, string Plugin)> packagedFields = [];
+    private readonly List<(string EntityKey, string Key, string Type, bool Required, int? MaxLength, IReadOnlyList<string>? Options, bool ReadOnly, string Plugin)> packagedFields = [];
     private readonly List<GateDefinition> gates = [];
     private readonly List<GridActionContribution> gridActions = [];
     private readonly List<ViewRequirement> viewRequirements = [];
     private readonly Dictionary<string, SlotDefinition> slots = [];
+    private readonly Dictionary<string, PageDefinition> pages = [];
     private readonly List<PanelContribution> panels = [];
     private readonly Dictionary<string, EventDeclaration> events = [];
     private readonly List<EventRequirement> eventRequirements = [];
@@ -167,11 +168,12 @@ public sealed partial class TamModelBuilder
     }
 
     internal void PackagedField(
-        string entityKey, string key, string type, bool required, int? maxLength, IReadOnlyList<string>? options)
+        string entityKey, string key, string type, bool required, int? maxLength,
+        IReadOnlyList<string>? options, bool readOnly)
     {
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: packaged fields can only be declared by a plugin.");
-        packagedFields.Add((entityKey, key, type, required, maxLength, options, currentPlugin));
+        packagedFields.Add((entityKey, key, type, required, maxLength, options, readOnly, currentPlugin));
     }
 
     internal void Gate(string operationId, Type handlerType, bool pure = false)
@@ -179,6 +181,20 @@ public sealed partial class TamModelBuilder
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: gates can only be declared by a plugin.");
         gates.Add(new GateDefinition(operationId, currentPlugin, handlerType, pure));
+    }
+
+    /// <summary>Declares a framework-composed page (docs/32): a grid plus an optional record
+    /// surface (detail + form + slots), rendered by the client library — the standard
+    /// list-and-detail shape without hand-written React. Host-only, like nav layout.</summary>
+    public TamModelBuilder Page(string id, Action<PageBuilder> configure)
+    {
+        if (currentPlugin is not null)
+            throw new InvalidOperationException(
+                "PLG005: pages are declared by the HOST — plugins contribute through slots and grid actions.");
+        var builder = new PageBuilder();
+        configure(builder);
+        pages[id] = builder.Build(id);
+        return this;
     }
 
     /// <summary>Declares a contribution point on one of the HOST's surfaces (docs/31 D-X4):
@@ -345,7 +361,8 @@ public sealed partial class TamModelBuilder
                     $"L10N001: packaged field '{r.Key}' has no 'ext.{r.Key}' label in default culture '{defaultCulture}'.");
             return new PackagedFieldDefinition(r.Plugin, r.EntityKey, new ExtensionFieldSpec(
                 r.Key, r.EntityKey, r.Type, r.Required, r.MaxLength,
-                labels, null, r.Options, ExtensionFieldState.Active));
+                labels, null, r.Options, ExtensionFieldState.Active)
+            { ReadOnly = r.ReadOnly });
         }).ToList();
 
         // A wildcard gate (docs/28 approvals seam 1) names no operation by design — its target
@@ -389,6 +406,7 @@ public sealed partial class TamModelBuilder
             Packages = packages,
             PackagedFields = packaged,
             ExtensibleEntityKeys = extensibleKeys,
+            Pages = pages,
             Slots = slots,
             Panels = panels.GroupBy(p => p.SlotId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<PanelContribution>)g.ToList()),
@@ -412,6 +430,7 @@ public sealed partial class TamModelBuilder
         VerifySubtreeViews(model);
         VerifyContributions(model);
         VerifySlotsAndEvents(model, eventRequirements);
+        VerifyPages(model);
         VerifyLocalization(model, catalogs);
         return model;
     }

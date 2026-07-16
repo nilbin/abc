@@ -45,6 +45,11 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, IReadOnlyList<NavNode>> Nav { get; init; } =
         new Dictionary<string, IReadOnlyList<NavNode>>();
 
+    /// <summary>Framework-composed pages (docs/32), by page key — nav { page } targets resolve
+    /// a registered custom page first, then one of these.</summary>
+    public IReadOnlyDictionary<string, PageDefinition> Pages { get; init; } =
+        new Dictionary<string, PageDefinition>();
+
     /// <summary>Host-declared contribution points (docs/31 D-X4), by slot id.</summary>
     public IReadOnlyDictionary<string, SlotDefinition> Slots { get; init; } =
         new Dictionary<string, SlotDefinition>();

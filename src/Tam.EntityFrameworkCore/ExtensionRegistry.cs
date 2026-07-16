@@ -66,6 +66,12 @@ public static class ExtensionApplier
             {
                 findings.Add(ExtensionFindings.DeprecatedField.At(FieldPath.Extension(key)));
             }
+            if (spec.ReadOnly)
+            {
+                // Plugin-owned state (docs/31 D-X2): only the owning plugin's writer sets it.
+                findings.Add(ExtensionFindings.ReadOnlyField.At(FieldPath.Extension(key)));
+                continue;
+            }
 
             var submitted = FromElement(change.Value);
             var original = FromElement(change.Original);

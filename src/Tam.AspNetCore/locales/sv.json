@@ -176,5 +176,6 @@
   "nav.rules": "Regler",
   "nav.audit": "Historik",
   "nav.tenants": "Bolag",
-  "nav.more": "Mer"
+  "nav.more": "Mer",
+  "extensions.read-only-field": "Fältet ägs av ett tillägg och kan inte ändras här."
 }

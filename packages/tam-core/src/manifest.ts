@@ -32,6 +32,8 @@ export interface ManifestField {
   options?: string[];
   changeSet: boolean;
   extension?: boolean;
+  /** Plugin-owned state (docs/31 D-X2): show in grids/filters, never editable in forms. */
+  readOnly?: boolean;
   visibleWhen?: Px;
   requiredWhen?: Px;
   renderer?: string;
@@ -90,6 +92,11 @@ export interface Manifest {
   packages?: string[];
   /** Declared navigation trees per surface class (docs/30); filter per actor at render. */
   nav?: Record<string, NavNode[]>;
+  /** Framework-composed pages (docs/32): grid + optional record surface, rendered mechanically. */
+  pages?: Record<string, {
+    grid: string;
+    record?: { detailView: string; key: string; form?: string; titleField?: string; slots: string[] };
+  }>;
   /** Host slots and the active plugins' panels in them (docs/31 D-X4). */
   slots?: Record<string, { grid: string; plugin: string; bind: Record<string, string> }[]>;
   /** Declared domain events with the active plugins subscribed to each (docs/31 D-X5). */

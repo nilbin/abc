@@ -176,5 +176,6 @@
   "nav.rules": "Rules",
   "nav.audit": "History",
   "nav.tenants": "Companies",
-  "nav.more": "More"
+  "nav.more": "More",
+  "extensions.read-only-field": "This field is owned by a plugin and cannot be edited here."
 }
