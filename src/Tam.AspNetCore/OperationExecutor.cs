@@ -309,7 +309,7 @@ public sealed class OperationExecutor(
         var findings = new List<Finding>();
         foreach (var field in operation.InputFields)
         {
-            var property = operation.InputType.GetProperty(field.MemberName)!;
+            var property = ReflectionCache.Property(operation.InputType, field.MemberName);
             var value = property.GetValue(input);
 
             if (field.Required && IsEmpty(value))
@@ -319,7 +319,7 @@ public sealed class OperationExecutor(
             }
 
             var toValidate = field.IsChangeSet && value is not null
-                ? value.GetType().GetProperty("Value")!.GetValue(value)
+                ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
                 : value;
             if (toValidate is null) continue;
 
@@ -355,7 +355,7 @@ public sealed class OperationExecutor(
         OperationDefinition operation, object input, OperationContext context, CancellationToken ct)
     {
         var args = BindParameters(operation.Execute, input, context, ct);
-        var invocation = operation.Execute.Invoke(null, args)
+        var invocation = ReflectionCache.Invoker(operation.Execute).Invoke(null, args.AsSpan())
             ?? throw new InvalidOperationException(
                 $"TAM004: {operation.Id} Execute returned null — expected Task<Result<...>>.");
         var task = (Task)invocation;
@@ -369,7 +369,7 @@ public sealed class OperationExecutor(
     internal object?[] BindParameters(
         MethodInfo method, object? input, OperationContext context, CancellationToken ct)
     {
-        return method.GetParameters().Select(p =>
+        return ReflectionCache.Parameters(method).Select(p =>
         {
             if (p.ParameterType == typeof(CancellationToken)) return (object?)ct;
             if (p.ParameterType == typeof(OperationContext)) return context;

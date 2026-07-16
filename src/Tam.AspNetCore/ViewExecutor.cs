@@ -185,7 +185,8 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         var isNpgsql = (services.GetService(typeof(ITamDb)) as ITamDb)?
             .Db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
 
-        var run = RunMethod.MakeGenericMethod(view.ResultType);
+        // One closed generic per view result type — memoized, not built per request.
+        var run = RunMethods.GetOrAdd(view.ResultType, t => RunMethod.MakeGenericMethod(t));
         var task = (Task<ViewResponse>)run.Invoke(
             null, [queryable, sort, descending, page, pageSize, fieldFilters, extensionFilters, extensionSort, isNpgsql, ct])!;
         var response = await task;
@@ -212,6 +213,9 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
 
     private static readonly MethodInfo RunMethod =
         typeof(ViewExecutor).GetMethod(nameof(Run), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo>
+        RunMethods = new();
 
     internal enum FilterOperator { Equal, From, To, Contains }
 
