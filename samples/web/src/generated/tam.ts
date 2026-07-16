@@ -8,6 +8,25 @@ export interface TypedOperationResponse<TOutput> extends OperationResponse {
   output?: TOutput & Record<string, unknown>;
 }
 
+export interface MaterialsAddInput {
+  workOrderId: string;
+  stockItemId: string;
+  quantity: number;
+}
+
+export interface MaterialsAddOutput {
+  materialLineId: string;
+  amount: number;
+}
+
+export interface TimeApproveInput {
+  timeEntryId: string;
+}
+
+export interface TimeApproveOutput {
+  status: "draft" | "approved";
+}
+
 export interface WorkOrdersAssignInput {
   workOrderId: string;
   assigneeActorId: string;
@@ -15,6 +34,20 @@ export interface WorkOrdersAssignInput {
 
 export interface WorkOrdersAssignOutput {
   status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+}
+
+export interface TimeBookInput {
+  workOrderId: string;
+  date: string;
+  hours: number;
+  hourlyRate: number;
+  note?: string;
+  amount?: number;
+}
+
+export interface TimeBookOutput {
+  timeEntryId: string;
+  amount: number;
 }
 
 export interface ProjectsCloseInput {
@@ -561,6 +594,36 @@ export interface CustomersLookupQuery {
   search?: string;
 }
 
+export interface MaterialsDetailRow {
+  id: string;
+  workOrderNumber: string;
+  sku: string;
+  stockItemName: string;
+  unit: "piece" | "hour" | "meter" | "kilogram" | "litre";
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface MaterialsDetailQuery {
+  materialLineId?: string;
+}
+
+export interface MaterialsListRow {
+  id: string;
+  workOrderNumber: string;
+  sku: string;
+  stockItemName: string;
+  unit: "piece" | "hour" | "meter" | "kilogram" | "litre";
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface MaterialsListQuery {
+  search?: string;
+}
+
 export interface OrdersDetailRow {
   id: string;
   number: string;
@@ -646,6 +709,37 @@ export interface StockListRow {
 }
 
 export interface StockListQuery {
+  search?: string;
+}
+
+export interface TimeDetailRow {
+  id: string;
+  workOrderNumber: string;
+  date: string;
+  technicianName: string;
+  hours: number;
+  hourlyRate: number;
+  amount: number;
+  note?: string;
+  status: "draft" | "approved";
+}
+
+export interface TimeDetailQuery {
+  timeEntryId?: string;
+}
+
+export interface TimeListRow {
+  id: string;
+  workOrderNumber: string;
+  date: string;
+  technicianName: string;
+  hours: number;
+  hourlyRate: number;
+  amount: number;
+  status: "draft" | "approved";
+}
+
+export interface TimeListQuery {
   search?: string;
 }
 
@@ -909,9 +1003,24 @@ export interface InvoicingInvoicesListQuery {
 export class TypedTamClient {
   constructor(readonly client: TamClient) {}
 
+  /** materials.add (requires materials.add) */
+  materialsAdd(input: MaterialsAddInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<MaterialsAddOutput>> {
+    return this.client.operation("materials.add", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<MaterialsAddOutput>>;
+  }
+
+  /** time.approve (requires time.approve) */
+  timeApprove(input: TimeApproveInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<TimeApproveOutput>> {
+    return this.client.operation("time.approve", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TimeApproveOutput>>;
+  }
+
   /** work-orders.assign (requires work-orders.assign) */
   workOrdersAssign(input: WorkOrdersAssignInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersAssignOutput>> {
     return this.client.operation("work-orders.assign", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersAssignOutput>>;
+  }
+
+  /** time.book (requires time.book) */
+  timeBook(input: TimeBookInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<TimeBookOutput>> {
+    return this.client.operation("time.book", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TimeBookOutput>>;
   }
 
   /** projects.close (requires projects.close) */
@@ -1184,6 +1293,16 @@ export class TypedTamClient {
     return this.client.view("customers.lookup", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersLookupRow[] }>;
   }
 
+  /** view materials.detail (requires materials.read) */
+  materialsDetail(query?: MaterialsDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: MaterialsDetailRow[] }> {
+    return this.client.view("materials.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: MaterialsDetailRow[] }>;
+  }
+
+  /** view materials.list (requires materials.read) */
+  materialsList(query?: MaterialsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: MaterialsListRow[] }> {
+    return this.client.view("materials.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: MaterialsListRow[] }>;
+  }
+
   /** view orders.detail (requires orders.read) */
   ordersDetail(query?: OrdersDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersDetailRow[] }> {
     return this.client.view("orders.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersDetailRow[] }>;
@@ -1212,6 +1331,16 @@ export class TypedTamClient {
   /** view stock.list (requires stock.read) */
   stockList(query?: StockListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }> {
     return this.client.view("stock.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }>;
+  }
+
+  /** view time.detail (requires time.read) */
+  timeDetail(query?: TimeDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: TimeDetailRow[] }> {
+    return this.client.view("time.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: TimeDetailRow[] }>;
+  }
+
+  /** view time.list (requires time.read) */
+  timeList(query?: TimeListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: TimeListRow[] }> {
+    return this.client.view("time.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: TimeListRow[] }>;
   }
 
   /** view work-orders.detail (requires work-orders.read) */

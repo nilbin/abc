@@ -449,6 +449,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Field-service arc M3 (docs/34): TimeEntry + MaterialLine — built docs-only by an RTFM
+  agent**: the arc's original intent realized — the slice was implemented by an agent
+  FORBIDDEN from reading framework source (docs + samples + compiler errors only), and it
+  shipped everything with zero framework changes: technician-owned time entries (paired
+  atoms + [Widens], `ScopedUnless` on the booking technician), `time.approve` as an
+  intent, snapshot semantics (hours×rate amount stored at booking; a material line keeps
+  its entry-time unit price when the catalog price moves — the seed carries a visible 79
+  vs 89 kr example), three derivations (live amount, latest-own-rate default, stock-item
+  options), two read-only-record declared pages, materials deliberately WO-scoped rather
+  than own-scoped (reasoning recorded in code). Its report filed 7 doc gaps and 6 DX
+  frictions — the friction log grew more from one docs-only consumer than from two
+  code-aware milestones, which is exactly why it ran this way. Verified independently:
+  21-check fieldm3 suite including the approvals-plugin gate PARKING time.approve via a
+  tenant-defined rule (wildcard gate over a domain that postdates the plugin), full
+  14-suite matrix on SQLite AND Postgres, RLS on both new tables.
 - **Field-service arc M2 (docs/34): WorkOrder — the real state machine, still zero framework
   changes**: Draft → Scheduled → InProgress → Done → Closed as entity methods behind 7
   intent operations (EDIT001 all the way — even scheduling is an intent that assigns AND

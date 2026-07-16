@@ -269,6 +269,7 @@
       "customers.duplicate-name": "A customer with that name already exists.",
       "customers.inactive": "The selected customer is inactive.",
       "customers.not-found": "The customer no longer exists.",
+      "enums.approved": "Approved",
       "enums.cancelled": "Cancelled",
       "enums.closed": "Closed",
       "enums.completed": "Completed",
@@ -284,17 +285,23 @@
       "enums.scheduled": "Scheduled",
       "enums.service": "Service",
       "labels.active-only": "Active only",
+      "labels.amount": "Amount",
       "labels.assignee": "Assignee",
       "labels.budget": "Budget",
       "labels.company": "Company",
       "labels.customer": "Customer",
       "labels.customer-id": "Customer",
+      "labels.date": "Date",
       "labels.description": "Description",
       "labels.email": "Email",
       "labels.estimated-total": "Estimated total",
       "labels.extensions": "Custom fields",
+      "labels.hourly-rate": "Hourly rate",
+      "labels.hours": "Hours",
       "labels.is-active": "Active",
       "labels.location": "Location",
+      "labels.material-line-id": "Material line",
+      "labels.note": "Note",
       "labels.number": "Order number",
       "labels.order-id": "Order",
       "labels.order-type": "Order type",
@@ -302,11 +309,15 @@
       "labels.project": "Project",
       "labels.project-id": "Project",
       "labels.project-number": "Project number",
+      "labels.quantity": "Quantity",
       "labels.requested-date": "Requested date",
       "labels.scheduled-date": "Scheduled date",
       "labels.sku": "SKU",
       "labels.stock-item": "Stock item",
       "labels.stock-item-id": "Stock item",
+      "labels.technician": "Technician",
+      "labels.time-entry": "Time entry",
+      "labels.time-entry-id": "Time entry",
       "labels.title": "Title",
       "labels.unit": "Unit",
       "labels.unit-price": "Unit price",
@@ -315,16 +326,22 @@
       "labels.work-order": "Work order",
       "labels.work-order-id": "Work order",
       "labels.work-order-number": "Work order number",
+      "materials.invalid-quantity": "Quantity must be greater than zero.",
+      "materials.stock-item-inactive": "The stock item is retired and cannot take new consumption.",
+      "materials.work-order-closed": "The work order is closed \u2014 materials can no longer be added.",
       "nav.admin": "Administration",
       "nav.administration": "General",
       "nav.customers": "Customers",
+      "nav.materials": "Materials",
       "nav.orders": "Orders",
       "nav.projects": "Projects",
       "nav.stock": "Stock items",
+      "nav.time": "Time",
       "nav.work": "Work",
       "nav.work-orders": "Work orders",
       "operations.customers.create.title": "New customer",
       "operations.customers.edit-contact.title": "Edit customer",
+      "operations.materials.add.title": "Add material",
       "operations.orders.complete.title": "Complete order",
       "operations.orders.create.title": "New order",
       "operations.orders.edit-details.title": "Edit order details",
@@ -335,6 +352,8 @@
       "operations.stock.create.title": "New stock item",
       "operations.stock.deactivate.title": "Deactivate",
       "operations.stock.edit.title": "Edit stock item",
+      "operations.time.approve.title": "Approve time",
+      "operations.time.book.title": "Book time",
       "operations.work-orders.assign.title": "Assign",
       "operations.work-orders.close.title": "Close",
       "operations.work-orders.complete.title": "Complete",
@@ -356,6 +375,11 @@
       "projects.not-open": "The project is not open.",
       "stock.duplicate-sku": "A stock item with this SKU already exists.",
       "stock.not-found": "Stock item not found.",
+      "time.already-approved": "The time entry is already approved.",
+      "time.invalid-hours": "Hours must be more than 0 and at most 24.",
+      "time.invalid-rate": "The hourly rate cannot be negative.",
+      "time.not-found": "Time entry not found.",
+      "time.work-order-closed": "The work order is closed \u2014 time can no longer be booked.",
       "work-orders.invalid-transition": "That step is not allowed from the current status.",
       "work-orders.not-editable": "The work order can no longer be edited.",
       "work-orders.not-found": "Work order not found.",
@@ -629,6 +653,7 @@
       "customers.duplicate-name": "Det finns redan en kund med det namnet.",
       "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
       "customers.not-found": "Kunden finns inte l\u00E4ngre.",
+      "enums.approved": "Godk\u00E4nd",
       "enums.cancelled": "Makulerad",
       "enums.closed": "Avslutat",
       "enums.completed": "Slutf\u00F6rd",
@@ -644,17 +669,23 @@
       "enums.scheduled": "Planerad",
       "enums.service": "Service",
       "labels.active-only": "Endast aktiva",
+      "labels.amount": "Belopp",
       "labels.assignee": "Utf\u00F6rare",
       "labels.budget": "Budget",
       "labels.company": "Bolag",
       "labels.customer": "Kund",
       "labels.customer-id": "Kund",
+      "labels.date": "Datum",
       "labels.description": "Arbetsbeskrivning",
       "labels.email": "E-post",
       "labels.estimated-total": "Uppskattat belopp",
       "labels.extensions": "Anpassade f\u00E4lt",
+      "labels.hourly-rate": "Timpris",
+      "labels.hours": "Timmar",
       "labels.is-active": "Aktiv",
       "labels.location": "Plats",
+      "labels.material-line-id": "Materialrad",
+      "labels.note": "Anteckning",
       "labels.number": "Ordernummer",
       "labels.order-id": "Order",
       "labels.order-type": "Ordertyp",
@@ -662,11 +693,15 @@
       "labels.project": "Projekt",
       "labels.project-id": "Projekt",
       "labels.project-number": "Projektnummer",
+      "labels.quantity": "Antal",
       "labels.requested-date": "\u00D6nskat datum",
       "labels.scheduled-date": "Planerat datum",
       "labels.sku": "Artikelnummer",
       "labels.stock-item": "Artikel",
       "labels.stock-item-id": "Artikel",
+      "labels.technician": "Tekniker",
+      "labels.time-entry": "Tidpost",
+      "labels.time-entry-id": "Tidpost",
       "labels.title": "Rubrik",
       "labels.unit": "Enhet",
       "labels.unit-price": "\u00C0-pris",
@@ -675,16 +710,22 @@
       "labels.work-order": "Arbetsorder",
       "labels.work-order-id": "Arbetsorder",
       "labels.work-order-number": "Arbetsordernummer",
+      "materials.invalid-quantity": "Antalet m\u00E5ste vara st\u00F6rre \u00E4n noll.",
+      "materials.stock-item-inactive": "Artikeln \u00E4r utg\u00E5ngen och kan inte ta ny f\u00F6rbrukning.",
+      "materials.work-order-closed": "Arbetsordern \u00E4r avslutad \u2014 material kan inte l\u00E4ngre registreras.",
       "nav.admin": "Administration",
       "nav.administration": "Allm\u00E4nt",
       "nav.customers": "Kunder",
+      "nav.materials": "Material",
       "nav.orders": "Ordrar",
       "nav.projects": "Projekt",
       "nav.stock": "Artiklar",
+      "nav.time": "Tid",
       "nav.work": "Arbete",
       "nav.work-orders": "Arbetsordrar",
       "operations.customers.create.title": "Ny kund",
       "operations.customers.edit-contact.title": "Redigera kund",
+      "operations.materials.add.title": "Registrera material",
       "operations.orders.complete.title": "Slutf\u00F6r order",
       "operations.orders.create.title": "Ny order",
       "operations.orders.edit-details.title": "\u00C4ndra orderdetaljer",
@@ -695,6 +736,8 @@
       "operations.stock.create.title": "Ny artikel",
       "operations.stock.deactivate.title": "Inaktivera",
       "operations.stock.edit.title": "Redigera artikel",
+      "operations.time.approve.title": "Godk\u00E4nn tid",
+      "operations.time.book.title": "Boka tid",
       "operations.work-orders.assign.title": "Tilldela",
       "operations.work-orders.close.title": "Avsluta",
       "operations.work-orders.complete.title": "Slutf\u00F6r",
@@ -716,6 +759,11 @@
       "projects.not-open": "Projektet \u00E4r inte \u00F6ppet.",
       "stock.duplicate-sku": "Det finns redan en artikel med detta artikelnummer.",
       "stock.not-found": "Artikeln hittades inte.",
+      "time.already-approved": "Tidposten \u00E4r redan godk\u00E4nd.",
+      "time.invalid-hours": "Timmar m\u00E5ste vara mer \u00E4n 0 och h\u00F6gst 24.",
+      "time.invalid-rate": "Timpriset kan inte vara negativt.",
+      "time.not-found": "Tidposten hittades inte.",
+      "time.work-order-closed": "Arbetsordern \u00E4r avslutad \u2014 tid kan inte l\u00E4ngre bokas.",
       "work-orders.invalid-transition": "Steget \u00E4r inte till\u00E5tet fr\u00E5n nuvarande status.",
       "work-orders.not-editable": "Arbetsordern kan inte l\u00E4ngre redigeras.",
       "work-orders.not-found": "Arbetsordern hittades inte.",
@@ -724,6 +772,98 @@
     }
   },
   "operations": {
+    "materials.add": {
+      "permission": "materials.add",
+      "titleKey": "operations.materials.add.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "quantity",
+          "labelKey": "labels.quantity",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "materialLineId",
+          "labelKey": "labels.material-line-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "time.approve": {
+      "permission": "time.approve",
+      "titleKey": "operations.time.approve.title",
+      "fields": [
+        {
+          "name": "timeEntryId",
+          "labelKey": "labels.time-entry",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Approved"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
     "work-orders.assign": {
       "permission": "work-orders.assign",
       "titleKey": "operations.work-orders.assign.title",
@@ -763,6 +903,97 @@
             "Done",
             "Closed"
           ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "time.book": {
+      "permission": "time.book",
+      "titleKey": "operations.time.book.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "date",
+          "labelKey": "labels.date",
+          "type": "date",
+          "wireKind": "date",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hours",
+          "labelKey": "labels.hours",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hourlyRate",
+          "labelKey": "labels.hourly-rate",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "note",
+          "labelKey": "labels.note",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": false,
+          "maxLength": 500,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "timeEntryId",
+          "labelKey": "labels.time-entry-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
           "changeSet": false,
           "extension": false,
           "readOnly": false
@@ -3541,6 +3772,230 @@
       "defaultSort": "name",
       "defaultSortDescending": false
     },
+    "materials.detail": {
+      "permission": "materials.read",
+      "queryFields": [
+        {
+          "name": "materialLineId",
+          "labelKey": "labels.material-line-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "workOrderNumber",
+          "labelKey": "labels.work-order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "stockItemName",
+          "labelKey": "labels.stock-item",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unit",
+          "labelKey": "labels.unit",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Piece",
+            "Hour",
+            "Meter",
+            "Kilogram",
+            "Litre"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "quantity",
+          "labelKey": "labels.quantity",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false
+    },
+    "materials.list": {
+      "permission": "materials.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "workOrderNumber",
+          "labelKey": "labels.work-order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "stockItemName",
+          "labelKey": "labels.stock-item",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unit",
+          "labelKey": "labels.unit",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Piece",
+            "Hour",
+            "Meter",
+            "Kilogram",
+            "Litre"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "quantity",
+          "labelKey": "labels.quantity",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "workOrderNumber",
+        "stockItemName",
+        "amount"
+      ],
+      "filterable": [
+        "workOrderNumber",
+        "sku",
+        "stockItemName",
+        "unit"
+      ],
+      "defaultSort": "workOrderNumber",
+      "defaultSortDescending": true
+    },
     "orders.detail": {
       "permission": "orders.read",
       "queryFields": [
@@ -4197,6 +4652,237 @@
       ],
       "defaultSort": "sku",
       "defaultSortDescending": false
+    },
+    "time.detail": {
+      "permission": "time.read",
+      "queryFields": [
+        {
+          "name": "timeEntryId",
+          "labelKey": "labels.time-entry-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "workOrderNumber",
+          "labelKey": "labels.work-order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "date",
+          "labelKey": "labels.date",
+          "type": "date",
+          "wireKind": "date",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "technicianName",
+          "labelKey": "labels.technician",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hours",
+          "labelKey": "labels.hours",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hourlyRate",
+          "labelKey": "labels.hourly-rate",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "note",
+          "labelKey": "labels.note",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": false,
+          "maxLength": 500,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Approved"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false
+    },
+    "time.list": {
+      "permission": "time.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "workOrderNumber",
+          "labelKey": "labels.work-order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "date",
+          "labelKey": "labels.date",
+          "type": "date",
+          "wireKind": "date",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "technicianName",
+          "labelKey": "labels.technician",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hours",
+          "labelKey": "labels.hours",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hourlyRate",
+          "labelKey": "labels.hourly-rate",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Approved"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "date",
+        "workOrderNumber",
+        "hours",
+        "amount"
+      ],
+      "filterable": [
+        "status",
+        "date",
+        "technicianName",
+        "workOrderNumber"
+      ],
+      "defaultSort": "date",
+      "defaultSortDescending": true
     },
     "work-orders.detail": {
       "permission": "work-orders.read",
@@ -6826,6 +7512,122 @@
         "workOrderId"
       ]
     },
+    "web.time.book": {
+      "operation": "time.book",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "date",
+          "labelKey": "labels.date",
+          "type": "date",
+          "wireKind": "date",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hours",
+          "labelKey": "labels.hours",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hourlyRate",
+          "labelKey": "labels.hourly-rate",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "money",
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "money",
+          "readOnly": false
+        },
+        {
+          "name": "note",
+          "labelKey": "labels.note",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": false,
+          "maxLength": 500,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [
+        "workOrderId",
+        "hours",
+        "hourlyRate"
+      ]
+    },
+    "web.materials.add": {
+      "operation": "materials.add",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "quantity",
+          "labelKey": "labels.quantity",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [
+        "workOrderId"
+      ]
+    },
     "web.stock.create": {
       "operation": "stock.create",
       "fields": [
@@ -7203,12 +8005,48 @@
         "work-orders.schedule",
         "work-orders.start",
         "work-orders.complete",
-        "work-orders.close"
+        "work-orders.close",
+        "time.book",
+        "materials.add"
       ],
       "toolbarActions": [
         "work-orders.create"
       ],
       "includeExtensions": true,
+      "contributedActions": []
+    },
+    "web.time.list": {
+      "view": "time.list",
+      "columns": [
+        "workOrderNumber",
+        "date",
+        "technicianName",
+        "hours",
+        "hourlyRate",
+        "amount",
+        "status"
+      ],
+      "rowActions": [
+        "time.approve"
+      ],
+      "toolbarActions": [],
+      "includeExtensions": false,
+      "contributedActions": []
+    },
+    "web.materials.list": {
+      "view": "materials.list",
+      "columns": [
+        "workOrderNumber",
+        "sku",
+        "stockItemName",
+        "unit",
+        "quantity",
+        "unitPrice",
+        "amount"
+      ],
+      "rowActions": [],
+      "toolbarActions": [],
+      "includeExtensions": false,
       "contributedActions": []
     },
     "web.stock.list": {
@@ -7245,6 +8083,8 @@
     "integrations.manage",
     "invoicing.manage",
     "invoicing.read",
+    "materials.add",
+    "materials.read",
     "nav.manage",
     "orders.complete",
     "orders.complete-all",
@@ -7271,6 +8111,10 @@
     "tenants.edit",
     "tenants.move",
     "tenants.read",
+    "time.approve",
+    "time.book",
+    "time.read",
+    "time.read-all",
     "users.manage",
     "work-orders.assign",
     "work-orders.close",
@@ -7331,6 +8175,26 @@
             "order": 15,
             "target": {
               "page": "work-orders"
+            },
+            "children": []
+          },
+          {
+            "id": "time",
+            "kind": "page",
+            "labelKey": "nav.time",
+            "order": 16,
+            "target": {
+              "page": "time"
+            },
+            "children": []
+          },
+          {
+            "id": "materials",
+            "kind": "page",
+            "labelKey": "nav.materials",
+            "order": 17,
+            "target": {
+              "page": "materials"
             },
             "children": []
           },
@@ -7631,6 +8495,34 @@
             "id": "web.work-orders.edit"
           }
         ]
+      }
+    },
+    "time": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "web.time.list"
+        }
+      ],
+      "record": {
+        "detailView": "time.detail",
+        "key": "timeEntryId",
+        "titleField": "workOrderNumber",
+        "sections": []
+      }
+    },
+    "materials": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "web.materials.list"
+        }
+      ],
+      "record": {
+        "detailView": "materials.detail",
+        "key": "materialLineId",
+        "titleField": "workOrderNumber",
+        "sections": []
       }
     }
   },

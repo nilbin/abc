@@ -36,14 +36,18 @@ public static class Seed
         doneDeal.Close();
         db.Projects.AddRange(pumpRefurb, serviceDeal, sveaVent, doneDeal);
 
-        // The stock catalog (docs/34 M1): per-node, retire-don't-delete.
+        // The stock catalog (docs/34 M1): per-node, retire-don't-delete. Named locals feed the
+        // M3 material lines below.
         var r22 = StockItem.Create(Tenant, new("KM-R22"), "Köldmedium R22 (utfasad)", StockUnit.Kilogram, 0m);
         r22.Deactivate();
+        var packning = StockItem.Create(Tenant, new("PKG-DN50"), "Packning DN50", StockUnit.Piece, 145m);
+        var koldmedium = StockItem.Create(Tenant, new("KM-R410A"), "Köldmedium R410A", StockUnit.Kilogram, 890m);
+        var kopparror = StockItem.Create(Tenant, new("CU-15"), "Kopparrör 15 mm", StockUnit.Meter, 89m);
         db.Stock.AddRange(
-            StockItem.Create(Tenant, new("PKG-DN50"), "Packning DN50", StockUnit.Piece, 145m),
-            StockItem.Create(Tenant, new("KM-R410A"), "Köldmedium R410A", StockUnit.Kilogram, 890m),
+            packning,
+            koldmedium,
             StockItem.Create(Tenant, new("SRV-TIM"), "Servicetekniker, timme", StockUnit.Hour, 950m),
-            StockItem.Create(Tenant, new("CU-15"), "Kopparrör 15 mm", StockUnit.Meter, 89m),
+            kopparror,
             r22);
 
         var orders = new[]
@@ -97,7 +101,10 @@ public static class Seed
             "work-orders.read", "work-orders.read-all", "work-orders.create",
             "work-orders.edit", "work-orders.edit-all", "work-orders.schedule",
             "work-orders.assign", "work-orders.start", "work-orders.start-all",
-            "work-orders.complete", "work-orders.complete-all", "work-orders.close");
+            "work-orders.complete", "work-orders.complete-all", "work-orders.close",
+            // Time is own-scoped by default; the office reads the whole board and approves.
+            "time.read", "time.read-all", "time.book", "time.approve",
+            "materials.read", "materials.add");
         // "viewer" is authored as ACCESS LEVELS (docs/27 D-A1): { orders: view, customers: view }
         // expands to the read atoms at load time — the level shape and the atom shape coexist.
         db.Add(new RoleEntity
@@ -105,13 +112,17 @@ public static class Seed
             Id = Guid.NewGuid(),
             TenantId = Tenant,
             Name = "viewer",
-            LevelsJson = """{"orders":"view","customers":"view","projects":"view","stock":"view"}""",
+            LevelsJson = """{"orders":"view","customers":"view","projects":"view","stock":"view","time":"view","materials":"view"}""",
         });
         // Technicians carry only the base atoms — own-scoped by construction, no suffixes.
         Role("technician",
             "orders.read", "orders.edit", "orders.complete", "customers.read",
             "projects.read", "stock.read",
-            "work-orders.read", "work-orders.edit", "work-orders.start", "work-orders.complete");
+            "work-orders.read", "work-orders.edit", "work-orders.start", "work-orders.complete",
+            // Base atoms only: a technician books and reads her OWN time; materials follow
+            // the work order (no own scope — see materials.add).
+            "time.read", "time.book",
+            "materials.read", "materials.add");
 
         // The tenant node (docs/26): the demo tenant is the root of its own hierarchy, so its
         // materialized Path is just its own id. Nesting adds children with Path = "demo.<child>".
@@ -225,6 +236,30 @@ public static class Seed
         woClosed.Start();
         woClosed.Complete();
         woClosed.CloseOut();
+
+        // Time entries (docs/34 M3): owned by the booking technician; Draft until the office
+        // approves (time.approve — the M4 invoicing seam takes approved time only).
+        var didrik = accountIds["didrik"].ToString();
+        var teklaDay1 = TimeEntry.Book(Tenant, woInProgress.Id, tekla, "Tekla Nilsson",
+            new DateOnly(2026, 7, 14), 6m, 950m, new("Demontering av aggregat, plan 3"));
+        var teklaDay2 = TimeEntry.Book(Tenant, woInProgress.Id, tekla, "Tekla Nilsson",
+            new DateOnly(2026, 7, 15), 4.5m, 950m, null);
+        var teklaDone = TimeEntry.Book(Tenant, woDone.Id, tekla, "Tekla Nilsson",
+            new DateOnly(2026, 7, 10), 8m, 950m, new("Montering av tilluftsdon"));
+        teklaDone.Approve();
+        var didrikClosed = TimeEntry.Book(Tenant, woClosed.Id, didrik, "Didrik Berg",
+            new DateOnly(2026, 6, 30), 3m, 895m, new("Förbesiktning på plats"));
+        didrikClosed.Approve();
+        db.TimeEntries.AddRange(teklaDay1, teklaDay2, teklaDone, didrikClosed);
+
+        // Material lines (docs/34 M3): the unit price is a SNAPSHOT taken at entry time.
+        // The copper line deliberately carries 79 kr — the catalog price was raised to 89
+        // afterwards; booked history must not follow it.
+        db.MaterialLines.AddRange(
+            MaterialLine.Add(Tenant, woInProgress.Id, packning.Id, 2m, packning.UnitPrice),
+            MaterialLine.Add(Tenant, woInProgress.Id, koldmedium.Id, 3.2m, koldmedium.UnitPrice),
+            MaterialLine.Add(Tenant, woDone.Id, kopparror.Id, 12m, 79m),
+            MaterialLine.Add(Tenant, woClosed.Id, packning.Id, 1m, packning.UnitPrice));
 
         // Integration config (docs/25): a non-secret base URL and — via the vault at startup —
         // an encrypted API key. The base URL points at this app's own mock Fortnox endpoint so

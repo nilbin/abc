@@ -81,8 +81,20 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
       seeded like an admin would, rides list rows/forms/audit untouched. Verified: 18-check
       fieldm2 suite (incl. the resolve endpoint serving assignee options from a derivation)
       + full 13-suite matrix on SQLite AND Postgres (RLS on WorkOrders confirmed).
-- [ ] M3 — TimeEntry + MaterialLine: ownership, derivations, approvals gate on
-      time.approve, row actions.
+- [x] M3 — TimeEntry + MaterialLine: ownership, derivations, approvals gate on
+      time.approve, row actions. **BUILT — and built the way this arc was meant to run**:
+      by an agent restricted to the DOCS and the samples (framework source forbidden,
+      compiler errors as IntelliSense). It shipped the whole slice with zero framework
+      changes — technician-owned time (paired atoms + [Widens]), amount/rate snapshot
+      semantics (a material line keeps its entry-time price when the catalog moves),
+      time.approve as an intent, three derivations (live hours×rate, latest-own-rate
+      default, stock-item options), two read-only-record declared pages, row-action
+      prefill from the work-orders grid — and filed 7 doc gaps + 6 DX frictions (below
+      and in the milestone commit). Verified independently after the fact: 21-check
+      fieldm3 suite INCLUDING the approvals-plugin gate parking time.approve via a
+      tenant-defined rule (the wildcard gate over a domain that postdates the plugin),
+      full 14-suite matrix on SQLite AND Postgres, RLS confirmed on TimeEntries and
+      MaterialLines.
 - [ ] M4 — Invoicing extension: draft invoice from a completed work order's approved
       time + materials; work-mode nav for technicians incl. a tenant nav override.
 - [ ] M5 — Postgres + RLS pass over the whole slice; read-set scaling measured;
@@ -135,7 +147,27 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   reader ask them. Candidate: page-placed slots auto-declare (inheriting the record's
   key), keeping standalone `model.Slot` only for `external: true` slots placed in custom
   React — one call in the common case.
-- (M2, positive) The five-state machine cost exactly what it should: five entity methods
+- (M3) A form has no seat for a COMPUTED display value: the live amount (hours × rate)
+  had to become an OPTIONAL OPERATION INPUT (`BookTime.Input.Amount`) that exists only so
+  the derivation's Suggest has a field to target — the server ignores it and recomputes.
+  docs/05 lists "calculated transient values" and a `DerivedValue`/`DefaultOnceFrom`/
+  `DerivedFrom` vocabulary, but only `Suggest`/`AddOptions`/`AddWarning`/`From` are built
+  (the compiler confirms: no `Derive` on DerivationResult). Candidate: a read-only
+  form-level computed field, or build the derived-value channel docs/05 already designs.
+- (M3) The `/api/forms/{id}/resolve` REQUEST shape is documented nowhere: posting the raw
+  input (as the MCP tool does per step-08) is a 500 with a bare JsonSerializer stack trace;
+  the body must be `{"input": {...}}`. Found by trial. Step-08/docs/05 should show the HTTP
+  shape, and the endpoint should 400 with a hint instead of 500.
+- (M3) The "SOMETHING must fire" derivation trigger (M2 entry) is now a PATTERN, copied
+  twice more: time.book's rate default and materials.add's stock-item options both key on
+  `[DependsOn(WorkOrderId)]` solely because the row action prefills it when the form opens.
+  Three sites now want "fire on form open" / a declarative lookup renderer.
+- (M3, positive) The paired-atom own scope generalized to a second domain in one line per
+  seam: `ScopedUnless` on the two time views + granting technicians only base atoms made
+  "Tekla sees her own time, the office sees the board, viewer levels expand to read-all"
+  all fall out — verified on the wire with three differently-scoped tokens and zero
+  authorization code in the feature. The snapshot discipline (technician name, unit price)
+  was likewise a constructor argument each, not a framework fight. five entity methods
   returning findings, seven thin operations, zero pipeline awareness. Own-scope pairs
   and TAM006 made "technician runs her own order end to end, dispatcher works the board"
   fall out of role composition — the wire suite proved both boundaries (403s included)

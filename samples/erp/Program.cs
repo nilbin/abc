@@ -72,10 +72,26 @@ var model = new TamModelBuilder()
             .Title("number")
             .Form("web.work-orders.edit")))
 
+    // Time + materials (docs/34 M3): read-only record surfaces — bookings are history; the
+    // only state change is time.approve, an intent riding the grid as a row action.
+    .Page("time", page => page
+        .Grid("web.time.list")
+        .Record(record => record
+            .Detail("time.detail", key: "timeEntryId")
+            .Title("workOrderNumber")))
+
+    .Page("materials", page => page
+        .Grid("web.materials.list")
+        .Record(record => record
+            .Detail("materials.detail", key: "materialLineId")
+            .Title("workOrderNumber")))
+
     .Nav("web", nav => nav
         .Mode("work", m => m
             .Page("orders", page: "orders", order: 10)   // declared page: permission derives
             .Page("work-orders", page: "work-orders", order: 15)
+            .Page("time", page: "time", order: 16)
+            .Page("materials", page: "materials", order: 17)
             .Page("projects", page: "projects", order: 20)
             .Page("customers", page: "customers", order: 30)
             .Page("stock", page: "stock", order: 40))
@@ -160,6 +176,28 @@ var model = new TamModelBuilder()
         form.Field(x => x.AssigneeActorId);   // options arrive via the assignees derivation
     })
 
+    // Booking rides the work-orders grid as a row action, so the work order arrives prefilled
+    // (hidden here); rate and amount are filled live by the time.book derivations —
+    // RecomputeIfUntouched keeps them tracking until the user overrides the rate.
+    .Form<BookTime.Input>("web.time.book", "time.book", form =>
+    {
+        form.Field(x => x.WorkOrderId).Renderer("hidden");
+        form.Field(x => x.Date);
+        form.Field(x => x.Hours);
+        form.Field(x => x.HourlyRate).Renderer("money")
+            .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
+        form.Field(x => x.Amount).Renderer("money")
+            .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
+        form.Field(x => x.Note);
+    })
+
+    .Form<AddMaterialLine.Input>("web.materials.add", "materials.add", form =>
+    {
+        form.Field(x => x.WorkOrderId).Renderer("hidden");
+        form.Field(x => x.StockItemId);   // options arrive via the stock-items derivation
+        form.Field(x => x.Quantity);
+    })
+
     // No configure: the record IS the form (docs/32 D-P6).
     .Form<CreateStockItem.Input>("web.stock.create", "stock.create")
 
@@ -222,8 +260,19 @@ var model = new TamModelBuilder()
         grid.RowAction("work-orders.start");
         grid.RowAction("work-orders.complete");
         grid.RowAction("work-orders.close");
+        // Time and materials are booked FROM the work order — the row prefills WorkOrderId.
+        grid.RowAction("time.book");
+        grid.RowAction("materials.add");
         grid.ToolbarAction("work-orders.create");
     })
+
+    // Columns by convention (D-P6) — configure only declares the actions.
+    .Grid<TimeEntryList.Result>("web.time.list", "time.list", grid =>
+    {
+        grid.RowAction("time.approve");
+    })
+
+    .Grid<MaterialLineList.Result>("web.materials.list", "materials.list")
 
     .Grid<StockList.Result>("web.stock.list", "stock.list", grid =>
     {

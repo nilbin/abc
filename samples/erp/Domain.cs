@@ -9,6 +9,8 @@ public readonly record struct ProjectId(Guid Value);
 public readonly record struct OrderId(Guid Value);
 public readonly record struct StockItemId(Guid Value);
 public readonly record struct WorkOrderId(Guid Value);
+public readonly record struct TimeEntryId(Guid Value);
+public readonly record struct MaterialLineId(Guid Value);
 
 public readonly record struct CustomerName(string Value);
 public readonly record struct OrderNumber(string Value);
@@ -27,6 +29,9 @@ public readonly record struct WorkOrderNumber(string Value);
 
 [Multiline, MaxLength(1000)]
 public readonly record struct WorkDescription(string Value);
+
+[Multiline, MaxLength(500)]
+public readonly record struct TimeNote(string Value);
 
 [Multiline, MaxLength(1000)]
 public readonly record struct OrderDescription(string Value);
@@ -48,6 +53,8 @@ public enum ProjectStatus { Open, Closed }
 public enum StockUnit { Piece, Hour, Meter, Kilogram, Litre }
 
 public enum WorkOrderStatus { Draft, Scheduled, InProgress, Done, Closed }
+
+public enum TimeEntryStatus { Draft, Approved }
 
 // ---- Finding factories: stable codes; text in locale catalogs ----
 
@@ -82,6 +89,22 @@ public static class StockFindings
 {
     public static readonly FindingFactory NotFound = Finding.Error("stock.not-found");
     public static readonly FindingFactory DuplicateSku = Finding.Error("stock.duplicate-sku");
+}
+
+public static class TimeFindings
+{
+    public static readonly FindingFactory NotFound = Finding.Error("time.not-found");
+    public static readonly FindingFactory InvalidHours = Finding.Error("time.invalid-hours");
+    public static readonly FindingFactory InvalidRate = Finding.Error("time.invalid-rate");
+    public static readonly FindingFactory AlreadyApproved = Finding.Error("time.already-approved");
+    public static readonly FindingFactory WorkOrderClosed = Finding.Error("time.work-order-closed");
+}
+
+public static class MaterialFindings
+{
+    public static readonly FindingFactory InvalidQuantity = Finding.Error("materials.invalid-quantity");
+    public static readonly FindingFactory StockItemInactive = Finding.Error("materials.stock-item-inactive");
+    public static readonly FindingFactory WorkOrderClosed = Finding.Error("materials.work-order-closed");
 }
 
 public static class WorkOrderFindings
@@ -272,6 +295,82 @@ public sealed class StockItem : Tam.EntityFrameworkCore.ITenantScoped
     };
 
     public void Deactivate() => IsActive = false;
+}
+
+/// <summary>A technician's time booking on a work order (docs/34 M3). Owned by the BOOKING
+/// technician — the paired-atom OWN scope rides TechnicianActorId. Amount is computed and
+/// STORED at booking time (hours × rate), so later rate conventions never rewrite history;
+/// approval is an intent operation (EDIT001), never an edit.</summary>
+public sealed class TimeEntry : Tam.EntityFrameworkCore.ITenantScoped
+{
+    private TimeEntry() { }
+
+    public TimeEntryId Id { get; private set; }
+    public string TenantId { get; private set; } = "";
+    public WorkOrderId WorkOrderId { get; private set; }
+    public string TechnicianActorId { get; private set; } = "";
+    // Snapshot of the technician's display name at booking time — same denormalization as
+    // WorkOrder.AssignedToName (docs/34 friction log: no actor-reference rendering story).
+    public string TechnicianName { get; private set; } = "";
+    public DateOnly Date { get; private set; }
+    public decimal Hours { get; private set; }
+    public decimal HourlyRate { get; private set; }
+    public decimal Amount { get; private set; }
+    public TimeNote? Note { get; private set; }
+    public TimeEntryStatus Status { get; private set; }
+
+    public static TimeEntry Book(
+        string tenantId, WorkOrderId workOrderId, string technicianActorId, string technicianName,
+        DateOnly date, decimal hours, decimal hourlyRate, TimeNote? note) => new()
+    {
+        Id = new TimeEntryId(Guid.NewGuid()),
+        TenantId = tenantId,
+        WorkOrderId = workOrderId,
+        TechnicianActorId = technicianActorId,
+        TechnicianName = technicianName,
+        Date = date,
+        Hours = hours,
+        HourlyRate = hourlyRate,
+        Amount = decimal.Round(hours * hourlyRate, 2),
+        Note = note,
+        Status = TimeEntryStatus.Draft,
+    };
+
+    public Result Approve()
+    {
+        if (Status == TimeEntryStatus.Approved) return TimeFindings.AlreadyApproved;
+        Status = TimeEntryStatus.Approved;
+        return Result.Success();
+    }
+}
+
+/// <summary>Stock consumption on a work order (docs/34 M3). UnitPrice is a SNAPSHOT of the
+/// stock item's price at entry time — catalog price changes never rewrite booked history —
+/// and Amount (quantity × snapshot price) is stored with it.</summary>
+public sealed class MaterialLine : Tam.EntityFrameworkCore.ITenantScoped
+{
+    private MaterialLine() { }
+
+    public MaterialLineId Id { get; private set; }
+    public string TenantId { get; private set; } = "";
+    public WorkOrderId WorkOrderId { get; private set; }
+    public StockItemId StockItemId { get; private set; }
+    public decimal Quantity { get; private set; }
+    public decimal UnitPrice { get; private set; }
+    public decimal Amount { get; private set; }
+
+    public static MaterialLine Add(
+        string tenantId, WorkOrderId workOrderId, StockItemId stockItemId,
+        decimal quantity, decimal unitPriceSnapshot) => new()
+    {
+        Id = new MaterialLineId(Guid.NewGuid()),
+        TenantId = tenantId,
+        WorkOrderId = workOrderId,
+        StockItemId = stockItemId,
+        Quantity = quantity,
+        UnitPrice = unitPriceSnapshot,
+        Amount = decimal.Round(quantity * unitPriceSnapshot, 2),
+    };
 }
 
 public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam.EntityFrameworkCore.ITenantScoped
