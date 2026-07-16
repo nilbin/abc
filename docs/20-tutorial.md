@@ -224,20 +224,15 @@ Three facts about order creation are interactive: project fields only matter for
 
 public static partial class CreateOrderDerivations
 {
-    // Portable: lowered to the expression AST, evaluated client-side instantly
-    [PortableDerivation]
-    public static bool ProjectVisible(CreateOrder.Input input)
-        => input.OrderType == OrderType.Project;
-
-    [PortableDerivation]
-    public static bool ProjectRequired(CreateOrder.Input input)
-        => input.OrderType == OrderType.Project;
+    // Portable rules live on the FORM BINDING as expression lambdas (Step 4): lowered to the
+    // wire AST, evaluated client-side instantly —
+    //   form.Field(x => x.ProjectId)
+    //       .VisibleWhen(x => x.OrderType == OrderType.Project)
+    //       .RequiredWhen(x => x.OrderType == OrderType.Project);
 
     // Contextual: needs the database, runs server-side, batched + debounced
     [ServerDerivation("orders.create.available-projects")]
-    [DependsOn<CreateOrder.Input>(
-        nameof(CreateOrder.Input.CustomerId),
-        nameof(CreateOrder.Input.OrderType))]
+    [DependsOn(nameof(CreateOrder.Input.CustomerId), nameof(CreateOrder.Input.OrderType))]
     public static async Task<DerivationResult> AvailableProjects(
         CreateOrder.Input input, DerivationContext context, CancellationToken ct)
     {
@@ -286,50 +281,34 @@ Note `CustomerState` reuses `OrderRules.CustomerCanReceiveOrder` — the same ru
 
 ## Step 4 — Bindings: one per boundary that differs
 
+Bindings are declared on the model builder in the host's composition root — registration and
+implementation one screen apart, wire ids explicit (docs/29):
+
 ```csharp
-// Product.Application/Orders/Create/Bindings.cs
+// samples/erp/Program.cs (the composition root)
 
-[FormBinding<CreateOrder.Input>("web.orders.create")]
-public static partial class CreateOrderForm
+.Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
 {
-    public static void Configure(FormBuilder<CreateOrder.Input> form)
-    {
-        form.Operation(CreateOrder.Definition);
-
-        form.Field(x => x.CustomerId).Renderer("customer-picker");
-
-        form.Context(CustomerSummary.Definition,
-            x => new CustomerSummary.Query(x.CustomerId));
-        form.Show<CustomerSummary.Result>(x => x.Name);
-        form.Show<CustomerSummary.Result>(x => x.Phone);
-
-        form.Field(x => x.OrderType);
-        form.Field(x => x.ProjectId);          // visibility/options come from derivations
-
-        form.Field(x => x.WorkAddress)
-            .SuggestFrom<CustomerSummary.Result>(x => x.VisitAddress)
-            .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
-
-        form.Field(x => x.Description);
-        form.Field(x => x.RequestedDate);
-        form.Field(x => x.EstimatedTotal);
-
-        form.Extensions();                     // tenant fields splice in here (Step 9)
-    }
-}
-
-[FormBinding<CreateOrder.Input>("mobile.orders.create")]
-public static partial class MobileCreateOrderForm
-{
-    public static void Configure(FormBuilder<CreateOrder.Input> form)
-    {
-        form.BasedOn(CreateOrderForm.Definition);
-        form.HideContextField<CustomerSummary.Result>(x => x.Phone);
-        form.Hide(x => x.EstimatedTotal);      // office concern, not field concern
-        form.Renderer(x => x.WorkAddress, "gps-assisted-address");
-    }
-}
+    form.Field(x => x.CustomerId).Renderer("customer-picker");
+    form.Field(x => x.OrderType);
+    form.Field(x => x.ProjectId)
+        .VisibleWhen(x => x.OrderType == OrderType.Project)     // portable Px — client-side
+        .RequiredWhen(x => x.OrderType == OrderType.Project);
+    form.Field(x => x.WorkAddress)
+        .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);  // server suggestion policy
+    form.Field(x => x.Description);
+    form.Field(x => x.RequestedDate);
+    form.Field(x => x.EstimatedTotal).Renderer("money");
+    form.Extensions();                     // tenant fields splice in here (Step 9)
+})
 ```
+
+This form DEVIATES from its record (a custom renderer, Px visibility, a suggestion policy), so
+it declares its decisions. A form with nothing to decide declares nothing —
+`.Form<CreateCustomer.Input>("web.customers.create", "customers.create")` binds every input
+field in record order: **the record IS the form** (docs/32 D-P6). A `mobile.*` twin narrowing
+this form (`BasedOn` + hide/re-render) and inline context display from a lookup's result are
+designed (docs/05) but not yet built — today a second surface declares its own binding.
 
 The frontend, in its entirety, for both apps:
 
@@ -371,40 +350,36 @@ public static partial class OrderList
             .SearchOn(query.Search, x => x.Number, x => x.CustomerName);
     }
 
-    public static void Capabilities(ViewCapabilities<Result> caps)
-    {
-        caps.Sortable(x => x.Number, x => x.CustomerName, x => x.RequestedDate);
-        caps.Filterable(x => x.Status, x => x.Type);
-        caps.DefaultSort(x => x.Number, descending: true);
-    }
+    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+        .Sortable(nameof(Result.Number), nameof(Result.CustomerName), nameof(Result.RequestedDate))
+        .Filterable(nameof(Result.Status), nameof(Result.Type))
+        .DefaultSort(nameof(Result.Number), descending: true);
 }
 ```
 
 Declared capabilities are the contract — and the implementation: `Filterable(Status)` makes the framework compose the SQL predicate and the grid render the filter control, with no further code (D7). A binding sorting on an undeclared field is `VIEW001` at build time, and `Tam.Testing` executes every declared capability against real PostgreSQL in CI — untranslatable LINQ becomes a red test, not a production 500. Tenant custom fields filter the same way (`?ext.machineSerialNumber=…`) — necessarily mechanically, since a runtime-defined field can never appear in a compiled Query record.
 
 ```csharp
-// Product.Application/Orders/List/Bindings.cs
+// samples/erp/Program.cs — beside the form above
 
-[GridBinding<OrderList.Query, OrderList.Result>("web.orders.list")]
-public static partial class OrdersGrid
+.Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
 {
-    public static void Configure(GridBuilder<OrderList.Result> grid)
-    {
-        grid.View(OrderList.Definition);
-
-        grid.Column(x => x.Number);
-        grid.Column(x => x.CustomerName);
-        grid.Column(x => x.Type);
-        grid.Column(x => x.Status);
-        grid.Column(x => x.RequestedDate);
-
-        grid.Extensions();                              // tenant columns (Step 9)
-
-        grid.RowAction(CompleteOrder.Definition);       // availability batched per page
-        grid.ToolbarAction(CreateOrder.Definition);
-    }
-}
+    grid.Column(x => x.Number);            // explicit: this grid REORDERS (company second)
+    grid.Column(x => x.TenantId);
+    grid.Column(x => x.CustomerName);
+    grid.Column(x => x.Type);
+    grid.Column(x => x.Status);
+    grid.Column(x => x.RequestedDate);
+    grid.Column(x => x.EstimatedTotal);
+    grid.Extensions();                     // tenant columns (Step 9)
+    grid.RowAction("orders.complete");
+    grid.ToolbarAction("orders.create");
+})
 ```
+
+Same convention as forms: a grid with nothing to decide declares nothing — every result field
+becomes a column in record order, minus `id`/`version` row plumbing (docs/32 D-P6). This one
+declares because it reorders and carries actions.
 
 Frontend: `<ViewGrid view="web.orders.list" />`. Paging, sorting, filtering, search, row actions with per-row availability, toolbar actions gated by the actor's permissions — all from the manifest.
 
