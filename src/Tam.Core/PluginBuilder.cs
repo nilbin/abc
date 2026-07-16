@@ -176,6 +176,15 @@ public sealed class PluginBuilder
         return this;
     }
 
+    /// <summary>Declares a framework-composed page for the plugin's OWN aggregate (docs/32,
+    /// review round 4): the id sits under the plugin prefix (PLG001), the manifest filters it
+    /// by activation, and placement stays the host's/tenant's via the nav suggestion.</summary>
+    public PluginBuilder Page(string id, Action<PageBuilder> configure)
+    {
+        Model.Page(id, configure);
+        return this;
+    }
+
     /// <summary>Declares a domain event contract (docs/31 D-X5) under the plugin prefix.</summary>
     public PluginBuilder PublishesEvent(string eventType, params string[] fields)
     {

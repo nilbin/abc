@@ -227,4 +227,81 @@ public class PageTests
         Assert.True(packaged.Spec.ReadOnly);
         Assert.True(ManifestBuilder.ToField(packaged.Spec).ReadOnly);
     }
+
+    [TamPlugin("pgdemo")]
+    private sealed class PagePlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin)
+        {
+            plugin.LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["plugins.pgdemo.title"] = "Demo",
+                ["pgdemo.labels.name"] = "Name",
+                ["nav.pgdemo.things"] = "Demo things",
+            });
+            plugin.Model.AddViewType(typeof(PluginThingsList));
+            plugin.Grid<PluginThingsList.Result>("pgdemo.web.things", "pgdemo.things.list");
+            plugin.Page("pgdemo.things", page => page.Grid("pgdemo.web.things"));
+        }
+    }
+
+    [View("pgdemo.things.list")]
+    [Authorize("pgdemo.read")]
+    private static class PluginThingsList
+    {
+        public sealed record Query;
+
+        public sealed record Result
+        {
+            public Guid Id { get; init; }
+            [LabelKey("pgdemo.labels.name")]
+            public string Name { get; init; } = "";
+        }
+
+        public static IQueryable<Result> Execute(Query query) =>
+            Array.Empty<Result>().AsQueryable();
+    }
+
+    [TamPlugin("squat")]
+    private sealed class SquattingPagePlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin)
+        {
+            plugin.LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["plugins.squat.title"] = "Squat",
+            });
+            // A page OUTSIDE the plugin namespace — PLG001, like any other contribution.
+            plugin.Page("orders", page => page.Grid("web.things"));
+        }
+    }
+
+    [Fact]
+    public void A_plugin_page_is_tagged_filtered_and_namespaced()
+    {
+        var model = Host()
+            .Page("things", p => p.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId")
+                    .Form("web.things.edit").Slot("web.things.detail")))
+            .AddPlugin<PagePlugin>().Build();
+        Assert.Equal("pgdemo", model.Pages["pgdemo.things"].Plugin);
+
+        // Activation filtering: inactive plugin → the page does not exist for the tenant.
+        var inactive = ManifestBuilder.Build(
+            model, new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(), 0,
+            new HashSet<string>());
+        Assert.False(inactive.Pages.ContainsKey("pgdemo.things"));
+        var active = ManifestBuilder.Build(
+            model, new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(), 0,
+            new HashSet<string> { "pgdemo" });
+        Assert.True(active.Pages.ContainsKey("pgdemo.things"));
+
+        // Outside the namespace → PLG001.
+        Assert.StartsWith("PLG001", Assert.Throws<InvalidOperationException>(
+            () => Host()
+                .Page("things", p => p.Grid("web.things")
+                    .Record(r => r.Detail("things.detail", key: "thingId")
+                        .Form("web.things.edit").Slot("web.things.detail")))
+                .AddPlugin<SquattingPagePlugin>().Build()).Message);
+    }
 }

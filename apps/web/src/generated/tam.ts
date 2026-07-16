@@ -660,6 +660,18 @@ export interface ApprovalsRequestsListQuery {
   status?: string;
 }
 
+export interface InvoicingInvoicesDetailRow {
+  id: string;
+  orderNumber: string;
+  status: string;
+  amount: number;
+  created: string;
+}
+
+export interface InvoicingInvoicesDetailQuery {
+  invoiceId?: string;
+}
+
 export interface InvoicingInvoicesListRow {
   id: string;
   orderNumber: string;
@@ -973,6 +985,11 @@ export class TypedTamClient {
   /** view approvals.requests.list (requires approvals.review) */
   approvalsRequestsList(query?: ApprovalsRequestsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }> {
     return this.client.view("approvals.requests.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }>;
+  }
+
+  /** view invoicing.invoices.detail (requires invoicing.read) */
+  invoicingInvoicesDetail(query?: InvoicingInvoicesDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InvoicingInvoicesDetailRow[] }> {
+    return this.client.view("invoicing.invoices.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InvoicingInvoicesDetailRow[] }>;
   }
 
   /** view invoicing.invoices.list (requires invoicing.read) */

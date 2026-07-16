@@ -79,8 +79,16 @@ internal sealed class InvoiceSurface : IPluginPart
 {
     public void Configure(PluginBuilder plugin)
     {
+        // The plugin's OWN declared page (review round 4): grid + a read-only record surface
+        // (no form — status moves through the finalize/mark-paid operations, never an edit).
+        plugin.Page("invoicing.invoices", page => page
+            .Grid("invoicing.web.invoices")
+            .Record(record => record
+                .Detail("invoicing.invoices.detail", key: "invoiceId")
+                .Title("orderNumber")));
+
         plugin.Nav(nav => nav.Page("invoicing.invoices",
-            grid: "invoicing.web.invoices", suggest: "work", order: 40));
+            page: "invoicing.invoices", suggest: "work", order: 40));
 
         // Columns default to the result record (docs/32); only the ACTIONS are a decision.
         plugin.Grid<InvoiceList.Result>(

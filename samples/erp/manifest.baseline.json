@@ -4230,6 +4230,77 @@
       "defaultSortDescending": true,
       "plugin": "approvals"
     },
+    "invoicing.invoices.detail": {
+      "permission": "invoicing.read",
+      "queryFields": [
+        {
+          "name": "invoiceId",
+          "labelKey": "labels.invoice-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "orderNumber",
+          "labelKey": "invoicing.labels.order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "amount",
+          "labelKey": "invoicing.labels.amount",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "created",
+          "labelKey": "invoicing.labels.created",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false,
+      "plugin": "invoicing"
+    },
     "invoicing.invoices.list": {
       "permission": "invoicing.read",
       "queryFields": [
@@ -5450,7 +5521,7 @@
             "labelKey": "nav.invoicing.invoices",
             "order": 40,
             "target": {
-              "grid": "invoicing.web.invoices"
+              "page": "invoicing.invoices"
             },
             "plugin": "invoicing",
             "children": []
@@ -5600,6 +5671,20 @@
     ]
   },
   "pages": {
+    "invoicing.invoices": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "invoicing.web.invoices"
+        }
+      ],
+      "record": {
+        "detailView": "invoicing.invoices.detail",
+        "key": "invoiceId",
+        "titleField": "orderNumber",
+        "sections": []
+      }
+    },
     "orders": {
       "sections": [
         {

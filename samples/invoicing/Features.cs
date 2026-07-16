@@ -115,6 +115,36 @@ public static class MarkPaid
     }
 }
 
+/// <summary>The record surface behind the plugin's DECLARED page (docs/32 + review round 4):
+/// one invoice, fields named like the list so labels are shared.</summary>
+[View("invoicing.invoices.detail")]
+[Authorize("invoicing.read")]
+public static class InvoiceDetail
+{
+    public sealed record Query(Guid InvoiceId);
+
+    public sealed record Result
+    {
+        public Guid Id { get; init; }
+        [LabelKey("invoicing.labels.order-number")]
+        public string OrderNumber { get; init; } = "";
+        [LabelKey("labels.status")]
+        public string Status { get; init; } = "";
+        [LabelKey("invoicing.labels.amount")]
+        public decimal Amount { get; init; }
+        [LabelKey("invoicing.labels.created")]
+        public string Created { get; init; } = "";
+    }
+
+    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
+        tam.Db.Set<Invoice>().Where(x => x.Id == query.InvoiceId)
+            .Select(x => new Result
+            {
+                Id = x.Id, OrderNumber = x.OrderNumber, Status = x.Status,
+                Amount = x.Amount, Created = x.CreatedAtIso,
+            });
+}
+
 [View("invoicing.invoices.list")]
 [Authorize("invoicing.read")]
 public static class InvoiceList

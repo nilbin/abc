@@ -23,15 +23,14 @@ public sealed partial class TamModelBuilder
 
     /// <summary>Declares a framework-composed page (docs/32): a grid plus an optional record
     /// surface (detail + form + slots), rendered by the client library — the standard
-    /// list-and-detail shape without hand-written React. Host-only, like nav layout.</summary>
+    /// list-and-detail shape without hand-written React. Plugins may declare pages for THEIR
+    /// OWN aggregates (review round 4; PLG001 namespaces the id, activation filters the
+    /// manifest) — existence is the declarer's, PLACEMENT stays the host's and tenant's.</summary>
     public TamModelBuilder Page(string id, Action<PageBuilder> configure)
     {
-        if (currentPlugin is not null)
-            throw new InvalidOperationException(
-                "PLG005: pages are declared by the HOST — plugins contribute through slots and grid actions.");
         var builder = new PageBuilder();
         configure(builder);
-        pages[id] = builder.Build(id);
+        pages[id] = builder.Build(id) with { Plugin = currentPlugin };
         return this;
     }
 

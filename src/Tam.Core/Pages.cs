@@ -25,6 +25,11 @@ public sealed record RecordSection(string Kind, string Id)
 public sealed record PageDefinition(
     string Id, IReadOnlyList<PageSection> Sections, RecordDefinition? Record)
 {
+    /// <summary>Owning plugin id, or null for host pages (review round 4: a plugin's own
+    /// aggregate deserves a record surface — EXISTENCE is the plugin's, placement stays the
+    /// host's/tenant's through the nav suggestion machinery).</summary>
+    public string? Plugin { get; init; }
+
     /// <summary>The grid whose rows open the record surface — the FIRST grid section.</summary>
     public string? PrimaryGridId =>
         Sections.FirstOrDefault(s => s.Kind == PageSection.GridKind)?.Id;

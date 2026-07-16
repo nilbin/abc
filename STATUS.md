@@ -35,7 +35,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              148 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              149 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -449,6 +449,16 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Plugin-declared pages (review round 4 finding 3, built)**: a plugin's own aggregate now
+  gets a full record page without host React — `plugin.Page("invoicing.invoices", …)` under
+  the plugin prefix (PLG001), activation-filtered in the manifest, placed through the same
+  nav suggestion machinery as everything else (existence is the declarer's, placement stays
+  the host's/tenant's). A record with NO form renders the detail view's fields read-only in
+  the modal — the invoicing showcase: grid + read-only record (status moves through
+  finalize/mark-paid operations, never an edit form), nav target flipped from { grid } to
+  { page }. Verified: 149 tests (tagging, activation filtering both ways, PLG001 squatter
+  rejection), invoicing wire suite asserts the declared page shape (27 checks), full matrix
+  green, manifest additive.
 - **The authoring reshape (review round 4's recommendation, built)**: behavior registration
   now lives ON the behavior — [Gate("orders.complete")]/[GateAll]/[OnEffect("event")]
   attributes on IOperationGate/IEffectHandler classes, discovered by the source generator

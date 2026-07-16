@@ -357,6 +357,7 @@ public sealed partial class TamModelBuilder
         }
         foreach (var f in model.Forms.Values) Check("form", f.Id, f.Plugin);
         foreach (var g in model.Grids.Values) Check("grid", g.Id, g.Plugin);
+        foreach (var pg in model.Pages.Values) Check("page", pg.Id, pg.Plugin);
         foreach (var nodes in model.Nav.Values)
         {
             void Walk(NavNode n)

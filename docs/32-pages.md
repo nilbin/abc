@@ -29,12 +29,17 @@ A page is an ORDERED list of sections — any number of `Grid(...)` and page-lev
 calls — and the record surface is likewise an ordered list of `Form(...)`/`Slot(...)` sections.
 A slot declared before the form renders above it; a second grid renders after the first.
 
-- **D-P1 — a page is a host-declared composition of things the model already has**: one grid,
-  and optionally a RECORD surface — detail view + context key, optional edit form, optional
-  title field, any number of slots. `PAGE001` verifies every part exists and fits (the key is
-  a real query field, the title a real result field, the slots declared). Pages are the
-  host's, like nav layout and slots (PLG005): plugins reach pages through slots and grid
-  action contributions, never by declaring pages.
+- **D-P1 (evolved, review round 4) — a page is a DECLARED composition of things the model
+  already has**: one grid, and optionally a RECORD surface — detail view + context key,
+  optional edit form, optional title field, any number of slots. `PAGE001` verifies every
+  part exists and fits (the key is a real query field, the title a real result field, the
+  record form's operation carries the key input, the slots declared). Pages were originally
+  host-only; a plugin may now declare pages for ITS OWN aggregates (the id sits under the
+  plugin prefix, PLG001; the manifest filters them by activation) — EXISTENCE is the
+  declarer's, PLACEMENT stays the host's and tenant's through the nav machinery. A record
+  with no form renders the detail view's fields read-only (the invoicing page: status moves
+  through operations, never an edit form). Layout (slots on host surfaces, nav trees) remains
+  host-declared.
 - **D-P2 — `registerPage()` is the escape hatch, not the default.** Nav `{ page }` targets
   resolve a registered React page first, then a declared page (rendered by `<ModelPage>` in
   tam-react: grid → row click → detail fetch (with per-row act-as for subtree rows) → modal

@@ -289,7 +289,9 @@ public static class ManifestBuilder
                 kv => kv.Key,
                 kv => (IReadOnlyList<ManifestNavNode>)kv.Value
                     .Select(NavOf).OfType<ManifestNavNode>().ToList()),
-            Pages = model.Pages.ToDictionary(
+            Pages = model.Pages
+                .Where(kv => Included(kv.Value.Plugin))   // plugin pages activation-filter
+                .ToDictionary(
                 kv => kv.Key,
                 kv => new ManifestPage(
                     kv.Value.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id)).ToList(),

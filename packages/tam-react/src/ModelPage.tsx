@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Stack, Title } from '@mantine/core';
+import { Group, Modal, Stack, Text, Title } from '@mantine/core';
 import { useTam } from './context';
 import { ViewGrid } from './ViewGrid';
 import { OperationForm } from './OperationForm';
@@ -80,6 +80,22 @@ export function ModelPage(props: { page: string }) {
       {rec && (
         <Modal opened={record !== null} onClose={() => setRecord(null)}
           title={<Title order={4}>{title}</Title>} size="lg">
+          {/* A record with NO form (a plugin's read-model page, docs/32) shows the detail
+              view's fields read-only — otherwise the modal would be a bare title. */}
+          {record && !rec.sections.some(s => s.kind === 'form') && (
+            <Stack gap={6} mb="md">
+              {(manifest.views[rec.detailView]?.resultFields ?? [])
+                .filter(f => f.name !== 'id' && f.name !== 'version'
+                  && f.wireKind !== 'object' && record[f.name] !== undefined
+                  && record[f.name] !== null)
+                .map(f => (
+                  <Group key={f.name} gap="xs" wrap="nowrap">
+                    <Text size="sm" c="dimmed" w={160}>{t(f.labelKey)}</Text>
+                    <Text size="sm">{String(record[f.name])}</Text>
+                  </Group>
+                ))}
+            </Stack>
+          )}
           {record && rec.sections.map(recordSection)}
         </Modal>
       )}
