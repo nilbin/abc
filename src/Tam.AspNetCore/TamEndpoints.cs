@@ -47,6 +47,11 @@ public static partial class TamAspNetCore
                 : Results.Json(response, TamJson.Options);
         });
 
+        // Server-side memo of the SERIALIZED manifest, keyed by the same ETag clients cache on.
+        // The manifest is a pure function of the ETag's inputs (content revision × permission
+        // set), so a hit is exact; per-app closure so parallel hosts/tests never share entries.
+        var manifestMemo = new System.Collections.Concurrent.ConcurrentDictionary<string, byte[]>();
+
         app.MapGet("/api/manifest", async (
             HttpContext http, IExtensionRegistry registry, ITamDb tam, CancellationToken ct) =>
         {
@@ -57,30 +62,39 @@ public static partial class TamAspNetCore
             // revision below, or clients would keep the pre-override tree cached.
             var navOverrides = await tam.Db.Set<NavOverrideEntity>()
                 .OrderBy(x => x.NodeId).ToListAsync(ct);
-            var revision = OverlayRevision(overlay, activePlugins, SystemOps.NavOverlay.Fingerprint(navOverrides));
+            var revision = OverlayRevision(overlay, activePlugins, NavOverlay.Fingerprint(navOverrides));
 
             // The manifest is a pure function of (model, overlay, activePlugins, actor permissions).
             // The overlay+activation queries are cheap; the reflection rebuild + serialization are
             // not — so serve a content ETag and answer 304 when the client already has this version,
             // skipping the build entirely (review-round-3 #5).
             var etag = ManifestETag(revision, context.Actor.Permissions);
-            if (http.Request.Headers.IfNoneMatch.ToString() == etag)
-            {
-                http.Response.Headers["ETag"] = etag;
-                return Results.StatusCode(StatusCodes.Status304NotModified);
-            }
-
-            var manifest = ManifestBuilder.Build(model, overlay, revision: revision, activePlugins);
-            // Read masking (docs/27 D-A3): sensitive fields the actor may not see are absent from the
-            // manifest entirely. Deterministic in the actor's permission set, so the ETag holds.
-            manifest = ManifestBuilder.MaskSensitive(manifest, context.Actor) with
-            {
-                Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model),
-                ActorPermissions = context.Actor.Permissions.ToList(),
-            };
-            manifest = SystemOps.NavOverlay.Apply(manifest, navOverrides);
             http.Response.Headers["ETag"] = etag;
-            return Results.Json(manifest, TamJson.Options);
+            if (http.Request.Headers.IfNoneMatch.ToString() == etag)
+                return Results.StatusCode(StatusCodes.Status304NotModified);
+
+            // Review-round-4 #4: clients without the cached copy (agents, new tabs, cold loads)
+            // used to pay the reflective rebuild every request — now only the FIRST request per
+            // (content, permission-set) version does.
+            if (!manifestMemo.TryGetValue(etag, out var body))
+            {
+                var manifest = ManifestBuilder.Build(model, overlay, revision: revision, activePlugins);
+                // Read masking (docs/27 D-A3): sensitive fields the actor may not see are absent
+                // from the manifest entirely. Deterministic in the actor's permission set, so the
+                // ETag (and this memo) hold.
+                manifest = ManifestBuilder.MaskSensitive(manifest, context.Actor) with
+                {
+                    Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model),
+                    ActorPermissions = context.Actor.Permissions.ToList(),
+                };
+                manifest = NavOverlay.Apply(manifest, navOverrides);
+                body = JsonSerializer.SerializeToUtf8Bytes(manifest, TamJson.Options);
+                // Crude bound: stale versions accumulate one entry per content/permission flip —
+                // reset rather than LRU-track; the next requests repopulate the live versions.
+                if (manifestMemo.Count >= 128) manifestMemo.Clear();
+                manifestMemo[etag] = body;
+            }
+            return Results.Bytes(body, "application/json");
         });
 
         // Plugin-shipped inbound integrations (docs/22): activation-gated, inbox-idempotent.

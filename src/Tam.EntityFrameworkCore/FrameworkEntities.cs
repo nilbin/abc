@@ -27,6 +27,12 @@ public sealed class InboxRecord : ITenantScoped
     public int Attempts { get; set; }
     public string? LastError { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }
+
+    /// <summary>ISO-8601 twin of <see cref="ReceivedAt"/>: lexicographic == chronological, so
+    /// the backlog drain can ORDER BY + TAKE server-side on every provider (SQLite cannot
+    /// order DateTimeOffset) instead of materializing the whole backlog (review-round-4 #8).</summary>
+    public string ReceivedAtIso { get; set; } = "";
+
     public DateTimeOffset? ProcessedAt { get; set; }
 
     // Exponential-backoff gate (docs/10 + docs/25): a failed row is not re-driven before this

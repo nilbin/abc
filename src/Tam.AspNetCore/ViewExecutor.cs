@@ -18,6 +18,29 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         OperationContext context,
         CancellationToken ct)
     {
+        // The SubtreeRead widening inside is EXECUTION-LOCAL (review-round-4 F2): the ambient
+        // read set is restored on the way out. Without this, a widened view read mid-request
+        // (a gate or operation going through IHostViewReader) would leave every LATER read in
+        // the same scope widened — including a write handler's load of the row it edits, which
+        // must see the strict filter (docs/26: "writes never widen").
+        var scope = services.GetService(typeof(TenantScope)) as TenantScope;
+        var priorReadSet = scope?.ReadSet ?? [];
+        try
+        {
+            return await ExecuteWidenedAsync(viewId, query, context, ct);
+        }
+        finally
+        {
+            scope?.WidenRead(priorReadSet);
+        }
+    }
+
+    private async Task<(ViewResponse? Response, Finding? Error)> ExecuteWidenedAsync(
+        string viewId,
+        IReadOnlyDictionary<string, string?> query,
+        OperationContext context,
+        CancellationToken ct)
+    {
         if (!model.Views.TryGetValue(viewId, out var view))
             return (null, PipelineFindings.UnknownView.With(("view", viewId)));
 

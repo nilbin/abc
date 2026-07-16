@@ -143,6 +143,7 @@ internal static class InboxProcessor
                     Key = key,
                     PayloadJson = payloadJson,
                     ReceivedAt = DateTimeOffset.UtcNow,
+                    ReceivedAtIso = IsoTime.Now(),
                 });
         }
         await db.SaveChangesAsync(ct);
@@ -152,15 +153,14 @@ internal static class InboxProcessor
         //    failed backlog drains over several calls, not all in this request.
         var policy = RetryPolicy.Resolve(context.Services);
         var nowIso = IsoTime.Now();
-        var retryable = (await inbox
+        var retryable = await inbox
             .Where(x => x.IntegrationId == integrationId
                 && (x.Status == InboxStatus.Pending
                     || (x.Status == InboxStatus.Failed
                         && (x.NextAttemptIso == null || string.Compare(x.NextAttemptIso, nowIso) <= 0))))
-            .ToListAsync(ct))
-            .OrderBy(x => x.ReceivedAt)   // client-side: SQLite can't ORDER BY DateTimeOffset
+            .OrderBy(x => x.ReceivedAtIso)   // ISO twin: server-side order+take on every provider
             .Take(IntegrationRunner.BatchSize)
-            .ToList();
+            .ToListAsync(ct);
 
         var results = new List<IntegrationRowResult>();
         foreach (var record in retryable)

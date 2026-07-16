@@ -51,8 +51,9 @@ public static class EditCustomerContact
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
-        // The ambient filter scopes to the acting node: an ANCESTOR's shared customer is
-        // readable here (inherited scope) but edited at the node that owns it.
+        // STRICT ambient filter — deliberately narrower than the list's inherited scope: an
+        // ancestor's shared customer is visible below, but edited only at the node that owns
+        // it (this read returns NotFound anywhere else).
         var customer = await db.Customers.SingleOrDefaultAsync(x => x.Id == input.CustomerId, ct);
         if (customer is null) return CustomerFindings.NotFound.Create();
 

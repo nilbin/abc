@@ -90,13 +90,16 @@ public static class TamRls
 
     /// <summary>True when the command carries the <see cref="TamTenantFilter.CrossTenantQueryTag"/>
     /// (docs/33 D-R7) — checked ONLY in the leading comment block EF emits for query tags, so a
-    /// tag-shaped string in a value or literal can never escalate a command.</summary>
+    /// tag-shaped string in a value or literal can never escalate a command. EF renders EACH tag
+    /// as a comment followed by a BLANK line (review-round-4 F4), so blank lines inside the
+    /// header must not end the scan — only the first substantive SQL line does.</summary>
     public static bool HasCrossTenantTag(string commandText)
     {
         foreach (var line in commandText.Split('\n'))
         {
-            var trimmed = line.TrimStart();
-            if (!trimmed.StartsWith("--")) return false;
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0) continue;                 // blank separators between tags
+            if (!trimmed.StartsWith("--")) return false;       // first real SQL ends the header
             if (trimmed.Contains(TamTenantFilter.CrossTenantQueryTag)) return true;
         }
         return false;
@@ -187,7 +190,8 @@ public sealed class TamRlsInterceptor
             applied.Fingerprint = null;
     }
 
-    private static DbCommand? Prepare(DbCommand command, CommandEventData eventData)
+    private static (DbCommand Set, Applied Applied, string Desired)? Prepare(
+        DbCommand command, CommandEventData eventData)
     {
         if (eventData.Context is not ITenantScopeContext scope || command.Connection is null)
             return null;
@@ -218,21 +222,29 @@ public sealed class TamRlsInterceptor
             ? "" : string.Join(",", scope.TenantReadSet);
         set.Parameters.Add(readSet);
 
-        applied.Fingerprint = desired;
-        return set;
+        return (set, applied, desired);
     }
 
+    // The fingerprint advances ONLY after set_config succeeds (review-round-4 F3): recording
+    // it before execution would, on a transient failure, mark the connection as applied while
+    // the session still holds the previous (possibly other-tenant) setting — and the next
+    // command with the same desired state would skip the re-apply entirely.
     private static void Sync(DbCommand command, CommandEventData eventData)
     {
-        using var set = Prepare(command, eventData);
-        set?.ExecuteNonQuery();
+        if (Prepare(command, eventData) is not { } prepared) return;
+        using var set = prepared.Set;
+        prepared.Applied.Fingerprint = null;
+        set.ExecuteNonQuery();
+        prepared.Applied.Fingerprint = prepared.Desired;
     }
 
     private static async Task SyncAsync(
         DbCommand command, CommandEventData eventData, CancellationToken ct)
     {
-        var set = Prepare(command, eventData);
-        if (set is null) return;
-        await using (set) await set.ExecuteNonQueryAsync(ct);
+        if (Prepare(command, eventData) is not { } prepared) return;
+        await using var set = prepared.Set;
+        prepared.Applied.Fingerprint = null;
+        await set.ExecuteNonQueryAsync(ct);
+        prepared.Applied.Fingerprint = prepared.Desired;
     }
 }

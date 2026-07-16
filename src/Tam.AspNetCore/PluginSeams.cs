@@ -72,6 +72,14 @@ public sealed class PackagedFieldWriter(
         if (await tam.Db.FindAsync(entityType.ClrType, [keyValue], ct) is not IExtensible row)
             return false;   // row gone — idempotent no-op, not a poison message
 
+        // FindAsync fetches by primary key ALONE — EF global query filters do not apply — so the
+        // tenant boundary is re-checked here explicitly (review-round-4 F1). Without this, a
+        // handler pinned to tenant A could write tenant B's row given its id; the RLS backstop
+        // would catch it on Postgres, but the application must never rely on RLS for
+        // correctness (docs/33 D-R1). Same idempotent no-op shape as a missing row.
+        if (row is ITenantScoped scoped && scoped.TenantId != scope.Current)
+            return false;
+
         row.Extensions = row.Extensions.WithValue(fullKey, normalized);
 
         // Plugin-attributed audit (docs/22 "deterministic composition"): provenance on the

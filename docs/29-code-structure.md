@@ -135,4 +135,8 @@ Done:
       contracts + definitions) + `PluginBuilder.cs` (authoring surface);
       `TamModelBuilder.Seams.cs` partial extracted (the PLG005 plugin-only internals).
 
+- [x] `NavOverlay` (+ its manifest-route application) out of `Packages/NavOverrides.cs` into
+      `src/Tam.AspNetCore/NavOverlay.cs` — the litmus test above, applied to our own newest
+      package (review round 4 #7). The package file keeps the operations/view/grid.
+
 Open: nothing — new debts get a checkbox here when they appear.

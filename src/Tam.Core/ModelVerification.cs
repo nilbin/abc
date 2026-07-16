@@ -228,9 +228,19 @@ public sealed partial class TamModelBuilder
                     $"PAGE001: page '{page.Id}' title field '{title}' is not on '{record.DetailViewId}'.");
             foreach (var section in record.Sections)
             {
-                if (section.Kind == RecordSection.FormKind && !model.Forms.ContainsKey(section.Id))
-                    throw new InvalidOperationException(
-                        $"PAGE001: page '{page.Id}' names unknown form '{section.Id}'.");
+                if (section.Kind == RecordSection.FormKind)
+                {
+                    if (!model.Forms.TryGetValue(section.Id, out var form))
+                        throw new InvalidOperationException(
+                            $"PAGE001: page '{page.Id}' names unknown form '{section.Id}'.");
+                    // Prefill sets the record identity through the SAME-NAMED input field
+                    // (docs/32); an operation without it would submit with no record identity —
+                    // a broken form that otherwise builds clean (review-round-4 F6).
+                    if (model.Operations.TryGetValue(form.OperationId, out var op)
+                        && !op.InputFields.Any(f => f.WireName == record.ContextKey))
+                        throw new InvalidOperationException(
+                            $"PAGE001: page '{page.Id}' record form '{section.Id}' binds operation '{form.OperationId}', which has no '{record.ContextKey}' input — the record key could never prefill.");
+                }
                 if (section.Kind == RecordSection.SlotKind && !model.Slots.ContainsKey(section.Id))
                     throw new InvalidOperationException(
                         $"PAGE001: page '{page.Id}' references undeclared slot '{section.Id}'.");

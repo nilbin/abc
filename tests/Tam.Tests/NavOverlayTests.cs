@@ -1,5 +1,5 @@
 using Tam;
-using Tam.AspNetCore.SystemOps;
+using Tam.AspNetCore;
 using Tam.EntityFrameworkCore;
 
 namespace Tam.Tests;

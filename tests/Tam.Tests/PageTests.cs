@@ -45,7 +45,18 @@ public class PageTests
     private static class RenameThing
     {
         public sealed record Input(
+            [property: LabelKey("labels.id")] Guid ThingId,
             [property: LabelKey("labels.name")] string Name);
+
+        public static Task<Result> Execute(Input input, OperationContext context) =>
+            Task.FromResult(Result.Success());
+    }
+
+    [Operation("things.keyless")]
+    [Authorize("things.manage")]
+    private static class KeylessRename
+    {
+        public sealed record Input([property: LabelKey("labels.name")] string Name);
 
         public static Task<Result> Execute(Input input, OperationContext context) =>
             Task.FromResult(Result.Success());
@@ -57,6 +68,7 @@ public class PageTests
             ["labels.id"] = "Id", ["labels.name"] = "Name", ["nav.work"] = "Work",
             ["nav.things"] = "Things", ["nav.more"] = "More",
             ["operations.things.rename.title"] = "Rename",
+            ["operations.things.keyless.title"] = "Rename",
         })
         .AddViewType(typeof(ThingsList))
         .AddViewType(typeof(ThingsDetail))
@@ -115,6 +127,16 @@ public class PageTests
         Assert.StartsWith("PAGE001", Assert.Throws<InvalidOperationException>(() =>
             Host().Page("p", page => page.Grid("web.things")
                 .Record(r => r.Detail("things.detail", key: "thingId").Title("ghost"))).Build()).Message);
+
+        // review-round-4 F6: a record form whose operation lacks the KEY input builds a form
+        // that can never carry the record identity — PAGE001, not a silent broken modal.
+        var keyless = Assert.Throws<InvalidOperationException>(() => Host()
+            .AddOperationType(typeof(KeylessRename))
+            .Form<KeylessRename.Input>("web.things.keyless", "things.keyless", f => f.Field(x => x.Name))
+            .Page("things", p => p.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId").Form("web.things.keyless"))).Build());
+        Assert.StartsWith("PAGE001", keyless.Message);
+        Assert.Contains("could never prefill", keyless.Message);
 
         Assert.StartsWith("PAGE001", Assert.Throws<InvalidOperationException>(() =>
             Host().Page("p", page => page.Grid("web.things")

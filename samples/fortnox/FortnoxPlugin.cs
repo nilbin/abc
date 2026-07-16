@@ -25,6 +25,10 @@ public sealed class FortnoxPlugin : ITamPlugin
                 culture, JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? []);
         }
 
+        // D-X3: the read footprint is a BUILD-TIME fact — the mapper resolves customers through
+        // the host lookup view, and the install screen can show exactly that.
+        plugin.RequiresView("customers.lookup", "id");
+
         // POST /api/integrations/fortnox.orders.import — a JSON array of Fortnox orders.
         // Key: the vendor document number (idempotent replays). Map: one order → orders.create
         // wire input, re-run on every retry so a late-created customer recovers the row.
@@ -95,15 +99,16 @@ public sealed class FortnoxPlugin : ITamPlugin
     {
         var customerName = Str(row, "customerName");
 
-        // Resolve the external customer name to our id through the host lookup VIEW — as the
-        // request's actor, so the plugin sees only what that actor may see (never a host table).
-        var views = (ViewExecutor)services.GetService(typeof(ViewExecutor))!;
-        var (lookup, _) = await views.ExecuteAsync(
+        // Resolve the external customer name to our id through the BLESSED read seam (docs/31
+        // D-X3): actor mode, so the plugin sees only what the request's actor may see — and the
+        // read footprint is DECLARED (RequiresView below), never a reach into pipeline internals.
+        var views = (IHostViewReader)services.GetService(typeof(IHostViewReader))!;
+        var lookup = await views.RowsAsync(
             "customers.lookup",
             new Dictionary<string, string?> { ["search"] = customerName, ["pageSize"] = "1" },
             context, ct);
         object? customerId = null;
-        if (lookup?.Rows.FirstOrDefault() is { } match
+        if (lookup.Rows.FirstOrDefault() is { } match
             && JsonSerializer.SerializeToElement(match, TamJson.Options)
                 .TryGetProperty("id", out var idElement))
             customerId = idElement.GetString();

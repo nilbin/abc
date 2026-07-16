@@ -60,8 +60,10 @@ public class RlsTests
         // The tag EF emits for .AcrossTenants() (docs/33 D-R7).
         Assert.True(TamRls.HasCrossTenantTag(
             "-- tam:cross-tenant\n\nSELECT m.\"TenantId\" FROM memberships AS m"));
+        // EF renders each tag as a comment FOLLOWED BY A BLANK LINE — a second tag must still
+        // be found past the separator (review-round-4 F4: the naive scan stopped at the blank).
         Assert.True(TamRls.HasCrossTenantTag(
-            "-- some other tag\n-- tam:cross-tenant\nSELECT 1"));
+            "-- some other tag\n\n-- tam:cross-tenant\n\nSELECT 1"));
 
         // A tag-shaped string past the comment block — a literal, a value, a column — never
         // escalates the command.
