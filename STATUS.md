@@ -34,7 +34,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
                              host operations via the wildcard gate, park, replay seams
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
-apps/web                     Norrservice ERP web app (Vite + React + Mantine)
+samples/web                     Norrservice ERP web app (Vite + React + Mantine)
 tests/Tam.Tests              149 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams

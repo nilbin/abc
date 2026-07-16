@@ -7,7 +7,7 @@ dist/
 *.db
 *.db-*
 .DS_Store
-apps/web/playwright-report/
+samples/web/playwright-report/
 samples/erp/generated/
 *.tsbuildinfo
 docs/status.md

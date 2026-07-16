@@ -19,7 +19,7 @@ src/Tam.AspNetCore         the pipeline (executors, endpoints, DI), background l
 src/Tam.Auth.OpenIddict    the embedded auth server behind IActorProvider.
 packages/tam-core          TS manifest types, Px evaluator, localization, HTTP client.
 packages/tam-react         React runtime: context, renderers, OperationForm, ViewGrid.
-apps/web                   the sample SPA (Norrservice ERP) — host code, not framework.
+samples/web                   the sample SPA (Norrservice ERP) — host code, not framework.
 samples/erp                the reference host: domain, bindings, seed, Program wiring.
 samples/inspect|fortnox|approvals   vendor-plugin exemplars (the plugin shapes to copy).
 tests/Tam.Tests            the unit/pipeline suite. Wire verification scripts live outside
@@ -87,7 +87,7 @@ never become a privilege-escalation vector). Packages never call each other's op
 | Finding codes | `<Area>Findings` in the same file; locale entries in BOTH catalogs |
 | Gate / handler classes | INTERNAL top-level classes in the owning part/feature file, registered by their own [Gate]/[OnEffect] attributes (AddDiscovered picks them up; generated code cannot reach private nested types); ctor-injected |
 | Test | `tests/Tam.Tests` — plus an analyzer rule when the invariant is structural |
-| Wire change | re-export `manifest.baseline.json` + regenerate `apps/web/src/generated/tam.ts` |
+| Wire change | re-export `manifest.baseline.json` + regenerate `samples/web/src/generated/tam.ts` |
 
 ## Namespace policy
 
@@ -145,5 +145,10 @@ Done:
 - [x] `NavOverlay` (+ its manifest-route application) out of `Packages/NavOverrides.cs` into
       `src/Tam.AspNetCore/NavOverlay.cs` — the litmus test above, applied to our own newest
       package (review round 4 #7). The package file keeps the operations/view/grid.
+
+- [x] `apps/web` → `samples/web`: the SPA is the sample HOST's frontend, not a product tier —
+      the `apps/` split was day-one scaffolding convention, and the map above already said
+      "host code, not framework". Mechanical (npm workspace path, CI paths, doc references);
+      tsc + vite build green, output still `samples/erp/wwwroot`.
 
 Open: nothing — new debts get a checkbox here when they appear.

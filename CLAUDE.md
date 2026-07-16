@@ -12,7 +12,7 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   surface, re-export and commit the baseline in the same change:
   `cd samples/erp && dotnet run -- manifest manifest.baseline.json`, then regenerate the
   TS types: `node scripts/generate-types.mjs samples/erp/manifest.baseline.json
-  apps/web/src/generated/tam.ts` (scripts/check_manifest.py fails CI otherwise).
+  samples/web/src/generated/tam.ts` (scripts/check_manifest.py fails CI otherwise).
 - "Verified on the wire" means exercised over HTTP against the running sample — on SQLite
   AND PostgreSQL when query translation is involved. Don't claim it in STATUS.md otherwise.
 

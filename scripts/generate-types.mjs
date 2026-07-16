@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const manifestPath = process.argv[2] ?? 'samples/erp/manifest.baseline.json';
-const outPath = process.argv[3] ?? 'apps/web/src/generated/tam.ts';
+const outPath = process.argv[3] ?? 'samples/web/src/generated/tam.ts';
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
 const pascal = (id) => id.split(/[.\-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');

@@ -15,7 +15,7 @@ const result = await client.ordersCreate({
 // result.output?.number — TypedOperationResponse<OrdersCreateOutput>, typed end to end
 ```
 
-The generated client (`apps/web/src/generated/tam.ts`) is flat camelCase methods over operation ids; an `{ idempotencyKey }` option becomes the `X-Idempotency-Key` header.
+The generated client (`samples/web/src/generated/tam.ts`) is flat camelCase methods over operation ids; an `{ idempotencyKey }` option becomes the `X-Idempotency-Key` header.
 
 **MCP** — tool names replace the id's dots and dashes with underscores (`orders_create`, `views_orders_list`), and the preflight tool rides the FORM id — interaction state is a form concern — so an agent asked to "create a project order for Acme's pump replacement" does:
 

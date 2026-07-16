@@ -1,7 +1,7 @@
 {
   "name": "tam-workspace",
   "private": true,
-  "workspaces": ["apps/web"],
+  "workspaces": ["samples/web"],
   "scripts": {
     "build:web": "npm run build -w erp-web",
     "dev:web": "npm run dev -w erp-web"
