@@ -127,6 +127,14 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   this for customers with bespoke React. A declarative `lookup(view)` renderer — field
   options served from any lookup view with search — is now the arc's clearest missing
   framework piece; it would delete the derivation AND the bespoke picker.
+- (from review) A slot appears TWICE in the composition root and the duplication reads as
+  a bug until explained: `model.Slot("web.orders.detail", s => s.Key("orderId"))` DECLARES
+  the contribution point (the id and record context plugins target — it exists even when
+  the host renders custom React), while `record.Slot("web.orders.detail")` PLACES it in
+  the declared page's layout. Two different questions, but the create form doesn't make a
+  reader ask them. Candidate: page-placed slots auto-declare (inheriting the record's
+  key), keeping standalone `model.Slot` only for `external: true` slots placed in custom
+  React — one call in the common case.
 - (M2, positive) The five-state machine cost exactly what it should: five entity methods
   returning findings, seven thin operations, zero pipeline awareness. Own-scope pairs
   and TAM006 made "technician runs her own order end to end, dispatcher works the board"
