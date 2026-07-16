@@ -408,6 +408,20 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (ordered manifest shape incl. slot-above-form, multi-grid + page-level slot composition,
   PrimaryGridId, SLOT001 both ways), nav wire suite asserts the sectioned shape, full matrix
   green.
+- **Quality pass: convention defaults, splits, tutorial catch-up**: Form/Grid configure is
+  now OPTIONAL (docs/32 D-P6 — the record IS the form; result fields ARE the columns minus
+  id/version plumbing; configure only to deviate), applied where enumeration was pure
+  boilerplate with a manifest diff proving equivalence (two deliberate additive fixes fell
+  out: audit gains entityId, checklist create gains its orderId reference). Core splits per
+  docs/29: Plugins.cs → Plugins/PluginHandlers/PluginBuilder; TamModelBuilder.Seams.cs
+  partial. Tutorial concept-coverage audit (agent-run gap table over docs/21-32): NEW Step 18
+  "The composed UI" (nav tree, declared pages, slots, subtree grid, the shell-in-entirety) +
+  patches for automation rules (Step 9), vault/outbound (Step 10), framework+tenant packages
+  (Step 13), subscription anchors (Step 14), no-switch create (Step 15), event contracts +
+  readOnly (Step 17), and five stale sentences fixed (retired overview, free-plan wording,
+  modal references). KNOWN remaining doc debt: steps 4-5 still show the design-era
+  attribute-style binding API instead of the built TamModelBuilder fluent API — queued as its
+  own consistency pass.
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

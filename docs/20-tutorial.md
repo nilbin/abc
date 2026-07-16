@@ -582,6 +582,16 @@ The registry runs its `EXT###` checks (key collision, visibility cycles, orphane
 
 What it can never do: gate `orders.complete`, appear on an intent operation, or otherwise steer compiled business decisions — the analyzer holds that line (see [15-extensibility.md](15-extensibility.md)). When serial numbers become load-bearing (warranty lookups, say), the graduation scaffold promotes the field to a compiled property with a data migration.
 
+Custom fields have a sibling: **automation rules** — the tenant's declarative logic, bounded by
+the same trust line. An admin defines "cold-chain orders need a requested date" as data: a Px
+condition over the input (compiled and extension fields alike) and a blocking finding, validated
+at definition time (`RUL###`: unknown field, type mismatch, unreachable condition), evaluated
+with a budget — no loops, no code, no HTTP — and fully audited. The executor has no rules
+special case: rules run as the `tam.rules` package's own wildcard gate, through the very seam
+Step 16's approvals plugin uses; and because Px is portable, the same condition drives
+client-side form behavior without a round trip. What rules never get is arbitrary code or
+writes to compiled fields — EDIT001's philosophy, extended to tenants.
+
 ---
 
 ## Step 10 — The integration is a mapping, not a sync engine
@@ -610,6 +620,18 @@ public static partial class ImportFortnoxOrder
 Imported orders execute `orders.create` — same authorization (as the integration principal), same rules, same findings, same audit. Inbox, retries, dead-lettering, replay, and reconciliation come from `Tam.Integrations`. Forgetting to map a required field is `INT001` at build time, not a support ticket.
 
 **Shipped as a plugin (implemented — samples/fortnox).** In the running system this integration is not host code at all — it lives in a `fortnox` plugin, activation- and entitlement-gated, mapped to `POST /api/integrations/fortnox.orders.import`. The plugin references no host CLR type: it maps to the `orders.create` *wire* contract and resolves the vendor customer name through the host's `customers.lookup` *view* (as the request's actor), and the inbox stores each source row so a customer created later recovers the failed import with no re-send. That a whole external-integration capability is a removable, per-tenant-priced plugin — over the same seams as fields and gates — is the extensibility thesis at full stretch.
+
+Traffic flows the other way too, and it needs credentials. The tenant's Fortnox API key lives
+in the **secrets vault** — `secrets.set` stores only Data-Protection ciphertext, and there is
+deliberately no read-back operation: `secrets.list` returns keys and a set/unset flag, never a
+value, not even masked; the plaintext exists transiently, in-process, only while a run executes.
+Non-secret config (`fortnox.baseUrl`) is `settings.set`, readable in the clear. **Outbound
+integrations** are declared like inbound ones and triggered three ways — by a committed effect,
+on a schedule, or manually: `push-completed-order` fires on `order-completed`, reads the base
+URL and key from the vault, POSTs the order to the accounting API, and records a run in the
+per-tenant run history (with retry, backoff and dead-lettering from the same integrations
+machinery). No `HttpClient` in domain code, no credential in any config file, and the SSRF
+guard blocks private-network destinations unless the host explicitly opts in.
 
 ---
 
@@ -738,7 +760,20 @@ public sealed class InspectionPlugin : ITamPlugin
 
 Because the packaged field rides the extension channel, it is already in every grid, form, audit trail, MCP schema, and D7 filter — none of that is plugin code. Because the gate is declared, `orders.complete` in the manifest now reads "gated by inspect", and the Step-12 impact report shows it when anyone touches `CompleteOrder`.
 
-The tenant admin flips it on — `plugins.activate("inspect")` — an audited framework operation like any other. For tenants that haven't, the manifest simply omits everything: no nav entry, no MCP tools, no packaged field, HTTP 404 on `inspect.*`. Installing code was the vendor's deploy; enabling it was the tenant's click. And the trust line holds: the partner wrote C# through a compiler and a review; the *tenant* still authors only data — fields, roles, packages, and (later) custom objects and Px-bounded automation rules, per D8.
+The tenant admin flips it on — `plugins.activate("inspect")` — an audited framework operation like any other. For tenants that haven't, the manifest simply omits everything: no nav entry, no MCP tools, no packaged field, HTTP 404 on `inspect.*`. Installing code was the vendor's deploy; enabling it was the tenant's click. And the trust line holds: the partner wrote C# through a compiler and a review; the *tenant* still authors only data — fields, roles, packages, and (later) Px-bounded automation rules (built — see Step 9) and, later, custom objects, per D8.
+
+Two more tiers ride the same machinery, in opposite trust directions. **The framework itself is
+packages**: `AddTamSystem()` is a set of `[TamPackage]` modules — `tam.users`, `tam.roles`,
+`tam.audit`, `tam.tenancy`, `tam.rules`, … — registering through the SAME `PluginBuilder`
+surface the inspection vendor used, differing only on the tier axes: always active (never in
+the activation table — who activates the activator), claiming their historical wire prefixes
+(`users.invite`, `audit.entries`) instead of a namespace, and framework-trusted. Every admin
+grid Norrservice clicks exercises the plugin seams daily — the strongest regression guard the
+seams can have. And below plugins sit **tenant packages**: everything the registry accepts one
+item at a time — fields, roles, rules — expressed as one JSON document and installed as one
+act, with dry-run findings, atomic apply, version-guarded upgrade, and retire-on-uninstall
+(data outlives configuration). A consultant carries the same `cold-chain` package to ten
+customers; it lives in a repo and gets code review, because it is a file.
 
 ---
 
@@ -754,7 +789,21 @@ builder.Services.AddTamOpenIddict<ErpDbContext>();   // the whole auth story, on
 app.MapTamAuth();                                    // /connect/authorize + /connect/token + login/picker/invite pages
 ```
 
-**Entitlements bound what that actor can reach** (docs/24). A tenant's subscription — plan, seats, plugin entitlements — is data a billing provider drives through `subscriptions.set-plan` (a service-actor operation, not the tenant admin: a Stripe webhook maps to one call). Two mechanical gates, both already the right place: `plugins.activate` refuses a plugin the plan doesn't entitle (a localized upsell finding, not a crash), and `users.define` refuses a new user past the seat ceiling. A tenant with no subscription row is simply the free plan, so the framework runs fully without any billing wired up. This is how the inspect and fortnox plugins of the last two steps become things a tenant *buys*: the marketplace adds the plugin id to `PluginEntitlements`, and activation starts succeeding — the framework never touches money, it reads one boolean.
+**Entitlements bound what that actor can reach** (docs/24). A tenant's subscription — plan, seats, plugin entitlements — is data a billing provider drives through `subscriptions.set-plan` (a service-actor operation, not the tenant admin: a Stripe webhook maps to one call). Two mechanical gates, both already the right place: `plugins.activate` refuses a plugin the plan doesn't entitle (a localized upsell finding, not a crash), and `users.define` refuses a new user past the seat ceiling. A tenant tree with no anchor on its chain falls to the host-configured `unconfigured` default — bootstrap-sized, anchored at the root so child nodes never mint fresh seat pools — and self-hosted deployments set `SubscriptionDefaults.Unlimited` once, so the framework runs fully without any billing wired up. This is how the inspect and fortnox plugins of the last two steps become things a tenant *buys*: the marketplace adds the plugin id to `PluginEntitlements`, and activation starts succeeding — the framework never touches money, it reads one boolean.
+
+When Norrservice becomes a group (next step), the subscription does what capability does:
+**it cascades**. A subscription row is an *anchor* — it covers its own node and every
+descendant until a nearer anchor shadows it — so the Kiruna company Norrservice acquires is
+entitled to everything the group plan pays for the moment it is created, with no row of its
+own. Seats pool at the anchor: the count spans the covered subtree and the seat lease lands on
+the anchor's row, so two invites racing at different child companies conflict at commit instead
+of both slipping under the ceiling — and one region admin with a cascading membership is one
+seat, not fifty. A subsidiary on genuinely separate billing gets a **sub-anchor**
+(`subscriptions.set-plan` run while acting at that node — billing-provider-only by
+construction, since `subscriptions.manage` is a reserved atom no role can grant), and the
+boundary is absolute: no entitlement unions, no seat borrowing. `tenants.move` across an anchor
+boundary succeeds with `subscriptions.entitlement-lost` / `seat-overflow` WARNINGS — a re-org
+is never held hostage to billing, and enforcement rides the ordinary downgrade semantics.
 
 The whole request now reads top to bottom as data: *the OpenIddict token names a user → the user's roles resolve to grants → the grants pass the operation's `[Authorize]` → the plan entitles the plugin the operation belongs to → the seat/entitlement gates hold → the pipeline runs → the audit row records the human's name.* Every arrow is a row in a table a tenant admin or a billing webhook can change without a deploy.
 
@@ -764,7 +813,18 @@ A year in, Norrservice buys a company in Kiruna. Nothing about Orders changes �
 
 **The tree is data.** An admin opens the Companies page (or calls `tenants.create`) and adds `nord` under `demo`; the registry stores a materialized path (`demo.nord`), and every data row keeps carrying exactly one `TenantId` — nothing is denormalized, so re-parenting a company later (`tenants.move`) rewrites paths in the tiny tenants table and touches no data row. Renames are `tenants.rename`; the whole lifecycle is operations, so it is authorized, audited and localized like everything else.
 
-**Grants fan out; writes fan in.** Alva's one membership at `demo` carries `admin` with `cascade: true`, so she can *stand at* any descendant — the login picker and the header switcher offer the whole standable set, labeled by path ("Demo AB ▸ Norrservice Nord AB"). Standing at `nord` (an `X-Tam-Tenant` act-as header the client sets), everything she does — creates, audit rows, events, idempotency — lands in `nord`, because the whole request is re-bound to the target node. Reads widen only where a view asks for it: the group overview declares `subtree` (roll-up down the tree), the customer lookup declares `inherited` (group-owned reference data readable from every leaf), and everything else stays strictly node-local. The compiler enforces the sharp edge here: composing a widened source into a query without explicitly scoping the other side is a build error (TAM005), because EF's filter opt-out is query-wide.
+**Grants fan out; writes fan in.** Alva's one membership at `demo` carries `admin` with `cascade: true`, so she can *stand at* any descendant — the login picker and the header switcher offer the whole standable set, labeled by path ("Demo AB ▸ Norrservice Nord AB"). Standing at `nord` (an `X-Tam-Tenant` act-as header the client sets), everything she does — creates, audit rows, events, idempotency — lands in `nord`, because the whole request is re-bound to the target node. Reads widen only where a view asks for it: the orders list itself declares `SubtreeRead` (the standard view IS the group roll-up — the dedicated overview it once had duplicated the real list and is retired; Step 18 shows the grid it drives), the customer lookup declares `inherited` (group-owned reference data readable from every leaf), and everything else stays strictly node-local. The compiler enforces the sharp edge here: composing a widened source into a query without explicitly scoping the other side is a build error (TAM005), because EF's filter opt-out is query-wide.
+
+**Creates fan in to one explicit node — without switching.** A create targets a row that does
+not exist yet, so its tenant must be *bound*, never inferred from a rolled-up view (D-H4).
+Alva, holding a cascading `orders.create` at `demo`, gets a **target-node field** on the create
+form — a lookup over the nodes where her cascaded capability grants create — so she books an
+order into `nord` without leaving `demo`, the Azure resource-group pattern. A leaf worker whose
+create capability covers only the active node never sees the chooser. The validated target
+becomes the request's **execution tenant**, not just a column value: audit, outbox events,
+idempotency and the form's own lookups (picking the sub-company's customer) all land in the
+target with the row. And the same rebind runs per row on the group's grids: acting on a child
+company's row acts *in* that company (Step 18).
 
 **Access is capability — including row reach.** A role says what you can *do*, authored as access levels (`{"orders": "manage"}`) expanding to permission atoms at load time, with `[Sensitive]` fields maskable down to reads *and* writes. Row reach rides the same atoms as the **paired-atom pattern** ([28](28-assignment-and-grouping.md)): `orders.read` is own-scoped by default, `orders.read-all` widens — so the technician role carries the base atoms and sees only assigned orders on every surface, while the dispatcher role adds the `-all` atoms and works the whole board. No second registry, no policy admin: granting a role with or without the widening atom IS the runtime toggle, and TAM006 verifies at compile time that every view over a widened resource actually applies the scope — fail-closed by construction. The role registry is tenant data with an admin page, validates against the compiled catalogue at define time, and re-resolves per request.
 
@@ -869,18 +929,29 @@ everything per-tenant activated and entitlement-priced.
    "number", "estimatedTotal")` — PLG008 fails the BUILD if the host doesn't expose exactly
    that, and the create operation reads the order through the ACTOR-mode `IHostViewReader`:
    permission-checked like the wire, so a user who may not see an order cannot invoice it.
-4. **The draft writes itself.** An `OnEffect("order-completed")` subscriber drafts the invoice
-   post-commit — idempotent under redelivery, number from the payload, amount backfilled
-   through a SERVICE-MODE declared read (no actor exists in the outbox; the readable surface
-   is exactly the RequiresView list, never a superuser).
+4. **The draft writes itself — against a contract, not folklore.** An
+   `OnEffect("order-completed")` subscriber drafts the invoice post-commit — idempotent under
+   redelivery, number from the payload, amount backfilled through a SERVICE-MODE declared read
+   (no actor exists in the outbox; the readable surface is exactly the RequiresView list,
+   never a superuser). The payload shape is a build-time fact (D-X5): the host declares
+   `.PublishesEvent("order-completed", "orderId", "number")` in its model, the plugin declares
+   `plugin.RequiresEvent("order-completed", "orderId", "number")`, and PLG009 fails the BUILD
+   on a subscription to an unknown event or a required field the publisher doesn't carry. The
+   manifest gains an `events` section — `"order-completed": { "fields": ["orderId","number"],
+   "subscribedBy": ["inspect","invoicing"] }` — so `SubscribedBy` shows in the impact report,
+   symmetric with `GatedBy`.
 5. **Invoicing pushes back.** A gate on `orders.complete`: an order with a PENDING DRAFT
    invoice cannot complete. The gate reads the plugin's own table off the wire input; the
    manifest shows `orders.complete → gatedBy: ["invoicing"]`.
 6. **The order wears its invoice status.** `plugin.ExtensionField("order", "invoiceStatus",
-   "selection", options: draft|invoiced|paid)` — and the missing write half, D-X2's
-   `IPackagedFieldWriter`: structurally scoped (only this plugin's declared keys), semantically
-   validated, audited with the PLUGIN as the attributed actor, live-refreshing open grids. The
-   column and filter appear on the host's orders grid with zero host changes.
+   "selection", options: draft|invoiced|paid, readOnly: true)` — and the missing write half,
+   D-X2's `IPackagedFieldWriter`: structurally scoped (only this plugin's declared keys),
+   semantically validated, audited with the PLUGIN as the attributed actor, live-refreshing
+   open grids. `readOnly` marks plugin-owned state: the field renders in grids and filters
+   like any extension field but is EXCLUDED from forms, and the wire extension channel rejects
+   writes (`extensions.read-only-field`) — the status shows everywhere, and its state machine
+   stays the plugin's. Tenant-defined fields are never read-only. The column and filter appear
+   on the host's orders grid with zero host changes.
 7. **"Create invoice" where the user lives.** D-X1: `plugin.GridAction("web.orders.list",
    "invoicing.create-from-order", bind => bind.Field("orderId", fromColumn: "id"))` — a row
    action ON THE HOST'S GRID, declared bind instead of name-convention, PLG006-verified,
@@ -893,15 +964,122 @@ everything per-tenant activated and entitlement-priced.
    DERIVED from the model: *reads your orders (id, number, estimatedTotal); adds field
    order.invoiceStatus; gates orders.complete; adds an action to your orders list; subscribes
    to order-completed.* The record-bound detail panel is one host line —
-   `model.Slot("web.orders.detail", …)` + `<PluginSlot/>` in the modal — and the invoice grid
-   lands in it unnamed (D-X4); the accounting-provider push is Step 13's outbound seam applied,
+   `model.Slot("web.orders.detail", slot => slot.Key("orderId"))` plus one `.Slot(…)` section on
+   the declared orders page (Step 18 — there is no modal React to edit) — and the invoice grid
+   lands in it unnamed (D-X4); the accounting-provider push is Step 10's outbound seam applied,
    not new machinery.
 
 The whole scenario — activate, create from the grid, duplicate rejected, ghost order rejected
 by the declared read, status on the order row, plugin-attributed audit, complete blocked by the
 draft, finalize, complete passes, auto-draft on a bare completion, paid rippling back onto the
-order — runs as a 23-check wire suite against `samples/invoicing`. `CompleteOrder` and the
+order — runs as a 26-check wire suite against `samples/invoicing`. `CompleteOrder` and the
 orders grid declaration were not touched.
+
+---
+
+## Step 18 — The composed UI: nav, pages, slots, and the subtree grid *(BUILT — [30-navigation.md](30-navigation.md), [32-pages.md](32-pages.md), docs/26 D-H1)*
+
+Seventeen steps in, the model knows everything — operations, views, forms, grids, fields,
+gates, actions, panels — and yet one surface was still hand-wired: the shell. Norrservice's app
+carried a flat hand-written nav list and a ~50-line `OrdersPage` React component whose every
+line was derivable (render the grid, on row click fetch the detail, open a modal with the edit
+form, host the plugin slot). Both are gone. This step is where the whole UI becomes
+manifest-composed — and, as always, the point is what we do NOT write.
+
+**Nav is a declared tree.** The host owns layout; here is Norrservice's, in the model builder:
+
+```csharp
+.Nav("web", nav => nav
+    .Mode("work", m => m
+        .Page("orders", page: "orders", order: 10)     // a DECLARED page (below)
+        .Page("customers", grid: "web.customers.list", order: 30))
+    .Mode("admin", m => m
+        .Section("administration")))
+```
+
+Two rules make this scale past one app. **Contribution is not placement**: the invoicing plugin
+declared `plugin.Nav(nav => nav.Page("invoicing.invoices", grid: "invoicing.web.invoices",
+suggest: "work", order: 40))` — a *suggestion* of a semantic section, never a position in a
+layout it cannot see; the framework's own admin packages suggest `administration` the same way,
+and the host's `Section("administration")` collects them. Anything nobody places lands on an
+auto-page under a well-known "more" section in the last mode — nothing can be authored into
+invisibility; declaring nav is how a plugin graduates from "appears" to "belongs". And
+**visibility is derived, never authored**: a page shows iff the actor holds the bound view's
+permission, a section or mode shows iff any descendant does — so a role-oriented workspace
+falls out free (a technician whose permissions empty the `admin` mode never sees the switcher
+entry), and there is no `visibleWhen` to audit. Nav is discoverability, never authorization:
+hiding removes the menu entry, not the surface. The manifest gains a `nav` section per surface
+class (`"nav": { "web": [ { "id": "work", "kind": "mode", "labelKey": "nav.work",
+"children": [ … ] } ] }`), labels are locale keys like everything else, node ids are D4-permanent,
+and a tenant overlay (`nav.override` — hide, relabel, reorder, regroup; registry data, audited)
+is the next slice of the same pattern.
+
+**The orders page is a declared composition.** The React component this replaces is deleted:
+
+```csharp
+.Slot("web.orders.detail", slot => slot.Key("orderId"))     // the contribution point (Step 17)
+
+.Page("orders", page => page
+    .Grid("web.orders.list")                        // sections render in DECLARATION ORDER
+    .Record(record => record
+        .Detail("orders.detail", key: "orderId")    // fetched with the clicked row's id
+        .Title("number")                            // detail field shown in the record title
+        .Form("web.orders.edit")                    // prefilled from same-named detail fields
+        .Slot("web.orders.detail")))                // invoicing's panel lands here, unnamed
+```
+
+A page is an ordered list of sections; the first grid opens the record surface, itself an
+ordered list of form and slot sections — declaration order IS layout order, so there is no
+`after:` annotation to disambiguate. Form prefill is the row-action convention made
+declarative: each form field takes the same-named detail field, the record's key takes the
+clicked row's id. `PAGE001` verifies every part exists and fits at build time; `SLOT001` fails
+the build on a declared slot no page renders (a slot nobody renders is plugins contributing
+panels into a void — the nav "more" lesson, applied to slots; a slot the app hosts in custom
+React declares `external: true` and nothing else). Pages are the host's, like layout: plugins
+reach them through slots and grid-action contributions, never by declaring pages. And the nav
+entry above needed no permission atom — a `{ page }` target naming a declared page derives its
+visibility from the page's grid's view, exactly like a `{ grid }` target. `registerPage(key,
+component)` remains the escape hatch for genuinely custom UX, and its ratio is the architecture
+tripwire: if most pages need React, the model is decorating the app. Norrservice is at zero.
+
+**The subtree grid.** Step 15 made Norrservice a group; here is what the group *sees*. The
+orders list — the same view, not a twin — declares one capability:
+
+```csharp
+public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+    .Sortable(nameof(Result.Number), nameof(Result.CustomerName), nameof(Result.RequestedDate))
+    .Filterable(nameof(Result.Status), nameof(Result.Type))
+    .SubtreeRead(nameof(Result.TenantId))           // docs/26 D-H1: THE list is also the roll-up
+    .DefaultSort(nameof(Result.Number), descending: true);
+```
+
+Standing at a leaf, nothing changes. Standing at `demo`, the ambient READ scope widens to the
+acting node's validated subtree for that execution — the authored query is untouched — and the
+named result field becomes three mechanical client behaviors at once: a **company column**
+(labeled by tenant display name, rendered only when there is more than one company to tell
+apart), a **tenant filter**, and **per-row act-as** — clicking a `nord` row fetches the detail,
+submits the edit form, and fires row actions with `X-Tam-Tenant: demo.nord`, so every write
+still fans in to exactly one node (writes never widen; the stamp reads only the current node).
+Step 17's contributed "Create invoice" button composes for free: on a child company's row it
+acts in that company. The manifest carries one fact — `"subtree": "tenantId"` on the view —
+and the one sharp edge stays compile-checked: a query composing a widened source must scope its
+other sides explicitly (`InScope` beside `WithInherited`), or TAM005 fails the build.
+
+**The frontend, in its entirety.** The app shell composes slot components and owns nothing else:
+
+```tsx
+<NavProvider>
+  <NavModeSwitcher />   {/* depth 0 — modes */}
+  <NavSidebar />        {/* depth 1 */}
+  <NavTabs />           {/* depth 2 */}
+  <NavPage />           {/* declared pages via <ModelPage>, grids via <ViewGrid>, registered pages by key */}
+</NavProvider>
+```
+
+**What we did NOT write:** routes, menu arrays, page components, modal wiring, a
+detail-fetch-then-prefill effect, a company column, a tenant filter, an act-as plumbing layer,
+or any per-plugin nav code. The sample's last hand-written page is deleted, and every plugin
+from Steps 13–17 landed in this shell without the shell knowing their names.
 
 ---
 
