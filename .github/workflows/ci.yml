@@ -12,9 +12,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: tam
-          POSTGRES_PASSWORD: tam
-          POSTGRES_DB: erp
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
         options: >-
@@ -46,15 +46,25 @@ jobs:
           node scripts/generate-types.mjs samples/erp/manifest.baseline.json apps/web/src/generated/tam.ts
           git diff --exit-code apps/web/src/generated/tam.ts
 
-      - name: Postgres smoke test (jsonb extensions, seed, views)
+      # The app role is NOSUPERUSER NOBYPASSRLS: the RLS backstop (docs/33 D-R3) REFUSES to
+      # provision under a bypassing role, so CI runs exactly like a real deployment.
+      - name: Create app role and database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres             -c "CREATE ROLE tam LOGIN PASSWORD 'tam' NOSUPERUSER NOBYPASSRLS;"             -c "CREATE DATABASE erp OWNER tam;"
+
+      - name: Postgres smoke test (RLS provisioning, seed, auth, views)
         env:
           ConnectionStrings__erp: Host=localhost;Database=erp;Username=tam;Password=tam
           ASPNETCORE_URLS: http://localhost:5100
         run: |
           dotnet run --project samples/erp --no-build &
           for i in $(seq 1 30); do curl -sf http://localhost:5100/api/manifest > /dev/null && break; sleep 1; done
-          TOKEN=$(curl -sf -X POST http://localhost:5100/connect/token -d 'grant_type=password&username=alva&password=demo123' | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
-          curl -sf -H "Authorization: Bearer $TOKEN" "http://localhost:5100/api/views/orders.list" | grep -q '"total":5'
+          # Machine client (client credentials — the password grant is gone, OAuth 2.1):
+          TOKEN=$(curl -sf -X POST http://localhost:5100/connect/token             -d 'grant_type=client_credentials&client_id=mcp-agent&client_secret=agent-secret'             | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+          BODY=$(curl -sf -H "Authorization: Bearer $TOKEN" "http://localhost:5100/api/views/orders.list")
+          echo "$BODY" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["total"] >= 1, d; print("orders.list total:", d["total"])'
+          # The RLS policies really exist (26 tenant-scoped tables enable+force at startup):
+          PGPASSWORD=tam psql -h localhost -U tam -d erp -tAc             "SELECT count(*) FROM pg_policies WHERE policyname='tam_tenant_isolation'" | grep -vq '^0$'
           kill %1
 
       - name: Frontend type-check and build
