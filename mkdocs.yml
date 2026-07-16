@@ -1,0 +1,91 @@
+site_name: Tam — Typed Application Model
+site_description: A model-driven framework for multi-tenant business applications (.NET + React)
+site_url: https://nilbin.github.io/abc/
+repo_url: https://github.com/nilbin/abc
+docs_dir: docs
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle: { icon: material/brightness-7, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle: { icon: material/brightness-4, name: Light mode }
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - tables
+  - toc:
+      permalink: true
+nav:
+  - Home: index.md
+  - Progress: status.md
+  - Tutorial:
+      - tutorial/index.md
+      - tutorial/step-00.md
+      - tutorial/step-01.md
+      - tutorial/step-02.md
+      - tutorial/step-03.md
+      - tutorial/step-04.md
+      - tutorial/step-05.md
+      - tutorial/step-06.md
+      - tutorial/step-07.md
+      - tutorial/step-08.md
+      - tutorial/step-09.md
+      - tutorial/step-10.md
+      - tutorial/step-11.md
+      - tutorial/step-12.md
+      - tutorial/step-13.md
+      - tutorial/step-14.md
+      - tutorial/step-15.md
+      - tutorial/step-16.md
+      - tutorial/step-17.md
+      - tutorial/step-18.md
+      - tutorial/tally.md
+  - Foundations:
+      - 01-overview.md
+      - 02-domain-state.md
+      - 03-operations.md
+      - 04-views.md
+      - 05-derivations.md
+      - 06-bindings.md
+      - 07-partial-edits.md
+      - 08-validation.md
+      - 09-envelope-and-effects.md
+      - 12-compiler-and-manifest.md
+      - 13-frontend-runtime.md
+      - 14-database-and-ef-core.md
+      - 21-localization.md
+  - Extensibility:
+      - 15-extensibility.md
+      - 22-plugins.md
+      - 31-cross-domain-plugins.md
+      - 23-custom-objects.md
+      - 24-subscriptions.md
+      - 10-integrations.md
+      - 25-external-integrations.md
+      - 11-mcp-and-agents.md
+  - Tenancy & security:
+      - 26-tenancy-hierarchy-and-identity.md
+      - 27-authorization-model.md
+      - 28-assignment-and-grouping.md
+      - 33-rls-backstop.md
+  - UI composition:
+      - 30-navigation.md
+      - 32-pages.md
+  - Process:
+      - 19-decisions.md
+      - 29-code-structure.md
+      - 16-packages-and-layout.md
+      - 17-implementation-phases.md
+      - 18-success-criteria.md
+      - review-notes.md

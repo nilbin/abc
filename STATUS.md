@@ -449,6 +449,14 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **The docs SITE (GitHub Pages)**: MkDocs Material over docs/, deployed by
+  .github/workflows/docs.yml on every push to main — https://nilbin.github.io/abc/. The
+  tutorial is split one page per step (docs/tutorial/step-00..18 + tally; docs/20-tutorial.md
+  stays as a pointer so inbound links survive), docs/index.md is the landing page, THIS file
+  publishes as /status (the progress page), and docs/llms.txt is the machine-readable index
+  (llms.txt convention: every page with a one-line description + raw-markdown pointers).
+  Site nav groups the design docs by theme (Foundations / Extensibility / Tenancy & security /
+  UI composition / Process). Built with --strict (broken links fail the build).
 - **Plugin-declared pages (review round 4 finding 3, built)**: a plugin's own aggregate now
   gets a full record page without host React — `plugin.Page("invoicing.invoices", …)` under
   the plugin prefix (PLG001), activation-filtered in the manifest, placed through the same

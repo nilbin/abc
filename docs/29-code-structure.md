@@ -24,7 +24,10 @@ samples/erp                the reference host: domain, bindings, seed, Program w
 samples/inspect|fortnox|approvals   vendor-plugin exemplars (the plugin shapes to copy).
 tests/Tam.Tests            the unit/pipeline suite. Wire verification scripts live outside
                            the repo (session tooling) — STATUS records what they proved.
-docs/                      numbered design docs; 19-decisions.md is the ledger.
+docs/                      numbered design docs; 19-decisions.md is the ledger; tutorial/
+                           one page per step; index.md + llms.txt front the published site.
+mkdocs.yml + .github/workflows/docs.yml   the docs SITE: MkDocs Material on GitHub Pages,
+                           deployed on every push to main (STATUS.md becomes /status).
 ```
 
 Dependency lines that must not blur: Core references nothing; EFCore references Core;

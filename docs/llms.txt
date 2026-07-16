@@ -1,0 +1,62 @@
+# Tam — Typed Application Model
+
+> A model-driven framework for multi-tenant business applications on .NET 10 + React: entities,
+> operations, views, and bindings declared in C# produce the API, manifest-driven UI,
+> localization, audit, tenant isolation, an MCP agent surface, and a per-tenant plugin system.
+> Everything marked BUILT is verified end to end against the Norrservice ERP reference host.
+
+Human site: https://nilbin.github.io/abc/ — raw markdown sources:
+https://raw.githubusercontent.com/nilbin/abc/main/docs/ (append the file name below).
+
+## Start
+
+- [Tutorial index](https://nilbin.github.io/abc/tutorial/): one feature end to end, then custom fields, plugins, integrations, tenancy, the composed UI — one page per step (tutorial/step-00.md … step-18.md in raw form), BUILT/designed markers throughout
+- [Progress ledger](https://nilbin.github.io/abc/status/): what runs, what is verified on the wire, known gaps (STATUS.md at the repo root)
+- [Decision ledger](https://nilbin.github.io/abc/19-decisions/): D1–D9 architectural decisions with reasoning (19-decisions.md)
+- [Code structure](https://nilbin.github.io/abc/29-code-structure/): repo map, where every piece goes, enforcement map (29-code-structure.md)
+
+## Foundations
+
+- [Overview](https://nilbin.github.io/abc/01-overview/): the thesis — declare the model, derive everything else (01-overview.md)
+- [Domain state](https://nilbin.github.io/abc/02-domain-state/): entities, semantic value types, invariants (02-domain-state.md)
+- [Operations](https://nilbin.github.io/abc/03-operations/): intent-named writes, findings, the pipeline (03-operations.md)
+- [Views](https://nilbin.github.io/abc/04-views/): queryable read models with declared capabilities (04-views.md)
+- [Derivations](https://nilbin.github.io/abc/05-derivations/): reactive form behavior, server + portable (05-derivations.md)
+- [Bindings](https://nilbin.github.io/abc/06-bindings/): forms and grids bound to operations and views, convention defaults (06-bindings.md)
+- [Partial edits](https://nilbin.github.io/abc/07-partial-edits/): Change<T>, three-way merge, conflict shapes (07-partial-edits.md)
+- [Validation](https://nilbin.github.io/abc/08-validation/): structural from the model, semantic types, findings (08-validation.md)
+- [Envelope & effects](https://nilbin.github.io/abc/09-envelope-and-effects/): audit, idempotency, events, the outbox (09-envelope-and-effects.md)
+- [Compiler & manifest](https://nilbin.github.io/abc/12-compiler-and-manifest/): analyzers, source generator, the wire manifest (12-compiler-and-manifest.md)
+- [Frontend runtime](https://nilbin.github.io/abc/13-frontend-runtime/): @tam/core + @tam/react, renderers, typed client (13-frontend-runtime.md)
+- [Database & EF Core](https://nilbin.github.io/abc/14-database-and-ef-core/): conventions, tenant filter/stamp, providers (14-database-and-ef-core.md)
+- [Localization](https://nilbin.github.io/abc/21-localization/): the flat key grammar, catalogs, the L10N001 gate (21-localization.md)
+
+## Extensibility
+
+- [Extensibility](https://nilbin.github.io/abc/15-extensibility/): tenant custom fields, the extension channel (15-extensibility.md)
+- [Plugins](https://nilbin.github.io/abc/22-plugins/): compiled, tenant-activated modules; tiers; the authoring reference (22-plugins.md)
+- [Cross-domain plugins](https://nilbin.github.io/abc/31-cross-domain-plugins/): grid actions, packaged-field writer, declared reads, slots, event contracts (31-cross-domain-plugins.md)
+- [Custom objects](https://nilbin.github.io/abc/23-custom-objects/): tenant-defined entities (designed) (23-custom-objects.md)
+- [Subscriptions](https://nilbin.github.io/abc/24-subscriptions/): plans, seats, entitlements, anchors on the tenant tree (24-subscriptions.md)
+- [Integrations](https://nilbin.github.io/abc/10-integrations/): inbound mapping over the inbox (10-integrations.md)
+- [External integrations](https://nilbin.github.io/abc/25-external-integrations/): outbound triggers, vault, retries, dead-letter (25-external-integrations.md)
+- [MCP & agents](https://nilbin.github.io/abc/11-mcp-and-agents/): the model as agent tools (11-mcp-and-agents.md)
+
+## Tenancy & security
+
+- [Tenancy, hierarchy & identity](https://nilbin.github.io/abc/26-tenancy-hierarchy-and-identity/): tenant trees, accounts, memberships, act-as (26-tenancy-hierarchy-and-identity.md)
+- [Authorization model](https://nilbin.github.io/abc/27-authorization-model/): permission atoms, levels, scopes (27-authorization-model.md)
+- [Assignment & grouping](https://nilbin.github.io/abc/28-assignment-and-grouping/): paired atoms, approver groups, park/replay seams (28-assignment-and-grouping.md)
+- [RLS backstop](https://nilbin.github.io/abc/33-rls-backstop/): PostgreSQL row-level security mirroring the EF filter (33-rls-backstop.md)
+
+## UI composition
+
+- [Navigation](https://nilbin.github.io/abc/30-navigation/): declared nav trees, contributions, the tenant override registry (30-navigation.md)
+- [Pages](https://nilbin.github.io/abc/32-pages/): framework-composed list-and-detail pages, plugin pages, slots (32-pages.md)
+
+## Process
+
+- [Packages & layout](https://nilbin.github.io/abc/16-packages-and-layout/): the design-era NuGet packaging sketch (16-packages-and-layout.md)
+- [Implementation phases](https://nilbin.github.io/abc/17-implementation-phases/): the original build plan (17-implementation-phases.md)
+- [Success criteria](https://nilbin.github.io/abc/18-success-criteria/): what "working" was defined to mean (18-success-criteria.md)
+- [Review notes](https://nilbin.github.io/abc/review-notes/): the pre-build design review (review-notes.md)
