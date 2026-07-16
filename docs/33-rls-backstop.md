@@ -123,12 +123,13 @@ array does not help because the comparisons themselves are the cost. The registr
 wins by three orders of magnitude because the planner drives the `(TenantId, …)` index from
 the small tenant set instead of testing an array against every row.
 
-Candidate fix (NOT yet built — awaiting the M5 triage): replace the policy's read-set arm
-with a semi-join on the tenants registry keyed by a path GUC (`app.tenant_path`), keeping
-the sentinel and current-tenant arms as they are. The interceptor then syncs a PATH instead
-of an id LIST — constant-size GUC regardless of tree width. Until then: the backstop is
-correct at any scale and cheap for single-tenant traffic; subtree-heavy hosts with hundreds
-of nodes pay ~1 ms per 100 rows × 100 nodes on subtree reads.
+**BUILT (M5 fix 8):** the policy's subtree arm is now a semi-join on the (RLS-exempt)
+tenants registry keyed by `app.tenant_path` — the interceptor syncs the acting node's PATH
+(constant size regardless of tree width) whenever the widening is subtree-shaped, and the
+id-list arm remains only as a fallback for a widening that carries no path. Re-measured on
+the same fixture: the 200-node subtree count over 20k rows dropped **240 ms → 11.7 ms** —
+indistinguishable from the single-tenant baseline. The fingerprint prefixes the two forms
+(`p:` / `s:`) so they can never collide into a skipped sync.
 
 ## Non-goals
 

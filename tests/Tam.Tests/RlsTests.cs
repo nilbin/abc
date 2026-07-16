@@ -15,6 +15,7 @@ public class RlsTests
     {
         public string? CurrentTenantId { get; init; }
         public IReadOnlyList<string> TenantReadSet { get; init; } = [];
+        public string? TenantReadPath { get; init; }
         public bool CrossTenantScope { get; init; }
     }
 
@@ -32,16 +33,28 @@ public class RlsTests
         Assert.Contains($"current_setting('{TamRls.TenantSetting}', true) = '*'", sql);
         Assert.Contains($"\"TenantId\" = current_setting('{TamRls.TenantSetting}', true)", sql);
         Assert.Contains($"nullif(current_setting('{TamRls.ReadSetSetting}', true), '')", sql);
+        // The subtree arm is a REGISTRY SEMI-JOIN keyed on the path setting (docs/33 M5):
+        // constant-size GUC, index-driven — never a per-row array scan.
+        Assert.Contains($"current_setting('{TamRls.ReadPathSetting}', true)", sql);
+        Assert.Contains("IN (SELECT \"Id\" FROM \"public\".\"tenants\"", sql);
     }
 
     [Fact]
     public void The_fingerprint_tracks_tenant_and_read_set()
     {
         // Null scope = the explicit cross-tenant contract → the sentinel (docs/33 D-R2).
-        Assert.Equal("*|", TamRls.Fingerprint(new Scope()));
-        Assert.Equal("demo|", TamRls.Fingerprint(new Scope { CurrentTenantId = "demo" }));
-        Assert.Equal("demo|nord,syd", TamRls.Fingerprint(
+        Assert.Equal("*|s:", TamRls.Fingerprint(new Scope()));
+        Assert.Equal("demo|s:", TamRls.Fingerprint(new Scope { CurrentTenantId = "demo" }));
+        Assert.Equal("demo|s:nord,syd", TamRls.Fingerprint(
             new Scope { CurrentTenantId = "demo", TenantReadSet = ["nord", "syd"] }));
+
+        // A subtree widening carries the PATH (docs/33 M5): different GUC state than an id
+        // list of the same text, so the two forms are prefixed and can never collide.
+        Assert.Equal("demo|p:demo", TamRls.Fingerprint(
+            new Scope { CurrentTenantId = "demo", TenantReadSet = ["demo", "nord"], TenantReadPath = "demo" }));
+        Assert.NotEqual(
+            TamRls.Fingerprint(new Scope { CurrentTenantId = "demo", TenantReadSet = ["demo"] }),
+            TamRls.Fingerprint(new Scope { CurrentTenantId = "demo", TenantReadSet = ["demo"], TenantReadPath = "demo" }));
 
         // Widening the read set MUST move the fingerprint, or the settings would go stale
         // mid-request when the view executor widens for a SubtreeRead view.

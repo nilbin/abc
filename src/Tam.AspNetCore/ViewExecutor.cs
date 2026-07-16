@@ -25,13 +25,14 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         // must see the strict filter (docs/26: "writes never widen").
         var scope = services.GetService(typeof(TenantScope)) as TenantScope;
         var priorReadSet = scope?.ReadSet ?? [];
+        var priorReadPath = scope?.ReadPath;
         try
         {
             return await ExecuteWidenedAsync(viewId, query, context, ct);
         }
         finally
         {
-            scope?.WidenRead(priorReadSet);
+            scope?.WidenRead(priorReadSet, priorReadPath);
         }
     }
 
@@ -71,7 +72,7 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             var prefix = activePath + ".";
             scope.WidenRead(await subtreeDb.Db.Set<TenantEntity>()
                 .Where(t => t.Path == activePath || t.Path.StartsWith(prefix))
-                .Select(t => t.Id).ToListAsync(ct));
+                .Select(t => t.Id).ToListAsync(ct), path: activePath);
         }
 
         object queryRecord;

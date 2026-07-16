@@ -15,6 +15,7 @@ public static class TamRls
 {
     public const string TenantSetting = "app.tenant_id";
     public const string ReadSetSetting = "app.tenant_read_set";
+    public const string ReadPathSetting = "app.tenant_path";
 
     /// <summary>The database mirror of a NULL <see cref="ITenantScopeContext.CurrentTenantId"/>
     /// — the framework's explicit cross-tenant scope (background loops, docs/33 D-R2).</summary>
@@ -63,30 +64,55 @@ public static class TamRls
                 .GetColumnName(Microsoft.EntityFrameworkCore.Metadata.StoreObjectIdentifier
                     .Table(table, entityType.GetSchema())) ?? nameof(ITenantScoped.TenantId);
 
-            await db.Database.ExecuteSqlRawAsync(PolicySql(schema, table, column), ct);
+            var registry = db.Model.FindEntityType(typeof(TenantEntity))!;
+            var registryTable = registry.GetTableName()!;
+            var registrySchema = registry.GetSchema() ?? "public";
+            var registryStore = Microsoft.EntityFrameworkCore.Metadata.StoreObjectIdentifier
+                .Table(registryTable, registry.GetSchema());
+            var registryId = registry.FindProperty(nameof(TenantEntity.Id))!
+                .GetColumnName(registryStore) ?? nameof(TenantEntity.Id);
+            var registryPath = registry.FindProperty(nameof(TenantEntity.Path))!
+                .GetColumnName(registryStore) ?? nameof(TenantEntity.Path);
+
+            await db.Database.ExecuteSqlRawAsync(
+                PolicySql(schema, table, column, registrySchema, registryTable, registryId, registryPath), ct);
         }
     }
 
     /// <summary>The per-table statements: enable + force (the app role OWNS its tables, docs/33
-    /// D-R3) + one FOR ALL policy mirroring the EF filter — current tenant, subtree read set,
-    /// or the explicit cross-tenant sentinel. An unset setting is NULL: fail closed. Public so
-    /// hosts that provision through migration scripts can emit the same statements.</summary>
-    public static string PolicySql(string schema, string table, string column) => $"""
+    /// D-R3) + one FOR ALL policy mirroring the EF filter — current tenant, subtree read (a
+    /// PATH-keyed semi-join on the exempt tenants registry: constant-size setting, planner
+    /// drives the TenantId index — measured 240 ms → 0.2 ms on a 200-node subtree over 20k
+    /// rows), an explicit id-list fallback for non-subtree widenings, or the cross-tenant
+    /// sentinel. An unset setting is NULL: fail closed. Public so hosts that provision through
+    /// migration scripts can emit the same statements.</summary>
+    public static string PolicySql(
+        string schema, string table, string column,
+        string registrySchema = "public", string registryTable = "tenants",
+        string registryIdColumn = "Id", string registryPathColumn = "Path") => $"""
         ALTER TABLE "{schema}"."{table}" ENABLE ROW LEVEL SECURITY;
         ALTER TABLE "{schema}"."{table}" FORCE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS {PolicyName} ON "{schema}"."{table}";
         CREATE POLICY {PolicyName} ON "{schema}"."{table}" FOR ALL USING (
             current_setting('{TenantSetting}', true) = '{CrossTenantSentinel}'
             OR "{column}" = current_setting('{TenantSetting}', true)
+            OR "{column}" IN (SELECT "{registryIdColumn}" FROM "{registrySchema}"."{registryTable}"
+                   WHERE "{registryPathColumn}" = nullif(current_setting('{ReadPathSetting}', true), '')
+                      OR "{registryPathColumn}" LIKE nullif(current_setting('{ReadPathSetting}', true), '') || '.%')
             OR "{column}" = ANY (string_to_array(
                    nullif(current_setting('{ReadSetSetting}', true), ''), ','))
         );
         """;
 
+    // The path and set forms are DIFFERENT session states (different GUCs), so the
+    // fingerprint prefixes them — "demo|p:demo" and "demo|s:demo" must never collide or a
+    // sync would be skipped while the wrong setting lingers.
     public static string Fingerprint(ITenantScopeContext scope) =>
         scope.CrossTenantScope
             ? $"{CrossTenantSentinel}|"
-            : $"{scope.CurrentTenantId ?? CrossTenantSentinel}|{string.Join(",", scope.TenantReadSet)}";
+            : scope.TenantReadPath is { } path
+                ? $"{scope.CurrentTenantId ?? CrossTenantSentinel}|p:{path}"
+                : $"{scope.CurrentTenantId ?? CrossTenantSentinel}|s:{string.Join(",", scope.TenantReadSet)}";
 
     /// <summary>True when the command carries the <see cref="TamTenantFilter.CrossTenantQueryTag"/>
     /// (docs/33 D-R7) — checked ONLY in the leading comment block EF emits for query tags, so a
@@ -209,6 +235,7 @@ public sealed class TamRlsInterceptor
         set.Transaction = command.Transaction;
         set.CommandText =
             $"SELECT set_config('{TamRls.TenantSetting}', @tenant, false), " +
+            $"set_config('{TamRls.ReadPathSetting}', @readPath, false), " +
             $"set_config('{TamRls.ReadSetSetting}', @readSet, false)";
         var tenant = set.CreateParameter();
         tenant.ParameterName = "tenant";
@@ -216,9 +243,16 @@ public sealed class TamRlsInterceptor
             ? TamRls.CrossTenantSentinel
             : scope.CurrentTenantId ?? TamRls.CrossTenantSentinel;
         set.Parameters.Add(tenant);
+        // Subtree widenings sync the constant-size PATH (the registry semi-join arm); the id
+        // LIST is only for a widening that carries no path. Exactly one is ever non-empty.
+        var subtree = !escalated && !scope.CrossTenantScope ? scope.TenantReadPath : null;
+        var readPath = set.CreateParameter();
+        readPath.ParameterName = "readPath";
+        readPath.Value = subtree ?? "";
+        set.Parameters.Add(readPath);
         var readSet = set.CreateParameter();
         readSet.ParameterName = "readSet";
-        readSet.Value = escalated || scope.CrossTenantScope
+        readSet.Value = escalated || scope.CrossTenantScope || subtree is not null
             ? "" : string.Join(",", scope.TenantReadSet);
         set.Parameters.Add(readSet);
 

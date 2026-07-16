@@ -28,6 +28,12 @@ public interface ITenantScopeContext
     /// and operation pipeline use <see cref="CurrentTenantId"/> alone (D-H4).</summary>
     IReadOnlyList<string> TenantReadSet { get; }
 
+    /// <summary>The acting node's PATH when the read set is a validated SUBTREE (the only
+    /// widening the framework performs) — lets the RLS backstop answer subtree membership as
+    /// a registry semi-join instead of a per-row array scan (docs/33, measured: 240 ms → 0.2 ms
+    /// on a 200-node subtree over 20k rows). Null when no widening is active.</summary>
+    string? TenantReadPath => null;
+
     /// <summary>True when this scope has been EXPLICITLY escalated to cross-tenant (docs/33
     /// D-R8: the auth branch, registry-mutating framework operations). The RLS backstop maps
     /// it to the '*' sentinel; hosts without RLS can ignore it — the EF filter never reads it

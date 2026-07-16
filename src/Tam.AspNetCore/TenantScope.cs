@@ -22,7 +22,16 @@ public sealed class TenantScope
     /// The write side (stamping, operations, outbox) never consults it.</summary>
     public IReadOnlyList<string> ReadSet { get; private set; } = [];
 
-    public void WidenRead(IEnumerable<string> tenantIds) => ReadSet = [.. tenantIds];
+    /// <summary>The acting node's PATH when <see cref="ReadSet"/> is its validated subtree —
+    /// the constant-size twin the RLS backstop syncs instead of the id list (docs/33). Null
+    /// whenever the set is empty or not subtree-shaped.</summary>
+    public string? ReadPath { get; private set; }
+
+    public void WidenRead(IEnumerable<string> tenantIds, string? path = null)
+    {
+        ReadSet = [.. tenantIds];
+        ReadPath = path;
+    }
 
     /// <summary>True after <see cref="EscalateCrossTenant"/>: this request is a sanctioned
     /// cross-tenant scope for its REMAINDER (docs/33 D-R8) — the auth branch (login enumerates
