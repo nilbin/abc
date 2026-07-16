@@ -203,3 +203,36 @@ public sealed record OutboundResult(bool Ok, string? Detail = null)
 
 public delegate Task<OutboundResult> OutboundIntegrationHandler(
     IIntegrationRunContext run, CancellationToken ct);
+
+/// <summary>
+/// Declares which operation this <see cref="IOperationGate"/> class gates — registration lives
+/// ON the behavior, mirroring [Operation]/[View]: the assembly's generated AddDiscovered()
+/// registers it, so a big plugin's Configure stays a table of contents (docs/22, review round
+/// 4). The fluent twin (PluginBuilder.Gate&lt;T&gt;) remains the substrate, like AddOperationType.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class GateAttribute(string operationId) : Attribute
+{
+    public string OperationId { get; } = operationId;
+
+    /// <summary>PURE gates run outside the operation transaction (docs/28).</summary>
+    public bool Pure { get; init; }
+}
+
+/// <summary>The wildcard form of <see cref="GateAttribute"/>: gates EVERY operation.</summary>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class GateAllAttribute : Attribute
+{
+    public bool Pure { get; init; }
+}
+
+/// <summary>
+/// Declares which committed event this <see cref="IEffectHandler"/> class subscribes to
+/// (at-least-once, via the outbox). Multiple attributes subscribe the class to multiple events.
+/// PLG009 still verifies every target against a declared event contract at Build().
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+public sealed class OnEffectAttribute(string eventType) : Attribute
+{
+    public string EventType { get; } = eventType;
+}

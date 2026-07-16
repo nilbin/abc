@@ -12,7 +12,7 @@ public sealed class TamSubscriptionsPackage : ITamPlugin
     public void Configure(PluginBuilder plugin)
     {
         plugin.LocaleDefaults();
-        plugin.Model
+        plugin
             .AddOperationType(typeof(SetPlan))
             .AddViewType(typeof(CurrentSubscription));
     }

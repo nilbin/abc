@@ -867,37 +867,39 @@ public sealed class InspectionPlugin : ITamPlugin
         // contract, never its assembly.
         plugin.ExtensionField("order", "requiresInspection", "boolean");
 
-        // A declared precondition on the HOST's operation — visible in the manifest as
-        // orders.complete.gatedBy: ["inspect"] and in the impact report.
-        plugin.Gate<ChecklistGate>("orders.complete");
-
-        // A reaction to a committed HOST effect — post-commit, off the outbox, in a scope
-        // pinned to the record's tenant. Completing an order opens its follow-up checklist.
-        plugin.OnEffect<OpenFollowUpChecklist>("order-completed");
+        // Behaviors are NOT registered here — the [Gate]/[OnEffect] attributes below are
+        // picked up by AddDiscovered exactly like [Operation]/[View]: declaration lives ON
+        // the behavior, and Configure stays a table of contents.
     }
+}
 
-    // Handlers are classes constructed per invocation with CONSTRUCTOR injection — the ctor
-    // signature is the dependency declaration, exactly like an operation handler's parameters.
-    // The gate reads the wire input and the plugin's OWN data, never host CLR types; the
-    // ambient tenant filter scopes the query, so no hand-written TenantId predicate.
-    private sealed class ChecklistGate(ITamDb tam) : IOperationGate
+// Handlers are internal top-level classes constructed per invocation with CONSTRUCTOR
+// injection — the ctor signature is the dependency declaration, exactly like an operation
+// handler's parameters. The attribute is the registration: a declared precondition on the
+// HOST's operation, visible in the manifest as orders.complete.gatedBy: ["inspect"]. The
+// gate reads the wire input and the plugin's OWN data, never host CLR types; the ambient
+// tenant filter scopes the query, so no hand-written TenantId predicate.
+[Gate("orders.complete")]
+internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
+{
+    public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
     {
-        public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
-        {
-            if (!gate.Input.TryGetProperty("orderId", out var idElement)
-                || !idElement.TryGetGuid(out var orderId))
-                return Result.Success();   // malformed input is validation's problem, not the gate's
-            var blocked = await tam.Db.Set<Checklist>().AnyAsync(
-                x => x.OrderId == orderId && !x.Passed, ct);
-            return blocked ? InspectFindings.ChecklistIncomplete : Result.Success();
-        }
+        if (!gate.Input.TryGetProperty("orderId", out var idElement)
+            || !idElement.TryGetGuid(out var orderId))
+            return Result.Success();   // malformed input is validation's problem, not the gate's
+        var blocked = await tam.Db.Set<Checklist>().AnyAsync(
+            x => x.OrderId == orderId && !x.Passed, ct);
+        return blocked ? InspectFindings.ChecklistIncomplete : Result.Success();
     }
+}
 
-    private sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
-    {
-        public Task HandleAsync(EffectEvent effect, CancellationToken ct)
-            => Task.CompletedTask; /* create the follow-up checklist, idempotently */
-    }
+// A reaction to a committed HOST effect — post-commit, off the outbox, in a scope pinned to
+// the record's tenant. Multiple [OnEffect] attributes subscribe one class to multiple events.
+[OnEffect("order-completed")]
+internal sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
+{
+    public Task HandleAsync(EffectEvent effect, CancellationToken ct)
+        => Task.CompletedTask; /* create the follow-up checklist, idempotently */
 }
 ```
 
@@ -1025,7 +1027,7 @@ gated and the impact report shows it, exactly like Step 13.
 test of the plugin architecture so far. The three gaps it exposed are now framework seams, each
 proven end to end through the real pipeline in the test suite:
 
-1. **Config-driven gate targets — built.** A gate registered as `plugin.GateAll<MyGate>()`
+1. **Config-driven gate targets — built.** A gate registered as `[GateAll]` (or `plugin.GateAll<MyGate>()`)
    runs on EVERY operation (after the operation-specific gates) and receives `gate.OperationId`,
    so which operations it actually blocks is a lookup in the plugin's own `ApprovalRule` rows —
    tenant data, not compile time. Every other gate contract is unchanged: wire input only,

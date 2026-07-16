@@ -170,6 +170,39 @@ public sealed partial class TamModelBuilder
         return this;
     }
 
+    /// <summary>Registers a gate class by its [Gate]/[GateAll] attribute — the add-by-type
+    /// substrate the generated AddDiscovered() emits (review round 4: registration lives ON
+    /// the behavior). Plugin scope only, like the fluent twin.</summary>
+    public TamModelBuilder AddGateType(Type type)
+    {
+        var all = type.GetCustomAttribute<GateAllAttribute>();
+        var one = type.GetCustomAttribute<GateAttribute>();
+        if (all is null && one is null)
+            throw new InvalidOperationException(
+                $"PLG012: '{type.Name}' has no [Gate]/[GateAll] attribute to register from.");
+        if (!typeof(IOperationGate).IsAssignableFrom(type))
+            throw new InvalidOperationException(
+                $"PLG012: '{type.Name}' is [Gate]-attributed but does not implement IOperationGate.");
+        if (all is not null) Gate(GateDefinition.Wildcard, type, all.Pure);
+        else Gate(one!.OperationId, type, one.Pure);
+        return this;
+    }
+
+    /// <summary>Registers an effect subscriber by its [OnEffect] attribute(s) — one
+    /// subscription per attribute. Plugin scope only; PLG009 verifies the targets at Build().</summary>
+    public TamModelBuilder AddSubscriberType(Type type)
+    {
+        var attributes = type.GetCustomAttributes<OnEffectAttribute>().ToList();
+        if (attributes.Count == 0)
+            throw new InvalidOperationException(
+                $"PLG012: '{type.Name}' has no [OnEffect] attribute to register from.");
+        if (!typeof(IEffectHandler).IsAssignableFrom(type))
+            throw new InvalidOperationException(
+                $"PLG012: '{type.Name}' is [OnEffect]-attributed but does not implement IEffectHandler.");
+        foreach (var attribute in attributes) OnEffect(attribute.EventType, type);
+        return this;
+    }
+
     public TamModelBuilder AddViewType(Type type)
     {
         viewTypes.Add((type, currentPlugin));

@@ -53,3 +53,15 @@ public sealed record PackageDefinition(string Id, IReadOnlyList<string> Prefixes
 /// key-prefixed with the plugin id, present only for tenants with the plugin active.
 /// </summary>
 public sealed record PackagedFieldDefinition(string PluginId, string EntityKey, ExtensionFieldSpec Spec);
+
+/// <summary>
+/// A cohesive UNIT of a plugin's registration (review round 4): a big plugin splits its
+/// Configure into parts — one per concern (the host-facing contract, the UI surface, …) —
+/// and the plugin class composes them with <see cref="PluginBuilder.AddPart{TPart}"/>, staying
+/// a readable table of contents. Parts share the plugin's builder, so every PLG gate applies
+/// unchanged. Composition is EXPLICIT (never auto-discovered): Configure is the index.
+/// </summary>
+public interface IPluginPart
+{
+    void Configure(PluginBuilder plugin);
+}

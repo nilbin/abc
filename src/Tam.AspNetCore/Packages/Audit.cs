@@ -14,7 +14,7 @@ public sealed class TamAuditPackage : ITamPlugin
         plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("audit", grid: "web.audit.list", suggest: "administration", order: 70));
-        plugin.Model
+        plugin
             .AddViewType(typeof(AuditLog))
             // No column enumeration: every result field, declaration order (docs/32) —
             // EntityId is deliberately part of the default now (it was an omission).

@@ -13,7 +13,7 @@ public sealed class TamRolesPackage : ITamPlugin
         plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("roles", grid: "web.roles", suggest: "administration", order: 20));
-        plugin.Model
+        plugin
             .AddOperationType(typeof(DefineRole))
             .AddViewType(typeof(RoleList))
             .Form<DefineRole.Input>("web.roles.define", "roles.define", form =>

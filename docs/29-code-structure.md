@@ -42,7 +42,11 @@ One package = one file: `src/Tam.AspNetCore/Packages/<Area>.cs`, containing in o
 5. its views.
 
 Registration and implementation are never in different files — that was the smell that
-motivated this layout. A package that outgrows ~400 lines graduates to a folder under
+motivated this layout, and the authoring reshape (review round 4) finished the thought:
+BEHAVIOR registration lives on the behavior itself ([Gate]/[OnEffect] attributes), and a
+plugin that outgrows one Configure splits into explicit `IPluginPart`s
+(`plugin.AddPart<OrdersContract>()`) — Configure stays the table of contents (the invoicing
+sample shows the shape). A package that outgrows ~400 lines graduates to a folder under
 `Packages/` and splits within it (the approvals sample shows the split shape: Domain /
 Features / Plugin). The shared locale catalogs stay one embedded pair
 (`src/Tam.AspNetCore/locales/{sv,en}.json`) — per-package locale files would fragment the
@@ -78,7 +82,7 @@ never become a privilege-escalation vector). Packages never call each other's op
 | Form / grid binding | the same package/plugin `Configure` |
 | Nav declaration | package/plugin: `plugin.Nav(...)` in `Configure` (content + suggestion); host layout: `model.Nav("web", …)` in Program.cs — never the other way (docs/30) |
 | Finding codes | `<Area>Findings` in the same file; locale entries in BOTH catalogs |
-| Gate / handler classes | same file as the package/plugin class; ctor-injected |
+| Gate / handler classes | INTERNAL top-level classes in the owning part/feature file, registered by their own [Gate]/[OnEffect] attributes (AddDiscovered picks them up; generated code cannot reach private nested types); ctor-injected |
 | Test | `tests/Tam.Tests` — plus an analyzer rule when the invariant is structural |
 | Wire change | re-export `manifest.baseline.json` + regenerate `apps/web/src/generated/tam.ts` |
 

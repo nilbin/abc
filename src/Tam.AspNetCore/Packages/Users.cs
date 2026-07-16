@@ -17,7 +17,7 @@ public sealed class TamUsersPackage : ITamPlugin
         plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("users", grid: "web.users", suggest: "administration", order: 10));
-        plugin.Model
+        plugin
             .AddOperationType(typeof(DefineUser))
             .AddOperationType(typeof(InviteUser))
             .AddOperationType(typeof(DeactivateUser))

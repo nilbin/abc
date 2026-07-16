@@ -151,6 +151,48 @@ public sealed class PluginBuilder
     /// <summary>Declares a precondition on a host operation (by operation id — the wire
     /// contract). <typeparamref name="TGate"/> is constructed per invocation with ctor injection.
     /// Runs only for tenants with this plugin active; listed in the manifest.</summary>
+    /// <summary>Composes a registration PART (review round 4): big plugins split Configure
+    /// into cohesive units and list them here — explicitly, so Configure stays the index.</summary>
+    public PluginBuilder AddPart<TPart>() where TPart : IPluginPart, new()
+    {
+        new TPart().Configure(this);
+        return this;
+    }
+
+    /// <summary>Binds a form (docs/32 defaults apply) — the single-receiver twin of
+    /// TamModelBuilder.Form, so plugin code never flips between plugin.* and plugin.Model.*.</summary>
+    public PluginBuilder Form<TInput>(string id, string operationId,
+        Action<FormBuilder<TInput>>? configure = null)
+    {
+        Model.Form(id, operationId, configure);
+        return this;
+    }
+
+    /// <summary>Binds a grid (docs/32 defaults apply) — single-receiver twin.</summary>
+    public PluginBuilder Grid<TResult>(string id, string viewId,
+        Action<GridBuilder<TResult>>? configure = null)
+    {
+        Model.Grid(id, viewId, configure);
+        return this;
+    }
+
+    /// <summary>Declares a domain event contract (docs/31 D-X5) under the plugin prefix.</summary>
+    public PluginBuilder PublishesEvent(string eventType, params string[] fields)
+    {
+        Model.PublishesEvent(eventType, fields);
+        return this;
+    }
+
+    /// <summary>Explicit add-by-type twins for the shared-assembly package tier (which cannot
+    /// use per-assembly AddDiscovered): operations, views, gates, subscribers.</summary>
+    public PluginBuilder AddOperationType(Type type) { Model.AddOperationType(type); return this; }
+
+    public PluginBuilder AddViewType(Type type) { Model.AddViewType(type); return this; }
+
+    public PluginBuilder AddGateType(Type type) { Model.AddGateType(type); return this; }
+
+    public PluginBuilder AddSubscriberType(Type type) { Model.AddSubscriberType(type); return this; }
+
     public PluginBuilder Gate<TGate>(string operationId, bool pure = false)
         where TGate : class, IOperationGate
     {

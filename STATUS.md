@@ -35,7 +35,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              145 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              148 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -449,6 +449,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **The authoring reshape (review round 4's recommendation, built)**: behavior registration
+  now lives ON the behavior — [Gate("orders.complete")]/[GateAll]/[OnEffect("event")]
+  attributes on IOperationGate/IEffectHandler classes, discovered by the source generator
+  exactly like [Operation]/[View] (AddGateType/AddSubscriberType are the add-by-type
+  substrate; PLG012 rejects attributed-but-wrong-shape types; plugin scope enforced). Big
+  plugins compose Configure from explicit IPluginParts (plugin.AddPart<OrdersContract>()) —
+  invoicing is the showcase: Configure is four lines, the host-facing contract and the UI
+  surface are cohesive parts, behaviors sit in Features.cs. PluginBuilder is now the ONE
+  receiver (Form/Grid/PublishesEvent/Add*Type forwarded) — the plugin.Model flip-flopping is
+  gone from every package and sample. Proof: the manifest is BYTE-IDENTICAL before/after
+  (gates, subscribedBy, events all registered by the new path), 148 unit tests, full wire
+  matrix green (every attribute-registered behavior exercised in anger). docs/22/29 and
+  tutorial Step 13 updated to the new shape.
 - **Review round 4 — end-to-end triage with two docs-only implementers**: three review agents
   (architecture + authoring shape, tutorial/DX fidelity, adversarial correctness on the newest
   surfaces) plus two "RTFM" agents who each built a working plugin (timesheets: the full

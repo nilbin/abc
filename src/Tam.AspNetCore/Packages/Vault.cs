@@ -12,7 +12,7 @@ public sealed class TamVaultPackage : ITamPlugin
     public void Configure(PluginBuilder plugin)
     {
         plugin.LocaleDefaults();
-        plugin.Model
+        plugin
             .AddOperationType(typeof(SetSetting))
             .AddOperationType(typeof(SetSecret))
             .AddViewType(typeof(SettingList))

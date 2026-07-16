@@ -153,3 +153,57 @@ public static class InvoiceList
         .Filterable(nameof(Result.Status))
         .DefaultSort(nameof(Result.Created), descending: true);
 }
+
+/// <summary>Blocks orders.complete while a draft invoice exists for the order — the gate
+/// reads the plugin's OWN table off the wire input, never host types (docs/22 P2).</summary>
+[Gate("orders.complete")]
+internal sealed class DraftPendingGate(ITamDb tam) : IOperationGate
+{
+    public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
+    {
+        if (!gate.Input.TryGetProperty("orderId", out var idProp)
+            || !Guid.TryParse(idProp.GetString(), out var orderId))
+            return Result.Success();
+        var pending = await tam.Db.Set<Invoice>()
+            .AnyAsync(x => x.OrderId == orderId && x.Status == "draft", ct);
+        return pending ? InvoicingFindings.DraftPending.Create() : Result.Success();
+    }
+}
+
+/// <summary>
+/// Step 17 beat 4: on order completion, draft the invoice. Idempotent (at-least-once
+/// delivery); order number from the payload; the amount backfilled through a SERVICE-MODE
+/// declared read (docs/31 D-X3) — no actor exists here, so the readable surface is exactly
+/// the RequiresView list. The status lands on the order via the writer (D-X2).
+/// </summary>
+[OnEffect("order-completed")]
+internal sealed class DraftOnCompletion(
+    ITamDb tam, IHostViewReader host, IPackagedFieldWriter fields) : IEffectHandler
+{
+    public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
+    {
+        if (!effect.Payload.TryGetProperty("orderId", out var idProp)
+            || !Guid.TryParse(idProp.GetString(), out var orderId))
+            return;
+        if (await tam.Db.Set<Invoice>().AnyAsync(x => x.OrderId == orderId, ct))
+            return;   // redelivery or already invoiced by hand — idempotent
+
+        var number = effect.Payload.TryGetProperty("number", out var n)
+            ? n.GetString() ?? "" : "";
+        var amount = 0m;
+        var detail = await host.RowsAsync("orders.detail",
+            new Dictionary<string, string?> { ["orderId"] = orderId.ToString() }, ct);
+        if (detail.Rows.Count > 0)
+        {
+            var row = System.Text.Json.JsonSerializer.SerializeToElement(
+                detail.Rows[0], TamJson.Options);
+            if (row.TryGetProperty("estimatedTotal", out var a)
+                && a.ValueKind == System.Text.Json.JsonValueKind.Number)
+                amount = a.GetDecimal();
+        }
+
+        tam.Db.Add(Invoice.Create(effect.TenantId, orderId, number, amount));
+        await tam.Db.SaveChangesAsync(ct);
+        await fields.SetAsync("order", orderId, "invoiceStatus", "draft", ct);
+    }
+}

@@ -17,7 +17,7 @@ public sealed class TamRulesPackage : ITamPlugin
         // The evaluator IS a gate: pure-over-input, pre-transaction, target set = rule rows.
         // The executor has no rules special case — the P5 feature dogfoods the gate seam.
         plugin.GateAll<RulesGate>(pure: true);
-        plugin.Model
+        plugin
             .AddOperationType(typeof(DefineAutomationRule))
             .AddOperationType(typeof(RetireRule))
             .AddViewType(typeof(RuleList))

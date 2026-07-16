@@ -13,7 +13,7 @@ public sealed class TamPluginsPackage : ITamPlugin
         plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("plugins", grid: "web.plugins", suggest: "administration", order: 40));
-        plugin.Model
+        plugin
             .AddOperationType(typeof(ActivatePlugin))
             .AddOperationType(typeof(DeactivatePlugin))
             .AddViewType(typeof(PluginList))

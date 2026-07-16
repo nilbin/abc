@@ -13,7 +13,7 @@ public sealed class TamExtensionsPackage : ITamPlugin
         plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("extensions", grid: "web.extensions.fields", suggest: "administration", order: 30));
-        plugin.Model
+        plugin
             .AddOperationType(typeof(DefineExtensionField))
             .AddOperationType(typeof(RetireExtensionField))
             .AddViewType(typeof(ExtensionFieldList))

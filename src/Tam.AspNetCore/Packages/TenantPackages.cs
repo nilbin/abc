@@ -14,7 +14,7 @@ public sealed class TamTenantPackagesPackage : ITamPlugin
         plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("packages", grid: "web.packages", suggest: "administration", order: 50));
-        plugin.Model
+        plugin
             .AddOperationType(typeof(InstallPackage))
             .AddOperationType(typeof(UninstallPackage))
             .AddViewType(typeof(PackageList))
