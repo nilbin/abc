@@ -45,5 +45,6 @@
   "labels.company": "Bolag",
   "nav.work": "Arbete",
   "nav.admin": "Administration",
-  "nav.administration": "Allmänt"
+  "nav.administration": "Allmänt",
+  "operations.customers.edit-contact.title": "Redigera kund"
 }

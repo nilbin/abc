@@ -43,6 +43,18 @@ export interface OrdersCreateOutput {
   number: string;
 }
 
+export interface CustomersEditContactInput {
+  customerId: string;
+  name?: Change<string>;
+  visitAddress?: Change<string>;
+  email?: Change<string>;
+  phone?: Change<string>;
+}
+
+export interface CustomersEditContactOutput {
+  customerId: string;
+}
+
 export interface OrdersEditDetailsInput {
   orderId: string;
   description?: Change<string>;
@@ -379,6 +391,19 @@ export interface InvoicingMarkPaidOutput {
   invoiceId: string;
 }
 
+export interface CustomersDetailRow {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  visitAddress: string;
+  isActive: boolean;
+}
+
+export interface CustomersDetailQuery {
+  customerId?: string;
+}
+
 export interface CustomersListRow {
   id: string;
   name: string;
@@ -665,6 +690,11 @@ export class TypedTamClient {
     return this.client.operation("orders.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersCreateOutput>>;
   }
 
+  /** customers.edit-contact (requires customers.edit) */
+  customersEditContact(input: CustomersEditContactInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<CustomersEditContactOutput>> {
+    return this.client.operation("customers.edit-contact", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<CustomersEditContactOutput>>;
+  }
+
   /** orders.edit-details (requires orders.edit) */
   ordersEditDetails(input: OrdersEditDetailsInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersEditDetailsOutput>> {
     return this.client.operation("orders.edit-details", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersEditDetailsOutput>>;
@@ -833,6 +863,11 @@ export class TypedTamClient {
   /** invoicing.mark-paid (requires invoicing.manage) */
   invoicingMarkPaid(input: InvoicingMarkPaidInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InvoicingMarkPaidOutput>> {
     return this.client.operation("invoicing.mark-paid", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InvoicingMarkPaidOutput>>;
+  }
+
+  /** view customers.detail (requires customers.read) */
+  customersDetail(query?: CustomersDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersDetailRow[] }> {
+    return this.client.view("customers.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: CustomersDetailRow[] }>;
   }
 
   /** view customers.list (requires customers.read) */

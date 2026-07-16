@@ -1,7 +1,8 @@
 # 32 — Framework-composed pages: the list-and-detail shape leaves app code
 
 Status: **v1.1 BUILT** (ordered SECTIONS at both levels; erp's OrdersPage React component
-deleted). Decisions D-P1..D-P5.
+deleted). Decisions D-P1..D-P6. The sample now declares TWO pages (orders with slots,
+customers without) — the shape generalizes, and the registerPage count is still zero.
 
 ## The problem
 

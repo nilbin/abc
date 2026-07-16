@@ -64,7 +64,7 @@ public static class Seed
         Role("dispatcher",
             "orders.read", "orders.read-all", "orders.create",
             "orders.edit", "orders.edit-all", "orders.complete", "orders.complete-all",
-            "customers.read", "customers.create");
+            "customers.read", "customers.create", "customers.edit");
         // "viewer" is authored as ACCESS LEVELS (docs/27 D-A1): { orders: view, customers: view }
         // expands to the read atoms at load time — the level shape and the atom shape coexist.
         db.Add(new RoleEntity

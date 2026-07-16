@@ -33,6 +33,36 @@ public static class CreateCustomer
     }
 }
 
+/// <summary>Conflict-safe partial edit of the shared registry entry — the Change&lt;T&gt;
+/// pattern (docs/6), same as orders.edit-details. Contact details stay sensitive-gated.</summary>
+[Operation("customers.edit-contact")]
+[Authorize("customers.edit")]
+public static class EditCustomerContact
+{
+    public sealed record Input(
+        [property: LabelKey("labels.customer")] CustomerId CustomerId,
+        Change<CustomerName>? Name = null,
+        Change<Address?>? VisitAddress = null,
+        [property: Sensitive("customers.sensitive")] Change<EmailAddress?>? Email = null,
+        [property: Sensitive("customers.sensitive")] Change<PhoneNumber?>? Phone = null);
+
+    public sealed record Output(CustomerId CustomerId);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        // The ambient filter scopes to the acting node: an ANCESTOR's shared customer is
+        // readable here (inherited scope) but edited at the node that owns it.
+        var customer = await db.Customers.SingleOrDefaultAsync(x => x.Id == input.CustomerId, ct);
+        if (customer is null) return CustomerFindings.NotFound.Create();
+
+        var merge = TamMerge.Apply(customer, input);
+        if (merge.HasConflicts) return merge.ToConflictResult<Output>();
+
+        return new Output(customer.Id);
+    }
+}
+
 [View("customers.list")]
 [Authorize("customers.read")]
 public static class CustomerList
@@ -73,6 +103,37 @@ public static class CustomerList
         .Sortable(nameof(Result.Name), nameof(Result.IsActive))
         .Filterable(nameof(Result.IsActive))
         .DefaultSort(nameof(Result.Name));
+}
+
+/// <summary>The record surface behind the declared customers page (docs/32): one row, fields
+/// named to prefill the edit form. Inherited scope like the list — an ancestor's shared
+/// customer opens read-only in spirit (edits land at the owning node).</summary>
+[View("customers.detail")]
+[Authorize("customers.read")]
+public static class CustomerDetail
+{
+    public sealed record Query(CustomerId CustomerId);
+
+    public sealed record Result
+    {
+        public CustomerId Id { get; init; }
+        public CustomerName Name { get; init; }
+        [Sensitive("customers.sensitive")]
+        public EmailAddress? Email { get; init; }
+        [Sensitive("customers.sensitive")]
+        public PhoneNumber? Phone { get; init; }
+        public Address VisitAddress { get; init; }
+        public bool IsActive { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context) =>
+        db.Customers.WithInherited(db, context.TenantId)
+            .Where(x => x.Id == query.CustomerId)
+            .Select(x => new Result
+            {
+                Id = x.Id, Name = x.Name, Email = x.Email, Phone = x.Phone,
+                VisitAddress = x.VisitAddress, IsActive = x.IsActive,
+            });
 }
 
 /// <summary>Lookup view backing customer pickers and agent option resolution.</summary>

@@ -288,7 +288,8 @@
       "labels.company": "Company",
       "nav.work": "Work",
       "nav.admin": "Administration",
-      "nav.administration": "General"
+      "nav.administration": "General",
+      "operations.customers.edit-contact.title": "Edit customer"
     },
     "sv": {
       "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
@@ -576,7 +577,8 @@
       "labels.company": "Bolag",
       "nav.work": "Arbete",
       "nav.admin": "Administration",
-      "nav.administration": "Allm\u00E4nt"
+      "nav.administration": "Allm\u00E4nt",
+      "operations.customers.edit-contact.title": "Redigera kund"
     }
   },
   "operations": {
@@ -772,6 +774,79 @@
           "name": "number",
           "labelKey": "labels.number",
           "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "customers.edit-contact": {
+      "permission": "customers.edit",
+      "titleKey": "operations.customers.edit-contact.title",
+      "fields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "visitAddress",
+          "labelKey": "labels.visit-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "email",
+          "labelKey": "labels.email",
+          "type": "email",
+          "wireKind": "string",
+          "format": "email",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "sensitive": "customers.sensitive",
+          "readOnly": false
+        },
+        {
+          "name": "phone",
+          "labelKey": "labels.phone",
+          "type": "phone",
+          "wireKind": "string",
+          "format": "phone",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "sensitive": "customers.sensitive",
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer-id",
+          "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
@@ -2435,6 +2510,90 @@
     }
   },
   "views": {
+    "customers.detail": {
+      "permission": "customers.read",
+      "queryFields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "email",
+          "labelKey": "labels.email",
+          "type": "email",
+          "wireKind": "string",
+          "format": "email",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "sensitive": "customers.sensitive",
+          "readOnly": false
+        },
+        {
+          "name": "phone",
+          "labelKey": "labels.phone",
+          "type": "phone",
+          "wireKind": "string",
+          "format": "phone",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "sensitive": "customers.sensitive",
+          "readOnly": false
+        },
+        {
+          "name": "visitAddress",
+          "labelKey": "labels.visit-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "isActive",
+          "labelKey": "labels.is-active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false
+    },
     "customers.list": {
       "permission": "customers.read",
       "queryFields": [
@@ -4850,6 +5009,68 @@
       ],
       "includeExtensions": false,
       "serverDependencies": []
+    },
+    "web.customers.edit": {
+      "operation": "customers.edit-contact",
+      "fields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "visitAddress",
+          "labelKey": "labels.visit-address",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "email",
+          "labelKey": "labels.email",
+          "type": "email",
+          "wireKind": "string",
+          "format": "email",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "sensitive": "customers.sensitive",
+          "readOnly": false
+        },
+        {
+          "name": "phone",
+          "labelKey": "labels.phone",
+          "type": "phone",
+          "wireKind": "string",
+          "format": "phone",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "sensitive": "customers.sensitive",
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
     }
   },
   "grids": {
@@ -5107,6 +5328,7 @@
     "approvals.review",
     "audit.read",
     "customers.create",
+    "customers.edit",
     "customers.read",
     "customers.sensitive",
     "extensions.manage",
@@ -5182,7 +5404,7 @@
             "labelKey": "nav.customers",
             "order": 30,
             "target": {
-              "grid": "web.customers.list"
+              "page": "customers"
             },
             "children": []
           }
@@ -5361,6 +5583,25 @@
           {
             "kind": "slot",
             "id": "web.orders.detail"
+          }
+        ]
+      }
+    },
+    "customers": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "web.customers.list"
+        }
+      ],
+      "record": {
+        "detailView": "customers.detail",
+        "key": "customerId",
+        "titleField": "name",
+        "sections": [
+          {
+            "kind": "form",
+            "id": "web.customers.edit"
           }
         ]
       }

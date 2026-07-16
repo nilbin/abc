@@ -40,10 +40,19 @@ var model = new TamModelBuilder()
             .Form("web.orders.edit")           // declaration order is layout order (docs/32)
             .Slot("web.orders.detail")))
 
+    // The second declared page — the shape generalizes: grid + record (no slots here; the
+    // customers surface is not a contribution point until a plugin needs it).
+    .Page("customers", page => page
+        .Grid("web.customers.list")
+        .Record(record => record
+            .Detail("customers.detail", key: "customerId")
+            .Title("name")
+            .Form("web.customers.edit")))
+
     .Nav("web", nav => nav
         .Mode("work", m => m
             .Page("orders", page: "orders", order: 10)   // declared page: permission derives
-            .Page("customers", grid: "web.customers.list", order: 30))
+            .Page("customers", page: "customers", order: 30))
         .Mode("admin", m => m
             .Section("administration")))
 
@@ -74,6 +83,16 @@ var model = new TamModelBuilder()
 
     // No configure: the record IS the form — every input field, declaration order (docs/32).
     .Form<CreateCustomer.Input>("web.customers.create", "customers.create")
+
+    // Enumerated only to hide the record key (the modal already IS the customer).
+    .Form<EditCustomerContact.Input>("web.customers.edit", "customers.edit-contact", form =>
+    {
+        form.Field(x => x.CustomerId).Renderer("hidden");
+        form.Field(x => x.Name);
+        form.Field(x => x.VisitAddress);
+        form.Field(x => x.Email);
+        form.Field(x => x.Phone);
+    })
 
     .Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
     {

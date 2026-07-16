@@ -440,6 +440,15 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   fingerprint stability), 14-check wire suite (validation findings, ETag movement, per-tenant
   isolation via act-as, admin grid rows, retire restores the baseline tree byte-for-byte),
   full matrix green on a fresh DB.
+- **Customers is the SECOND declared page (docs/32 generalizes)**: grid + record surface
+  (customers.detail → web.customers.edit) declared in the composition root — no React, no
+  slots (the customers surface becomes a contribution point only when a plugin needs it). The
+  slice added the missing record pieces the orders page already had: a `customers.detail` view
+  (inherited scope, sensitive-gated contact fields) and a `customers.edit-contact` operation
+  (Change<T> three-way partial edit; new `customers.edit` atom granted to dispatcher). Nav
+  target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
+  asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
+  re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
 - **The RLS backstop (docs/19 D2 → docs/33, D-R1..R8)**: PostgreSQL row-level security now
   mirrors the EF tenant filter — `TamRls.ProvisionAsync` walks the EF model and puts
   ENABLE+FORCE RLS plus one FOR ALL policy (current tenant ∨ subtree read set ∨ the explicit
