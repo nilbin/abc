@@ -66,6 +66,19 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
 - Retire, don't delete: deactivation/retirement flags, never row deletion, for anything
   audited or referenced.
 
+## The docs site (published surface)
+
+- https://nilbin.github.io/abc/ is rebuilt from docs/ by .github/workflows/docs.yml on every
+  push to main (MkDocs Material, `--strict`); STATUS.md publishes as /status. There is no
+  separate publish step to remember — but there IS a completeness gate:
+- A new doc page lands in THREE places in the same commit: the file under docs/, the
+  mkdocs.yml nav (in its themed section), and docs/llms.txt (one-line description entry).
+  scripts/check_docs.py fails the docs build when any of the three is missing.
+- Tutorial content lives one page per step in docs/tutorial/ (edit step-NN.md + index.md
+  together); docs/20-tutorial.md is a frozen pointer kept only for inbound links.
+- docs/llms.txt is API for agents the same way the manifest is for clients: keep its
+  descriptions truthful when a doc's scope changes, not just when files appear.
+
 ## Per-milestone expectations
 
 1. Tests green (`dotnet test`), analyzer-clean build, manifest baseline reconciled.

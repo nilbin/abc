@@ -27,6 +27,7 @@ jobs:
         run: |
           pip install mkdocs-material
           sed 's|(docs/|(|g' STATUS.md > docs/status.md
+          python3 scripts/check_docs.py
           mkdocs build --strict
       - name: Deploy to gh-pages
         run: |
