@@ -35,11 +35,22 @@ public sealed class InvoicingPlugin : ITamPlugin
             bind => bind.Field("orderId", fromColumn: "id"));
 
         // Step 17 beat 4: the draft writes itself when the host commits an order completion.
+        // The payload shape the handler reads is a CONTRACT, not folklore (docs/31 D-X5).
+        plugin.RequiresEvent("order-completed", "orderId", "number");
         plugin.OnEffect<DraftOnCompletion>("order-completed");
+        plugin.Model
+            .PublishesEvent("invoicing.invoice-created", "invoiceId", "orderId")
+            .PublishesEvent("invoicing.invoice-finalized", "invoiceId", "orderId")
+            .PublishesEvent("invoicing.invoice-paid", "invoiceId", "orderId");
 
         // Step 17 beat 5: invoicing pushes back — an order with a pending DRAFT invoice cannot
         // complete ("you started invoicing this order; finish it first"). Own data only.
         plugin.Gate<DraftPendingGate>("orders.complete");
+
+        // D-X4: the invoice panel on the order detail — the plugin's own grid bound to the
+        // slot's record context. The host opted the surface in once; it never names us.
+        plugin.Panel("web.orders.detail", grid: "invoicing.web.invoices",
+            bind => bind.Query("orderId", fromContext: "orderId"));
 
         plugin.Nav(nav => nav.Page("invoicing.invoices",
             grid: "invoicing.web.invoices", suggest: "work", order: 40));

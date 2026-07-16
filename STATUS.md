@@ -34,7 +34,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              125 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              127 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -365,6 +365,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   manifest filtering) and a 23-check wire suite (inactive → nothing exists; activate; the whole
   lifecycle; sibling tenant still sees nothing), full regression matrix green, UI screenshot of
   the host grid carrying the plugin's button, column and filter.
+- **docs/31 phase 2 — slots + event contracts**: the host declares a contribution point ONCE
+  (`model.Slot("web.orders.detail", slot => slot.Key("orderId"))`) and every active plugin's
+  panel lands there unnamed — `plugin.Panel(slotId, grid, bind)` binds the plugin's own grid's
+  query fields to the slot's record context (PLG007: slot exists, grid is the plugin's own,
+  binds name real fields/keys; plugins cannot declare slots). Manifest gains `slots`
+  (activation-filtered); tam-react ships `<PluginSlot id context actAs>` and the erp order
+  modal hosts it — the invoicing panel appears with zero host knowledge of the plugin. Events
+  became CONTRACTS (D-X5): `PublishesEvent(type, fields)` declares payload shape;
+  `plugin.RequiresEvent` + every `OnEffect`/event trigger target must name a declared event
+  (PLG009) — a typo'd subscription is now a build error, not a silent no-op; manifest `events`
+  carries fields + `subscribedBy` (the GatedBy symmetry). Known wrinkle recorded in docs/31:
+  packaged fields render user-editable in host edit forms (extension channel) — a `readOnly`
+  packaged-spec flag is the queued fix. Verified: 127 unit tests (PLG007/PLG009 + manifest
+  filtering + slot-declaration guard), invoicing wire suite grown to 26 checks (slot panel with
+  bind, event contract with subscribers, inactive tenant sees an EMPTY slot), regression matrix
+  green, UI screenshot of the invoice panel inside the order edit modal.
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

@@ -53,7 +53,9 @@ public sealed class InspectionPlugin : ITamPlugin
         // P2 — an effect subscriber: when the host commits an order completion, open a
         // follow-up checklist. Post-commit via the outbox, in the plugin's own tenant-pinned
         // scope — never by patching the host handler.
+        plugin.RequiresEvent("order-completed", "orderId", "number");   // payload contract (PLG009)
         plugin.OnEffect<OpenFollowUpChecklist>("order-completed");
+        plugin.Model.PublishesEvent("inspect.checklist-passed", "checklistId");
     }
 
     private sealed class ChecklistGate(ITamDb tam) : IOperationGate

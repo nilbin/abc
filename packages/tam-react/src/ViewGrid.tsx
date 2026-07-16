@@ -16,6 +16,8 @@ export interface ViewGridProps {
   refreshKey?: number;
   onAction?: () => void;
   pageSize?: number;
+  /** Read/act in another standable node (docs/26 D-H4) — slot panels on cross-company rows. */
+  actAs?: string;
 }
 
 export function ViewGrid(props: ViewGridProps) {
@@ -107,7 +109,7 @@ export function ViewGrid(props: ViewGridProps) {
     setLoading(true);
     client.view(gridDef.view, {
       ...props.query, ...filters, page, pageSize, sort, dir: desc ? 'desc' : 'asc',
-    }).then(result => {
+    }, props.actAs ? { actAs: props.actAs } : undefined).then(result => {
       if (!cancelled) { setRows(result.rows); setTotal(result.total); }
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -168,7 +170,8 @@ export function ViewGrid(props: ViewGridProps) {
       if (!field.required) continue;
       body[field.name] = row[field.name] ?? row.id;
     }
-    const rowTenant = subtreeField ? (row[subtreeField] as string | undefined) : undefined;
+    const rowTenant = (subtreeField ? (row[subtreeField] as string | undefined) : undefined)
+      ?? props.actAs;
     await client.operation(operationId, body,
       rowTenant && rowTenant !== acting ? { actAs: rowTenant } : undefined);
     refresh();
@@ -180,7 +183,8 @@ export function ViewGrid(props: ViewGridProps) {
   ) => {
     const body: Record<string, unknown> = {};
     for (const [input, column] of Object.entries(action.bind)) body[input] = row[column];
-    const rowTenant = subtreeField ? (row[subtreeField] as string | undefined) : undefined;
+    const rowTenant = (subtreeField ? (row[subtreeField] as string | undefined) : undefined)
+      ?? props.actAs;
     await client.operation(action.operation, body,
       rowTenant && rowTenant !== acting ? { actAs: rowTenant } : undefined);
     refresh();

@@ -4733,5 +4733,71 @@
         ]
       }
     ]
+  },
+  "slots": {
+    "web.orders.detail": [
+      {
+        "grid": "invoicing.web.invoices",
+        "plugin": "invoicing",
+        "bind": {
+          "orderId": "orderId"
+        }
+      }
+    ]
+  },
+  "events": {
+    "inspect.checklist-passed": {
+      "fields": [
+        "checklistId"
+      ],
+      "subscribedBy": []
+    },
+    "approvals.requested": {
+      "fields": [
+        "requestId"
+      ],
+      "subscribedBy": [
+        "approvals"
+      ]
+    },
+    "approvals.approved": {
+      "fields": [
+        "requestId"
+      ],
+      "subscribedBy": [
+        "approvals"
+      ]
+    },
+    "invoicing.invoice-created": {
+      "fields": [
+        "invoiceId",
+        "orderId"
+      ],
+      "subscribedBy": []
+    },
+    "invoicing.invoice-finalized": {
+      "fields": [
+        "invoiceId",
+        "orderId"
+      ],
+      "subscribedBy": []
+    },
+    "invoicing.invoice-paid": {
+      "fields": [
+        "invoiceId",
+        "orderId"
+      ],
+      "subscribedBy": []
+    },
+    "order-completed": {
+      "fields": [
+        "orderId",
+        "number"
+      ],
+      "subscribedBy": [
+        "inspect",
+        "invoicing"
+      ]
+    }
   }
 }

@@ -6,7 +6,7 @@ import {
 import { TamClient, type StandableInfo } from '@tam/core';
 import {
   FieldRendererProps, LookupSelect, NavModeSwitcher, NavPage, NavProvider, NavSidebar, NavTabs,
-  OperationForm, TamProvider, ViewGrid, registerBadgeColors, registerPage, registerRenderer,
+  OperationForm, PluginSlot, TamProvider, ViewGrid, registerBadgeColors, registerPage, registerRenderer,
   useTam, useTamAuth,
 } from '@tam/react';
 
@@ -78,6 +78,12 @@ function OrdersPage() {
             initialExtensions={(editing.extensions as Record<string, unknown>) ?? {}}
             onSuccess={() => { setEditing(null); setRefreshKey(k => k + 1); }}
           />
+        )}
+        {editing && (
+          // The host opts this surface in ONCE (docs/31 D-X4) — every active plugin's panel
+          // (invoicing's invoice list, and whatever comes next) lands here unnamed.
+          <PluginSlot id="web.orders.detail" context={{ orderId: editing.id }}
+            actAs={typeof editing.tenantId === 'string' ? editing.tenantId : undefined} />
         )}
       </Modal>
     </>

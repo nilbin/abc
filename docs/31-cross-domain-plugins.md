@@ -1,7 +1,11 @@
 # 31 — Cross-domain plugins: extending a domain you don't own
 
-Status: **phase 1 BUILT** (D-X1 grid actions, D-X2 field writer, D-X3 RequiresView + reader,
-`samples/invoicing`, tutorial Step 17); D-X4 slots + D-X5 event contracts remain phase 2.
+Status: **BUILT** — phase 1 (D-X1 grid actions, D-X2 field writer, D-X3 RequiresView + reader,
+`samples/invoicing`, tutorial Step 17) and phase 2 (D-X4 slots + `<PluginSlot>`, D-X5 event
+contracts + PLG009). Remaining follow-ups: host-action migration to declared binds; action/panel
+suppression via the tenant-override registry; and a KNOWN WRINKLE — packaged fields ride the
+extension form channel, so a host edit form renders a plugin-owned field as user-editable
+(invoiceStatus is a plugin state machine; a `readOnly` flag on packaged specs is the fix).
 Decisions D-X1…D-X6. The driving case is an **Invoicing
 plugin that becomes part of the host's Orders domain** — create-invoice from the orders grid,
 invoice status on the order row, drafts written by order events — without the plugin ever
@@ -117,7 +121,7 @@ plugin.RequiresView("orders.detail", "id", "number", "status");
   denormalize-at-event-time (the payload carries it); service reads cover validation and
   backfill/repair.
 
-## D-X4 — Detail slots (deferred to phase 2)
+## D-X4 — Detail slots (BUILT)
 
 The record-bound panel ("invoices on the order detail modal") needs a host-declared SLOT — a
 wire contract carrying record context — that plugins bind panels to:
@@ -135,7 +139,7 @@ future plugin lands there unnamed. **Deferred** because Step 17 degrades gracefu
 slots are the first brick of "framework-composed pages" — worth designing together with that,
 not rushed here. D4: slot ids are permanent host wire names from day one.
 
-## D-X5 — Event contracts (deferred to phase 2)
+## D-X5 — Event contracts (BUILT)
 
 `OnEffect("order-completed")` targets are unchecked and payload shapes are folklore
 (`TryGetProperty` defensive reads everywhere). Phase 2: the host (or the generator, derived

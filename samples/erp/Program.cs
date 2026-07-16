@@ -23,6 +23,13 @@ var model = new TamModelBuilder()
     // The web nav tree (docs/30): the HOST owns layout — modes at the top, the administration
     // section collects every package/plugin page that SUGGESTS it; anything uncollected lands
     // under "more" in the last mode automatically (nothing can be authored into invisibility).
+    // Event contracts (docs/31 D-X5): what subscribers/triggers may bind to, with payload shape.
+    .PublishesEvent("order-completed", "orderId", "number")
+
+    // The order detail is a CONTRIBUTION POINT (docs/31 D-X4): declared once, with the record
+    // context it provides — every current and future plugin lands panels here unnamed.
+    .Slot("web.orders.detail", slot => slot.Key("orderId"))
+
     .Nav("web", nav => nav
         .Mode("work", m => m
             .Page("orders", page: "orders", permission: "orders.read", order: 10)

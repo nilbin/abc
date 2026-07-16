@@ -16,6 +16,10 @@ public sealed partial class TamModelBuilder
     private readonly List<GateDefinition> gates = [];
     private readonly List<GridActionContribution> gridActions = [];
     private readonly List<ViewRequirement> viewRequirements = [];
+    private readonly Dictionary<string, SlotDefinition> slots = [];
+    private readonly List<PanelContribution> panels = [];
+    private readonly Dictionary<string, EventDeclaration> events = [];
+    private readonly List<EventRequirement> eventRequirements = [];
     private readonly Dictionary<string, NavTreeBuilder> navTrees = [];
     private readonly List<NavContribution> navContributions = [];
     private readonly List<SubscriberDefinition> subscribers = [];
@@ -175,6 +179,45 @@ public sealed partial class TamModelBuilder
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: gates can only be declared by a plugin.");
         gates.Add(new GateDefinition(operationId, currentPlugin, handlerType, pure));
+    }
+
+    /// <summary>Declares a contribution point on one of the HOST's surfaces (docs/31 D-X4):
+    /// a permanent slot id plus the record-context keys it provides. Layout stays the host's —
+    /// a plugin cannot declare slots (PLG005), only fill them.</summary>
+    public TamModelBuilder Slot(string slotId, Action<SlotContextBuilder> context)
+    {
+        if (currentPlugin is not null)
+            throw new InvalidOperationException(
+                "PLG005: slots are declared by the HOST — plugins contribute panels into them.");
+        var builder = new SlotContextBuilder();
+        context(builder);
+        slots[slotId] = new SlotDefinition(slotId, builder.Keys);
+        return this;
+    }
+
+    /// <summary>Declares a domain event contract (docs/31 D-X5): the type and payload fields
+    /// EventPublished carries. Host events are free-named; plugin events sit under the plugin
+    /// prefix (PLG001). OnEffect / event triggers must target a declared event (PLG009).</summary>
+    public TamModelBuilder PublishesEvent(string eventType, params string[] fields)
+    {
+        events[eventType] = new EventDeclaration(
+            eventType, fields.Select(Naming.Camel).ToArray(), currentPlugin);
+        return this;
+    }
+
+    internal void Panel(string slotId, string gridId,
+        IReadOnlyList<(string QueryField, string ContextKey)> bind)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: panels can only be contributed by a plugin.");
+        panels.Add(new PanelContribution(slotId, gridId, currentPlugin, bind));
+    }
+
+    internal void RequireEvent(string eventType, IReadOnlyList<string> fields)
+    {
+        if (currentPlugin is null)
+            throw new InvalidOperationException("PLG005: event requirements can only be declared by a plugin.");
+        eventRequirements.Add(new EventRequirement(eventType, currentPlugin, fields));
     }
 
     internal void GridAction(string gridId, string operationId,
@@ -346,6 +389,10 @@ public sealed partial class TamModelBuilder
             Packages = packages,
             PackagedFields = packaged,
             ExtensibleEntityKeys = extensibleKeys,
+            Slots = slots,
+            Panels = panels.GroupBy(p => p.SlotId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<PanelContribution>)g.ToList()),
+            Events = events,
             GridActions = gridActions.GroupBy(a => a.GridId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<GridActionContribution>)g.ToList()),
             ViewRequirements = viewRequirements,
@@ -364,6 +411,7 @@ public sealed partial class TamModelBuilder
         VerifyNav(model);
         VerifySubtreeViews(model);
         VerifyContributions(model);
+        VerifySlotsAndEvents(model, eventRequirements);
         VerifyLocalization(model, catalogs);
         return model;
     }

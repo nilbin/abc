@@ -892,8 +892,10 @@ everything per-tenant activated and entitlement-priced.
 9. **What we didn't need.** Host code names the plugin nowhere; the capability manifest is
    DERIVED from the model: *reads your orders (id, number, estimatedTotal); adds field
    order.invoiceStatus; gates orders.complete; adds an action to your orders list; subscribes
-   to order-completed.* The record-bound detail panel arrives with slots (docs/31 phase 2);
-   the accounting-provider push is Step 13's outbound seam applied, not new machinery.
+   to order-completed.* The record-bound detail panel is one host line —
+   `model.Slot("web.orders.detail", …)` + `<PluginSlot/>` in the modal — and the invoice grid
+   lands in it unnamed (D-X4); the accounting-provider push is Step 13's outbound seam applied,
+   not new machinery.
 
 The whole scenario — activate, create from the grid, duplicate rejected, ghost order rejected
 by the declared read, status on the order row, plugin-attributed audit, complete blocked by the

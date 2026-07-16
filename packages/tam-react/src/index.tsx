@@ -16,3 +16,4 @@ export type { NavState } from './nav';
 export type { LookupSelectProps } from './LookupSelect';
 export { useTamAuth } from './auth';
 export type { TamAuthState, TamAuthStatus } from './auth';
+export { PluginSlot } from './PluginSlot';

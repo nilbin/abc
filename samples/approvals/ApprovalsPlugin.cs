@@ -61,6 +61,9 @@ public sealed class ApprovalsPlugin : ITamPlugin
         // Seam 1: ONE wildcard gate — which operations it blocks is ApprovalRule data.
         plugin.GateAll<ApprovalsGate>();
         // Post-commit, via the outbox, in tenant-pinned scopes:
+        plugin.Model
+            .PublishesEvent("approvals.requested", "requestId")
+            .PublishesEvent("approvals.approved", "requestId");
         plugin.OnEffect<NotifyApprovers>("approvals.requested");
         plugin.OnEffect<ReleaseApproved>("approvals.approved");
     }

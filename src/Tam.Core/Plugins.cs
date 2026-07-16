@@ -165,6 +165,14 @@ public sealed record GridActionContribution(
 /// as a build-time fact (PLG008) and the service-mode read whitelist for effect handlers.</summary>
 public sealed record ViewRequirement(string ViewId, string PluginId, IReadOnlyList<string> Fields);
 
+/// <summary>A declared domain event (docs/31 D-X5): the payload contract subscribers and
+/// event-triggered integrations bind to. Owner is the declaring plugin, or null for host events.</summary>
+public sealed record EventDeclaration(string EventType, IReadOnlyList<string> Fields, string? Plugin);
+
+/// <summary>A plugin's declared dependency on an EVENT contract (docs/31 D-X5): PLG009 verifies
+/// the event is declared and carries the named payload fields.</summary>
+public sealed record EventRequirement(string EventType, string PluginId, IReadOnlyList<string> Fields);
+
 /// <summary>Declared-bind author for <see cref="PluginBuilder.GridAction"/>.</summary>
 public sealed class GridActionBindBuilder
 {
@@ -368,6 +376,28 @@ public sealed class PluginBuilder
     public PluginBuilder RequiresView(string viewId, params string[] fields)
     {
         Model.RequireView(viewId, fields.Select(Naming.Camel).ToArray());
+        return this;
+    }
+
+    /// <summary>
+    /// Contributes a panel into a HOST-declared slot (docs/31 D-X4): this plugin's own grid,
+    /// its query fields bound to the slot's record-context keys. The host opts a surface in
+    /// once; panels land there without the host naming any plugin. Validated at Build (PLG007).
+    /// </summary>
+    public PluginBuilder Panel(string slotId, string grid, Action<PanelBindBuilder> bind)
+    {
+        var builder = new PanelBindBuilder();
+        bind(builder);
+        Model.Panel(slotId, grid, builder.Binds);
+        return this;
+    }
+
+    /// <summary>Declares a dependency on an EVENT contract (docs/31 D-X5): PLG009 verifies the
+    /// event is declared and carries the named payload fields — the payload shape this plugin's
+    /// subscribers read stops being folklore.</summary>
+    public PluginBuilder RequiresEvent(string eventType, params string[] fields)
+    {
+        Model.RequireEvent(eventType, fields.Select(Naming.Camel).ToArray());
         return this;
     }
 

@@ -45,6 +45,19 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, IReadOnlyList<NavNode>> Nav { get; init; } =
         new Dictionary<string, IReadOnlyList<NavNode>>();
 
+    /// <summary>Host-declared contribution points (docs/31 D-X4), by slot id.</summary>
+    public IReadOnlyDictionary<string, SlotDefinition> Slots { get; init; } =
+        new Dictionary<string, SlotDefinition>();
+
+    /// <summary>Plugin panels in host slots, by slot id (docs/31 D-X4).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<PanelContribution>> Panels { get; init; } =
+        new Dictionary<string, IReadOnlyList<PanelContribution>>();
+
+    /// <summary>Declared domain events (docs/31 D-X5): type + payload fields. OnEffect and
+    /// RequiresEvent targets must name one (PLG009) — subscriptions are contracts, not folklore.</summary>
+    public IReadOnlyDictionary<string, EventDeclaration> Events { get; init; } =
+        new Dictionary<string, EventDeclaration>();
+
     /// <summary>Plugin row actions on HOST grids, by grid id (docs/31 D-X1).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<GridActionContribution>> GridActions { get; init; } =
         new Dictionary<string, IReadOnlyList<GridActionContribution>>();

@@ -33,6 +33,16 @@ public sealed record ManifestDto(
     /// never authorization — D-N6). Headless consumers ignore this section.</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<ManifestNavNode>> Nav { get; init; } =
         new Dictionary<string, IReadOnlyList<ManifestNavNode>>();
+
+    /// <summary>Host slots and the ACTIVE plugins' panels in them (docs/31 D-X4). The client
+    /// renders a slot wherever the host placed it; empty slots render nothing.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<ManifestPanel>> Slots { get; init; } =
+        new Dictionary<string, IReadOnlyList<ManifestPanel>>();
+
+    /// <summary>Declared domain events (docs/31 D-X5) with the ACTIVE plugins subscribed to
+    /// each — the SubscribedBy symmetry to operations' GatedBy.</summary>
+    public IReadOnlyDictionary<string, ManifestEvent> Events { get; init; } =
+        new Dictionary<string, ManifestEvent>();
 }
 
 /// <summary>A nav node on the wire (docs/30). Grid-target visibility derives client-side from
@@ -123,6 +133,14 @@ public sealed record ManifestGrid(
 
 public sealed record ManifestGridAction(
     string Operation, string Plugin, IReadOnlyDictionary<string, string> Bind);
+
+/// <summary>A plugin panel in a host slot: render the grid with its bound query params filled
+/// from the slot's record context.</summary>
+public sealed record ManifestPanel(
+    string Grid, string Plugin, IReadOnlyDictionary<string, string> Bind);
+
+public sealed record ManifestEvent(
+    IReadOnlyList<string> Fields, IReadOnlyList<string> SubscribedBy);
 
 public static class ManifestBuilder
 {
@@ -254,6 +272,20 @@ public static class ManifestBuilder
                 kv => kv.Key,
                 kv => (IReadOnlyList<ManifestNavNode>)kv.Value
                     .Select(NavOf).OfType<ManifestNavNode>().ToList()),
+            Slots = model.Slots.Keys.ToDictionary(
+                slotId => slotId,
+                slotId => (IReadOnlyList<ManifestPanel>)(model.Panels.TryGetValue(slotId, out var contributed)
+                    ? contributed.Where(p => Included(p.PluginId))
+                        .Select(p => new ManifestPanel(p.GridId, p.PluginId,
+                            p.Bind.ToDictionary(b => b.QueryField, b => b.ContextKey)))
+                        .ToList()
+                    : [])),
+            Events = model.Events.ToDictionary(
+                kv => kv.Key,
+                kv => new ManifestEvent(
+                    kv.Value.Fields,
+                    model.Subscribers.Where(s => s.EventType == kv.Key && Included(s.PluginId))
+                        .Select(s => s.PluginId).Distinct().Order().ToList())),
         };
     }
 

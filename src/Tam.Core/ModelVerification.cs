@@ -138,6 +138,65 @@ public sealed partial class TamModelBuilder
         }
     }
 
+    /// <summary>PLG007: panels land in a declared slot, use the plugin's OWN grid, and bind
+    /// real query fields to real context keys. PLG009: every OnEffect / RequiresEvent target
+    /// names a DECLARED event carrying the required payload fields — subscriptions are
+    /// contracts, not folklore. Plugin-declared events must sit under the plugin prefix.</summary>
+    private static void VerifySlotsAndEvents(
+        TamModel model, IReadOnlyList<EventRequirement> eventRequirements)
+    {
+        foreach (var panel in model.Panels.Values.SelectMany(p => p))
+        {
+            if (!model.Slots.TryGetValue(panel.SlotId, out var slot))
+                throw new InvalidOperationException(
+                    $"PLG007: panel targets unknown slot '{panel.SlotId}'.");
+            if (!model.Grids.TryGetValue(panel.GridId, out var grid))
+                throw new InvalidOperationException(
+                    $"PLG007: panel names unknown grid '{panel.GridId}'.");
+            if (grid.Plugin != panel.PluginId)
+                throw new InvalidOperationException(
+                    $"PLG007: plugin '{panel.PluginId}' may only contribute ITS OWN grids as panels — '{panel.GridId}' is not.");
+            var view = model.Views[grid.ViewId];
+            foreach (var (queryField, contextKey) in panel.Bind)
+            {
+                if (!view.QueryFields.Any(f => f.WireName == queryField))
+                    throw new InvalidOperationException(
+                        $"PLG007: panel '{panel.GridId}' binds unknown query field '{queryField}'.");
+                if (!slot.ContextKeys.Contains(contextKey))
+                    throw new InvalidOperationException(
+                        $"PLG007: panel '{panel.GridId}' binds context key '{contextKey}', not provided by slot '{panel.SlotId}'.");
+            }
+        }
+
+        foreach (var declared in model.Events.Values)
+            if (declared.Plugin is { } owner
+                && !declared.EventType.StartsWith(owner + ".", StringComparison.Ordinal)
+                && !model.Packages.ContainsKey(owner))
+                throw new InvalidOperationException(
+                    $"PLG001: event '{declared.EventType}' is not under '{owner}.'.");
+
+        foreach (var subscriber in model.Subscribers)
+            if (!model.Events.ContainsKey(subscriber.EventType))
+                throw new InvalidOperationException(
+                    $"PLG009: plugin '{subscriber.PluginId}' subscribes to undeclared event '{subscriber.EventType}' — declare it with PublishesEvent.");
+        foreach (var outbound in model.OutboundIntegrations.Values)
+            if (outbound.Trigger is EventTrigger trigger && !model.Events.ContainsKey(trigger.EventType))
+                throw new InvalidOperationException(
+                    $"PLG009: outbound integration '{outbound.Id}' triggers on undeclared event '{trigger.EventType}' — declare it with PublishesEvent.");
+
+        foreach (var requirement in eventRequirements)
+        {
+            if (!model.Events.TryGetValue(requirement.EventType, out var declared)
+                )
+                throw new InvalidOperationException(
+                    $"PLG009: plugin '{requirement.PluginId}' requires undeclared event '{requirement.EventType}'.");
+            foreach (var field in requirement.Fields)
+                if (!declared.Fields.Contains(field))
+                    throw new InvalidOperationException(
+                        $"PLG009: event '{requirement.EventType}' does not carry field '{field}' required by plugin '{requirement.PluginId}'.");
+        }
+    }
+
     /// <summary>SUB001: a subtree-read view's tenant field must be a real result field —
     /// the client renders the company column, tenant filter and row-action targeting off it.</summary>
     private static void VerifySubtreeViews(TamModel model)

@@ -90,6 +90,10 @@ export interface Manifest {
   packages?: string[];
   /** Declared navigation trees per surface class (docs/30); filter per actor at render. */
   nav?: Record<string, NavNode[]>;
+  /** Host slots and the active plugins' panels in them (docs/31 D-X4). */
+  slots?: Record<string, { grid: string; plugin: string; bind: Record<string, string> }[]>;
+  /** Declared domain events with the active plugins subscribed to each (docs/31 D-X5). */
+  events?: Record<string, { fields: string[]; subscribedBy: string[] }>;
   revision: number;
 }
 
