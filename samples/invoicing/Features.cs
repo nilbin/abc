@@ -237,3 +237,51 @@ internal sealed class DraftOnCompletion(
         await fields.SetAsync("order", orderId, "invoiceStatus", "draft", ct);
     }
 }
+
+/// <summary>
+/// docs/34 M4: on WORK ORDER completion, draft the invoice from what the work actually cost —
+/// APPROVED time entries plus every material line, read through the same service-mode declared
+/// reads as the order path (docs/31 D-X3), filtered by the number the payload carries. The
+/// aggregates postdate this plugin's original design; only the CONTRACT grew.
+/// </summary>
+[OnEffect("work-order-completed")]
+internal sealed class DraftOnWorkOrderCompletion(
+    ITamDb tam, IHostViewReader host) : IEffectHandler
+{
+    public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
+    {
+        if (!effect.Payload.TryGetProperty("workOrderId", out var idProp)
+            || !Guid.TryParse(idProp.GetString(), out var workOrderId))
+            return;
+        if (await tam.Db.Set<Invoice>().AnyAsync(x => x.WorkOrderId == workOrderId, ct))
+            return;   // at-least-once delivery — idempotent
+
+        var number = effect.Payload.TryGetProperty("number", out var n)
+            ? n.GetString() ?? "" : "";
+        if (number.Length == 0) return;
+
+        var amount =
+            await SumAsync("time.list", new Dictionary<string, string?>
+                { ["workOrderNumber"] = number, ["status"] = "approved", ["pageSize"] = "200" }, ct)
+            + await SumAsync("materials.list", new Dictionary<string, string?>
+                { ["workOrderNumber"] = number, ["pageSize"] = "200" }, ct);
+
+        tam.Db.Add(Invoice.CreateForWorkOrder(effect.TenantId, workOrderId, number, amount));
+        await tam.Db.SaveChangesAsync(ct);
+    }
+
+    private async Task<decimal> SumAsync(
+        string viewId, IReadOnlyDictionary<string, string?> query, CancellationToken ct)
+    {
+        var result = await host.RowsAsync(viewId, query, ct);
+        var sum = 0m;
+        foreach (var row in result.Rows)
+        {
+            var element = System.Text.Json.JsonSerializer.SerializeToElement(row, TamJson.Options);
+            if (element.TryGetProperty("amount", out var a)
+                && a.ValueKind == System.Text.Json.JsonValueKind.Number)
+                sum += a.GetDecimal();
+        }
+        return sum;
+    }
+}

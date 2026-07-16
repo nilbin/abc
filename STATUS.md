@@ -451,6 +451,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Field-service arc M4 (docs/34): invoicing from completed work orders + the technician
+  field mode**: the invoicing plugin now subscribes to work-order-completed and drafts from
+  what the work actually COST — approved time + materials, read through service-mode
+  declared reads over the M3 views (contract grew: RequiresView time.list/materials.list +
+  RequiresEvent; the aggregates postdate the plugin). Amount math proven on the wire:
+  approved 2000 + materials 178 = 2178 with a 5000 DRAFT entry excluded. Invoice gained a
+  nullable WorkOrderId; the "order number" label honestly became "source document". Host:
+  the "field" nav MODE (my-work/my-time over existing declared pages) — and the wire suite
+  hides it via nav.override and restores it via nav.retire, the docs/30 v2 tenant story on
+  a real surface. In sequence the suite also walks park → release → replay when M3's
+  approval rule gates time.approve. New friction entry: approval RULES have no retire
+  operation — a tenant can gate an operation forever but never un-gate it. Verified:
+  14-check fieldm4 + full 15-suite matrix on SQLite AND Postgres.
 - **Tam.Testing (tutorial Step 11, BUILT — the 13th framework package)**: the in-process
   pipeline harness. `TamTestHost<TDb>` runs the REAL executors — authorization, validation,
   gates, transaction, merge, audit, outbox — against a real provider with no HTTP;

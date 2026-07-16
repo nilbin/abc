@@ -97,6 +97,11 @@ public static class ErpModel
                 .Page("projects", page: "projects", order: 20)
                 .Page("customers", page: "customers", order: 30)
                 .Page("stock", page: "stock", order: 40))
+            // The technician's mode (docs/34 M4): the same declared pages, curated for the
+            // field — and the thing a tenant can HIDE via the nav override registry (docs/30 v2).
+            .Mode("field", m => m
+                .Page("my-work", page: "work-orders", order: 10)
+                .Page("my-time", page: "time", order: 20))
             .Mode("admin", m => m
                 .Section("administration")))
 

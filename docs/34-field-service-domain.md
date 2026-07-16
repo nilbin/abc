@@ -95,8 +95,21 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
       tenant-defined rule (the wildcard gate over a domain that postdates the plugin),
       full 14-suite matrix on SQLite AND Postgres, RLS confirmed on TimeEntries and
       MaterialLines.
-- [ ] M4 — Invoicing extension: draft invoice from a completed work order's approved
-      time + materials; work-mode nav for technicians incl. a tenant nav override.
+- [x] M4 — Invoicing extension: draft invoice from a completed work order's approved
+      time + materials; work-mode nav for technicians incl. a tenant nav override. **BUILT**:
+      the invoicing plugin subscribes to work-order-completed and drafts from what the work
+      actually COST — approved time entries plus material lines, read through service-mode
+      declared reads over the M3 views (RequiresView time.list/materials.list, filtered by
+      the number the payload carries; draft time excluded, proven by the amount math on the
+      wire: 2000 + 178 = 2178 with a 5000 draft entry ignored). The aggregates postdate the
+      plugin; only its CONTRACT grew. Invoice gained a nullable WorkOrderId (exactly one
+      source set) and the "order number" label honestly became "source document". The host
+      added the technician "field" MODE (my-work/my-time over the same declared pages), and
+      the wire suite hides it via nav.override and restores it via nav.retire — the docs/30
+      v2 story on a mode that exists for exactly this purpose. In sequence, fieldm4 also
+      walks the park → release → replay loop when fieldm3's approval rule gates
+      time.approve. Verified: 14-check fieldm4 + full 15-suite matrix on SQLite AND
+      Postgres.
 - [ ] M5 — Postgres + RLS pass over the whole slice; read-set scaling measured;
       friction-log triage → fixes or explicit deferrals.
 
@@ -139,6 +152,10 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   this for customers with bespoke React. A declarative `lookup(view)` renderer — field
   options served from any lookup view with search — is now the arc's clearest missing
   framework piece; it would delete the derivation AND the bespoke picker.
+- (M4) Approval RULES cannot be retired: approvals.rules.define exists, approvals.rules.
+  retire does not — a tenant that gates an operation can never un-gate it, and the wire
+  suites had to design AROUND a permanent rule (fieldm4 walks the release loop instead).
+  The "retire, don't delete" convention needs its missing half here.
 - (from review) A slot appears TWICE in the composition root and the duplication reads as
   a bug until explained: `model.Slot("web.orders.detail", s => s.Key("orderId"))` DECLARES
   the contribution point (the id and record context plugins target — it exists even when

@@ -48,6 +48,12 @@ internal sealed class OrdersContract : IPluginPart
         // service-mode reads (the draft subscriber) are limited to exactly this list.
         plugin.RequiresView("orders.detail", "id", "number", "estimatedTotal");
 
+        // The field-service path (docs/34 M4): a completed work order is invoiced from its
+        // APPROVED time + materials — service-mode reads over the M3 views, filtered by the
+        // number the event payload carries.
+        plugin.RequiresView("time.list", "id", "workOrderNumber", "amount", "status");
+        plugin.RequiresView("materials.list", "id", "workOrderNumber", "amount");
+
         // The order wears its invoice status (docs/22 P2). Read-only: only this plugin's
         // IPackagedFieldWriter sets it — the state machine stays the plugin's.
         plugin.ExtensionField("order", "invoiceStatus", "selection",
@@ -67,6 +73,7 @@ internal sealed class OrdersContract : IPluginPart
         // DraftOnCompletion subscriber and DraftPendingGate register from their own
         // attributes in Features.cs.
         plugin.RequiresEvent("order-completed", "orderId", "number");
+        plugin.RequiresEvent("work-order-completed", "workOrderId", "number");
         plugin
             .PublishesEvent("invoicing.invoice-created", "invoiceId", "orderId")
             .PublishesEvent("invoicing.invoice-finalized", "invoiceId", "orderId")
