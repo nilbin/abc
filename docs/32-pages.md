@@ -1,8 +1,9 @@
 # 32 — Framework-composed pages: the list-and-detail shape leaves app code
 
-Status: **v1.1 BUILT** (ordered SECTIONS at both levels; erp's OrdersPage React component
-deleted). Decisions D-P1..D-P6. The sample now declares TWO pages (orders with slots,
-customers without) — the shape generalizes, and the registerPage count is still zero.
+Status: **v1.2 BUILT** (ordered SECTIONS at both levels; plugin-declared pages; erp's
+OrdersPage React component deleted). Decisions D-P1..D-P6. The sample declares THREE pages —
+orders (host, with slots), customers (host, plain), invoicing.invoices (PLUGIN, read-only
+record) — and the registerPage count is still zero.
 
 ## The problem
 
@@ -68,8 +69,8 @@ provided configure gets the same defaults, so a grid that only declares actions 
 
 Form prefill is the row-action convention made declarative: each form field takes the
 same-named detail result field; the record's `key` field takes the clicked row's id. The
-manifest gains a `pages` section (host-only, no activation filtering — the slots inside filter
-themselves).
+manifest gains a `pages` section (plugin pages activation-filtered like every contribution;
+the slots inside filter themselves).
 
 ## readOnly packaged fields (the docs/31 wrinkle, closed)
 
