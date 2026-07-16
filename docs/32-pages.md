@@ -1,7 +1,7 @@
 # 32 — Framework-composed pages: the list-and-detail shape leaves app code
 
-Status: **v1 BUILT** (declared page = grid + record surface; erp's OrdersPage React component
-deleted). Decision D-P1..D-P3.
+Status: **v1.1 BUILT** (ordered SECTIONS at both levels; erp's OrdersPage React component
+deleted). Decisions D-P1..D-P5.
 
 ## The problem
 
@@ -16,13 +16,17 @@ host would write it again for every aggregate.
 
 ```csharp
 model.Page("orders", page => page
-    .Grid("web.orders.list")
+    .Grid("web.orders.list")                       // sections render in DECLARATION ORDER
     .Record(record => record
         .Detail("orders.detail", key: "orderId")   // fetched with the clicked row's id
-        .Form("web.orders.edit")                   // prefilled from same-named detail fields
         .Title("number")                           // detail field shown in the record title
+        .Form("web.orders.edit")                   // prefilled from same-named detail fields
         .Slot("web.orders.detail")));              // plugin panels (docs/31 D-X4)
 ```
+
+A page is an ORDERED list of sections — any number of `Grid(...)` and page-level `Slot(...)`
+calls — and the record surface is likewise an ordered list of `Form(...)`/`Slot(...)` sections.
+A slot declared before the form renders above it; a second grid renders after the first.
 
 - **D-P1 — a page is a host-declared composition of things the model already has**: one grid,
   and optionally a RECORD surface — detail view + context key, optional edit form, optional
@@ -36,6 +40,14 @@ model.Page("orders", page => page
   with form + slot panels). The registerPage RATIO is the architecture tripwire (the docs/19
   direction review): if most pages need React, the model is decorating the app. The sample is
   now at zero.
+- **D-P4 — declaration order IS layout order; the FIRST grid opens the record.** Position
+  hints are the structure itself, not `after:` string annotations — an ordered composition has
+  nothing to disambiguate. Page-level slots carry no record context (their panels render
+  unbound — plugin widgets); record slots receive the record context.
+- **D-P5 — SLOT001: an orphaned slot is a build error.** A declared slot referenced by no page
+  is authored into invisibility (plugins would contribute panels nothing renders) — the nav
+  "more" lesson applied to slots. A slot the app places in custom React declares
+  `external: true`, which exempts it from the check and nothing else.
 - **D-P3 — declared pages derive nav visibility from their grid** (NAV005 relaxed): a nav
   `{ page }` target may omit its explicit permission when the key names a declared page —
   visibility comes off the page's grid's view, exactly like `{ grid }` targets. Registered

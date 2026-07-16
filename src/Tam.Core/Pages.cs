@@ -1,34 +1,61 @@
 namespace Tam;
 
-// Framework-composed pages (docs/32): a PAGE becomes a declared composition in the model — a
-// grid plus an optional RECORD surface (detail view + edit form + slots) — rendered entirely
-// by the client library. registerPage() remains the escape hatch for genuinely custom UX; a
-// declared page is how the standard list-and-detail shape stops being hand-written React.
-// Pages are the HOST's (like nav layout and slots); plugins reach them through slots and
-// grid-action contributions, never by declaring pages.
+// Framework-composed pages (docs/32): a PAGE is an ordered list of sections — grids and slots —
+// plus an optional RECORD surface (itself an ordered list of form/slot sections) that rows of
+// the page's FIRST grid open into. Declaration order IS layout order: "position hints" are the
+// structure itself, not string annotations. registerPage() remains the escape hatch for
+// genuinely custom UX. Pages are the HOST's (like nav layout and slots); plugins reach them
+// through slots and grid-action contributions, never by declaring pages.
 
-/// <summary>A declared page: one grid, optionally a record surface its rows open into.</summary>
-public sealed record PageDefinition(string Id, string GridId, RecordDefinition? Record);
+/// <summary>One page-level section: a grid, or a slot (page-level slots carry no record
+/// context — their panels render unbound, e.g. dashboard-style plugin widgets).</summary>
+public sealed record PageSection(string Kind, string Id)
+{
+    public const string GridKind = "grid";
+    public const string SlotKind = "slot";
+}
 
-/// <summary>The record surface of a page: the detail VIEW fetched by <see cref="ContextKey"/>
-/// (filled from the clicked row's id), an optional edit FORM (fields prefilled from same-named
-/// detail fields — the row-action convention, declared here), an optional detail field used in
-/// the title, and the SLOTS whose panels render below (docs/31 D-X4).</summary>
+/// <summary>One record-level section: the edit form, or a slot bound to the record context.</summary>
+public sealed record RecordSection(string Kind, string Id)
+{
+    public const string FormKind = "form";
+    public const string SlotKind = "slot";
+}
+
+public sealed record PageDefinition(
+    string Id, IReadOnlyList<PageSection> Sections, RecordDefinition? Record)
+{
+    /// <summary>The grid whose rows open the record surface — the FIRST grid section.</summary>
+    public string? PrimaryGridId =>
+        Sections.FirstOrDefault(s => s.Kind == PageSection.GridKind)?.Id;
+}
+
+/// <summary>The record surface: the detail VIEW fetched by <see cref="ContextKey"/> (filled
+/// from the clicked row's id), an optional detail field for the title, and ORDERED sections —
+/// form(s) prefilled from same-named detail fields, slots receiving the record context.</summary>
 public sealed record RecordDefinition(
     string DetailViewId,
     string ContextKey,
-    string? FormId,
     string? TitleField,
-    IReadOnlyList<string> SlotIds);
+    IReadOnlyList<RecordSection> Sections);
 
 public sealed class PageBuilder
 {
-    private string? gridId;
+    private readonly List<PageSection> sections = [];
     private RecordDefinition? record;
 
+    /// <summary>A grid section. The FIRST grid's rows open the record surface (if declared);
+    /// later grids are additional listings. Declaration order is layout order.</summary>
     public PageBuilder Grid(string id)
     {
-        gridId = id;
+        sections.Add(new PageSection(PageSection.GridKind, id));
+        return this;
+    }
+
+    /// <summary>A page-level slot section: plugin panels without record context.</summary>
+    public PageBuilder Slot(string slotId)
+    {
+        sections.Add(new PageSection(PageSection.SlotKind, slotId));
         return this;
     }
 
@@ -40,18 +67,21 @@ public sealed class PageBuilder
         return this;
     }
 
-    internal PageDefinition Build(string id) =>
-        new(id, gridId ?? throw new InvalidOperationException(
-            $"PAGE001: page '{id}' declares no grid."), record);
+    internal PageDefinition Build(string id)
+    {
+        var page = new PageDefinition(id, sections, record);
+        if (page.PrimaryGridId is null)
+            throw new InvalidOperationException($"PAGE001: page '{id}' declares no grid.");
+        return page;
+    }
 }
 
 public sealed class RecordBuilder
 {
     private string? detailViewId;
     private string? contextKey;
-    private string? formId;
     private string? titleField;
-    private readonly List<string> slotIds = [];
+    private readonly List<RecordSection> sections = [];
 
     /// <summary>The detail view and the query field the clicked row's id fills.</summary>
     public RecordBuilder Detail(string viewId, string key)
@@ -61,9 +91,11 @@ public sealed class RecordBuilder
         return this;
     }
 
+    /// <summary>A form section, prefilled from same-named detail fields. Declaration order is
+    /// layout order — a slot declared before the form renders above it.</summary>
     public RecordBuilder Form(string formId)
     {
-        this.formId = formId;
+        sections.Add(new RecordSection(RecordSection.FormKind, formId));
         return this;
     }
 
@@ -76,12 +108,12 @@ public sealed class RecordBuilder
 
     public RecordBuilder Slot(string slotId)
     {
-        slotIds.Add(slotId);
+        sections.Add(new RecordSection(RecordSection.SlotKind, slotId));
         return this;
     }
 
     internal RecordDefinition Build() => new(
         detailViewId ?? throw new InvalidOperationException("PAGE001: record declares no detail view."),
         contextKey ?? "id",
-        formId, titleField, slotIds);
+        titleField, sections);
 }

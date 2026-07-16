@@ -40,15 +40,29 @@ public class PageTests
             Array.Empty<Result>().AsQueryable();
     }
 
+    [Operation("things.rename")]
+    [Authorize("things.manage")]
+    private static class RenameThing
+    {
+        public sealed record Input(
+            [property: LabelKey("labels.name")] string Name);
+
+        public static Task<Result> Execute(Input input, OperationContext context) =>
+            Task.FromResult(Result.Success());
+    }
+
     private static TamModelBuilder Host() => new TamModelBuilder()
         .LocaleDefaults("en", new Dictionary<string, string>
         {
             ["labels.id"] = "Id", ["labels.name"] = "Name", ["nav.work"] = "Work",
             ["nav.things"] = "Things", ["nav.more"] = "More",
+            ["operations.things.rename.title"] = "Rename",
         })
         .AddViewType(typeof(ThingsList))
         .AddViewType(typeof(ThingsDetail))
         .Grid<ThingsList.Result>("web.things", "things.list", g => g.Column(x => x.Name))
+        .AddOperationType(typeof(RenameThing))
+        .Form<RenameThing.Input>("web.things.edit", "things.rename", form => form.Field(x => x.Name))
         .Slot("web.things.detail", slot => slot.Key("thingId"));
 
     [Fact]
@@ -60,7 +74,8 @@ public class PageTests
                 .Record(record => record
                     .Detail("things.detail", key: "thingId")
                     .Title("name")
-                    .Slot("web.things.detail")))
+                    .Slot("web.things.detail")     // before the form: renders above it
+                    .Form("web.things.edit")))
             // page target WITHOUT explicit permission: legal because the page is declared
             .Nav("web", nav => nav.Mode("work", m => m.Page("things", page: "things")))
             .Build();
@@ -68,10 +83,13 @@ public class PageTests
         var manifest = ManifestBuilder.Build(
             model, new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(), 0, null);
         var page = manifest.Pages["things"];
-        Assert.Equal("web.things", page.Grid);
+        Assert.Equal([("grid", "web.things")],
+            page.Sections.Select(sec => (sec.Kind, sec.Id)));
         Assert.Equal(("things.detail", "thingId", "name"),
             (page.Record!.DetailView, page.Record.Key, page.Record.TitleField));
-        Assert.Equal(["web.things.detail"], page.Record.Slots);
+        // declaration order IS layout order: slot declared BEFORE the form renders above it
+        Assert.Equal([("slot", "web.things.detail"), ("form", "web.things.edit")],
+            page.Record.Sections.Select(sec => (sec.Kind, sec.Id)));
         Assert.Null(model.Nav["web"][0].Children[0].Permission);
     }
 
@@ -102,6 +120,43 @@ public class PageTests
             Host().Page("p", page => page.Grid("web.things")
                 .Record(r => r.Detail("things.detail", key: "thingId")
                     .Slot("web.nowhere"))).Build()).Message);
+    }
+
+    [Fact]
+    public void SLOT001_catches_orphaned_slots_and_external_exempts_them()
+    {
+        // declared, referenced by no page, not external → authored into invisibility
+        var orphan = Host();   // Host declares web.things.detail and no page references it
+        Assert.StartsWith("SLOT001",
+            Assert.Throws<InvalidOperationException>(() => orphan.Build()).Message);
+
+        // external: the app places it in React — the model stops policing
+        var external = new TamModelBuilder()
+            .LocaleDefaults("en", new Dictionary<string, string> { ["labels.id"] = "Id", ["labels.name"] = "Name" })
+            .AddViewType(typeof(ThingsList))
+            .Grid<ThingsList.Result>("web.things", "things.list", g => g.Column(x => x.Name))
+            .Slot("web.custom.surface", slot => slot.Key("thingId"), external: true)
+            .Build();
+        Assert.True(external.Slots["web.custom.surface"].External);
+    }
+
+    [Fact]
+    public void Pages_compose_multiple_grids_and_page_level_slots_in_order()
+    {
+        var model = Host()
+            .Slot("web.things.banner")   // page-level, no context keys
+            .Page("things", page => page
+                .Slot("web.things.banner")
+                .Grid("web.things")
+                .Grid("web.things2")
+                .Record(r => r.Detail("things.detail", key: "thingId").Slot("web.things.detail")))
+            .Grid<ThingsList.Result>("web.things2", "things.list", g => g.Column(x => x.Name))
+            .Build();
+
+        var page = model.Pages["things"];
+        Assert.Equal([("slot", "web.things.banner"), ("grid", "web.things"), ("grid", "web.things2")],
+            page.Sections.Select(sec => (sec.Kind, sec.Id)));
+        Assert.Equal("web.things", page.PrimaryGridId);   // FIRST grid opens the record
     }
 
     [TamPlugin("meter")]

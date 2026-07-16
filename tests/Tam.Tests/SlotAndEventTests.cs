@@ -50,7 +50,7 @@ public class SlotAndEventTests
         })
         .AddViewType(typeof(ThingsList))
         .Grid<ThingsList.Result>("web.things", "things.list", g => g.Column(x => x.Name))
-        .Slot("web.things.detail", slot => slot.Key("thingId"))
+        .Slot("web.things.detail", slot => slot.Key("thingId"), external: true)
         .PublishesEvent("thing-archived", "thingId", "name");
 
     [TamPlugin("notes")]

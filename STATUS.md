@@ -34,7 +34,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              131 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              133 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -396,6 +396,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   asserts the declared page shape + derived permission, invoicing suite asserts readOnly on
   the wire, full matrix green, UI screenshot of the framework-rendered record modal (form
   without the read-only field, slot panel below, title from the declared field).
+- **Pages v1.1 — ordered sections + SLOT001** (docs/32 D-P4/D-P5): a page is now an ORDERED
+  list of sections (any number of grids and page-level slots; the FIRST grid opens the record)
+  and the record surface is an ordered form/slot section list — declaration order IS layout
+  order, so "position hints" are structure, not annotations (a slot declared before the form
+  renders above it). Page-level slots render their panels unbound (no record context).
+  SLOT001 closes the orphaned-slot hole: a declared slot referenced by no page is a BUILD
+  error (panels would never render — the nav "more" lesson applied to slots); slots placed by
+  custom React declare external: true. Manifest pages section is now {sections:[{kind,id}],
+  record:{..., sections}}; ModelPage renders both levels in order. Verified: 133 unit tests
+  (ordered manifest shape incl. slot-above-form, multi-grid + page-level slot composition,
+  PrimaryGridId, SLOT001 both ways), nav wire suite asserts the sectioned shape, full matrix
+  green.
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

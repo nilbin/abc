@@ -7,8 +7,10 @@ namespace Tam;
 // to the slot's context keys — wire names both sides, validated at Build (PLG007).
 
 /// <summary>A host contribution point: permanent wire id (D4) + the context keys it provides
-/// (e.g. "web.orders.detail" providing "orderId"). Slot ids are host wire names.</summary>
-public sealed record SlotDefinition(string Id, IReadOnlyList<string> ContextKeys);
+/// (e.g. "web.orders.detail" providing "orderId"). Slot ids are host wire names.
+/// <see cref="External"/> marks a slot placed by app React rather than a declared page — it
+/// exempts the slot from the SLOT001 orphan check, nothing else.</summary>
+public sealed record SlotDefinition(string Id, IReadOnlyList<string> ContextKeys, bool External = false);
 
 /// <summary>A plugin panel in a host slot: the plugin's OWN grid, its query fields bound to
 /// the slot's context keys.</summary>

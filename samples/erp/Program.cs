@@ -36,8 +36,8 @@ var model = new TamModelBuilder()
         .Grid("web.orders.list")
         .Record(record => record
             .Detail("orders.detail", key: "orderId")
-            .Form("web.orders.edit")
             .Title("number")
+            .Form("web.orders.edit")           // declaration order is layout order (docs/32)
             .Slot("web.orders.detail")))
 
     .Nav("web", nav => nav

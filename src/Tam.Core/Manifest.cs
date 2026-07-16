@@ -148,10 +148,16 @@ public sealed record ManifestPanel(
 public sealed record ManifestEvent(
     IReadOnlyList<string> Fields, IReadOnlyList<string> SubscribedBy);
 
-public sealed record ManifestPage(string Grid, ManifestRecord? Record);
+/// <summary>A framework-composed page (docs/32): ORDERED sections — {"kind":"grid"|"slot"} —
+/// plus an optional record surface. Declaration order is layout order.</summary>
+public sealed record ManifestPage(
+    IReadOnlyList<ManifestPageSection> Sections, ManifestRecord? Record);
+
+public sealed record ManifestPageSection(string Kind, string Id);
 
 public sealed record ManifestRecord(
-    string DetailView, string Key, string? Form, string? TitleField, IReadOnlyList<string> Slots);
+    string DetailView, string Key, string? TitleField,
+    IReadOnlyList<ManifestPageSection> Sections);
 
 public static class ManifestBuilder
 {
@@ -285,9 +291,12 @@ public static class ManifestBuilder
                     .Select(NavOf).OfType<ManifestNavNode>().ToList()),
             Pages = model.Pages.ToDictionary(
                 kv => kv.Key,
-                kv => new ManifestPage(kv.Value.GridId, kv.Value.Record is { } r
-                    ? new ManifestRecord(r.DetailViewId, r.ContextKey, r.FormId, r.TitleField, r.SlotIds)
-                    : null)),
+                kv => new ManifestPage(
+                    kv.Value.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id)).ToList(),
+                    kv.Value.Record is { } r
+                        ? new ManifestRecord(r.DetailViewId, r.ContextKey, r.TitleField,
+                            r.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id)).ToList())
+                        : null)),
             Slots = model.Slots.Keys.ToDictionary(
                 slotId => slotId,
                 slotId => (IReadOnlyList<ManifestPanel>)(model.Panels.TryGetValue(slotId, out var contributed)

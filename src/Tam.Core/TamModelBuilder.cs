@@ -200,14 +200,15 @@ public sealed partial class TamModelBuilder
     /// <summary>Declares a contribution point on one of the HOST's surfaces (docs/31 D-X4):
     /// a permanent slot id plus the record-context keys it provides. Layout stays the host's —
     /// a plugin cannot declare slots (PLG005), only fill them.</summary>
-    public TamModelBuilder Slot(string slotId, Action<SlotContextBuilder> context)
+    public TamModelBuilder Slot(string slotId, Action<SlotContextBuilder>? context = null,
+        bool external = false)
     {
         if (currentPlugin is not null)
             throw new InvalidOperationException(
                 "PLG005: slots are declared by the HOST — plugins contribute panels into them.");
         var builder = new SlotContextBuilder();
-        context(builder);
-        slots[slotId] = new SlotDefinition(slotId, builder.Keys);
+        context?.Invoke(builder);
+        slots[slotId] = new SlotDefinition(slotId, builder.Keys, external);
         return this;
     }
 

@@ -22,9 +22,10 @@ function visible(node: NavNode, manifest: Manifest, can: (p: string) => boolean)
   }
   if (node.target?.page) {
     if (node.permission) return can(node.permission);
-    // A DECLARED page (docs/32) derives visibility from its grid's view, like grid targets.
+    // A DECLARED page (docs/32) derives visibility from its FIRST grid's view.
     const declared = manifest.pages?.[node.target.page];
-    const view = declared ? manifest.grids[declared.grid]?.view : undefined;
+    const grid = declared?.sections.find(s => s.kind === 'grid')?.id;
+    const view = grid ? manifest.grids[grid]?.view : undefined;
     return view ? can(manifest.views[view]?.permission ?? '') : false;
   }
   if (node.target?.plugin) {

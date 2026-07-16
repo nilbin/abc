@@ -5052,14 +5052,25 @@
   },
   "pages": {
     "orders": {
-      "grid": "web.orders.list",
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "web.orders.list"
+        }
+      ],
       "record": {
         "detailView": "orders.detail",
         "key": "orderId",
-        "form": "web.orders.edit",
         "titleField": "number",
-        "slots": [
-          "web.orders.detail"
+        "sections": [
+          {
+            "kind": "form",
+            "id": "web.orders.edit"
+          },
+          {
+            "kind": "slot",
+            "id": "web.orders.detail"
+          }
         ]
       }
     }

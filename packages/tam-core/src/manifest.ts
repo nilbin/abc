@@ -92,10 +92,14 @@ export interface Manifest {
   packages?: string[];
   /** Declared navigation trees per surface class (docs/30); filter per actor at render. */
   nav?: Record<string, NavNode[]>;
-  /** Framework-composed pages (docs/32): grid + optional record surface, rendered mechanically. */
+  /** Framework-composed pages (docs/32): ORDERED sections (grids + slots) and an optional
+   *  record surface whose sections (forms + slots) render in declaration order. */
   pages?: Record<string, {
-    grid: string;
-    record?: { detailView: string; key: string; form?: string; titleField?: string; slots: string[] };
+    sections: { kind: 'grid' | 'slot'; id: string }[];
+    record?: {
+      detailView: string; key: string; titleField?: string;
+      sections: { kind: 'form' | 'slot'; id: string }[];
+    };
   }>;
   /** Host slots and the active plugins' panels in them (docs/31 D-X4). */
   slots?: Record<string, { grid: string; plugin: string; bind: Record<string, string> }[]>;

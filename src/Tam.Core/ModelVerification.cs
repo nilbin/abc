@@ -197,16 +197,24 @@ public sealed partial class TamModelBuilder
         }
     }
 
-    /// <summary>PAGE001: a declared page's parts must all exist and fit together — the grid,
-    /// the record's detail view (and the context key on its Query), the form, the title field
-    /// on the detail Result, and every referenced slot.</summary>
+    /// <summary>PAGE001: a declared page's parts must all exist and fit — grids, page-level
+    /// slots, the record's detail view (and the context key on its Query), forms, the title
+    /// field, record slots. SLOT001: a declared slot referenced by NO page and not marked
+    /// external is authored into invisibility — plugins would contribute panels nothing
+    /// renders (the nav "more" lesson, applied to slots).</summary>
     private static void VerifyPages(TamModel model)
     {
         foreach (var page in model.Pages.Values)
         {
-            if (!model.Grids.ContainsKey(page.GridId))
-                throw new InvalidOperationException(
-                    $"PAGE001: page '{page.Id}' names unknown grid '{page.GridId}'.");
+            foreach (var section in page.Sections)
+            {
+                if (section.Kind == PageSection.GridKind && !model.Grids.ContainsKey(section.Id))
+                    throw new InvalidOperationException(
+                        $"PAGE001: page '{page.Id}' names unknown grid '{section.Id}'.");
+                if (section.Kind == PageSection.SlotKind && !model.Slots.ContainsKey(section.Id))
+                    throw new InvalidOperationException(
+                        $"PAGE001: page '{page.Id}' references undeclared slot '{section.Id}'.");
+            }
             if (page.Record is not { } record) continue;
 
             if (!model.Views.TryGetValue(record.DetailViewId, out var detail))
@@ -215,17 +223,29 @@ public sealed partial class TamModelBuilder
             if (!detail.QueryFields.Any(f => f.WireName == record.ContextKey))
                 throw new InvalidOperationException(
                     $"PAGE001: page '{page.Id}' key '{record.ContextKey}' is not a query field of '{record.DetailViewId}'.");
-            if (record.FormId is { } formId && !model.Forms.ContainsKey(formId))
-                throw new InvalidOperationException(
-                    $"PAGE001: page '{page.Id}' names unknown form '{formId}'.");
             if (record.TitleField is { } title && !detail.ResultFields.Any(f => f.WireName == title))
                 throw new InvalidOperationException(
                     $"PAGE001: page '{page.Id}' title field '{title}' is not on '{record.DetailViewId}'.");
-            foreach (var slotId in record.SlotIds)
-                if (!model.Slots.ContainsKey(slotId))
+            foreach (var section in record.Sections)
+            {
+                if (section.Kind == RecordSection.FormKind && !model.Forms.ContainsKey(section.Id))
                     throw new InvalidOperationException(
-                        $"PAGE001: page '{page.Id}' references undeclared slot '{slotId}'.");
+                        $"PAGE001: page '{page.Id}' names unknown form '{section.Id}'.");
+                if (section.Kind == RecordSection.SlotKind && !model.Slots.ContainsKey(section.Id))
+                    throw new InvalidOperationException(
+                        $"PAGE001: page '{page.Id}' references undeclared slot '{section.Id}'.");
+            }
         }
+
+        var referenced = model.Pages.Values.SelectMany(p =>
+                p.Sections.Where(s => s.Kind == PageSection.SlotKind).Select(s => s.Id)
+                    .Concat(p.Record?.Sections
+                        .Where(s => s.Kind == RecordSection.SlotKind).Select(s => s.Id) ?? []))
+            .ToHashSet();
+        foreach (var slot in model.Slots.Values)
+            if (!slot.External && !referenced.Contains(slot.Id))
+                throw new InvalidOperationException(
+                    $"SLOT001: slot '{slot.Id}' is referenced by no declared page — panels contributed to it would never render. Reference it from a page, or declare it external: true (placed by app code).");
     }
 
     /// <summary>SUB001: a subtree-read view's tenant field must be a real result field —
