@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/samples/" />
+  <Folder Name="/samples/erp.Tests/">
+    <Project Path="samples/erp.Tests/Erp.Tests.csproj" />
+  </Folder>
   <Folder Name="/samples/erp/">
     <Project Path="samples/erp/Erp.csproj" />
     <Project Path="samples/inspect/Inspect.csproj" />
@@ -14,6 +17,7 @@
     <Project Path="src/Tam.Compiler/Tam.Compiler.csproj" />
     <Project Path="src/Tam.Core/Tam.Core.csproj" />
     <Project Path="src/Tam.EntityFrameworkCore/Tam.EntityFrameworkCore.csproj" />
+    <Project Path="src/Tam.Testing/Tam.Testing.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Tam.Tests/Tam.Tests.csproj" />

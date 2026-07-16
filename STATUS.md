@@ -23,6 +23,8 @@ src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane + the RLS 
                              session settings — docs/33)
 src/Tam.Auth.OpenIddict      embedded OpenIddict token server + ClaimsActorProvider (the
                              framework's own auth, behind the IActorProvider seam)
+src/Tam.Testing              in-process pipeline test harness: TamTestHost, envelope
+                             assertions, CapabilitySweep (tutorial Step 11)
 packages/tam-core            manifest types, portable AST evaluator, localization, HTTP client
 packages/tam-react           context/renderers/OperationForm/ViewGrid modules + renderer
                              registry, Mantine renderer pack
@@ -449,6 +451,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Tam.Testing (tutorial Step 11, BUILT — the 13th framework package)**: the in-process
+  pipeline harness. `TamTestHost<TDb>` runs the REAL executors — authorization, validation,
+  gates, transaction, merge, audit, outbox — against a real provider with no HTTP;
+  actors are (tenant, grant-set) pairs; assertions speak the envelope
+  (ShouldSucceed/ShouldFailWith(code, onField)/ShouldBeDenied/ShouldConflictOn/
+  ShouldPublish/typed Output<T>). `CapabilitySweep.RunAsync` executes EVERY view's declared
+  capabilities — default sort, each sortable both directions, each filterable with a typed
+  probe — so a view that compiles but cannot translate fails a NAMED test instead of
+  500ing on its first sorted request, and every future aggregate is covered the moment it
+  is declared. `samples/erp.Tests` is the consumer showcase (7 tests over the REAL erp
+  model: pipeline scenarios incl. own-scope with two actors, a structural merge conflict,
+  the work-order event contract, and the full sweep — all green first run) and runs in CI.
+  Enabler: `ErpModel.Build()` extracted from Program.cs (the model is a value both hosts
+  consume; manifest byte-identical). Tutorial Step 11 rewritten from designed-not-built
+  onto the shipped API.
 - **Field-service arc M3 (docs/34): TimeEntry + MaterialLine — built docs-only by an RTFM
   agent**: the arc's original intent realized — the slice was implemented by an agent
   FORBIDDEN from reading framework source (docs + samples + compiler errors only), and it

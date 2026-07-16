@@ -34,7 +34,9 @@ jobs:
         run: dotnet build Tam.slnx
 
       - name: Tests
-        run: dotnet test tests/Tam.Tests --no-build
+        run: |
+          dotnet test tests/Tam.Tests --no-build
+          dotnet test samples/erp.Tests --no-build
 
       - name: Manifest baseline check (D4, additive-only)
         run: |

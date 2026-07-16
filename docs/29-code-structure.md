@@ -17,11 +17,18 @@ src/Tam.EntityFrameworkCore EF integration: conventions, tenant filter/stamp, au
 src/Tam.AspNetCore         the pipeline (executors, endpoints, DI), background loops,
                            framework packages (Packages/), pipeline infrastructure (root).
 src/Tam.Auth.OpenIddict    the embedded auth server behind IActorProvider.
+src/Tam.Testing            the in-process test harness (tutorial Step 11): TamTestHost drives
+                           the REAL executors against a real provider; CapabilitySweep executes
+                           every declared view capability. References AspNetCore; sits outside
+                           the app pipeline.
 packages/tam-core          TS manifest types, Px evaluator, localization, HTTP client.
 packages/tam-react         React runtime: context, renderers, OperationForm, ViewGrid.
 samples/web                   the sample SPA (Norrservice ERP) — host code, not framework.
 samples/erp                the reference host: domain, bindings, seed, Program wiring.
 samples/inspect|fortnox|approvals   vendor-plugin exemplars (the plugin shapes to copy).
+samples/erp.Tests          the CONSUMER test suite: Tam.Testing over the real erp model
+                           (pipeline scenarios + the capability sweep) — what a product team's
+                           test project looks like.
 tests/Tam.Tests            the unit/pipeline suite. Wire verification scripts live outside
                            the repo (session tooling) — STATUS records what they proved.
 docs/                      numbered design docs; 19-decisions.md is the ledger; tutorial/
@@ -106,6 +113,7 @@ possible pre-1.0 but must be its own deliberate commit, never ride a refactor.
 | Change<T> discipline | analyzer EDIT001 |
 | Plugin/package namespacing, gate targets, packaged fields, plugin-only seams | Build()-time PLG000–005 / PKG000 |
 | Wire-name permanence | CI baseline check (scripts/check_manifest.py) |
+| Declared capabilities actually translate | Tam.Testing CapabilitySweep (samples/erp.Tests, runs in CI) |
 | File layout, naming, cross-package policy-helper rule | review + this doc — promote to analyzer when it hurts |
 
 ## Refactor ledger
@@ -145,6 +153,10 @@ Done:
 - [x] `NavOverlay` (+ its manifest-route application) out of `Packages/NavOverrides.cs` into
       `src/Tam.AspNetCore/NavOverlay.cs` — the litmus test above, applied to our own newest
       package (review round 4 #7). The package file keeps the operations/view/grid.
+
+- [x] `ErpModel.Build()` extracted from Program.cs (samples/erp/ErpModel.cs): the model is a
+      value consumed by BOTH hosts — Program.cs serves it, Erp.Tests verifies it (Step 11).
+      Proven mechanical: manifest byte-identical.
 
 - [x] `apps/web` → `samples/web`: the SPA is the sample HOST's frontend, not a product tier —
       the `apps/` split was day-one scaffolding convention, and the map above already said
