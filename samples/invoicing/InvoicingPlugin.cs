@@ -55,13 +55,10 @@ public sealed class InvoicingPlugin : ITamPlugin
         plugin.Nav(nav => nav.Page("invoicing.invoices",
             grid: "invoicing.web.invoices", suggest: "work", order: 40));
 
+        // Columns default to the result record (docs/32); only the ACTIONS are a decision.
         plugin.Model.Grid<InvoiceList.Result>(
             "invoicing.web.invoices", "invoicing.invoices.list", grid =>
         {
-            grid.Column(x => x.OrderNumber);
-            grid.Column(x => x.Status);
-            grid.Column(x => x.Amount);
-            grid.Column(x => x.Created);
             grid.RowAction("invoicing.finalize");
             grid.RowAction("invoicing.mark-paid");
         });

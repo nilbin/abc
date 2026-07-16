@@ -24,17 +24,14 @@ public sealed class InspectionPlugin : ITamPlugin
         // Embedded locales/*.json by convention; application locale files override.
         plugin.LocaleDefaults();
 
+        // No configure: the record IS the form (docs/32). Title + OrderId, declaration order.
         plugin.Model.Form<CreateChecklist.Input>(
-            "inspect.web.create", "inspect.checklists.create", form =>
-        {
-            form.Field(x => x.Title);
-        });
+            "inspect.web.create", "inspect.checklists.create");
 
+        // Columns default to the result record (docs/32); only the ACTIONS are a decision.
         plugin.Model.Grid<ChecklistList.Result>(
             "inspect.web.checklists", "inspect.checklists.list", grid =>
         {
-            grid.Column(x => x.Title);
-            grid.Column(x => x.Passed);
             grid.RowAction("inspect.checklists.pass");
             grid.ToolbarAction("inspect.checklists.create");
         });

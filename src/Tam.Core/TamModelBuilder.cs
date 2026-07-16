@@ -167,125 +167,23 @@ public sealed partial class TamModelBuilder
         return this;
     }
 
-    internal void PackagedField(
-        string entityKey, string key, string type, bool required, int? maxLength,
-        IReadOnlyList<string>? options, bool readOnly)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: packaged fields can only be declared by a plugin.");
-        packagedFields.Add((entityKey, key, type, required, maxLength, options, readOnly, currentPlugin));
-    }
-
-    internal void Gate(string operationId, Type handlerType, bool pure = false)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: gates can only be declared by a plugin.");
-        gates.Add(new GateDefinition(operationId, currentPlugin, handlerType, pure));
-    }
-
-    /// <summary>Declares a framework-composed page (docs/32): a grid plus an optional record
-    /// surface (detail + form + slots), rendered by the client library — the standard
-    /// list-and-detail shape without hand-written React. Host-only, like nav layout.</summary>
-    public TamModelBuilder Page(string id, Action<PageBuilder> configure)
-    {
-        if (currentPlugin is not null)
-            throw new InvalidOperationException(
-                "PLG005: pages are declared by the HOST — plugins contribute through slots and grid actions.");
-        var builder = new PageBuilder();
-        configure(builder);
-        pages[id] = builder.Build(id);
-        return this;
-    }
-
-    /// <summary>Declares a contribution point on one of the HOST's surfaces (docs/31 D-X4):
-    /// a permanent slot id plus the record-context keys it provides. Layout stays the host's —
-    /// a plugin cannot declare slots (PLG005), only fill them.</summary>
-    public TamModelBuilder Slot(string slotId, Action<SlotContextBuilder>? context = null,
-        bool external = false)
-    {
-        if (currentPlugin is not null)
-            throw new InvalidOperationException(
-                "PLG005: slots are declared by the HOST — plugins contribute panels into them.");
-        var builder = new SlotContextBuilder();
-        context?.Invoke(builder);
-        slots[slotId] = new SlotDefinition(slotId, builder.Keys, external);
-        return this;
-    }
-
-    /// <summary>Declares a domain event contract (docs/31 D-X5): the type and payload fields
-    /// EventPublished carries. Host events are free-named; plugin events sit under the plugin
-    /// prefix (PLG001). OnEffect / event triggers must target a declared event (PLG009).</summary>
-    public TamModelBuilder PublishesEvent(string eventType, params string[] fields)
-    {
-        events[eventType] = new EventDeclaration(
-            eventType, fields.Select(Naming.Camel).ToArray(), currentPlugin);
-        return this;
-    }
-
-    internal void Panel(string slotId, string gridId,
-        IReadOnlyList<(string QueryField, string ContextKey)> bind)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: panels can only be contributed by a plugin.");
-        panels.Add(new PanelContribution(slotId, gridId, currentPlugin, bind));
-    }
-
-    internal void RequireEvent(string eventType, IReadOnlyList<string> fields)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: event requirements can only be declared by a plugin.");
-        eventRequirements.Add(new EventRequirement(eventType, currentPlugin, fields));
-    }
-
-    internal void GridAction(string gridId, string operationId,
-        IReadOnlyList<(string Input, string Column)> bind)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: grid actions can only be contributed by a plugin.");
-        gridActions.Add(new GridActionContribution(gridId, operationId, currentPlugin, bind));
-    }
-
-    internal void RequireView(string viewId, IReadOnlyList<string> fields)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: view requirements can only be declared by a plugin.");
-        viewRequirements.Add(new ViewRequirement(viewId, currentPlugin, fields));
-    }
-
-    internal void OnEffect(string eventType, Type handlerType)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: effect subscribers can only be declared by a plugin.");
-        subscribers.Add(new SubscriberDefinition(eventType, currentPlugin, handlerType));
-    }
-
-    internal void Integration(
-        string id, string operationId, IntegrationKeySelector key, IntegrationRowMapper map)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: integrations can only be declared by a plugin.");
-        integrations.Add((id, operationId, key, map, currentPlugin));
-    }
-
-    internal void OutboundIntegration(string id, IntegrationTrigger trigger, OutboundIntegrationHandler handler)
-    {
-        if (currentPlugin is null)
-            throw new InvalidOperationException("PLG005: integrations can only be declared by a plugin.");
-        outboundIntegrations.Add((id, trigger, handler, currentPlugin));
-    }
-
-    public TamModelBuilder Form<TInput>(string id, string operationId, Action<FormBuilder<TInput>> configure)
+    public TamModelBuilder Form<TInput>(string id, string operationId,
+        Action<FormBuilder<TInput>>? configure = null)
     {
         var builder = new FormBuilder<TInput>();
-        configure(builder);
+        configure?.Invoke(builder);
         forms[id] = (typeof(TInput), builder, operationId, currentPlugin);
         return this;
     }
 
-    public TamModelBuilder Grid<TResult>(string id, string viewId, Action<GridBuilder<TResult>> configure)
+    /// <summary>Binds a grid. WITHOUT <paramref name="configure"/>, every view result field
+    /// becomes a column in record declaration order — minus the conventions (id, version) that
+    /// are row plumbing, not display; configure only to subset, reorder, or add actions.</summary>
+    public TamModelBuilder Grid<TResult>(string id, string viewId,
+        Action<GridBuilder<TResult>>? configure = null)
     {
         var builder = new GridBuilder<TResult>();
-        configure(builder);
+        configure?.Invoke(builder);
         grids[id] = (builder, viewId, currentPlugin);
         return this;
     }
@@ -312,7 +210,19 @@ public sealed partial class TamModelBuilder
             if (op.InputType != input)
                 throw new InvalidOperationException($"FORM004: form '{id}' input type mismatch with operation '{operationId}'.");
             var build = builder.GetType().GetMethod("Build", BindingFlags.NonPublic | BindingFlags.Instance)!;
-            formDefs[id] = (FormDefinition)build.Invoke(builder, [id, operationId, null])! with { Plugin = plugin };
+            var formDef = (FormDefinition)build.Invoke(builder, [id, operationId, null])! with { Plugin = plugin };
+            if (formDef.Fields.Count == 0)
+            {
+                // Convention default: the record IS the form (docs/32).
+                formDef = formDef with
+                {
+                    Fields = op.InputFields
+                        .Select(fld => new FormFieldConfig(fld.WireName, null, null, null,
+                            DependentValuePolicy.RecomputeIfUntouched))
+                        .ToList(),
+                };
+            }
+            formDefs[id] = formDef;
         }
 
         var gridDefs = new Dictionary<string, GridDefinition>();
@@ -322,6 +232,20 @@ public sealed partial class TamModelBuilder
                 throw new InvalidOperationException($"GRID001: grid '{id}' references unknown view '{viewId}'.");
             var build = builder.GetType().GetMethod("Build", BindingFlags.NonPublic | BindingFlags.Instance)!;
             var def = (GridDefinition)build.Invoke(builder, [id, viewId])! with { Plugin = plugin };
+            if (def.Columns.Count == 0)
+            {
+                // Convention default: every result field is a column, in declaration order —
+                // minus row plumbing (id, version) and object-shaped fields (extensions render
+                // via IncludeExtensions, never as one column). Configure only to deviate.
+                def = def with
+                {
+                    Columns = view.ResultFields
+                        .Where(fld => fld.WireName is not ("id" or "version")
+                            && fld.Semantic.WireKind != "object")
+                        .Select(fld => fld.WireName)
+                        .ToList(),
+                };
+            }
 
             foreach (var action in def.RowActions.Concat(def.ToolbarActions))
                 if (!operations.ContainsKey(action))

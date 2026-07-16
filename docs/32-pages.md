@@ -53,6 +53,13 @@ A slot declared before the form renders above it; a second grid renders after th
   visibility comes off the page's grid's view, exactly like `{ grid }` targets. Registered
   React pages still require the explicit atom (there is no manifest surface to derive from).
 
+**Convention over enumeration (D-P6).** `Form<T>(id, op)` without configure binds EVERY
+operation input field in record declaration order — the record IS the form; `Grid<T>(id, view)`
+without configure makes every result field a column (minus `id`/`version` row plumbing and
+object-shaped fields). Configure exists to DEVIATE — subset, reorder, renderers, visibility,
+actions — never to enumerate what the record already states. An empty column/field list in a
+provided configure gets the same defaults, so a grid that only declares actions stays one line.
+
 Form prefill is the row-action convention made declarative: each form field takes the
 same-named detail result field; the record's `key` field takes the clicked row's id. The
 manifest gains a `pages` section (host-only, no activation filtering — the slots inside filter

@@ -16,16 +16,9 @@ public sealed class TamAuditPackage : ITamPlugin
         plugin.Nav(nav => nav.Page("audit", grid: "web.audit.list", suggest: "administration", order: 70));
         plugin.Model
             .AddViewType(typeof(AuditLog))
-            .Grid<AuditLog.Result>("web.audit.list", "audit.entries", grid =>
-            {
-                grid.Column(x => x.Timestamp);
-                grid.Column(x => x.OperationId);
-                grid.Column(x => x.ActorName);
-                grid.Column(x => x.Entity);
-                grid.Column(x => x.Field);
-                grid.Column(x => x.OldValue);
-                grid.Column(x => x.NewValue);
-            });
+            // No column enumeration: every result field, declaration order (docs/32) —
+            // EntityId is deliberately part of the default now (it was an omission).
+            .Grid<AuditLog.Result>("web.audit.list", "audit.entries");
     }
 }
 

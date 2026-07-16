@@ -4258,6 +4258,16 @@
           "changeSet": false,
           "extension": false,
           "readOnly": false
+        },
+        {
+          "name": "orderId",
+          "labelKey": "inspect.labels.order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
         }
       ],
       "includeExtensions": false,
@@ -4634,6 +4644,7 @@
         "operationId",
         "actorName",
         "entity",
+        "entityId",
         "field",
         "oldValue",
         "newValue"

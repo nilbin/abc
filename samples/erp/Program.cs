@@ -72,13 +72,8 @@ var model = new TamModelBuilder()
         form.Extensions();
     })
 
-    .Form<CreateCustomer.Input>("web.customers.create", "customers.create", form =>
-    {
-        form.Field(x => x.Name);
-        form.Field(x => x.VisitAddress);
-        form.Field(x => x.Email);
-        form.Field(x => x.Phone);
-    })
+    // No configure: the record IS the form — every input field, declaration order (docs/32).
+    .Form<CreateCustomer.Input>("web.customers.create", "customers.create")
 
     .Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
     {

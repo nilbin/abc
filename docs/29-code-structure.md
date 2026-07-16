@@ -131,4 +131,8 @@ Done:
 - [x] `orders.overview` retired: the standard `orders.list` carries `SubtreeRead` (docs/26
       D-H1 evolved) — one view per aggregate again; roll-up is a capability, not a twin view.
 
+- [x] `Tam.Core/Plugins.cs` (457) → `Plugins.cs` (identity tier) + `PluginHandlers.cs` (seam
+      contracts + definitions) + `PluginBuilder.cs` (authoring surface);
+      `TamModelBuilder.Seams.cs` partial extracted (the PLG005 plugin-only internals).
+
 Open: nothing — new debts get a checkbox here when they appear.
