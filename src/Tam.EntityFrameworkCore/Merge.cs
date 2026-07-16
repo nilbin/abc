@@ -11,7 +11,7 @@ public sealed record MergeResult(
     public Result<T> ToConflictResult<T>() => new()
     {
         Findings = Conflicts
-            .Select(c => ConcurrencyFindings.FieldConflict.At(c.Field))
+            .Select(c => ConcurrencyFindings.FieldConflict.With(("reason", c.Reason)).At(c.Field))
             .ToList(),
         Conflicts = Conflicts,
     };
@@ -71,7 +71,10 @@ public static class TamMerge
                 Naming.Camel(property.Name),
                 ValueWrapper.Unwrap(original),
                 ValueWrapper.Unwrap(current),
-                ValueWrapper.Unwrap(submitted)));
+                ValueWrapper.Unwrap(submitted),
+                // A null base against a non-null current means the caller never SENT the
+                // original — the raw-wire mistake — not that someone edited concurrently.
+                Reason: original is null && current is not null ? "original-missing" : "stale"));
         }
 
         return new MergeResult(applied, conflicts);

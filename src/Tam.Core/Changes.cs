@@ -10,12 +10,15 @@ public sealed record Change<T>(T? Original, T? Value)
     public static Change<T> To(T? value) => new(default, value);
 }
 
-/// <summary>A structured field conflict from the three-way merge.</summary>
+/// <summary>A structured field conflict from the three-way merge. <see cref="Reason"/>
+/// distinguishes a GENUINE concurrent edit ("stale") from a raw-wire caller that omitted the
+/// merge base entirely ("original-missing") — the two need different fixes (docs/34 M5).</summary>
 public sealed record FieldConflict(
     string Field,
     object? OriginalValue,
     object? CurrentValue,
-    object? SubmittedValue);
+    object? SubmittedValue,
+    string Reason = "stale");
 
 public static class ConcurrencyFindings
 {

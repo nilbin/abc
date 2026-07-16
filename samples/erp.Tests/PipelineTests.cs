@@ -148,5 +148,21 @@ public sealed class PipelineTests : IAsyncLifetime
         var stale = await actor.ExecuteAsync("projects.edit-details", new
             { projectId = id, name = new { original = "Original", value = "Mine" } });
         stale.ShouldConflictOn("name");
+        Assert.Equal("stale", stale.Conflicts!.Single(c => c.Field == "name").Reason);
+    }
+
+    [Fact]
+    public async Task Omitting_the_merge_base_is_named_not_mistaken_for_staleness()
+    {
+        var actor = host.Actor("demo", "projects.create", "projects.edit");
+        var created = await actor.ExecuteAsync("projects.create", new
+            { customerId, number = "P-TEST-003", name = "Original" });
+        var id = created.Output<CreateProject.Output>().ProjectId.Value;
+
+        // The raw-wire mistake: {value} with no original — the finding says WHICH mistake.
+        var missing = await actor.ExecuteAsync("projects.edit-details", new
+            { projectId = id, name = new { value = "Mine" } });
+        missing.ShouldConflictOn("name");
+        Assert.Equal("original-missing", missing.Conflicts!.Single(c => c.Field == "name").Reason);
     }
 }
