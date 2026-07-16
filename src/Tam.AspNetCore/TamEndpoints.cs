@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Tam.EntityFrameworkCore;
@@ -52,7 +53,11 @@ public static partial class TamAspNetCore
             var context = BuildContext(http, model);
             var overlay = await registry.All(context.TenantId, ct);
             var activePlugins = await ActivationCache.ForAsync(http.RequestServices, tam.Db, context.TenantId.Value, ct);
-            var revision = OverlayRevision(overlay, activePlugins);
+            // The tenant's nav overrides (docs/30 v2) join the manifest inputs — and the
+            // revision below, or clients would keep the pre-override tree cached.
+            var navOverrides = await tam.Db.Set<NavOverrideEntity>()
+                .OrderBy(x => x.NodeId).ToListAsync(ct);
+            var revision = OverlayRevision(overlay, activePlugins, SystemOps.NavOverlay.Fingerprint(navOverrides));
 
             // The manifest is a pure function of (model, overlay, activePlugins, actor permissions).
             // The overlay+activation queries are cheap; the reflection rebuild + serialization are
@@ -73,6 +78,7 @@ public static partial class TamAspNetCore
                 Catalogs = MergeExtensionLabels(manifest.Catalogs, overlay, model),
                 ActorPermissions = context.Actor.Permissions.ToList(),
             };
+            manifest = SystemOps.NavOverlay.Apply(manifest, navOverrides);
             http.Response.Headers["ETag"] = etag;
             return Results.Json(manifest, TamJson.Options);
         });
@@ -188,12 +194,14 @@ public static partial class TamAspNetCore
     /// activation flip moves it, so clients know their manifest is stale.</summary>
     private static long OverlayRevision(
         IReadOnlyDictionary<string, IReadOnlyList<ExtensionFieldSpec>> overlay,
-        IReadOnlySet<string>? activePlugins = null)
+        IReadOnlySet<string>? activePlugins = null,
+        string navFingerprint = "")
     {
         var fingerprint = string.Join("|", overlay
             .OrderBy(kv => kv.Key)
             .SelectMany(kv => kv.Value.Select(s => $"{kv.Key}/{s.Key}/{s.Type}/{s.State}/{s.Required}/{s.MaxLength}")))
-            + "||" + string.Join(",", (activePlugins ?? new HashSet<string>()).Order());
+            + "||" + string.Join(",", (activePlugins ?? new HashSet<string>()).Order())
+            + "||" + navFingerprint;
         return BitConverter.ToInt64(
             System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fingerprint)), 0) & long.MaxValue;
     }

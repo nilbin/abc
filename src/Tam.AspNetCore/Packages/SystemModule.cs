@@ -23,7 +23,8 @@ public static class SystemModule
         .AddPackage<TamUsersPackage>()
         .AddPackage<TamSubscriptionsPackage>()
         .AddPackage<TamVaultPackage>()
-        .AddPackage<TamIntegrationsPackage>();
+        .AddPackage<TamIntegrationsPackage>()
+        .AddPackage<TamNavPackage>();
 }
 
 // ---------------------------------------------------------------- tenant custom fields

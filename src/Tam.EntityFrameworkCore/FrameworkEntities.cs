@@ -312,6 +312,24 @@ public sealed class PackageInstallationEntity : ITenantScoped
     public string InstalledAtIso { get; set; } = "";
 }
 
+/// <summary>A tenant's nav override (docs/30 v2): presentation-only mutations of one declared
+/// nav node — hide, per-culture relabel, reorder, regroup under another section. Retire
+/// restores the declared default. An override whose node vanished (plugin deactivated) is
+/// dormant, not broken. Nav is discoverability, never authorization (D-N6).</summary>
+public sealed class NavOverrideEntity : ITenantScoped
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string NodeId { get; set; } = "";
+    public bool Hidden { get; set; }
+    public string LabelsJson { get; set; } = "{}";
+    public int? Order { get; set; }
+    public string? Parent { get; set; }
+
+    public IReadOnlyDictionary<string, string> Labels() =>
+        System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(LabelsJson) ?? [];
+}
+
 /// <summary>Registry storage for tenant-defined fields (docs/15). Managed only through operations.</summary>
 public sealed class ExtensionFieldEntity : ITenantScoped
 {

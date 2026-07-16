@@ -177,5 +177,13 @@
   "nav.audit": "History",
   "nav.tenants": "Companies",
   "nav.more": "More",
-  "extensions.read-only-field": "This field is owned by a plugin and cannot be edited here."
+  "extensions.read-only-field": "This field is owned by a plugin and cannot be edited here.",
+  "operations.nav.override.title": "Customize navigation",
+  "operations.nav.retire.title": "Restore default",
+  "nav.nav": "Navigation",
+  "labels.hidden": "Hidden",
+  "labels.order": "Order",
+  "nav.unknown-node": "No menu item has this id.",
+  "nav.invalid-parent": "Only pages can move, and only into a section.",
+  "labels.node-id": "Menu item"
 }

@@ -97,7 +97,7 @@ public class PackageTierTests
     }
 
     [Fact]
-    public void The_system_module_is_eleven_packages()
+    public void The_system_module_is_twelve_packages()
     {
         // The aggregate registers the framework's admin surface as packages — every framework
         // capability exercises the plugin seams. Forms/grids ship WITH the packages now.
@@ -106,7 +106,7 @@ public class PackageTierTests
             .AddTamSystem()
             .Build();
 
-        Assert.Equal(11, model.Packages.Count);
+        Assert.Equal(12, model.Packages.Count);
         Assert.Equal("tam.users", model.Operations["users.invite"].Plugin);
         Assert.Equal("tam.audit", model.Views["audit.entries"].Plugin);
         Assert.Equal("tam.users", model.Grids["web.users"].Plugin);

@@ -142,6 +142,12 @@ public static class TamModelConventions
             b.ToTable("subscriptions");
             b.HasKey(x => x.TenantId);
         });
+        modelBuilder.Entity<NavOverrideEntity>(b =>
+        {
+            b.ToTable("nav_overrides");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.TenantId, x.NodeId }).IsUnique();
+        });
         modelBuilder.Entity<AutomationRuleEntity>(b =>
         {
             b.ToTable("automation_rules");

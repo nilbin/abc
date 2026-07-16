@@ -177,5 +177,13 @@
   "nav.audit": "Historik",
   "nav.tenants": "Bolag",
   "nav.more": "Mer",
-  "extensions.read-only-field": "Fältet ägs av ett tillägg och kan inte ändras här."
+  "extensions.read-only-field": "Fältet ägs av ett tillägg och kan inte ändras här.",
+  "operations.nav.override.title": "Anpassa navigering",
+  "operations.nav.retire.title": "Återställ standard",
+  "nav.nav": "Navigering",
+  "labels.hidden": "Dold",
+  "labels.order": "Ordning",
+  "nav.unknown-node": "Ingen menypunkt har detta id.",
+  "nav.invalid-parent": "Endast sidor kan flyttas, och endast in i en sektion.",
+  "labels.node-id": "Menypunkt"
 }

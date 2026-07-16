@@ -182,6 +182,14 @@
       "nav.tenants": "Companies",
       "nav.more": "More",
       "extensions.read-only-field": "This field is owned by a plugin and cannot be edited here.",
+      "operations.nav.override.title": "Customize navigation",
+      "operations.nav.retire.title": "Restore default",
+      "nav.nav": "Navigation",
+      "labels.hidden": "Hidden",
+      "labels.order": "Order",
+      "nav.unknown-node": "No menu item has this id.",
+      "nav.invalid-parent": "Only pages can move, and only into a section.",
+      "labels.node-id": "Menu item",
       "plugins.inspect.title": "Inspections",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
@@ -462,6 +470,14 @@
       "nav.tenants": "Bolag",
       "nav.more": "Mer",
       "extensions.read-only-field": "F\u00E4ltet \u00E4gs av ett till\u00E4gg och kan inte \u00E4ndras h\u00E4r.",
+      "operations.nav.override.title": "Anpassa navigering",
+      "operations.nav.retire.title": "\u00C5terst\u00E4ll standard",
+      "nav.nav": "Navigering",
+      "labels.hidden": "Dold",
+      "labels.order": "Ordning",
+      "nav.unknown-node": "Ingen menypunkt har detta id.",
+      "nav.invalid-parent": "Endast sidor kan flyttas, och endast in i en sektion.",
+      "labels.node-id": "Menypunkt",
       "plugins.inspect.title": "Besiktning",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
@@ -1915,6 +1931,106 @@
         }
       ],
       "plugin": "tam.integrations",
+      "gatedBy": []
+    },
+    "nav.override": {
+      "permission": "nav.manage",
+      "titleKey": "operations.nav.override.title",
+      "fields": [
+        {
+          "name": "nodeId",
+          "labelKey": "labels.node-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hidden",
+          "labelKey": "labels.hidden",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "labels",
+          "labelKey": "labels.labels",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "order",
+          "labelKey": "labels.order",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "parent",
+          "labelKey": "labels.parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "overrideId",
+          "labelKey": "labels.override-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "tam.nav",
+      "gatedBy": []
+    },
+    "nav.retire": {
+      "permission": "nav.manage",
+      "titleKey": "operations.nav.retire.title",
+      "fields": [
+        {
+          "name": "nodeId",
+          "labelKey": "labels.node-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "nodeId",
+          "labelKey": "labels.node-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "tam.nav",
       "gatedBy": []
     },
     "inspect.checklists.create": {
@@ -3659,6 +3775,79 @@
       "defaultSortDescending": false,
       "plugin": "tam.integrations"
     },
+    "nav.overrides": {
+      "permission": "nav.manage",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "nodeId",
+          "labelKey": "labels.node-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hidden",
+          "labelKey": "labels.hidden",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "order",
+          "labelKey": "labels.order",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "parent",
+          "labelKey": "labels.parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "labels",
+          "labelKey": "labels.labels",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "nodeId"
+      ],
+      "filterable": [],
+      "defaultSort": "nodeId",
+      "defaultSortDescending": false,
+      "plugin": "tam.nav"
+    },
     "inspect.checklists.list": {
       "permission": "inspect.checklists.read",
       "queryFields": [
@@ -4246,6 +4435,65 @@
       "serverDependencies": [],
       "plugin": "tam.users"
     },
+    "web.nav.override": {
+      "operation": "nav.override",
+      "fields": [
+        {
+          "name": "nodeId",
+          "labelKey": "labels.node-id",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "hidden",
+          "labelKey": "labels.hidden",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "labels",
+          "labelKey": "labels.labels",
+          "type": "object",
+          "wireKind": "object",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "culture-text",
+          "readOnly": false
+        },
+        {
+          "name": "order",
+          "labelKey": "labels.order",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "parent",
+          "labelKey": "labels.parent",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "tam.nav"
+    },
     "inspect.web.create": {
       "operation": "inspect.checklists.create",
       "fields": [
@@ -4739,6 +4987,25 @@
       "plugin": "tam.users",
       "contributedActions": []
     },
+    "web.nav": {
+      "view": "nav.overrides",
+      "columns": [
+        "nodeId",
+        "hidden",
+        "order",
+        "parent",
+        "labels"
+      ],
+      "rowActions": [
+        "nav.retire"
+      ],
+      "toolbarActions": [
+        "nav.override"
+      ],
+      "includeExtensions": false,
+      "plugin": "tam.nav",
+      "contributedActions": []
+    },
     "inspect.web.checklists": {
       "view": "inspect.checklists.list",
       "columns": [
@@ -4848,6 +5115,7 @@
     "integrations.manage",
     "invoicing.manage",
     "invoicing.read",
+    "nav.manage",
     "orders.complete",
     "orders.complete-all",
     "orders.create",
@@ -4881,6 +5149,7 @@
     "tam.audit",
     "tam.extensions",
     "tam.integrations",
+    "tam.nav",
     "tam.plugins",
     "tam.roles",
     "tam.rules",
@@ -5015,6 +5284,17 @@
                   "grid": "web.tenants"
                 },
                 "plugin": "tam.tenancy",
+                "children": []
+              },
+              {
+                "id": "nav",
+                "kind": "page",
+                "labelKey": "nav.nav",
+                "order": 90,
+                "target": {
+                  "grid": "web.nav"
+                },
+                "plugin": "tam.nav",
                 "children": []
               }
             ]

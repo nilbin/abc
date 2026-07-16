@@ -269,6 +269,26 @@ export interface IntegrationsRequeueOutput {
   kind: string;
 }
 
+export interface NavOverrideInput {
+  nodeId: string;
+  hidden?: boolean;
+  labels?: Record<string, unknown>;
+  order?: number;
+  parent?: string;
+}
+
+export interface NavOverrideOutput {
+  overrideId: string;
+}
+
+export interface NavRetireInput {
+  nodeId: string;
+}
+
+export interface NavRetireOutput {
+  nodeId: string;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
@@ -569,6 +589,19 @@ export interface IntegrationsDeadLetterQuery {
   kind?: string;
 }
 
+export interface NavOverridesRow {
+  id: string;
+  nodeId: string;
+  hidden: boolean;
+  order?: number;
+  parent?: string;
+  labels: string;
+}
+
+export interface NavOverridesQuery {
+
+}
+
 export interface InspectChecklistsListRow {
   id: string;
   title: string;
@@ -742,6 +775,16 @@ export class TypedTamClient {
     return this.client.operation("integrations.requeue", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<IntegrationsRequeueOutput>>;
   }
 
+  /** nav.override (requires nav.manage) */
+  navOverride(input: NavOverrideInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<NavOverrideOutput>> {
+    return this.client.operation("nav.override", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<NavOverrideOutput>>;
+  }
+
+  /** nav.retire (requires nav.manage) */
+  navRetire(input: NavRetireInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<NavRetireOutput>> {
+    return this.client.operation("nav.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<NavRetireOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
@@ -875,6 +918,11 @@ export class TypedTamClient {
   /** view integrations.dead-letter (requires integrations.manage) */
   integrationsDeadLetter(query?: IntegrationsDeadLetterQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsDeadLetterRow[] }> {
     return this.client.view("integrations.dead-letter", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: IntegrationsDeadLetterRow[] }>;
+  }
+
+  /** view nav.overrides (requires nav.manage) */
+  navOverrides(query?: NavOverridesQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: NavOverridesRow[] }> {
+    return this.client.view("nav.overrides", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: NavOverridesRow[] }>;
   }
 
   /** view inspect.checklists.list (requires inspect.checklists.read) */

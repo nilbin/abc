@@ -986,8 +986,12 @@ entry), and there is no `visibleWhen` to audit. Nav is discoverability, never au
 hiding removes the menu entry, not the surface. The manifest gains a `nav` section per surface
 class (`"nav": { "web": [ { "id": "work", "kind": "mode", "labelKey": "nav.work",
 "children": [ … ] } ] }`), labels are locale keys like everything else, node ids are D4-permanent,
-and a tenant overlay (`nav.override` — hide, relabel, reorder, regroup; registry data, audited)
-is the next slice of the same pattern.
+and a tenant overlay closes the loop: the `tam.nav` package ships `nav.override` (hide,
+per-culture relabel, reorder, move a page into another section — a CLOSED mutation set) and
+`nav.retire` (restore the default) as ordinary audited operations over registry rows, overlaid
+onto the tree at the manifest route. It is the custom-fields pattern applied to navigation —
+tenant customization as data, never code — and an override whose node vanished (say the plugin
+was deactivated) is dormant, not broken: reactivate and the tenant's placement returns intact.
 
 **The orders page is a declared composition.** The React component this replaces is deleted:
 

@@ -15,8 +15,8 @@ src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effec
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
                              OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, plugin
-                             system, and the framework admin surface as ELEVEN always-active
-                             [TamPackage] modules (users/roles/audit/tenancy/rules/... with
+                             system, and the framework admin surface as TWELVE always-active
+                             [TamPackage] modules (users/roles/audit/tenancy/rules/nav/... with
                              their forms, grids and embedded sv/en locales)
 src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane as a real package
                              (was sample code — multi-node live refresh is one reference now)
@@ -34,11 +34,11 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 apps/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              133 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              140 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
-                             + NAV diagnostics, subscription anchors, package tier
+                             + NAV diagnostics + tenant overlay, subscription anchors, package tier
 ```
 
 ### Run it
@@ -419,9 +419,26 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   patches for automation rules (Step 9), vault/outbound (Step 10), framework+tenant packages
   (Step 13), subscription anchors (Step 14), no-switch create (Step 15), event contracts +
   readOnly (Step 17), and five stale sentences fixed (retired overview, free-plan wording,
-  modal references). KNOWN remaining doc debt: steps 4-5 still show the design-era
-  attribute-style binding API instead of the built TamModelBuilder fluent API — queued as its
-  own consistency pass.
+  modal references). The follow-up consistency pass landed too: steps 3-5 rewritten from the
+  design-era attribute-style bindings onto the built TamModelBuilder fluent surface (Form/Grid
+  in the composition root, Px lambdas on the binding, ViewCapabilitiesBuilder with nameof).
+- **Nav v2 — the tenant override registry** (docs/30 D-N5, the last unbuilt piece of the nav
+  design): the `tam.nav` framework package (the twelfth) ships `nav.override` — upsert one
+  node's override: hidden, per-culture labels, order, parent, the CLOSED mutation set,
+  validated against the COMPILED tree so overriding an inactive plugin's node stays legal —
+  and `nav.retire` (delete the row = restore the declared default; unlike extension fields
+  there is no data behind it to preserve), plus the `nav.overrides` view + `web.nav` admin
+  grid riding the D-P6 defaults. `NavOverlay.Apply` transforms the manifest at the route:
+  hide prunes the subtree, order replaces, parent moves a PAGE under a section resolved
+  against the post-prune tree (a move into a hidden or absent section is DORMANT, not broken
+  — reactivate the plugin and the tenant's placement returns intact), labels merge into the
+  per-culture catalogs; the override fingerprint joins the overlay revision so the ETag moves
+  with every change. Nav stays discoverability, never authorization (D-N6): hiding removes
+  the menu entry, not the surface. Deferred lean: `nav.define-section` waits on real demand.
+  Verified: 7 overlay unit tests (hide/order/move/labels, both dormancy directions,
+  fingerprint stability), 14-check wire suite (validation findings, ETag movement, per-tenant
+  isolation via act-as, admin grid rows, retire restores the baseline tree byte-for-byte),
+  full matrix green on a fresh DB.
 - **Source layout is now a stated convention** (CLAUDE.md + docs/29-code-structure.md): one
   package = one file under `src/Tam.AspNetCore/Packages/` with the package class, findings,
   gates, operations and views co-resident; pipeline infrastructure extracted to named root

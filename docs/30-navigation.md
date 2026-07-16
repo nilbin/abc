@@ -1,11 +1,18 @@
 # 30 — Navigation: a declared tree, slotted levels, modes, and a tenant overlay
 
-Status: **v1 BUILT** (declared tree, merge + NAV000-005, manifest `nav`, tam-react slot
-components, package declarations, App.tsx on slots). v2 (tenant overlay) is next. Decisions
-D-N1…D-N8. Owner calls made: modes are the top level of the tree; hiding is presentation-only;
-per-surface trees with `web` fallback. v1 additions settled in code: `Place()` adopts content
-but the HOST's order replaces the contribution's; a plugin that declared any nav contribution
-never also gets the mechanical fallback page.
+Status: **v1 + v2 BUILT** (v1: declared tree, merge + NAV000-005, manifest `nav`, tam-react
+slot components, package declarations, App.tsx on slots. v2: the `tam.nav` override registry —
+`nav.override`/`nav.retire` + `web.nav` admin grid, `NavOverlay` applied at the manifest route,
+override fingerprint in the revision/ETag). Decisions D-N1…D-N8. Owner calls made: modes are
+the top level of the tree; hiding is presentation-only; per-surface trees with `web` fallback.
+v1 additions settled in code: `Place()` adopts content but the HOST's order replaces the
+contribution's; a plugin that declared any nav contribution never also gets the mechanical
+fallback page. v2 shipped LEAN: `nav.define-section` (tenant-authored sections) and
+nav-overrides-in-bundles (P3) deferred until real demand, and no missing-culture-label
+diagnostic — override labels overlay COMPILED labels, so a partial relabel falls back per
+culture instead of breaking. Moves are pages-into-sections
+only (modes and sections are the host's frame); an override whose node or move target is absent
+is dormant, exactly as designed below.
 
 ## The problem this solves
 
