@@ -60,3 +60,4 @@ https://raw.githubusercontent.com/nilbin/abc/main/docs/ (append the file name be
 - [Implementation phases](https://nilbin.github.io/abc/17-implementation-phases/): the original build plan (17-implementation-phases.md)
 - [Success criteria](https://nilbin.github.io/abc/18-success-criteria/): what "working" was defined to mean (18-success-criteria.md)
 - [Review notes](https://nilbin.github.io/abc/review-notes/): the pre-build design review (review-notes.md)
+- [Field-service domain](https://nilbin.github.io/abc/34-field-service-domain/): the consumer stress-test arc — projects, work orders, time, materials; milestones + append-only friction log (34-field-service-domain.md)
