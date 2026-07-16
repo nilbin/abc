@@ -30,14 +30,27 @@ public sealed partial class TamModelBuilder
     private string defaultCulture = "en";
     private string? currentPlugin;
 
+    /// <summary>PLG005's other half: the builder methods that shape the HOST (registering more
+    /// plugins, cultures, layout, building) are unreachable from a plugin's Configure — without
+    /// this, a plugin calling AddPlugin/AddPackage would reset the ambient plugin tag and every
+    /// later registration would escape PLG001's namespace enforcement entirely.</summary>
+    private void HostOnly(string method)
+    {
+        if (currentPlugin is not null)
+            throw new InvalidOperationException(
+                $"PLG005: {method} is the host's — a plugin/package ('{currentPlugin}') cannot call it from Configure.");
+    }
+
     public TamModelBuilder DefaultCulture(string culture)
     {
+        HostOnly("DefaultCulture");
         defaultCulture = culture;
         return this;
     }
 
     public TamModelBuilder Locales(string directory)
     {
+        HostOnly("Locales");
         locales.Directories.Add(directory);
         return this;
     }
@@ -75,6 +88,7 @@ public sealed partial class TamModelBuilder
     /// </summary>
     public TamModelBuilder AddPlugin<TPlugin>() where TPlugin : ITamPlugin, new()
     {
+        HostOnly("AddPlugin");
         var attribute = typeof(TPlugin).GetCustomAttribute<TamPluginAttribute>()
             ?? throw new InvalidOperationException(
                 $"PLG000: plugin type '{typeof(TPlugin).Name}' lacks [TamPlugin(\"id\")].");
@@ -105,6 +119,7 @@ public sealed partial class TamModelBuilder
     /// </summary>
     public TamModelBuilder AddPackage<TPackage>() where TPackage : ITamPlugin, new()
     {
+        HostOnly("AddPackage");
         var attribute = typeof(TPackage).GetCustomAttribute<TamPackageAttribute>()
             ?? throw new InvalidOperationException(
                 $"PKG000: package type '{typeof(TPackage).Name}' lacks [TamPackage(\"id\", prefixes)].");
@@ -190,6 +205,7 @@ public sealed partial class TamModelBuilder
 
     public TamModel Build()
     {
+        HostOnly("Build");
         var catalogs = new LocaleCatalogs(defaultCulture);
         foreach (var (culture, entries) in locales.Defaults) catalogs.Add(culture, entries);
         foreach (var dir in locales.Directories) catalogs.AddFromDirectory(dir);

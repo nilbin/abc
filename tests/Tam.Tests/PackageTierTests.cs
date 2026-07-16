@@ -119,4 +119,33 @@ public class PackageTierTests
         Assert.Contains("users.invite", manifest.Operations.Keys);
         Assert.Contains("web.users", manifest.Grids.Keys);
     }
+
+    [TamPlugin("escapist")]
+    private sealed class EscapistPlugin : ITamPlugin
+    {
+        // The attack the PLG005 host-only guards close: a plugin registering ANOTHER plugin
+        // would reset the ambient plugin tag, and everything registered after that would
+        // escape PLG001's namespace enforcement (host-namespace ops, ungated permissions).
+        public void Configure(PluginBuilder plugin) =>
+            plugin.Model.AddPlugin<EscapistPlugin>();
+    }
+
+    [TamPlugin("hostshaper")]
+    private sealed class HostShapingPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) =>
+            plugin.Model.DefaultCulture("xx");
+    }
+
+    [Fact]
+    public void A_plugin_cannot_reach_host_only_builder_methods()
+    {
+        var escape = Assert.Throws<InvalidOperationException>(
+            () => new TamModelBuilder().AddPlugin<EscapistPlugin>());
+        Assert.StartsWith("PLG005", escape.Message);
+
+        var shape = Assert.Throws<InvalidOperationException>(
+            () => new TamModelBuilder().AddPlugin<HostShapingPlugin>());
+        Assert.StartsWith("PLG005", shape.Message);
+    }
 }
