@@ -37,10 +37,27 @@ public static partial class TamAspNetCore
         app.MapPost("/api/forms/{formId}/resolve", async (
             string formId, HttpContext http, ResolveExecutor executor, CancellationToken ct) =>
         {
-            var request = await JsonSerializer.DeserializeAsync<ResolveExecutor.ResolveRequest>(
-                http.Request.Body, TamJson.Options, ct);
             var context = BuildContext(http, model);
-            var (response, error) = await executor.ResolveAsync(formId, request!, context, ct);
+            // The body is an ENVELOPE, not the bare input — posting flat input is the most
+            // common raw-wire mistake (docs/34 M3 gap 1), so it answers 400 naming the
+            // expected shape, never a 500 with a serializer stack.
+            ResolveExecutor.ResolveRequest? request;
+            try
+            {
+                request = await JsonSerializer.DeserializeAsync<ResolveExecutor.ResolveRequest>(
+                    http.Request.Body, TamJson.Options, ct);
+            }
+            catch (JsonException)
+            {
+                request = null;
+            }
+            if (request is null || request.Input.ValueKind is not JsonValueKind.Object)
+                return Results.Json(new { findings = new[] { model.Locales.Resolve(
+                        PipelineFindings.InvalidInput.With(
+                            ("expected", """{ "input": { ...form fields... }, "changed": ["field"], "revision": 1 }""")),
+                        context.Culture) } },
+                    TamJson.Options, statusCode: StatusCodes.Status400BadRequest);
+            var (response, error) = await executor.ResolveAsync(formId, request, context, ct);
             return error is not null
                 ? Results.Json(new { findings = new[] { model.Locales.Resolve(error, context.Culture) } },
                     TamJson.Options, statusCode: ErrorStatus(error))
