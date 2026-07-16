@@ -8,6 +8,14 @@ export interface TypedOperationResponse<TOutput> extends OperationResponse {
   output?: TOutput & Record<string, unknown>;
 }
 
+export interface ProjectsCloseInput {
+  projectId: string;
+}
+
+export interface ProjectsCloseOutput {
+  status: "open" | "closed";
+}
+
 export interface OrdersCompleteInput {
   orderId: string;
 }
@@ -43,6 +51,36 @@ export interface OrdersCreateOutput {
   number: string;
 }
 
+export interface ProjectsCreateInput {
+  customerId: string;
+  number: string;
+  name: string;
+  budget?: number;
+}
+
+export interface ProjectsCreateOutput {
+  projectId: string;
+}
+
+export interface StockCreateInput {
+  sku: string;
+  name: string;
+  unit: "piece" | "hour" | "meter" | "kilogram" | "litre";
+  unitPrice: number;
+}
+
+export interface StockCreateOutput {
+  stockItemId: string;
+}
+
+export interface StockDeactivateInput {
+  stockItemId: string;
+}
+
+export interface StockDeactivateOutput {
+  isActive: boolean;
+}
+
 export interface CustomersEditContactInput {
   customerId: string;
   name?: Change<string>;
@@ -66,6 +104,34 @@ export interface OrdersEditDetailsInput {
 
 export interface OrdersEditDetailsOutput {
   version: number;
+}
+
+export interface ProjectsEditDetailsInput {
+  projectId: string;
+  name?: Change<string>;
+  budget?: Change<number>;
+}
+
+export interface ProjectsEditDetailsOutput {
+  projectId: string;
+}
+
+export interface StockEditInput {
+  stockItemId: string;
+  name?: Change<string>;
+  unitPrice?: Change<number>;
+}
+
+export interface StockEditOutput {
+  stockItemId: string;
+}
+
+export interface ProjectsReopenInput {
+  projectId: string;
+}
+
+export interface ProjectsReopenOutput {
+  status: "open" | "closed";
 }
 
 export interface ExtensionsDefineFieldInput {
@@ -462,6 +528,59 @@ export interface OrdersListQuery {
   search?: string;
 }
 
+export interface ProjectsDetailRow {
+  id: string;
+  number: string;
+  name: string;
+  customerName: string;
+  status: "open" | "closed";
+  budget?: number;
+}
+
+export interface ProjectsDetailQuery {
+  projectId?: string;
+}
+
+export interface ProjectsListRow {
+  id: string;
+  number: string;
+  name: string;
+  customerName: string;
+  status: "open" | "closed";
+  budget?: number;
+  tenantId: string;
+}
+
+export interface ProjectsListQuery {
+  search?: string;
+}
+
+export interface StockDetailRow {
+  id: string;
+  sku: string;
+  name: string;
+  unit: "piece" | "hour" | "meter" | "kilogram" | "litre";
+  unitPrice: number;
+  isActive: boolean;
+}
+
+export interface StockDetailQuery {
+  stockItemId?: string;
+}
+
+export interface StockListRow {
+  id: string;
+  sku: string;
+  name: string;
+  unit: "piece" | "hour" | "meter" | "kilogram" | "litre";
+  unitPrice: number;
+  isActive: boolean;
+}
+
+export interface StockListQuery {
+  search?: string;
+}
+
 export interface ExtensionsFieldsRow {
   id: string;
   entity: string;
@@ -687,6 +806,11 @@ export interface InvoicingInvoicesListQuery {
 export class TypedTamClient {
   constructor(readonly client: TamClient) {}
 
+  /** projects.close (requires projects.close) */
+  projectsClose(input: ProjectsCloseInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsCloseOutput>> {
+    return this.client.operation("projects.close", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsCloseOutput>>;
+  }
+
   /** orders.complete (requires orders.complete) */
   ordersComplete(input: OrdersCompleteInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersCompleteOutput>> {
     return this.client.operation("orders.complete", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersCompleteOutput>>;
@@ -702,6 +826,21 @@ export class TypedTamClient {
     return this.client.operation("orders.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersCreateOutput>>;
   }
 
+  /** projects.create (requires projects.create) */
+  projectsCreate(input: ProjectsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsCreateOutput>> {
+    return this.client.operation("projects.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsCreateOutput>>;
+  }
+
+  /** stock.create (requires stock.manage) */
+  stockCreate(input: StockCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<StockCreateOutput>> {
+    return this.client.operation("stock.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<StockCreateOutput>>;
+  }
+
+  /** stock.deactivate (requires stock.manage) */
+  stockDeactivate(input: StockDeactivateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<StockDeactivateOutput>> {
+    return this.client.operation("stock.deactivate", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<StockDeactivateOutput>>;
+  }
+
   /** customers.edit-contact (requires customers.edit) */
   customersEditContact(input: CustomersEditContactInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<CustomersEditContactOutput>> {
     return this.client.operation("customers.edit-contact", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<CustomersEditContactOutput>>;
@@ -710,6 +849,21 @@ export class TypedTamClient {
   /** orders.edit-details (requires orders.edit) */
   ordersEditDetails(input: OrdersEditDetailsInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersEditDetailsOutput>> {
     return this.client.operation("orders.edit-details", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersEditDetailsOutput>>;
+  }
+
+  /** projects.edit-details (requires projects.edit) */
+  projectsEditDetails(input: ProjectsEditDetailsInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsEditDetailsOutput>> {
+    return this.client.operation("projects.edit-details", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsEditDetailsOutput>>;
+  }
+
+  /** stock.edit (requires stock.manage) */
+  stockEdit(input: StockEditInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<StockEditOutput>> {
+    return this.client.operation("stock.edit", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<StockEditOutput>>;
+  }
+
+  /** projects.reopen (requires projects.close) */
+  projectsReopen(input: ProjectsReopenInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsReopenOutput>> {
+    return this.client.operation("projects.reopen", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsReopenOutput>>;
   }
 
   /** extensions.define-field (requires extensions.manage) */
@@ -900,6 +1054,26 @@ export class TypedTamClient {
   /** view orders.list (requires orders.read) */
   ordersList(query?: OrdersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersListRow[] }> {
     return this.client.view("orders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: OrdersListRow[] }>;
+  }
+
+  /** view projects.detail (requires projects.read) */
+  projectsDetail(query?: ProjectsDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ProjectsDetailRow[] }> {
+    return this.client.view("projects.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ProjectsDetailRow[] }>;
+  }
+
+  /** view projects.list (requires projects.read) */
+  projectsList(query?: ProjectsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ProjectsListRow[] }> {
+    return this.client.view("projects.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ProjectsListRow[] }>;
+  }
+
+  /** view stock.detail (requires stock.read) */
+  stockDetail(query?: StockDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: StockDetailRow[] }> {
+    return this.client.view("stock.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: StockDetailRow[] }>;
+  }
+
+  /** view stock.list (requires stock.read) */
+  stockList(query?: StockListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }> {
+    return this.client.view("stock.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

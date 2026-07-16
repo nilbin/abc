@@ -449,6 +449,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Field-service arc M1 (docs/34): Project deepened + StockItem — the consumer baseline**:
+  the stress-test arc's first slice, built with ZERO framework changes and zero React.
+  Project gained number (unique per tenant), status, budget, and close/reopen INTENT
+  operations (EDIT001) with a cross-aggregate guard (open orders block closing); StockItem
+  is the new per-node catalog (sku, unit, price, retire-don't-delete). 7 operations, 4
+  views (projects.list is subtree-capable with the mechanical company column), 2 more
+  declared pages — registerPage count still ZERO; the stock page needed no form/grid
+  configure at all (the record IS the form). Verified: new 21-check wire suite (fieldm1:
+  duplicate-number/SKU findings field-targeted, Change<T> edits with {original,value},
+  close guards, role boundaries didrik/tekla) + the full 12-suite matrix on SQLite AND
+  Postgres with RLS policies confirmed on both new tables. Three friction-log entries
+  recorded in docs/34 (money-by-name-sniffing confirmed live; flat label namespace
+  collision labels.number; Change<T> raw-wire discoverability).
 - **The docs SITE (GitHub Pages) — LIVE at https://nilbin.github.io/abc/**: MkDocs Material
   over docs/, rebuilt and republished by .github/workflows/docs.yml on every push to main.
   Deployment is `mkdocs gh-deploy` onto the gh-pages branch — the Actions token can push a

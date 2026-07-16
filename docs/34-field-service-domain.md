@@ -61,8 +61,14 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
 
 ## Milestones
 
-- [ ] M1 — Project + StockItem: entities, CRUD operations/views, declared pages, nav,
-      locales, seed. (The boring baseline: how fast is a plain aggregate?)
+- [x] M1 — Project + StockItem: entities, CRUD operations/views, declared pages, nav,
+      locales, seed. (The boring baseline: how fast is a plain aggregate?) **BUILT** with
+      ZERO framework changes and zero React: two aggregates (Project deepened with
+      number/status/budget + close/reopen intents with a cross-aggregate open-orders
+      guard; StockItem catalog with retire-don't-delete), 7 operations, 4 views, 2
+      declared pages, subtree-capable projects list, per-role visibility. Verified: 21
+      wire checks + full 12-suite matrix on SQLite AND Postgres (RLS policies confirmed
+      on both new tables). Three friction entries below came out of it.
 - [ ] M2 — WorkOrder: status machine, assignment, own-scope paired atoms, scheduling,
       custom field on a new entity.
 - [ ] M3 — TimeEntry + MaterialLine: ownership, derivations, approvals gate on
@@ -80,3 +86,20 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   (`SemanticTypes.For`: `t.Name.Contains("Money")`) — `HourlyRate`/`UnitPrice` will
   silently render as bare numbers. Predicted before M1; candidate fix is a `[Format("money")]`
   attribute or a Money value wrapper in the closed vocabulary.
+- (M1, confirmed) `Budget` and `UnitPrice` hit exactly that: both are money, both typed
+  as bare "number"; the money RENDERER had to be attached by hand per form field and the
+  grid columns show raw numbers. The semantic vocabulary has Money — the CLR mapping just
+  can't be told to use it without renaming the member.
+- (M1) The flat label namespace collides across aggregates: `Project.Number` silently
+  reused `labels.number` — which orders had already claimed as "Order number". Nothing
+  warns; the wrong label only shows in the UI. Escape was a type-level [LabelKey] on the
+  ProjectNumber wrapper (nice once you know it). Candidate: L10N-family warning when a
+  convention-derived key is shared by members of different aggregates.
+- (M1) `Change<T>` on the raw wire is `{original, value}` — a consumer writing JSON by
+  hand (agent, integration) who guesses `{value}` or `{value, base}` gets
+  `concurrency.field-conflict` with empty args and no hint that the ORIGINAL was missing
+  rather than stale. The form runtime hides this entirely; the finding could say which.
+- (M1, positive) The full slice — 2 aggregates, 7 ops, 4 views, 2 pages, nav, sv+en,
+  seed, 21 wire checks — was one sitting with no framework edits; L10N001 caught every
+  missing key at build; PAGE001 verified the record surfaces; conventions (record IS the
+  form, grid defaults) meant the stock page needed no configure at all.

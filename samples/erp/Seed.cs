@@ -29,10 +29,22 @@ public static class Seed
         inactive.Deactivate();
         db.Customers.AddRange(acme, nordpump, svea, kylteknik, inactive);
 
-        var pumpRefurb = Project.Create(Tenant, acme.Id, "Pumprenovering 2026");
-        var serviceDeal = Project.Create(Tenant, acme.Id, "Serviceavtal årligt");
-        var sveaVent = Project.Create(Tenant, svea.Id, "Ventilationsbyte Storgatan");
-        db.Projects.AddRange(pumpRefurb, serviceDeal, sveaVent);
+        var pumpRefurb = Project.Create(Tenant, new("P-2026-001"), acme.Id, "Pumprenovering 2026", 250000m);
+        var serviceDeal = Project.Create(Tenant, new("P-2026-002"), acme.Id, "Serviceavtal årligt");
+        var sveaVent = Project.Create(Tenant, new("P-2026-003"), svea.Id, "Ventilationsbyte Storgatan", 90000m);
+        var doneDeal = Project.Create(Tenant, new("P-2025-017"), kylteknik.Id, "Frysrumsinstallation", 145000m);
+        doneDeal.Close();
+        db.Projects.AddRange(pumpRefurb, serviceDeal, sveaVent, doneDeal);
+
+        // The stock catalog (docs/34 M1): per-node, retire-don't-delete.
+        var r22 = StockItem.Create(Tenant, new("KM-R22"), "Köldmedium R22 (utfasad)", StockUnit.Kilogram, 0m);
+        r22.Deactivate();
+        db.Stock.AddRange(
+            StockItem.Create(Tenant, new("PKG-DN50"), "Packning DN50", StockUnit.Piece, 145m),
+            StockItem.Create(Tenant, new("KM-R410A"), "Köldmedium R410A", StockUnit.Kilogram, 890m),
+            StockItem.Create(Tenant, new("SRV-TIM"), "Servicetekniker, timme", StockUnit.Hour, 950m),
+            StockItem.Create(Tenant, new("CU-15"), "Kopparrör 15 mm", StockUnit.Meter, 89m),
+            r22);
 
         var orders = new[]
         {
@@ -64,7 +76,9 @@ public static class Seed
         Role("dispatcher",
             "orders.read", "orders.read-all", "orders.create",
             "orders.edit", "orders.edit-all", "orders.complete", "orders.complete-all",
-            "customers.read", "customers.create", "customers.edit");
+            "customers.read", "customers.create", "customers.edit",
+            "projects.read", "projects.create", "projects.edit", "projects.close",
+            "stock.read", "stock.manage");
         // "viewer" is authored as ACCESS LEVELS (docs/27 D-A1): { orders: view, customers: view }
         // expands to the read atoms at load time — the level shape and the atom shape coexist.
         db.Add(new RoleEntity
@@ -72,11 +86,12 @@ public static class Seed
             Id = Guid.NewGuid(),
             TenantId = Tenant,
             Name = "viewer",
-            LevelsJson = """{"orders":"view","customers":"view"}""",
+            LevelsJson = """{"orders":"view","customers":"view","projects":"view","stock":"view"}""",
         });
         // Technicians carry only the base atoms — own-scoped by construction, no suffixes.
         Role("technician",
-            "orders.read", "orders.edit", "orders.complete", "customers.read");
+            "orders.read", "orders.edit", "orders.complete", "customers.read",
+            "projects.read", "stock.read");
 
         // The tenant node (docs/26): the demo tenant is the root of its own hierarchy, so its
         // materialized Path is just its own id. Nesting adds children with Path = "demo.<child>".

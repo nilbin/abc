@@ -49,10 +49,27 @@ var model = new TamModelBuilder()
             .Title("name")
             .Form("web.customers.edit")))
 
+    // The field-service slice (docs/34 M1): two more declared pages, zero React.
+    .Page("projects", page => page
+        .Grid("web.projects.list")
+        .Record(record => record
+            .Detail("projects.detail", key: "projectId")
+            .Title("number")
+            .Form("web.projects.edit")))
+
+    .Page("stock", page => page
+        .Grid("web.stock.list")
+        .Record(record => record
+            .Detail("stock.detail", key: "stockItemId")
+            .Title("name")
+            .Form("web.stock.edit")))
+
     .Nav("web", nav => nav
         .Mode("work", m => m
             .Page("orders", page: "orders", order: 10)   // declared page: permission derives
-            .Page("customers", page: "customers", order: 30))
+            .Page("projects", page: "projects", order: 20)
+            .Page("customers", page: "customers", order: 30)
+            .Page("stock", page: "stock", order: 40))
         .Mode("admin", m => m
             .Section("administration")))
 
@@ -94,6 +111,31 @@ var model = new TamModelBuilder()
         form.Field(x => x.Phone);
     })
 
+    .Form<CreateProject.Input>("web.projects.create", "projects.create", form =>
+    {
+        form.Field(x => x.CustomerId).Renderer("customer-picker");
+        form.Field(x => x.Number);
+        form.Field(x => x.Name);
+        form.Field(x => x.Budget).Renderer("money");
+    })
+
+    .Form<EditProjectDetails.Input>("web.projects.edit", "projects.edit-details", form =>
+    {
+        form.Field(x => x.ProjectId).Renderer("hidden");
+        form.Field(x => x.Name);
+        form.Field(x => x.Budget).Renderer("money");
+    })
+
+    // No configure: the record IS the form (docs/32 D-P6).
+    .Form<CreateStockItem.Input>("web.stock.create", "stock.create")
+
+    .Form<EditStockItem.Input>("web.stock.edit", "stock.edit", form =>
+    {
+        form.Field(x => x.StockItemId).Renderer("hidden");
+        form.Field(x => x.Name);
+        form.Field(x => x.UnitPrice).Renderer("money");
+    })
+
     .Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
     {
         grid.Column(x => x.Number);
@@ -117,6 +159,30 @@ var model = new TamModelBuilder()
         grid.Column(x => x.VisitAddress);
         grid.Column(x => x.IsActive);
         grid.ToolbarAction("customers.create");
+    })
+
+    .Grid<ProjectList.Result>("web.projects.list", "projects.list", grid =>
+    {
+        grid.Column(x => x.Number);
+        grid.Column(x => x.TenantId);   // the company column — rendered only above a leaf
+        grid.Column(x => x.Name);
+        grid.Column(x => x.CustomerName);
+        grid.Column(x => x.Status);
+        grid.Column(x => x.Budget);
+        grid.RowAction("projects.close");
+        grid.RowAction("projects.reopen");
+        grid.ToolbarAction("projects.create");
+    })
+
+    .Grid<StockList.Result>("web.stock.list", "stock.list", grid =>
+    {
+        grid.Column(x => x.Sku);
+        grid.Column(x => x.Name);
+        grid.Column(x => x.Unit);
+        grid.Column(x => x.UnitPrice);
+        grid.Column(x => x.IsActive);
+        grid.RowAction("stock.deactivate");
+        grid.ToolbarAction("stock.create");
     })
 
     .Build();

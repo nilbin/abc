@@ -265,49 +265,79 @@
       "enums.paid": "Paid",
       "labels.invoice-id": "Invoice",
       "app.title": "Norrservice ERP",
-      "nav.orders": "Orders",
+      "customers.credit-blocked": "The customer is credit blocked.",
+      "customers.duplicate-name": "A customer with that name already exists.",
+      "customers.inactive": "The selected customer is inactive.",
+      "customers.not-found": "The customer no longer exists.",
+      "enums.cancelled": "Cancelled",
+      "enums.closed": "Closed",
+      "enums.completed": "Completed",
+      "enums.hour": "Hour",
+      "enums.kilogram": "Kilogram",
+      "enums.litre": "Litre",
+      "enums.meter": "Metre",
+      "enums.open": "Open",
+      "enums.piece": "Piece",
+      "enums.project": "Project",
+      "enums.service": "Service",
+      "labels.active-only": "Active only",
+      "labels.budget": "Budget",
+      "labels.company": "Company",
+      "labels.customer": "Customer",
+      "labels.customer-id": "Customer",
+      "labels.description": "Description",
+      "labels.email": "Email",
+      "labels.estimated-total": "Estimated total",
+      "labels.extensions": "Custom fields",
+      "labels.is-active": "Active",
+      "labels.number": "Order number",
+      "labels.order-id": "Order",
+      "labels.order-type": "Order type",
+      "labels.phone": "Phone",
+      "labels.project": "Project",
+      "labels.project-id": "Project",
+      "labels.project-number": "Project number",
+      "labels.requested-date": "Requested date",
+      "labels.sku": "SKU",
+      "labels.stock-item": "Stock item",
+      "labels.stock-item-id": "Stock item",
+      "labels.unit": "Unit",
+      "labels.unit-price": "Unit price",
+      "labels.visit-address": "Visit address",
+      "labels.work-address": "Work address",
+      "nav.admin": "Administration",
+      "nav.administration": "General",
       "nav.customers": "Customers",
+      "nav.orders": "Orders",
+      "nav.projects": "Projects",
+      "nav.stock": "Stock items",
+      "nav.work": "Work",
       "operations.customers.create.title": "New customer",
+      "operations.customers.edit-contact.title": "Edit customer",
+      "operations.orders.complete.title": "Complete order",
       "operations.orders.create.title": "New order",
       "operations.orders.edit-details.title": "Edit order details",
-      "operations.orders.complete.title": "Complete order",
-      "labels.visit-address": "Visit address",
-      "labels.email": "Email",
-      "labels.phone": "Phone",
-      "labels.is-active": "Active",
-      "labels.customer": "Customer",
-      "labels.order-type": "Order type",
-      "labels.project": "Project",
-      "labels.work-address": "Work address",
-      "labels.description": "Description",
-      "labels.requested-date": "Requested date",
-      "labels.estimated-total": "Estimated total",
-      "labels.order-id": "Order",
-      "labels.number": "Order number",
-      "labels.extensions": "Custom fields",
-      "labels.active-only": "Active only",
-      "enums.service": "Service",
-      "enums.project": "Project",
-      "enums.open": "Open",
-      "enums.completed": "Completed",
-      "enums.cancelled": "Cancelled",
+      "operations.projects.close.title": "Close project",
+      "operations.projects.create.title": "New project",
+      "operations.projects.edit-details.title": "Edit project",
+      "operations.projects.reopen.title": "Reopen project",
+      "operations.stock.create.title": "New stock item",
+      "operations.stock.deactivate.title": "Deactivate",
+      "operations.stock.edit.title": "Edit stock item",
       "orders.already-completed": "The order is already completed.",
       "orders.cannot-complete-cancelled": "A cancelled order cannot be completed.",
       "orders.invalid-customer": "The selected customer cannot receive orders.",
-      "orders.project-required": "Select a project for project orders.",
-      "orders.project-not-for-customer": "The project does not belong to the selected customer.",
-      "orders.not-found": "The order does not exist.",
       "orders.not-editable": "The order can no longer be edited.",
-      "customers.not-found": "The customer no longer exists.",
-      "customers.inactive": "The selected customer is inactive.",
-      "customers.credit-blocked": "The customer is credit blocked.",
-      "customers.duplicate-name": "A customer with that name already exists.",
-      "labels.company": "Company",
-      "nav.work": "Work",
-      "nav.admin": "Administration",
-      "nav.administration": "General",
-      "operations.customers.edit-contact.title": "Edit customer",
-      "labels.customer-id": "Customer"
+      "orders.not-found": "The order does not exist.",
+      "orders.project-not-for-customer": "The project does not belong to the selected customer.",
+      "orders.project-required": "Select a project for project orders.",
+      "projects.duplicate-number": "A project with this number already exists.",
+      "projects.has-open-orders": "The project still has open orders.",
+      "projects.not-closed": "The project is not closed.",
+      "projects.not-found": "Project not found.",
+      "projects.not-open": "The project is not open.",
+      "stock.duplicate-sku": "A stock item with this SKU already exists.",
+      "stock.not-found": "Stock item not found."
     },
     "sv": {
       "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
@@ -572,52 +602,115 @@
       "enums.paid": "Betald",
       "labels.invoice-id": "Faktura",
       "app.title": "Norrservice ERP",
-      "nav.orders": "Ordrar",
+      "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
+      "customers.duplicate-name": "Det finns redan en kund med det namnet.",
+      "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
+      "customers.not-found": "Kunden finns inte l\u00E4ngre.",
+      "enums.cancelled": "Makulerad",
+      "enums.closed": "Avslutat",
+      "enums.completed": "Slutf\u00F6rd",
+      "enums.hour": "Timme",
+      "enums.kilogram": "Kilogram",
+      "enums.litre": "Liter",
+      "enums.meter": "Meter",
+      "enums.open": "\u00D6ppen",
+      "enums.piece": "Styck",
+      "enums.project": "Projekt",
+      "enums.service": "Service",
+      "labels.active-only": "Endast aktiva",
+      "labels.budget": "Budget",
+      "labels.company": "Bolag",
+      "labels.customer": "Kund",
+      "labels.customer-id": "Kund",
+      "labels.description": "Arbetsbeskrivning",
+      "labels.email": "E-post",
+      "labels.estimated-total": "Uppskattat belopp",
+      "labels.extensions": "Anpassade f\u00E4lt",
+      "labels.is-active": "Aktiv",
+      "labels.number": "Ordernummer",
+      "labels.order-id": "Order",
+      "labels.order-type": "Ordertyp",
+      "labels.phone": "Telefon",
+      "labels.project": "Projekt",
+      "labels.project-id": "Projekt",
+      "labels.project-number": "Projektnummer",
+      "labels.requested-date": "\u00D6nskat datum",
+      "labels.sku": "Artikelnummer",
+      "labels.stock-item": "Artikel",
+      "labels.stock-item-id": "Artikel",
+      "labels.unit": "Enhet",
+      "labels.unit-price": "\u00C0-pris",
+      "labels.visit-address": "Bes\u00F6ksadress",
+      "labels.work-address": "Arbetsadress",
+      "nav.admin": "Administration",
+      "nav.administration": "Allm\u00E4nt",
       "nav.customers": "Kunder",
+      "nav.orders": "Ordrar",
+      "nav.projects": "Projekt",
+      "nav.stock": "Artiklar",
+      "nav.work": "Arbete",
       "operations.customers.create.title": "Ny kund",
+      "operations.customers.edit-contact.title": "Redigera kund",
+      "operations.orders.complete.title": "Slutf\u00F6r order",
       "operations.orders.create.title": "Ny order",
       "operations.orders.edit-details.title": "\u00C4ndra orderdetaljer",
-      "operations.orders.complete.title": "Slutf\u00F6r order",
-      "labels.visit-address": "Bes\u00F6ksadress",
-      "labels.email": "E-post",
-      "labels.phone": "Telefon",
-      "labels.is-active": "Aktiv",
-      "labels.customer": "Kund",
-      "labels.order-type": "Ordertyp",
-      "labels.project": "Projekt",
-      "labels.work-address": "Arbetsadress",
-      "labels.description": "Arbetsbeskrivning",
-      "labels.requested-date": "\u00D6nskat datum",
-      "labels.estimated-total": "Uppskattat belopp",
-      "labels.order-id": "Order",
-      "labels.number": "Ordernummer",
-      "labels.extensions": "Anpassade f\u00E4lt",
-      "labels.active-only": "Endast aktiva",
-      "enums.service": "Service",
-      "enums.project": "Projekt",
-      "enums.open": "\u00D6ppen",
-      "enums.completed": "Slutf\u00F6rd",
-      "enums.cancelled": "Makulerad",
+      "operations.projects.close.title": "Avsluta projekt",
+      "operations.projects.create.title": "Nytt projekt",
+      "operations.projects.edit-details.title": "Redigera projekt",
+      "operations.projects.reopen.title": "\u00C5ter\u00F6ppna projekt",
+      "operations.stock.create.title": "Ny artikel",
+      "operations.stock.deactivate.title": "Inaktivera",
+      "operations.stock.edit.title": "Redigera artikel",
       "orders.already-completed": "Ordern \u00E4r redan slutf\u00F6rd.",
       "orders.cannot-complete-cancelled": "En makulerad order kan inte slutf\u00F6ras.",
       "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar.",
-      "orders.project-required": "V\u00E4lj ett projekt f\u00F6r projektordrar.",
-      "orders.project-not-for-customer": "Projektet tillh\u00F6r inte den valda kunden.",
-      "orders.not-found": "Ordern finns inte.",
       "orders.not-editable": "Ordern kan inte l\u00E4ngre \u00E4ndras.",
-      "customers.not-found": "Kunden finns inte l\u00E4ngre.",
-      "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
-      "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
-      "customers.duplicate-name": "Det finns redan en kund med det namnet.",
-      "labels.company": "Bolag",
-      "nav.work": "Arbete",
-      "nav.admin": "Administration",
-      "nav.administration": "Allm\u00E4nt",
-      "operations.customers.edit-contact.title": "Redigera kund",
-      "labels.customer-id": "Kund"
+      "orders.not-found": "Ordern finns inte.",
+      "orders.project-not-for-customer": "Projektet tillh\u00F6r inte den valda kunden.",
+      "orders.project-required": "V\u00E4lj ett projekt f\u00F6r projektordrar.",
+      "projects.duplicate-number": "Det finns redan ett projekt med detta nummer.",
+      "projects.has-open-orders": "Projektet har fortfarande \u00F6ppna ordrar.",
+      "projects.not-closed": "Projektet \u00E4r inte avslutat.",
+      "projects.not-found": "Projektet hittades inte.",
+      "projects.not-open": "Projektet \u00E4r inte \u00F6ppet.",
+      "stock.duplicate-sku": "Det finns redan en artikel med detta artikelnummer.",
+      "stock.not-found": "Artikeln hittades inte."
     }
   },
   "operations": {
+    "projects.close": {
+      "permission": "projects.close",
+      "titleKey": "operations.projects.close.title",
+      "fields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Open",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
     "orders.complete": {
       "permission": "orders.complete",
       "titleKey": "operations.orders.complete.title",
@@ -819,6 +912,160 @@
       ],
       "gatedBy": []
     },
+    "projects.create": {
+      "permission": "projects.create",
+      "titleKey": "operations.projects.create.title",
+      "fields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.project-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "budget",
+          "labelKey": "labels.budget",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "stock.create": {
+      "permission": "stock.manage",
+      "titleKey": "operations.stock.create.title",
+      "fields": [
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unit",
+          "labelKey": "labels.unit",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Piece",
+            "Hour",
+            "Meter",
+            "Kilogram",
+            "Litre"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "stock.deactivate": {
+      "permission": "stock.manage",
+      "titleKey": "operations.stock.deactivate.title",
+      "fields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "isActive",
+          "labelKey": "labels.is-active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
     "customers.edit-contact": {
       "permission": "customers.edit",
       "titleKey": "operations.customers.edit-contact.title",
@@ -957,6 +1204,137 @@
           "type": "integer",
           "wireKind": "integer",
           "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "projects.edit-details": {
+      "permission": "projects.edit",
+      "titleKey": "operations.projects.edit-details.title",
+      "fields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "budget",
+          "labelKey": "labels.budget",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "stock.edit": {
+      "permission": "stock.manage",
+      "titleKey": "operations.stock.edit.title",
+      "fields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "projects.reopen": {
+      "permission": "projects.close",
+      "titleKey": "operations.projects.reopen.title",
+      "fields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Open",
+            "Closed"
+          ],
           "changeSet": false,
           "extension": false,
           "readOnly": false
@@ -3057,6 +3435,378 @@
       "defaultSortDescending": true,
       "extensibleEntity": "order",
       "subtree": "tenantId"
+    },
+    "projects.detail": {
+      "permission": "projects.read",
+      "queryFields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.project-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "customerName",
+          "labelKey": "labels.customer",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Open",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "budget",
+          "labelKey": "labels.budget",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false
+    },
+    "projects.list": {
+      "permission": "projects.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.project-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "customerName",
+          "labelKey": "labels.customer",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Open",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "budget",
+          "labelKey": "labels.budget",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "tenantId",
+          "labelKey": "labels.company",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "number",
+        "name",
+        "customerName"
+      ],
+      "filterable": [
+        "status",
+        "customerName",
+        "budget",
+        "tenantId"
+      ],
+      "defaultSort": "number",
+      "defaultSortDescending": true,
+      "subtree": "tenantId"
+    },
+    "stock.detail": {
+      "permission": "stock.read",
+      "queryFields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unit",
+          "labelKey": "labels.unit",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Piece",
+            "Hour",
+            "Meter",
+            "Kilogram",
+            "Litre"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "isActive",
+          "labelKey": "labels.is-active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false
+    },
+    "stock.list": {
+      "permission": "stock.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unit",
+          "labelKey": "labels.unit",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Piece",
+            "Hour",
+            "Meter",
+            "Kilogram",
+            "Litre"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "isActive",
+          "labelKey": "labels.is-active",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "sku",
+        "name",
+        "unitPrice"
+      ],
+      "filterable": [
+        "unit",
+        "isActive",
+        "unitPrice"
+      ],
+      "defaultSort": "sku",
+      "defaultSortDescending": false
     },
     "extensions.fields": {
       "permission": "extensions.manage",
@@ -5178,6 +5928,187 @@
       ],
       "includeExtensions": false,
       "serverDependencies": []
+    },
+    "web.projects.create": {
+      "operation": "projects.create",
+      "fields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "customer-picker",
+          "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.project-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "budget",
+          "labelKey": "labels.budget",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "money",
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.projects.edit": {
+      "operation": "projects.edit-details",
+      "fields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "budget",
+          "labelKey": "labels.budget",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "renderer": "money",
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.stock.create": {
+      "operation": "stock.create",
+      "fields": [
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unit",
+          "labelKey": "labels.unit",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Piece",
+            "Hour",
+            "Meter",
+            "Kilogram",
+            "Litre"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.stock.edit": {
+      "operation": "stock.edit",
+      "fields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "renderer": "money",
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
     }
   },
   "grids": {
@@ -5427,6 +6358,44 @@
       ],
       "includeExtensions": false,
       "contributedActions": []
+    },
+    "web.projects.list": {
+      "view": "projects.list",
+      "columns": [
+        "number",
+        "tenantId",
+        "name",
+        "customerName",
+        "status",
+        "budget"
+      ],
+      "rowActions": [
+        "projects.close",
+        "projects.reopen"
+      ],
+      "toolbarActions": [
+        "projects.create"
+      ],
+      "includeExtensions": false,
+      "contributedActions": []
+    },
+    "web.stock.list": {
+      "view": "stock.list",
+      "columns": [
+        "sku",
+        "name",
+        "unit",
+        "unitPrice",
+        "isActive"
+      ],
+      "rowActions": [
+        "stock.deactivate"
+      ],
+      "toolbarActions": [
+        "stock.create"
+      ],
+      "includeExtensions": false,
+      "contributedActions": []
     }
   },
   "extensions": {},
@@ -5454,10 +6423,16 @@
     "orders.read-all",
     "packages.manage",
     "plugins.manage",
+    "projects.close",
+    "projects.create",
+    "projects.edit",
+    "projects.read",
     "roles.manage",
     "rules.manage",
     "secrets.manage",
     "settings.manage",
+    "stock.manage",
+    "stock.read",
     "subscriptions.manage",
     "subscriptions.read",
     "tenants.create",
@@ -5506,12 +6481,32 @@
             "children": []
           },
           {
+            "id": "projects",
+            "kind": "page",
+            "labelKey": "nav.projects",
+            "order": 20,
+            "target": {
+              "page": "projects"
+            },
+            "children": []
+          },
+          {
             "id": "customers",
             "kind": "page",
             "labelKey": "nav.customers",
             "order": 30,
             "target": {
               "page": "customers"
+            },
+            "children": []
+          },
+          {
+            "id": "stock",
+            "kind": "page",
+            "labelKey": "nav.stock",
+            "order": 40,
+            "target": {
+              "page": "stock"
             },
             "children": []
           },
@@ -5723,6 +6718,44 @@
           {
             "kind": "form",
             "id": "web.customers.edit"
+          }
+        ]
+      }
+    },
+    "projects": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "web.projects.list"
+        }
+      ],
+      "record": {
+        "detailView": "projects.detail",
+        "key": "projectId",
+        "titleField": "number",
+        "sections": [
+          {
+            "kind": "form",
+            "id": "web.projects.edit"
+          }
+        ]
+      }
+    },
+    "stock": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "web.stock.list"
+        }
+      ],
+      "record": {
+        "detailView": "stock.detail",
+        "key": "stockItemId",
+        "titleField": "name",
+        "sections": [
+          {
+            "kind": "form",
+            "id": "web.stock.edit"
           }
         ]
       }

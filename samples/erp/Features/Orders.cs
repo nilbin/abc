@@ -24,7 +24,7 @@ public static class OrderRules
     {
         if (projectId is null) return OrderErrors.ProjectRequired;
         var ok = await db.Projects.AnyAsync(
-            x => x.Id == projectId && x.CustomerId == customerId && x.IsOpen, ct);
+            x => x.Id == projectId && x.CustomerId == customerId && x.Status == ProjectStatus.Open, ct);
         return ok ? Result.Success() : OrderErrors.ProjectNotForCustomer;
     }
 }
@@ -88,7 +88,7 @@ public static class CreateOrderDerivations
             return DerivationResult.Empty;
 
         var options = await db.Projects
-            .Where(x => x.CustomerId == input.CustomerId && x.IsOpen)
+            .Where(x => x.CustomerId == input.CustomerId && x.Status == ProjectStatus.Open)
             .OrderBy(x => x.Name)
             .Select(x => new Option(x.Id.Value, x.Name))
             .ToListAsync(ct);
