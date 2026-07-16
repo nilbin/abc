@@ -138,10 +138,14 @@ public class PageTests
         Assert.StartsWith("PAGE001", keyless.Message);
         Assert.Contains("could never prefill", keyless.Message);
 
-        Assert.StartsWith("PAGE001", Assert.Throws<InvalidOperationException>(() =>
-            Host().Page("p", page => page.Grid("web.things")
-                .Record(r => r.Detail("things.detail", key: "thingId")
-                    .Slot("web.nowhere"))).Build()).Message);
+        // docs/34 M5 fix 9: an undeclared record slot no longer PAGE001s — placement IS
+        // declaration, and the auto-declared slot carries the record's context key.
+        var auto = Host().Page("p", page => page.Grid("web.things")
+            .Record(r => r.Detail("things.detail", key: "thingId")
+                .Slot("web.things.detail")     // the fixture's standalone declaration, placed
+                .Slot("web.auto"))).Build();   // never declared — placement declares it
+        Assert.Equal(["thingId"], auto.Slots["web.auto"].ContextKeys);
+        Assert.False(auto.Slots["web.auto"].External);
     }
 
     [Fact]
