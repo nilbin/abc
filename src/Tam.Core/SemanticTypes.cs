@@ -26,6 +26,19 @@ public sealed class LabelKeyAttribute(string key) : Attribute
 }
 
 /// <summary>
+/// Declares that a field REFERENCES another aggregate through a lookup view (docs/34 M5):
+/// on a wrapper TYPE (`[Lookup("projects.lookup")] record struct ProjectId(Guid Value)`)
+/// every usage renders a searchable picker over that view; on a property/parameter it
+/// overrides for one field. The view must exist at Build (LOOKUP001). The renderer takes
+/// options from the view's rows: `id` is the value, the first string result field the label.
+/// </summary>
+[AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
+public sealed class LookupAttribute(string view) : Attribute
+{
+    public string View { get; } = view;
+}
+
+/// <summary>
 /// The ready-made money wrapper: declare a field as <see cref="Money"/> and every form, grid,
 /// filter and agent schema treats it as money (docs/34 M5 — the type carries the defaults).
 /// Domain-named wrappers get the same by carrying [Format("money")] themselves.

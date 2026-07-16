@@ -102,6 +102,7 @@ public static class Seed
             "work-orders.edit", "work-orders.edit-all", "work-orders.schedule",
             "work-orders.assign", "work-orders.start", "work-orders.start-all",
             "work-orders.complete", "work-orders.complete-all", "work-orders.close",
+            "users.lookup",
             // Time is own-scoped by default; the office reads the whole board and approves.
             "time.read", "time.read-all", "time.book", "time.approve",
             "materials.read", "materials.add");
@@ -119,6 +120,7 @@ public static class Seed
             "orders.read", "orders.edit", "orders.complete", "customers.read",
             "projects.read", "stock.read",
             "work-orders.read", "work-orders.edit", "work-orders.start", "work-orders.complete",
+            "users.lookup",
             // Base atoms only: a technician books and reads her OWN time; materials follow
             // the work order (no own scope — see materials.add).
             "time.read", "time.book",

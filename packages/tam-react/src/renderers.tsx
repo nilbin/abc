@@ -3,6 +3,7 @@ import { Button, Checkbox, Group, NumberInput, SegmentedControl, Select, Stack, 
 import { DateInput } from '@mantine/dates';
 import dayjs from 'dayjs';
 import { ManifestField, enumLabel, toWireEnum } from '@tam/core';
+import { LookupSelect } from './LookupSelect';
 import { TamContextValue } from './context';
 
 export interface FieldRendererProps {
@@ -159,6 +160,36 @@ export const DefaultRenderer: FieldRenderer = (p) => {
   const str = (v: unknown) => (v === null || v === undefined ? '' : String(v));
 
   if (p.field.renderer === 'hidden') return null;
+
+  // docs/34 M5 — the type carries the defaults. A readOnly COMPILED field is a computed
+  // display seat: disabled, fed by suggestions, the server's value authoritative.
+  if (p.field.readOnly && !p.field.extension) {
+    const shown = p.value === null || p.value === undefined ? ''
+      : p.field.format === 'money'
+        ? new Intl.NumberFormat(p.tam.culture, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(p.value))
+        : String(p.value);
+    return <TextInput label={p.label} value={shown} disabled description={p.warning} />;
+  }
+
+  // A [Lookup]-carrying field renders a searchable picker over its view — no per-form
+  // renderer, no options derivation. Server-sent options (a derivation) still win: they
+  // carry request context a global lookup cannot (e.g. "projects OF THIS customer").
+  if (p.field.lookup && !(p.options && p.options.length > 0)) {
+    const view = p.tam.manifest.views[p.field.lookup];
+    const labelField = view?.resultFields.find(f => f.name !== 'id' && f.wireKind === 'string')?.name ?? 'name';
+    return (
+      <LookupSelect
+        view={p.field.lookup}
+        value={p.value}
+        onChange={v => p.onChange(v)}
+        label={p.label}
+        required={p.required}
+        error={p.error}
+        description={p.warning}
+        labelField={labelField}
+      />
+    );
+  }
 
   if (p.options && (p.field.type === 'reference' || p.options.length > 0)) {
     return (

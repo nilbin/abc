@@ -103,7 +103,7 @@ public static class ScheduleWorkOrder
     public sealed record Input(
         [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
         DateOnly ScheduledDate,
-        [property: LabelKey("labels.assignee")] string AssigneeActorId);
+        [property: LabelKey("labels.assignee"), Lookup("users.lookup")] string AssigneeActorId);
 
     public sealed record Output(WorkOrderStatus Status);
 
@@ -128,7 +128,7 @@ public static class AssignWorkOrder
 {
     public sealed record Input(
         [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
-        [property: LabelKey("labels.assignee")] string AssigneeActorId);
+        [property: LabelKey("labels.assignee"), Lookup("users.lookup")] string AssigneeActorId);
 
     public sealed record Output(WorkOrderStatus Status);
 
@@ -217,29 +217,6 @@ public static class CloseWorkOrder
         var result = workOrder.CloseOut();
         if (result.IsError) return result.As<Output>();
         return new Output(workOrder.Status);
-    }
-}
-
-public static class ScheduleWorkOrderDerivations
-{
-    /// <summary>Assignee options for the schedule/assign forms: this tenant's active members.
-    /// Same shape as orders.create.available-projects — options ride a derivation because
-    /// there is no generic lookup renderer yet (docs/34 friction log).</summary>
-    [ServerDerivation("work-orders.schedule.assignees")]
-    [DependsOn(nameof(ScheduleWorkOrder.Input.WorkOrderId))]
-    public static async Task<DerivationResult> Assignees(
-        ScheduleWorkOrder.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
-    {
-        var accountIds = await db.Set<TenantMembershipEntity>()
-            .Where(m => m.Active)
-            .Select(m => m.AccountId)
-            .ToListAsync(ct);
-        var options = await db.Set<AccountEntity>()
-            .Where(a => accountIds.Contains(a.Id) && a.Active)
-            .OrderBy(a => a.DisplayName)
-            .Select(a => new Option(a.Id, a.DisplayName))
-            .ToListAsync(ct);
-        return DerivationResult.Empty.AddOptions(nameof(ScheduleWorkOrder.Input.AssigneeActorId), options);
     }
 }
 

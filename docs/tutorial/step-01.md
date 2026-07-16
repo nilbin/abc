@@ -52,7 +52,7 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
 }
 ```
 
-Three interface contracts, no base class: `ITenantScoped` (a plain `string TenantId` the pipeline stamps and the global filter scopes), `IVersioned` (a `long Version` the audit interceptor increments on every modification), `IExtensible` (the JSON-backed container tenant-defined fields live in). And note what money is: `EstimatedTotal` is a `decimal?` that a *binding* renders with `.Renderer("money")` (Step 4) — there is no `Money` CLR type, and search input is likewise a plain `string?` on the view's Query (Step 5). Semantic value types are for meaning the domain owns (`OrderNumber`, `OrderDescription`), not for formatting.
+Three interface contracts, no base class: `ITenantScoped` (a plain `string TenantId` the pipeline stamps and the global filter scopes), `IVersioned` (a `long Version` the audit interceptor increments on every modification), `IExtensible` (the JSON-backed container tenant-defined fields live in). And note what money is: `EstimatedTotal` is a `Tam.Money?` — the TYPE carries the semantic (docs/02): every form, grid, filter and agent schema treats it as money with no per-field renderer, and implicit conversions keep the arithmetic in `decimal`. An undeclared bare `decimal` stays a plain number; search input is likewise a plain `string?` on the view's Query (Step 5). Semantic value types are for meaning the domain owns (`OrderNumber`, `CustomerId` with its `[Lookup]` — Step 4, `OrderDescription`) — declared once, inherited everywhere.
 
 Domain errors are **finding factories** — a stable code, no prose; the code doubles as the message key:
 

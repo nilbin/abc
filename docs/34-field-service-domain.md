@@ -110,12 +110,23 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
       walks the park → release → replay loop when fieldm3's approval rule gates
       time.approve. Verified: 14-check fieldm4 + full 15-suite matrix on SQLite AND
       Postgres.
-- [~] M5 — Postgres + RLS pass over the whole slice (CONTINUOUSLY DONE — every milestone
+- [x] M5 — Postgres + RLS pass over the whole slice (CONTINUOUSLY DONE — every milestone
       ran the full matrix on Postgres with RLS provisioned); read-set scaling MEASURED
-      (docs/33: the GUC-array policy costs rows × |read set| — 240 ms for a 200-node
-      subtree over 20k rows even paged; a registry semi-join answers the same question in
-      0.2 ms — candidate policy change recorded, not yet built). Remaining: the friction-log
-      triage → fixes or explicit deferrals (decision pending).
+      then FIXED (docs/33: the GUC-array policy cost rows × |read set| — 240 ms for a
+      200-node subtree over 20k rows; the policy now takes a constant-size `app.tenant_path`
+      GUC and semi-joins the tenant registry — 11.7 ms on the same shape, id-set arm kept
+      as fallback). Friction-log triage EXECUTED — all nine candidates built rather than
+      deferred, under one principle: **the type carries the defaults**
+      ([02-domain-state.md](02-domain-state.md)). Type-level `[Format]`/`Tam.Money` (sniff
+      deleted), type-level `[LabelKey]` + advisory L10N005 collision warning, type-level
+      `[Lookup]` + LOOKUP001 + framework `users.lookup` directory view (the M2 actor-render
+      gap becomes a picker, and erp's assignee/stock-item ServerDerivations + bespoke
+      CustomerPicker wiring were DELETED), `.ReadOnly()` display seat for computed values,
+      `FieldConflict.Reason` ("original-missing" vs "stale") on the wire, resolve endpoint
+      400s with the expected shape instead of 500, `approvals.rules.retire`, and page-placed
+      slots auto-declare (standalone `model.Slot` remains only for external slots). Verified:
+      149 framework + 8 harness tests, full 15-suite matrix (210 checks) on SQLite AND
+      Postgres, additive-only manifest baseline.
 
 ## Friction log
 
@@ -193,3 +204,19 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   and TAM006 made "technician runs her own order end to end, dispatcher works the board"
   fall out of role composition — the wire suite proved both boundaries (403s included)
   without any authorization code in the domain.
+- (M5, resolutions) The triage built every open candidate above; where each landed:
+  money sniffing → type-level `[Format]` honored + ready-made `Tam.Money`, sniff deleted
+  (an undeclared `decimal` is now honestly a plain number); label collisions → type-level
+  `[LabelKey]` names the concept once, and Build() warns (advisory L10N005) when two
+  different wrapper types share one convention key; `{original, value}` guessing → the
+  conflict finding now carries `reason: original-missing | stale`; actor rendering and the
+  "SOMETHING must fire" derivation pattern → type-level `[Lookup("view.id")]` + a
+  framework `users.lookup` directory view (own low-sensitivity atom): assignee, project,
+  customer and stock-item fields all render searchable pickers from the manifest alone —
+  the two options-derivations and the bespoke CustomerPicker wiring in erp are DELETED;
+  rules can't be un-gated → `approvals.rules.retire`; slot-declared-twice →
+  page-placed slots auto-declare (record context key inherited); computed display value →
+  `.ReadOnly()` marks the input as a display seat (disabled, still derivation-targetable);
+  resolve 500 → 400 with the expected `{"input": ...}` shape in the finding. The pattern
+  in the fixes: every one moved a per-usage decision onto a DECLARATION the model already
+  had — the type, the view, the placement ([02-domain-state.md](02-domain-state.md)).

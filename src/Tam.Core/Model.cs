@@ -12,7 +12,8 @@ public sealed record FieldModel(
     SemanticType Semantic,
     string LabelKey,
     IReadOnlyList<string>? EnumOptions,
-    string? SensitivePermission = null)   // docs/27 D-A3: field masked behind this atom
+    string? SensitivePermission = null,   // docs/27 D-A3: field masked behind this atom
+    string? Lookup = null)                // docs/34 M5: reference field's lookup view
 {
     /// <summary>docs/27 D-A3: is this field hidden/blocked for the actor? The ONE predicate the
     /// operation and view masking sites share, so they can never disagree.</summary>
@@ -50,6 +51,11 @@ public sealed record FieldModel(
             ?? nonNullable.GetCustomAttribute<LabelKeyAttribute>()?.Key
             ?? $"labels.{Naming.Kebab(name)}";
 
+        // The TYPE carries the defaults (docs/34 M5): lookup resolves member → type, like the
+        // label key — declare [Lookup] once on the wrapper, every usage gets the picker.
+        var lookup = Attr<LookupAttribute>(attributeSources)?.View
+            ?? nonNullable.GetCustomAttribute<LookupAttribute>()?.View;
+
         return new FieldModel(
             name,
             Naming.Camel(name),
@@ -60,7 +66,8 @@ public sealed record FieldModel(
             SemanticTypes.For(nonNullable),
             labelKey,
             nonNullable.IsEnum ? Enum.GetNames(nonNullable) : null,
-            Attr<SensitiveAttribute>(attributeSources)?.Permission);
+            Attr<SensitiveAttribute>(attributeSources)?.Permission,
+            lookup);
     }
 
     private static T? Attr<T>(ICustomAttributeProvider?[] sources) where T : Attribute =>

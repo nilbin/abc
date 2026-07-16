@@ -130,7 +130,9 @@ Done:
       page components are gone; what remains is the shell, `CustomerPicker`, and the one custom
       page (`OrdersPage`, registered via `registerPage`). Nav model + merge live in
       `Tam.Core/Nav.cs` + `TamModel.MergeNav/VerifyNav`; slot components in
-      `packages/tam-react/src/nav.tsx`.
+      `packages/tam-react/src/nav.tsx`. (Since docs/34 M5, `CustomerPicker` is gone too —
+      `[Lookup]` on the wrapper type renders the picker from the manifest; App.tsx is shell
+      + badge colors only.)
 
 - [x] The mechanical-split batch, proven by a byte-identical manifest AND an unchanged web
       bundle hash: `ModelConventions.cs` → conventions + `FrameworkEntities.cs`;

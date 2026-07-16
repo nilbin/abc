@@ -107,7 +107,7 @@ public static class ErpModel
 
         .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
         {
-            form.Field(x => x.CustomerId).Renderer("customer-picker");
+            form.Field(x => x.CustomerId);   // [Lookup] on CustomerId renders the picker
             form.Field(x => x.OrderType);
             form.Field(x => x.ProjectId)
                 .VisibleWhen(x => x.OrderType == OrderType.Project)
@@ -145,7 +145,7 @@ public static class ErpModel
 
         .Form<CreateProject.Input>("web.projects.create", "projects.create", form =>
         {
-            form.Field(x => x.CustomerId).Renderer("customer-picker");
+            form.Field(x => x.CustomerId);   // [Lookup] on CustomerId renders the picker
             form.Field(x => x.Number);
             form.Field(x => x.Name);
             form.Field(x => x.Budget);
@@ -193,7 +193,7 @@ public static class ErpModel
             form.Field(x => x.Hours);
             form.Field(x => x.HourlyRate)
                 .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
-            form.Field(x => x.Amount)
+            form.Field(x => x.Amount).ReadOnly()   // computed display seat (docs/34 M5)
                 .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
             form.Field(x => x.Note);
         })

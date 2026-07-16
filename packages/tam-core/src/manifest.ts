@@ -32,8 +32,11 @@ export interface ManifestField {
   options?: string[];
   changeSet: boolean;
   extension?: boolean;
-  /** Plugin-owned state (docs/31 D-X2): show in grids/filters, never editable in forms. */
+  /** Plugin-owned state (docs/31 D-X2) or a computed-display seat (docs/34 M5): extension
+   * fields are excluded from forms; compiled form fields render DISABLED, fed by suggestions. */
   readOnly?: boolean;
+  /** Reference field's lookup view (docs/34 M5): render a searchable picker over it. */
+  lookup?: string;
   visibleWhen?: Px;
   requiredWhen?: Px;
   renderer?: string;

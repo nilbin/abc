@@ -14,9 +14,14 @@ BUILT** (an M3 RTFM finding — this box is the source of truth until the doc is
 - NOT built (kept below as design): `DerivedValue` (forced computed fields),
   `field.DefaultOnceFrom` / `SuggestFrom` / `DerivedFrom` fluent bindings, the
   `Preserve`/`Clear`/`ClearIfInvalid` policies (`RecomputeIfUntouched` is the one shipped
-  `DependentValuePolicy`), and dependency-cycle detection (FORM001). A computed
-  display-only value today rides a `Suggest` onto an input field the server ignores — the
-  docs/34 friction log tracks the wart.
+  `DependentValuePolicy`), and dependency-cycle detection (FORM001).
+- Built since (docs/34 M5): a computed display value gets a SEAT —
+  `form.Field(x => x.Amount).ReadOnly()` renders disabled but stays a derivation target
+  (Suggest updates it live; the server still recomputes). And "load allowed selections"
+  usually needs NO derivation anymore: a reference field whose wrapper type declares
+  `[Lookup("view.id")]` renders a searchable picker over that view from the manifest alone
+  (docs/02) — `AddOptions` remains for genuinely context-DEPENDENT option sets and wins
+  over the lookup when both are present.
 
 A derivation computes **interaction state** without changing durable business state.
 

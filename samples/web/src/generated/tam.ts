@@ -694,6 +694,16 @@ export interface ProjectsListQuery {
   search?: string;
 }
 
+export interface ProjectsLookupRow {
+  id: string;
+  name: string;
+  number: string;
+}
+
+export interface ProjectsLookupQuery {
+  search?: string;
+}
+
 export interface StockDetailRow {
   id: string;
   sku: string;
@@ -717,6 +727,16 @@ export interface StockListRow {
 }
 
 export interface StockListQuery {
+  search?: string;
+}
+
+export interface StockLookupRow {
+  id: string;
+  name: string;
+  sku: string;
+}
+
+export interface StockLookupQuery {
   search?: string;
 }
 
@@ -878,6 +898,15 @@ export interface UsersListRow {
 }
 
 export interface UsersListQuery {
+  search?: string;
+}
+
+export interface UsersLookupRow {
+  id: string;
+  displayName: string;
+}
+
+export interface UsersLookupQuery {
   search?: string;
 }
 
@@ -1336,6 +1365,11 @@ export class TypedTamClient {
     return this.client.view("projects.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ProjectsListRow[] }>;
   }
 
+  /** view projects.lookup (requires projects.read) */
+  projectsLookup(query?: ProjectsLookupQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ProjectsLookupRow[] }> {
+    return this.client.view("projects.lookup", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ProjectsLookupRow[] }>;
+  }
+
   /** view stock.detail (requires stock.read) */
   stockDetail(query?: StockDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: StockDetailRow[] }> {
     return this.client.view("stock.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: StockDetailRow[] }>;
@@ -1344,6 +1378,11 @@ export class TypedTamClient {
   /** view stock.list (requires stock.read) */
   stockList(query?: StockListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }> {
     return this.client.view("stock.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }>;
+  }
+
+  /** view stock.lookup (requires stock.read) */
+  stockLookup(query?: StockLookupQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: StockLookupRow[] }> {
+    return this.client.view("stock.lookup", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: StockLookupRow[] }>;
   }
 
   /** view time.detail (requires time.read) */
@@ -1404,6 +1443,11 @@ export class TypedTamClient {
   /** view users.list (requires users.manage) */
   usersList(query?: UsersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }> {
     return this.client.view("users.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: UsersListRow[] }>;
+  }
+
+  /** view users.lookup (requires users.lookup) */
+  usersLookup(query?: UsersLookupQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: UsersLookupRow[] }> {
+    return this.client.view("users.lookup", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: UsersLookupRow[] }>;
   }
 
   /** view subscriptions.current (requires subscriptions.read) */

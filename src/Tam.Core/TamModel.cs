@@ -54,6 +54,11 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, SlotDefinition> Slots { get; init; } =
         new Dictionary<string, SlotDefinition>();
 
+    /// <summary>Non-fatal Build() observations (docs/34 M5): e.g. a convention-derived label
+    /// key claimed by members of DIFFERENT aggregates — legal, but one catalog text serves
+    /// both, which is how projects once inherited "Order number". Hosts log these at startup.</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
+
     /// <summary>Plugin panels in host slots, by slot id (docs/31 D-X4).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<PanelContribution>> Panels { get; init; } =
         new Dictionary<string, IReadOnlyList<PanelContribution>>();

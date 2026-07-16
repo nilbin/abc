@@ -395,6 +395,7 @@ public sealed partial class TamModelBuilder
             ExtensibleEntityKeys = extensibleKeys,
             Pages = pages,
             Slots = slots,
+            Warnings = CollectLabelWarnings(operations, views),
             Panels = panels.GroupBy(p => p.SlotId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<PanelContribution>)g.ToList()),
             Events = events,
@@ -418,6 +419,7 @@ public sealed partial class TamModelBuilder
         VerifyContributions(model);
         VerifySlotsAndEvents(model, eventRequirements);
         VerifyPages(model);
+        VerifyLookups(model);
         VerifyLocalization(model, catalogs);
         return model;
     }

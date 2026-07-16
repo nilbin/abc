@@ -25,6 +25,11 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   enforced. Never invent scope suffixes.
 - L10N001: zero display text in code. Every label/message is a locale key present in every
   culture catalog (sv + en). Use [LabelKey] and FindingFactory codes.
+- The TYPE carries the defaults (docs/02, docs/34 M5): semantic wrapper types own
+  [Format]/[LabelKey]/[Lookup] so every usage inherits them; member attributes override,
+  convention is the last resort. Use Tam.Money for money; never re-add name sniffing.
+  Reference fields get [Lookup("x.lookup")] on the wrapper, not per-form renderers or
+  options derivations.
 - EDIT001: consequential state never rides a Change<T> — state transitions are intent
   operations.
 - PLG001–005: everything a plugin/package contributes is id-prefixed (packages: claimed

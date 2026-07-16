@@ -154,6 +154,35 @@ public static class ProjectList
         .DefaultSort(nameof(Result.Number), descending: true);
 }
 
+/// <summary>The picker behind every ProjectId field ([Lookup], docs/34 M5): open projects,
+/// searched by number or name.</summary>
+[View("projects.lookup")]
+[Authorize("projects.read")]
+public static class ProjectLookup
+{
+    public sealed record Query(string? Search = null);
+
+    public sealed record Result
+    {
+        public ProjectId Id { get; init; }
+        public string Name { get; init; } = "";
+        public ProjectNumber Number { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
+    {
+        var projects = db.Projects.Where(x => x.Status == ProjectStatus.Open);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            projects = projects.Where(x =>
+                x.Name.Contains(query.Search!) ||
+                ((string)(object)x.Number).Contains(query.Search!));
+        return projects.Select(x => new Result { Id = x.Id, Name = x.Name, Number = x.Number });
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) =>
+        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
+}
+
 /// <summary>The record surface behind the declared projects page (docs/32): fields named to
 /// prefill the edit form.</summary>
 [View("projects.detail")]

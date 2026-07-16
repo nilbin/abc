@@ -45,28 +45,6 @@ public static class AddMaterialLine
     }
 }
 
-public static class AddMaterialLineDerivations
-{
-    /// <summary>Options for the stock item picker: the tenant's ACTIVE catalog. Keyed on
-    /// WorkOrderId because the row action prefills it when the form opens — same trigger
-    /// compromise as work-orders.schedule.assignees (docs/34 friction log: no declarative
-    /// lookup renderer yet).</summary>
-    [ServerDerivation("materials.add.stock-items")]
-    [DependsOn(nameof(AddMaterialLine.Input.WorkOrderId))]
-    public static async Task<DerivationResult> StockItems(
-        AddMaterialLine.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
-    {
-        if (input.WorkOrderId.Value == Guid.Empty) return DerivationResult.Empty;
-
-        var options = await db.Stock
-            .Where(x => x.IsActive)
-            .OrderBy(x => x.Name)
-            .Select(x => new Option(x.Id.Value, x.Name))
-            .ToListAsync(ct);
-        return DerivationResult.Empty.AddOptions(nameof(AddMaterialLine.Input.StockItemId), options);
-    }
-}
-
 [View("materials.list")]
 [Authorize("materials.read")]
 public static class MaterialLineList

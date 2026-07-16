@@ -31,11 +31,12 @@ Grid usage:
 
 ## Custom renderers
 
-```ts
-runtime.registerRenderer(
-  "customer-id",
-  CustomerPicker);
+Reference pickers need NO custom renderer: a field whose wrapper type declares
+`[Lookup("view.id")]` renders a searchable picker from the manifest alone
+([02-domain-state.md](02-domain-state.md) — this deleted the sample's CustomerPicker).
+`registerRenderer` is the seat for controls the manifest genuinely cannot describe:
 
+```ts
 runtime.registerRenderer(
   "address",
   AddressEditor);

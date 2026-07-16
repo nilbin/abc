@@ -22,6 +22,7 @@ public sealed class TamUsersPackage : ITamPlugin
             .AddOperationType(typeof(InviteUser))
             .AddOperationType(typeof(DeactivateUser))
             .AddViewType(typeof(UserList))
+            .AddViewType(typeof(UserDirectoryLookup))
             .Form<InviteUser.Input>("web.users.invite", "users.invite", form =>
             {
                 form.Field(x => x.Email);
@@ -281,6 +282,39 @@ public static class DeactivateUser
         membership.Active = false;   // revoke access here, never delete — the audit trail references the actor
         return new Output(input.UserName);
     }
+}
+
+/// <summary>The tenant DIRECTORY (docs/34 M5): active members as picker options — the
+/// lookup behind every [Lookup("users.lookup")] actor-reference field (assignees,
+/// approvers). Deliberately its OWN low-sensitivity atom: display names only, so granting
+/// a dispatcher the picker never grants the users ADMIN surface (users.manage).</summary>
+[View("users.lookup")]
+[Authorize("users.lookup")]
+public static class UserDirectoryLookup
+{
+    public sealed record Query(string? Search = null);
+
+    public sealed record Result
+    {
+        public Guid Id { get; init; }
+        [LabelKey("labels.display-name")]
+        public string DisplayName { get; init; } = "";
+    }
+
+    public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context)
+    {
+        var members = tam.Db.Set<TenantMembershipEntity>().Where(m => m.Active);
+        var accounts = tam.Db.Set<AccountEntity>().Where(a => a.Active);
+        var rows = from m in members
+                   join a in accounts on m.AccountId equals a.Id
+                   select new Result { Id = a.Id, DisplayName = a.DisplayName };
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            rows = rows.Where(x => x.DisplayName.Contains(query.Search!));
+        return rows;
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) =>
+        caps.Sortable(nameof(Result.DisplayName)).DefaultSort(nameof(Result.DisplayName));
 }
 
 [View("users.list")]

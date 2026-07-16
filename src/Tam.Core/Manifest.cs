@@ -78,7 +78,8 @@ public sealed record ManifestField(
     Px? RequiredWhen = null,
     string? Renderer = null,
     string? Sensitive = null,    // docs/27 D-A3: present only for actors holding this atom
-    bool ReadOnly = false);      // docs/31 D-X2: plugin-owned state — grids yes, forms no
+    bool ReadOnly = false,       // docs/31 D-X2: plugin-owned state — grids yes, forms no
+    string? Lookup = null);      // docs/34 M5: render a searchable picker over this view
 
 public sealed record ManifestOperation(
     string Permission,
@@ -229,6 +230,7 @@ public static class ManifestBuilder
                         Renderer = config.Renderer,
                         VisibleWhen = config.VisibleWhen,
                         RequiredWhen = config.RequiredWhen,
+                        ReadOnly = field.ReadOnly || config.ReadOnly,
                     };
                 }).ToList();
 
@@ -359,6 +361,7 @@ public static class ManifestBuilder
         f.IsChangeSet)
     {
         Sensitive = f.SensitivePermission,
+        Lookup = f.Lookup,
     };
 
     public static ManifestField ToField(ExtensionFieldSpec spec) => new(

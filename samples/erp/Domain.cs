@@ -4,10 +4,20 @@ namespace Erp;
 
 // ---- Semantic value types (labels live in locales/, never here — docs/21) ----
 
+// Reference types carry their PICKER (docs/34 M5 — the type carries the defaults): declare
+// the lookup once, and every form field of this type renders a searchable select over the
+// view. [LabelKey] rides the same channel where the convention key would mislead.
+[LabelKey("labels.customer"), Lookup("customers.lookup")]
 public readonly record struct CustomerId(Guid Value);
+
+[LabelKey("labels.project"), Lookup("projects.lookup")]
 public readonly record struct ProjectId(Guid Value);
+
 public readonly record struct OrderId(Guid Value);
+
+[LabelKey("labels.stock-item"), Lookup("stock.lookup")]
 public readonly record struct StockItemId(Guid Value);
+
 public readonly record struct WorkOrderId(Guid Value);
 public readonly record struct TimeEntryId(Guid Value);
 public readonly record struct MaterialLineId(Guid Value);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
@@ -12,6 +13,11 @@ public static partial class TamAspNetCore
     public static WebApplication MapTam(this WebApplication app)
     {
         var model = app.Services.GetRequiredService<TamModel>();
+
+        // Model hygiene warnings (e.g. L10N005 wrapper-label collisions) surface once at startup —
+        // advisory by design: Build() already threw on everything that must block.
+        foreach (var warning in model.Warnings)
+            app.Logger.LogWarning("{TamModelWarning}", warning);
 
         app.MapPost("/api/operations/{operationId}", async (
             string operationId, HttpContext http, OperationExecutor executor, CancellationToken ct) =>

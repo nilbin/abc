@@ -375,6 +375,52 @@ public sealed partial class TamModelBuilder
     }
 
     /// <summary>L10N001: every label key the model references must exist in the default culture.</summary>
+    /// <summary>LOOKUP001: a [Lookup] view must exist — a picker over a missing view is a
+    /// dead control on every form that uses the type (docs/34 M5).</summary>
+    private static void VerifyLookups(TamModel model)
+    {
+        var fields = model.Operations.Values.SelectMany(o => o.InputFields)
+            .Concat(model.Views.Values.SelectMany(v => v.QueryFields));
+        foreach (var field in fields)
+            if (field.Lookup is { } view && !model.Views.ContainsKey(view))
+                throw new InvalidOperationException(
+                    $"LOOKUP001: field '{field.WireName}' declares [Lookup(\"{view}\")] but no such view exists.");
+    }
+
+    /// <summary>L10N005 (WARNING, docs/34 M5): DIFFERENT semantic wrapper types claiming the
+    /// same convention-derived label key — the exact trap where Project.Number silently wore
+    /// orders' "Order number" text. Plain string/enum members sharing generic keys ("Name",
+    /// "Status") stay silent: one text genuinely serves them. Silence a true positive with a
+    /// [LabelKey] on one of the wrapper types.</summary>
+    private static List<string> CollectLabelWarnings(
+        IReadOnlyDictionary<string, OperationDefinition> operations,
+        IReadOnlyDictionary<string, ViewDefinition> views)
+    {
+        var claims = new Dictionary<string, HashSet<Type>>(StringComparer.Ordinal);
+        void Claim(FieldModel field)
+        {
+            // Only convention-derived keys on WRAPPER types — an explicit [LabelKey] is a
+            // deliberate share, and primitive members sharing "Name" is the convention working.
+            if (field.LabelKey != $"labels.{Naming.Kebab(field.MemberName)}") return;
+            var type = Nullable.GetUnderlyingType(field.EffectiveType) ?? field.EffectiveType;
+            if (!ValueWrapper.IsWrapper(type)) return;
+            (claims.TryGetValue(field.LabelKey, out var set)
+                ? set : claims[field.LabelKey] = []).Add(type);
+        }
+        foreach (var op in operations.Values)
+            foreach (var f in op.InputFields) Claim(f);
+        foreach (var view in views.Values)
+            foreach (var f in view.ResultFields) Claim(f);
+
+        return claims.Where(kv => kv.Value.Count > 1)
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => $"L10N005: label key '{kv.Key}' is convention-claimed by different "
+                + $"semantic types ({string.Join(", ", kv.Value.Select(t => t.Name).OrderBy(x => x, StringComparer.Ordinal))}) "
+                + "— one catalog text serves them all; if the text is type-specific, give one "
+                + "a [LabelKey] on its wrapper type.")
+            .ToList();
+    }
+
     private static void VerifyLocalization(TamModel model, LocaleCatalogs catalogs)
     {
         static IEnumerable<string> NavLabels(NavNode node) =>

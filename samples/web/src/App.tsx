@@ -5,30 +5,18 @@ import {
 } from '@mantine/core';
 import { TamClient, type StandableInfo } from '@tam/core';
 import {
-  FieldRendererProps, LookupSelect, NavModeSwitcher, NavPage, NavProvider, NavSidebar, NavTabs,
-  TamProvider, registerBadgeColors, registerRenderer,
+  NavModeSwitcher, NavPage, NavProvider, NavSidebar, NavTabs,
+  TamProvider, registerBadgeColors,
   useTam, useTamAuth,
 } from '@tam/react';
 
 const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
 
-// ---- App-owned renderers: the framework owns semantics, the app owns pixels (docs/13) ----
+// ---- App-owned look & feel: the framework owns semantics, the app owns pixels (docs/13).
+// The old CustomerPicker renderer is GONE — [Lookup("customers.lookup")] on the CustomerId
+// wrapper renders the picker from the manifest (docs/02); registerRenderer remains the seat
+// for genuinely bespoke controls.
 
-function CustomerPicker(p: FieldRendererProps) {
-  return (
-    <LookupSelect
-      view="customers.lookup"
-      label={p.label}
-      required={p.required}
-      error={p.error}
-      description={p.warning}
-      value={p.value}
-      onChange={v => p.onChange(v)}
-    />
-  );
-}
-
-registerRenderer('customer-picker', CustomerPicker);
 // Domain enum colors for grid badges — the framework ships only its own registry states.
 registerBadgeColors({
   open: 'blue', completed: 'green', cancelled: 'gray', project: 'grape', service: 'cyan',

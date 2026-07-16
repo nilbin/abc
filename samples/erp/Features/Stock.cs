@@ -115,6 +115,35 @@ public static class StockList
         .DefaultSort(nameof(Result.Sku));
 }
 
+/// <summary>The picker behind every StockItemId field ([Lookup], docs/34 M5): active items
+/// only — the guard the old options derivation enforced now lives in the view.</summary>
+[View("stock.lookup")]
+[Authorize("stock.read")]
+public static class StockLookup
+{
+    public sealed record Query(string? Search = null);
+
+    public sealed record Result
+    {
+        public StockItemId Id { get; init; }
+        public string Name { get; init; } = "";
+        public Sku Sku { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
+    {
+        var items = db.Stock.Where(x => x.IsActive);
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            items = items.Where(x =>
+                x.Name.Contains(query.Search!) ||
+                ((string)(object)x.Sku).Contains(query.Search!));
+        return items.Select(x => new Result { Id = x.Id, Name = x.Name, Sku = x.Sku });
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) =>
+        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
+}
+
 [View("stock.detail")]
 [Authorize("stock.read")]
 public static class StockDetail

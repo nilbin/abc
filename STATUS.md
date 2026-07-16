@@ -451,6 +451,30 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Field-service arc M5 (docs/34): the friction triage — all nine fixes BUILT, under one
+  principle: the type carries the defaults (docs/02)**. Semantic wrapper types now own
+  their `[Format]`, `[LabelKey]` and NEW `[Lookup("view.id")]`; resolution is member attr →
+  type attr → convention. `Tam.Money` ships ready-made (implicit decimal conversions) and
+  the type-NAME sniff is deleted — erp's nine money fields are `Money`, its three reference
+  wrappers (`CustomerId`/`ProjectId`/`StockItemId`) plus assignee fields declare lookups,
+  and the manifest alone renders searchable pickers (labelField inferred from the lookup
+  view's first string column; server-sent derivation options still win). That DELETED erp's
+  two "SOMETHING must fire" options-derivations and the bespoke CustomerPicker wiring. The
+  framework grew `users.lookup` (tenant directory as its own low-sensitivity atom — the M2
+  actor-gap answer) plus `projects.lookup`/`stock.lookup` in the sample; LOOKUP001 verifies
+  lookup targets at Build; advisory L10N005 (`TamModel.Warnings`, logged at startup) flags
+  two wrapper types sharing one convention label key. Rounding out the log:
+  `.ReadOnly()` display seat (time.book's computed amount renders disabled but
+  derivation-targetable), `FieldConflict.Reason` distinguishes original-missing from stale
+  on the wire, the resolve endpoint 400s with the expected `{"input": ...}` hint instead of
+  500, `approvals.rules.retire` un-gates what define gated, page-placed slots auto-declare
+  (the slot-declared-twice reading is gone), and the RLS read-set scaling measurement became
+  a FIX: the policy takes a constant-size `app.tenant_path` GUC and semi-joins the tenant
+  registry — 240 ms → 11.7 ms for a 200-node subtree over 20k rows (id-set arm kept as
+  fallback; fingerprints distinguish `p:`/`s:`). Verified: 149 framework + 8 harness tests,
+  full 15-suite matrix (210 checks) on SQLite AND Postgres, additive-only manifest baseline
+  (fieldm2 now asserts the manifest lookup + wire rows from users.lookup instead of the
+  deleted derivation).
 - **Field-service arc M4 (docs/34): invoicing from completed work orders + the technician
   field mode**: the invoicing plugin now subscribes to work-order-completed and drafts from
   what the work actually COST — approved time + materials, read through service-mode

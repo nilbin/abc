@@ -806,7 +806,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         },
         {
           "name": "quantity",
@@ -899,7 +900,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "users.lookup"
         }
       ],
       "outputFields": [
@@ -1029,7 +1031,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         }
       ],
       "outputFields": [
@@ -1206,13 +1209,14 @@
       "outputFields": [
         {
           "name": "customerId",
-          "labelKey": "labels.customer-id",
+          "labelKey": "labels.customer",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         }
       ],
       "gatedBy": []
@@ -1229,7 +1233,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "orderType",
@@ -1275,7 +1280,8 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "requestedDate",
@@ -1336,7 +1342,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "number",
@@ -1373,13 +1380,14 @@
       "outputFields": [
         {
           "name": "projectId",
-          "labelKey": "labels.project-id",
+          "labelKey": "labels.project",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         }
       ],
       "gatedBy": []
@@ -1440,13 +1448,14 @@
       "outputFields": [
         {
           "name": "stockItemId",
-          "labelKey": "labels.stock-item-id",
+          "labelKey": "labels.stock-item",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         }
       ],
       "gatedBy": []
@@ -1463,7 +1472,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "title",
@@ -1535,7 +1545,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         }
       ],
       "outputFields": [
@@ -1564,7 +1575,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "name",
@@ -1614,13 +1626,14 @@
       "outputFields": [
         {
           "name": "customerId",
-          "labelKey": "labels.customer-id",
+          "labelKey": "labels.customer",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         }
       ],
       "gatedBy": []
@@ -1710,7 +1723,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "name",
@@ -1737,13 +1751,14 @@
       "outputFields": [
         {
           "name": "projectId",
-          "labelKey": "labels.project-id",
+          "labelKey": "labels.project",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         }
       ],
       "gatedBy": []
@@ -1760,7 +1775,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         },
         {
           "name": "name",
@@ -1787,13 +1803,14 @@
       "outputFields": [
         {
           "name": "stockItemId",
-          "labelKey": "labels.stock-item-id",
+          "labelKey": "labels.stock-item",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         }
       ],
       "gatedBy": []
@@ -1872,7 +1889,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         }
       ],
       "outputFields": [
@@ -1925,7 +1943,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "users.lookup"
         }
       ],
       "outputFields": [
@@ -3602,25 +3621,27 @@
       "queryFields": [
         {
           "name": "customerId",
-          "labelKey": "labels.customer-id",
+          "labelKey": "labels.customer",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         }
       ],
       "resultFields": [
         {
           "name": "id",
-          "labelKey": "labels.id",
+          "labelKey": "labels.customer",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "name",
@@ -3698,13 +3719,14 @@
       "resultFields": [
         {
           "name": "id",
-          "labelKey": "labels.id",
+          "labelKey": "labels.customer",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "name",
@@ -3788,13 +3810,14 @@
       "resultFields": [
         {
           "name": "id",
-          "labelKey": "labels.id",
+          "labelKey": "labels.customer",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "name",
@@ -4344,25 +4367,27 @@
       "queryFields": [
         {
           "name": "projectId",
-          "labelKey": "labels.project-id",
+          "labelKey": "labels.project",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         }
       ],
       "resultFields": [
         {
           "name": "id",
-          "labelKey": "labels.id",
+          "labelKey": "labels.project",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "number",
@@ -4441,13 +4466,14 @@
       "resultFields": [
         {
           "name": "id",
-          "labelKey": "labels.id",
+          "labelKey": "labels.project",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "number",
@@ -4530,15 +4556,15 @@
       "defaultSortDescending": true,
       "subtree": "tenantId"
     },
-    "stock.detail": {
-      "permission": "stock.read",
+    "projects.lookup": {
+      "permission": "projects.read",
       "queryFields": [
         {
-          "name": "stockItemId",
-          "labelKey": "labels.stock-item-id",
-          "type": "reference",
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
           "wireKind": "string",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false,
           "readOnly": false
@@ -4547,13 +4573,69 @@
       "resultFields": [
         {
           "name": "id",
-          "labelKey": "labels.id",
+          "labelKey": "labels.project",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
+          "readOnly": false,
+          "lookup": "projects.lookup"
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
           "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.project-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "name"
+      ],
+      "filterable": [],
+      "defaultSort": "name",
+      "defaultSortDescending": false
+    },
+    "stock.detail": {
+      "permission": "stock.read",
+      "queryFields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false,
+          "lookup": "stock.lookup"
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false,
+          "lookup": "stock.lookup"
         },
         {
           "name": "sku",
@@ -4635,13 +4717,14 @@
       "resultFields": [
         {
           "name": "id",
-          "labelKey": "labels.id",
+          "labelKey": "labels.stock-item",
           "type": "reference",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         },
         {
           "name": "sku",
@@ -4713,6 +4796,60 @@
         "unitPrice"
       ],
       "defaultSort": "sku",
+      "defaultSortDescending": false
+    },
+    "stock.lookup": {
+      "permission": "stock.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false,
+          "lookup": "stock.lookup"
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "name"
+      ],
+      "filterable": [],
+      "defaultSort": "name",
       "defaultSortDescending": false
     },
     "time.detail": {
@@ -5805,6 +5942,50 @@
       ],
       "filterable": [],
       "defaultSort": "userName",
+      "defaultSortDescending": false,
+      "plugin": "tam.users"
+    },
+    "users.lookup": {
+      "permission": "users.lookup",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "displayName",
+          "labelKey": "labels.display-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "displayName"
+      ],
+      "filterable": [],
+      "defaultSort": "displayName",
       "defaultSortDescending": false,
       "plugin": "tam.users"
     },
@@ -7078,8 +7259,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "customer-picker",
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "orderType",
@@ -7127,7 +7308,8 @@
               "v": "Project"
             }
           },
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "workAddress",
@@ -7303,7 +7485,8 @@
           "changeSet": false,
           "extension": false,
           "renderer": "hidden",
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "name",
@@ -7364,8 +7547,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "customer-picker",
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "customers.lookup"
         },
         {
           "name": "number",
@@ -7414,7 +7597,8 @@
           "changeSet": false,
           "extension": false,
           "renderer": "hidden",
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "name",
@@ -7452,7 +7636,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "projects.lookup"
         },
         {
           "name": "title",
@@ -7572,13 +7757,12 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "users.lookup"
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": [
-        "workOrderId"
-      ]
+      "serverDependencies": []
     },
     "web.time.book": {
       "operation": "time.book",
@@ -7634,7 +7818,7 @@
           "required": false,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": true
         },
         {
           "name": "note",
@@ -7678,7 +7862,8 @@
           "required": true,
           "changeSet": false,
           "extension": false,
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         },
         {
           "name": "quantity",
@@ -7692,9 +7877,7 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": [
-        "workOrderId"
-      ]
+      "serverDependencies": []
     },
     "web.stock.create": {
       "operation": "stock.create",
@@ -7763,7 +7946,8 @@
           "changeSet": false,
           "extension": false,
           "renderer": "hidden",
-          "readOnly": false
+          "readOnly": false,
+          "lookup": "stock.lookup"
         },
         {
           "name": "name",
@@ -8184,6 +8368,7 @@
     "time.book",
     "time.read",
     "time.read-all",
+    "users.lookup",
     "users.manage",
     "work-orders.assign",
     "work-orders.close",

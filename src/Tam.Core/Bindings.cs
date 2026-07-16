@@ -16,7 +16,12 @@ public sealed record FormFieldConfig(
     string? Renderer,
     Px? VisibleWhen,
     Px? RequiredWhen,
-    DependentValuePolicy SuggestionPolicy);
+    DependentValuePolicy SuggestionPolicy)
+{
+    /// <summary>docs/34 M5: a computed-display seat — rendered disabled, fed by suggestions;
+    /// the server's value stays authoritative. Ends the editable-input-the-server-ignores wart.</summary>
+    public bool ReadOnly { get; init; }
+}
 
 public sealed record FormDefinition(
     string Id,
@@ -86,6 +91,13 @@ public sealed class FormFieldBuilder<TInput>(FormBuilder<TInput> form, int index
     public FormFieldBuilder<TInput> OnSourceChange(DependentValuePolicy policy)
     {
         form.Update(index, f => f with { SuggestionPolicy = policy });
+        return this;
+    }
+
+    /// <summary>Renders disabled — a display seat for derivation-computed values.</summary>
+    public FormFieldBuilder<TInput> ReadOnly()
+    {
+        form.Update(index, f => f with { ReadOnly = true });
         return this;
     }
 }
