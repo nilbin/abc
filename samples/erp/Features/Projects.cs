@@ -13,7 +13,7 @@ public static class CreateProject
         [property: LabelKey("labels.customer")] CustomerId CustomerId,
         ProjectNumber Number,
         string Name,
-        decimal? Budget = null);
+        Money? Budget = null);
 
     public sealed record Output(ProjectId ProjectId);
 
@@ -43,7 +43,7 @@ public static class EditProjectDetails
     public sealed record Input(
         [property: LabelKey("labels.project")] ProjectId ProjectId,
         Change<string>? Name = null,
-        Change<decimal?>? Budget = null);
+        Change<Money?>? Budget = null);
 
     public sealed record Output(ProjectId ProjectId);
 
@@ -121,7 +121,7 @@ public static class ProjectList
         [LabelKey("labels.customer")]
         public CustomerName CustomerName { get; init; }
         public ProjectStatus Status { get; init; }
-        public decimal? Budget { get; init; }
+        public Money? Budget { get; init; }
         [LabelKey("labels.company")]
         public string TenantId { get; init; } = "";
     }
@@ -170,7 +170,7 @@ public static class ProjectDetail
         [LabelKey("labels.customer")]
         public CustomerName CustomerName { get; init; }
         public ProjectStatus Status { get; init; }
-        public decimal? Budget { get; init; }
+        public Money? Budget { get; init; }
     }
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context) =>

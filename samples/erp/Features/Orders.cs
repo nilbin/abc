@@ -41,7 +41,7 @@ public static class CreateOrder
         OrderDescription Description,
         [property: LabelKey("labels.project")] ProjectId? ProjectId = null,
         DateOnly? RequestedDate = null,
-        decimal? EstimatedTotal = null);
+        Money? EstimatedTotal = null);
 
     public sealed record Output(OrderId OrderId, OrderNumber Number);
 
@@ -133,7 +133,7 @@ public static class EditOrderDetails
         Change<OrderDescription?>? Description = null,
         Change<DateOnly?>? RequestedDate = null,
         Change<Address?>? WorkAddress = null,
-        Change<decimal?>? EstimatedTotal = null);
+        Change<Money?>? EstimatedTotal = null);
 
     public sealed record Output(long Version);
 
@@ -202,7 +202,7 @@ public static class OrderList
         public OrderType Type { get; init; }
         public OrderStatus Status { get; init; }
         public DateOnly? RequestedDate { get; init; }
-        public decimal? EstimatedTotal { get; init; }
+        public Money? EstimatedTotal { get; init; }
         [LabelKey("labels.company")]
         public string TenantId { get; init; } = "";
         public long Version { get; init; }
@@ -268,7 +268,7 @@ public static class OrderDetail
         public Address WorkAddress { get; init; }
         public OrderDescription Description { get; init; }
         public DateOnly? RequestedDate { get; init; }
-        public decimal? EstimatedTotal { get; init; }
+        public Money? EstimatedTotal { get; init; }
         public long Version { get; init; }
         public ExtensionData Extensions { get; init; } = new();
     }

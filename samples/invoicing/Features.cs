@@ -131,7 +131,7 @@ public static class InvoiceDetail
         [LabelKey("labels.status")]
         public string Status { get; init; } = "";
         [LabelKey("invoicing.labels.amount")]
-        public decimal Amount { get; init; }
+        public Money Amount { get; init; }
         [LabelKey("invoicing.labels.created")]
         public string Created { get; init; } = "";
     }
@@ -159,7 +159,7 @@ public static class InvoiceList
         [LabelKey("labels.status")]
         public string Status { get; init; } = "";
         [LabelKey("invoicing.labels.amount")]
-        public decimal Amount { get; init; }
+        public Money Amount { get; init; }
         [LabelKey("invoicing.labels.created")]
         public string Created { get; init; } = "";
     }

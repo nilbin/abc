@@ -19,7 +19,7 @@ public sealed class Invoice : ITenantScoped
     public Guid? WorkOrderId { get; set; }
     public string OrderNumber { get; set; } = "";
     public string Status { get; set; } = "draft";      // draft | invoiced | paid
-    public decimal Amount { get; set; }
+    public Money Amount { get; set; }
     public string CreatedAtIso { get; set; } = "";
     public string? FinalizedAtIso { get; set; }
 

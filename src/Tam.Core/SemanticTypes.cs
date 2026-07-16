@@ -26,6 +26,19 @@ public sealed class LabelKeyAttribute(string key) : Attribute
 }
 
 /// <summary>
+/// The ready-made money wrapper: declare a field as <see cref="Money"/> and every form, grid,
+/// filter and agent schema treats it as money (docs/34 M5 — the type carries the defaults).
+/// Domain-named wrappers get the same by carrying [Format("money")] themselves.
+/// </summary>
+[Format("money")]
+public readonly record struct Money(decimal Value)
+{
+    public static implicit operator decimal(Money money) => money.Value;
+    public static implicit operator Money(decimal value) => new(value);
+    public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
+
+/// <summary>
 /// The closed vocabulary shared by compiled fields and tenant extension fields
 /// (docs/02, docs/15). One implementation per key: wire kind, format, normalization,
 /// semantic equality — reused everywhere the type appears.
@@ -151,9 +164,13 @@ public static class SemanticTypes
         {
             "email" => Email,
             "phone" => Phone,
+            // The TYPE carries the semantic (docs/34 M5): [Format("money")] on a wrapper —
+            // or Tam.Money itself — makes every usage money end to end. The old
+            // name-contains-"Money" sniff is gone; an undeclared decimal is a plain number.
+            "money" => Money,
             _ when multiline => MultilineText,
             _ when inner == typeof(string) => Text,
-            _ when inner == typeof(decimal) => t.Name.Contains("Money", StringComparison.OrdinalIgnoreCase) ? Money : Number,
+            _ when inner == typeof(decimal) => Number,
             _ when inner == typeof(int) || inner == typeof(long) => Integer,
             _ when inner == typeof(bool) => Bool,
             _ when inner == typeof(DateOnly) => Date,

@@ -13,7 +13,7 @@ public static class CreateStockItem
         Sku Sku,
         string Name,
         StockUnit Unit,
-        decimal UnitPrice);
+        Money UnitPrice);
 
     public sealed record Output(StockItemId StockItemId);
 
@@ -38,7 +38,7 @@ public static class EditStockItem
     public sealed record Input(
         [property: LabelKey("labels.stock-item")] StockItemId StockItemId,
         Change<string>? Name = null,
-        Change<decimal>? UnitPrice = null);
+        Change<Money>? UnitPrice = null);
 
     public sealed record Output(StockItemId StockItemId);
 
@@ -88,7 +88,7 @@ public static class StockList
         public Sku Sku { get; init; }
         public string Name { get; init; } = "";
         public StockUnit Unit { get; init; }
-        public decimal UnitPrice { get; init; }
+        public Money UnitPrice { get; init; }
         public bool IsActive { get; init; }
     }
 
@@ -127,7 +127,7 @@ public static class StockDetail
         public Sku Sku { get; init; }
         public string Name { get; init; } = "";
         public StockUnit Unit { get; init; }
-        public decimal UnitPrice { get; init; }
+        public Money UnitPrice { get; init; }
         public bool IsActive { get; init; }
     }
 

@@ -827,8 +827,9 @@
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -953,8 +954,9 @@
         {
           "name": "hourlyRate",
           "labelKey": "labels.hourly-rate",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -975,8 +977,9 @@
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -997,8 +1000,9 @@
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -1280,8 +1284,9 @@
         {
           "name": "estimatedTotal",
           "labelKey": "labels.estimated-total",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -1350,8 +1355,9 @@
         {
           "name": "budget",
           "labelKey": "labels.budget",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -1416,8 +1422,9 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -1661,8 +1668,9 @@
         {
           "name": "estimatedTotal",
           "labelKey": "labels.estimated-total",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": true,
           "extension": false,
@@ -1711,8 +1719,9 @@
         {
           "name": "budget",
           "labelKey": "labels.budget",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": true,
           "extension": false,
@@ -1760,8 +1769,9 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": true,
           "extension": false,
@@ -3863,8 +3873,9 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -3873,8 +3884,9 @@
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -3970,8 +3982,9 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -3980,8 +3993,9 @@
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -4111,8 +4125,9 @@
         {
           "name": "estimatedTotal",
           "labelKey": "labels.estimated-total",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -4231,8 +4246,9 @@
         {
           "name": "estimatedTotal",
           "labelKey": "labels.estimated-total",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -4359,8 +4375,9 @@
         {
           "name": "budget",
           "labelKey": "labels.budget",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -4443,8 +4460,9 @@
         {
           "name": "budget",
           "labelKey": "labels.budget",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -4541,8 +4559,9 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -4628,8 +4647,9 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -4727,8 +4747,9 @@
         {
           "name": "hourlyRate",
           "labelKey": "labels.hourly-rate",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -4737,8 +4758,9 @@
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -4843,8 +4865,9 @@
         {
           "name": "hourlyRate",
           "labelKey": "labels.hourly-rate",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -4853,8 +4876,9 @@
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -6390,8 +6414,9 @@
         {
           "name": "amount",
           "labelKey": "invoicing.labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -6461,8 +6486,9 @@
         {
           "name": "amount",
           "labelKey": "invoicing.labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -7102,12 +7128,12 @@
         {
           "name": "estimatedTotal",
           "labelKey": "labels.estimated-total",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "money",
           "readOnly": false
         }
       ],
@@ -7166,12 +7192,12 @@
         {
           "name": "estimatedTotal",
           "labelKey": "labels.estimated-total",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": true,
           "extension": false,
-          "renderer": "money",
           "readOnly": false
         }
       ],
@@ -7328,12 +7354,12 @@
         {
           "name": "budget",
           "labelKey": "labels.budget",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "money",
           "readOnly": false
         }
       ],
@@ -7367,12 +7393,12 @@
         {
           "name": "budget",
           "labelKey": "labels.budget",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": true,
           "extension": false,
-          "renderer": "money",
           "readOnly": false
         }
       ],
@@ -7555,23 +7581,23 @@
         {
           "name": "hourlyRate",
           "labelKey": "labels.hourly-rate",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
-          "renderer": "money",
           "readOnly": false
         },
         {
           "name": "amount",
           "labelKey": "labels.amount",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "money",
           "readOnly": false
         },
         {
@@ -7677,8 +7703,9 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -7715,12 +7742,12 @@
         {
           "name": "unitPrice",
           "labelKey": "labels.unit-price",
-          "type": "number",
+          "type": "money",
           "wireKind": "number",
+          "format": "money",
           "required": false,
           "changeSet": true,
           "extension": false,
-          "renderer": "money",
           "readOnly": false
         }
       ],

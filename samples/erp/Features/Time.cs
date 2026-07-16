@@ -33,11 +33,11 @@ public static class BookTime
         [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
         DateOnly Date,
         decimal Hours,
-        [property: LabelKey("labels.hourly-rate")] decimal HourlyRate,
+        [property: LabelKey("labels.hourly-rate")] Money HourlyRate,
         TimeNote? Note = null,
-        decimal? Amount = null);
+        Money? Amount = null);
 
-    public sealed record Output(TimeEntryId TimeEntryId, decimal Amount);
+    public sealed record Output(TimeEntryId TimeEntryId, Money Amount);
 
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
@@ -143,8 +143,8 @@ public static class TimeEntryList
         public string TechnicianName { get; init; } = "";
         public decimal Hours { get; init; }
         [LabelKey("labels.hourly-rate")]
-        public decimal HourlyRate { get; init; }
-        public decimal Amount { get; init; }
+        public Money HourlyRate { get; init; }
+        public Money Amount { get; init; }
         public TimeEntryStatus Status { get; init; }
     }
 
@@ -193,8 +193,8 @@ public static class TimeEntryDetail
         public string TechnicianName { get; init; } = "";
         public decimal Hours { get; init; }
         [LabelKey("labels.hourly-rate")]
-        public decimal HourlyRate { get; init; }
-        public decimal Amount { get; init; }
+        public Money HourlyRate { get; init; }
+        public Money Amount { get; init; }
         public TimeNote? Note { get; init; }
         public TimeEntryStatus Status { get; init; }
     }

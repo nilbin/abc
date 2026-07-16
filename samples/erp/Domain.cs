@@ -157,7 +157,7 @@ public sealed class Project : Tam.EntityFrameworkCore.ITenantScoped
     public ProjectNumber Number { get; private set; }
     public CustomerId CustomerId { get; private set; }
     public string Name { get; private set; } = "";
-    public decimal? Budget { get; private set; }
+    public Money? Budget { get; private set; }
     public ProjectStatus Status { get; private set; }
 
     public static Project Create(
@@ -279,7 +279,7 @@ public sealed class StockItem : Tam.EntityFrameworkCore.ITenantScoped
     public Sku Sku { get; private set; }
     public string Name { get; private set; } = "";
     public StockUnit Unit { get; private set; }
-    public decimal UnitPrice { get; private set; }
+    public Money UnitPrice { get; private set; }
     public bool IsActive { get; private set; }
 
     public static StockItem Create(
@@ -314,8 +314,8 @@ public sealed class TimeEntry : Tam.EntityFrameworkCore.ITenantScoped
     public string TechnicianName { get; private set; } = "";
     public DateOnly Date { get; private set; }
     public decimal Hours { get; private set; }
-    public decimal HourlyRate { get; private set; }
-    public decimal Amount { get; private set; }
+    public Money HourlyRate { get; private set; }
+    public Money Amount { get; private set; }
     public TimeNote? Note { get; private set; }
     public TimeEntryStatus Status { get; private set; }
 
@@ -356,8 +356,8 @@ public sealed class MaterialLine : Tam.EntityFrameworkCore.ITenantScoped
     public WorkOrderId WorkOrderId { get; private set; }
     public StockItemId StockItemId { get; private set; }
     public decimal Quantity { get; private set; }
-    public decimal UnitPrice { get; private set; }
-    public decimal Amount { get; private set; }
+    public Money UnitPrice { get; private set; }
+    public Money Amount { get; private set; }
 
     public static MaterialLine Add(
         string tenantId, WorkOrderId workOrderId, StockItemId stockItemId,
@@ -386,7 +386,7 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
     public Address WorkAddress { get; private set; }
     public OrderDescription Description { get; private set; }
     public DateOnly? RequestedDate { get; private set; }
-    public decimal? EstimatedTotal { get; private set; }
+    public Money? EstimatedTotal { get; private set; }
     public OrderStatus Status { get; private set; }
     public string? AssignedToActorId { get; private set; }
     public long Version { get; set; }

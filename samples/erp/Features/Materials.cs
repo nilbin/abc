@@ -19,7 +19,7 @@ public static class AddMaterialLine
         [property: LabelKey("labels.stock-item")] StockItemId StockItemId,
         decimal Quantity);
 
-    public sealed record Output(MaterialLineId MaterialLineId, decimal Amount);
+    public sealed record Output(MaterialLineId MaterialLineId, Money Amount);
 
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
@@ -83,8 +83,8 @@ public static class MaterialLineList
         public StockUnit Unit { get; init; }
         public decimal Quantity { get; init; }
         [LabelKey("labels.unit-price")]
-        public decimal UnitPrice { get; init; }
-        public decimal Amount { get; init; }
+        public Money UnitPrice { get; init; }
+        public Money Amount { get; init; }
     }
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
@@ -132,8 +132,8 @@ public static class MaterialLineDetail
         public StockUnit Unit { get; init; }
         public decimal Quantity { get; init; }
         [LabelKey("labels.unit-price")]
-        public decimal UnitPrice { get; init; }
-        public decimal Amount { get; init; }
+        public Money UnitPrice { get; init; }
+        public Money Amount { get; init; }
     }
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context) =>

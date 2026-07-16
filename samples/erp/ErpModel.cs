@@ -116,7 +116,7 @@ public static class ErpModel
                 .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
             form.Field(x => x.Description);
             form.Field(x => x.RequestedDate);
-            form.Field(x => x.EstimatedTotal).Renderer("money");
+            form.Field(x => x.EstimatedTotal);
             form.Extensions();
         })
 
@@ -126,7 +126,7 @@ public static class ErpModel
             form.Field(x => x.Description);
             form.Field(x => x.RequestedDate);
             form.Field(x => x.WorkAddress);
-            form.Field(x => x.EstimatedTotal).Renderer("money");
+            form.Field(x => x.EstimatedTotal);
             form.Extensions();
         })
 
@@ -148,14 +148,14 @@ public static class ErpModel
             form.Field(x => x.CustomerId).Renderer("customer-picker");
             form.Field(x => x.Number);
             form.Field(x => x.Name);
-            form.Field(x => x.Budget).Renderer("money");
+            form.Field(x => x.Budget);
         })
 
         .Form<EditProjectDetails.Input>("web.projects.edit", "projects.edit-details", form =>
         {
             form.Field(x => x.ProjectId).Renderer("hidden");
             form.Field(x => x.Name);
-            form.Field(x => x.Budget).Renderer("money");
+            form.Field(x => x.Budget);
         })
 
         .Form<CreateWorkOrder.Input>("web.work-orders.create", "work-orders.create", form =>
@@ -191,9 +191,9 @@ public static class ErpModel
             form.Field(x => x.WorkOrderId).Renderer("hidden");
             form.Field(x => x.Date);
             form.Field(x => x.Hours);
-            form.Field(x => x.HourlyRate).Renderer("money")
+            form.Field(x => x.HourlyRate)
                 .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
-            form.Field(x => x.Amount).Renderer("money")
+            form.Field(x => x.Amount)
                 .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
             form.Field(x => x.Note);
         })
@@ -212,7 +212,7 @@ public static class ErpModel
         {
             form.Field(x => x.StockItemId).Renderer("hidden");
             form.Field(x => x.Name);
-            form.Field(x => x.UnitPrice).Renderer("money");
+            form.Field(x => x.UnitPrice);
         })
 
         .Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
