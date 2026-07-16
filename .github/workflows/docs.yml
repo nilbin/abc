@@ -5,10 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Deployment is a push to the gh-pages branch (mkdocs gh-deploy): GitHub auto-enables
+# Pages from that branch, which the Actions token CAN do — creating a Pages site via
+# the API (actions/configure-pages enablement) needs repo-admin rights it doesn't have.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -27,26 +28,8 @@ jobs:
           pip install mkdocs-material
           sed 's|(docs/|(|g' STATUS.md > docs/status.md
           mkdocs build --strict
-      # Creates the Pages site on first run (needs a PUBLIC repo or a plan with Pages) —
-      # tolerated-if-failing so the strict BUILD above still gates every push; the probe
-      # below decides whether deployment can proceed.
-      - uses: actions/configure-pages@v5
-        continue-on-error: true
-        with:
-          enablement: true
-      - name: Pages available?
-        id: pages
+      - name: Deploy to gh-pages
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: Bearer ${{ github.token }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/pages")
-          echo "enabled=$([ "$code" = "200" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "Pages API returned $code"
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.pages.outputs.enabled == 'true'
-        with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v4
-        if: steps.pages.outputs.enabled == 'true'
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdocs gh-deploy --force --no-history
