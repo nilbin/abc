@@ -69,8 +69,18 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
       declared pages, subtree-capable projects list, per-role visibility. Verified: 21
       wire checks + full 12-suite matrix on SQLite AND Postgres (RLS policies confirmed
       on both new tables). Three friction entries below came out of it.
-- [ ] M2 — WorkOrder: status machine, assignment, own-scope paired atoms, scheduling,
-      custom field on a new entity.
+- [x] M2 — WorkOrder: status machine, assignment, own-scope paired atoms, scheduling,
+      custom field on a new entity. **BUILT**, again zero framework changes: the 5-state
+      machine (Draft → Scheduled → InProgress → Done → Closed) is entity methods behind 7
+      intent operations; scheduling assigns AND dates in one intent (resolved against the
+      framework's membership table, display name SNAPSHOT onto the entity); start/complete
+      are own-scoped with -all pairs (technician runs her own orders end to end, dispatcher
+      works the board); editing locks once work starts; completion publishes
+      work-order-completed (the M4 invoicing seam). The runtime custom field
+      (requiresLift, boolean) landed on the new entity exactly as docs/15 promises —
+      seeded like an admin would, rides list rows/forms/audit untouched. Verified: 18-check
+      fieldm2 suite (incl. the resolve endpoint serving assignee options from a derivation)
+      + full 13-suite matrix on SQLite AND Postgres (RLS on WorkOrders confirmed).
 - [ ] M3 — TimeEntry + MaterialLine: ownership, derivations, approvals gate on
       time.approve, row actions.
 - [ ] M4 — Invoicing extension: draft invoice from a completed work order's approved
@@ -103,3 +113,22 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   seed, 21 wire checks — was one sitting with no framework edits; L10N001 caught every
   missing key at build; PAGE001 verified the record surfaces; conventions (record IS the
   form, grid defaults) meant the stock page needed no configure at all.
+- (M2) There is NO framework story for rendering an ACTOR reference in a view. Joining
+  the account table from a domain view means a string↔Guid cross-provider join
+  (AssignedToActorId is a string, account ids are Guids — SQLite renders Guids as
+  upper-case text, Postgres lower-case; the join silently drops rows on one provider).
+  Denormalizing the display name onto the entity at assignment time is the honest
+  workaround, but every domain with assignees will re-invent it. Candidate: an actor
+  reference semantic type the view layer knows how to render.
+- (M2) The second aggregate that needed a PICKER had nowhere to go: `ProjectId` on the
+  work-order create form is a raw guid input, and the schedule form's assignee options
+  had to ride a ServerDerivation keyed on [DependsOn(WorkOrderId)] — a trigger chosen
+  because SOMETHING must fire, not because the data depends on it. CustomerPicker solved
+  this for customers with bespoke React. A declarative `lookup(view)` renderer — field
+  options served from any lookup view with search — is now the arc's clearest missing
+  framework piece; it would delete the derivation AND the bespoke picker.
+- (M2, positive) The five-state machine cost exactly what it should: five entity methods
+  returning findings, seven thin operations, zero pipeline awareness. Own-scope pairs
+  and TAM006 made "technician runs her own order end to end, dispatcher works the board"
+  fall out of role composition — the wire suite proved both boundaries (403s included)
+  without any authorization code in the domain.

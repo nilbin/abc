@@ -62,6 +62,21 @@ public static class Seed
         orders[0].Complete();
         db.Orders.AddRange(orders);
 
+        // Work orders (docs/34 M2): one per state so the machine is visible in the demo.
+        // Assignment stamps happen below once account ids exist.
+        var woDraft = WorkOrder.Create(Tenant, new("WO-2026-0001"), pumpRefurb.Id,
+            "Demontera pumphus", new("Demontera och rengör pumphus etapp 1"), acme.VisitAddress);
+        var woScheduled = WorkOrder.Create(Tenant, new("WO-2026-0002"), pumpRefurb.Id,
+            "Byt slitringar", new("Byt slitringar och lager på pump 2"), acme.VisitAddress);
+        var woInProgress = WorkOrder.Create(Tenant, new("WO-2026-0003"), sveaVent.Id,
+            "Riv gammalt aggregat", new("Demontering av befintligt ventilationsaggregat plan 3"),
+            new("Storgatan 1, Stockholm"));
+        var woDone = WorkOrder.Create(Tenant, new("WO-2026-0004"), sveaVent.Id,
+            "Montera nya don", new("Montering av tilluftsdon plan 2"), new("Storgatan 1, Stockholm"));
+        var woClosed = WorkOrder.Create(Tenant, new("WO-2026-0005"), pumpRefurb.Id,
+            "Förbesiktning", new("Förbesiktning inför etapp 1"), acme.VisitAddress);
+        db.WorkOrders.AddRange(woDraft, woScheduled, woInProgress, woDone, woClosed);
+
         // Tenant-managed roles (decision D1): named grant sets, stored as data.
         void Role(string name, params string[] permissions) => db.Add(new RoleEntity
         {
@@ -78,7 +93,11 @@ public static class Seed
             "orders.edit", "orders.edit-all", "orders.complete", "orders.complete-all",
             "customers.read", "customers.create", "customers.edit",
             "projects.read", "projects.create", "projects.edit", "projects.close",
-            "stock.read", "stock.manage");
+            "stock.read", "stock.manage",
+            "work-orders.read", "work-orders.read-all", "work-orders.create",
+            "work-orders.edit", "work-orders.edit-all", "work-orders.schedule",
+            "work-orders.assign", "work-orders.start", "work-orders.start-all",
+            "work-orders.complete", "work-orders.complete-all", "work-orders.close");
         // "viewer" is authored as ACCESS LEVELS (docs/27 D-A1): { orders: view, customers: view }
         // expands to the read atoms at load time — the level shape and the atom shape coexist.
         db.Add(new RoleEntity
@@ -91,7 +110,8 @@ public static class Seed
         // Technicians carry only the base atoms — own-scoped by construction, no suffixes.
         Role("technician",
             "orders.read", "orders.edit", "orders.complete", "customers.read",
-            "projects.read", "stock.read");
+            "projects.read", "stock.read",
+            "work-orders.read", "work-orders.edit", "work-orders.start", "work-orders.complete");
 
         // The tenant node (docs/26): the demo tenant is the root of its own hierarchy, so its
         // materialized Path is just its own id. Nesting adds children with Path = "demo.<child>".
@@ -192,6 +212,20 @@ public static class Seed
         orders[3].AssignTo(accountIds["tekla"].ToString());
         orders[4].AssignTo(accountIds["tekla"].ToString());
 
+        // Walk the seeded work orders through the machine — Tekla owns the active ones, so the
+        // own-scope pairs and the technician's board are demonstrable from first login.
+        var tekla = accountIds["tekla"].ToString();
+        woScheduled.Schedule(new DateOnly(2026, 7, 21), tekla, "Tekla Nilsson");
+        woInProgress.Schedule(new DateOnly(2026, 7, 14), tekla, "Tekla Nilsson");
+        woInProgress.Start();
+        woDone.Schedule(new DateOnly(2026, 7, 10), tekla, "Tekla Nilsson");
+        woDone.Start();
+        woDone.Complete();
+        woClosed.Schedule(new DateOnly(2026, 6, 30), accountIds["didrik"].ToString(), "Didrik Berg");
+        woClosed.Start();
+        woClosed.Complete();
+        woClosed.CloseOut();
+
         // Integration config (docs/25): a non-secret base URL and — via the vault at startup —
         // an encrypted API key. The base URL points at this app's own mock Fortnox endpoint so
         // the outbound loop is verifiable. (The secret is seeded in Program.cs through the vault,
@@ -218,6 +252,20 @@ public static class Seed
             State = ExtensionFieldState.Active,
         });
         orders[4].Extensions = orders[4].Extensions.WithValue("machineSerialNumber", "KA-2201-X");
+
+        // A runtime custom field on the NEW entity (docs/34 M2): proves docs/15 generalizes
+        // beyond the tutorial's order — boolean this time (a third wire kind in the demo).
+        db.Add(new ExtensionFieldEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            Entity = "work-order",
+            Key = "requiresLift",
+            Type = "boolean",
+            LabelsJson = """{"sv":"Kräver lift","en":"Requires lift"}""",
+            State = ExtensionFieldState.Active,
+        });
+        woScheduled.Extensions = woScheduled.Extensions.WithValue("requiresLift", true);
 
         // A numeric tenant field: exercises typed JSON predicates (equality + ranges) end to end.
         db.Add(new ExtensionFieldEntity

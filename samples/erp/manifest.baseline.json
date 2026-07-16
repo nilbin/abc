@@ -272,15 +272,19 @@
       "enums.cancelled": "Cancelled",
       "enums.closed": "Closed",
       "enums.completed": "Completed",
+      "enums.done": "Done",
       "enums.hour": "Hour",
+      "enums.in-progress": "In progress",
       "enums.kilogram": "Kilogram",
       "enums.litre": "Litre",
       "enums.meter": "Metre",
       "enums.open": "Open",
       "enums.piece": "Piece",
       "enums.project": "Project",
+      "enums.scheduled": "Scheduled",
       "enums.service": "Service",
       "labels.active-only": "Active only",
+      "labels.assignee": "Assignee",
       "labels.budget": "Budget",
       "labels.company": "Company",
       "labels.customer": "Customer",
@@ -290,6 +294,7 @@
       "labels.estimated-total": "Estimated total",
       "labels.extensions": "Custom fields",
       "labels.is-active": "Active",
+      "labels.location": "Location",
       "labels.number": "Order number",
       "labels.order-id": "Order",
       "labels.order-type": "Order type",
@@ -298,13 +303,18 @@
       "labels.project-id": "Project",
       "labels.project-number": "Project number",
       "labels.requested-date": "Requested date",
+      "labels.scheduled-date": "Scheduled date",
       "labels.sku": "SKU",
       "labels.stock-item": "Stock item",
       "labels.stock-item-id": "Stock item",
+      "labels.title": "Title",
       "labels.unit": "Unit",
       "labels.unit-price": "Unit price",
       "labels.visit-address": "Visit address",
       "labels.work-address": "Work address",
+      "labels.work-order": "Work order",
+      "labels.work-order-id": "Work order",
+      "labels.work-order-number": "Work order number",
       "nav.admin": "Administration",
       "nav.administration": "General",
       "nav.customers": "Customers",
@@ -312,6 +322,7 @@
       "nav.projects": "Projects",
       "nav.stock": "Stock items",
       "nav.work": "Work",
+      "nav.work-orders": "Work orders",
       "operations.customers.create.title": "New customer",
       "operations.customers.edit-contact.title": "Edit customer",
       "operations.orders.complete.title": "Complete order",
@@ -324,6 +335,13 @@
       "operations.stock.create.title": "New stock item",
       "operations.stock.deactivate.title": "Deactivate",
       "operations.stock.edit.title": "Edit stock item",
+      "operations.work-orders.assign.title": "Assign",
+      "operations.work-orders.close.title": "Close",
+      "operations.work-orders.complete.title": "Complete",
+      "operations.work-orders.create.title": "New work order",
+      "operations.work-orders.edit-details.title": "Edit work order",
+      "operations.work-orders.schedule.title": "Schedule",
+      "operations.work-orders.start.title": "Start work",
       "orders.already-completed": "The order is already completed.",
       "orders.cannot-complete-cancelled": "A cancelled order cannot be completed.",
       "orders.invalid-customer": "The selected customer cannot receive orders.",
@@ -337,7 +355,12 @@
       "projects.not-found": "Project not found.",
       "projects.not-open": "The project is not open.",
       "stock.duplicate-sku": "A stock item with this SKU already exists.",
-      "stock.not-found": "Stock item not found."
+      "stock.not-found": "Stock item not found.",
+      "work-orders.invalid-transition": "That step is not allowed from the current status.",
+      "work-orders.not-editable": "The work order can no longer be edited.",
+      "work-orders.not-found": "Work order not found.",
+      "work-orders.project-not-open": "The project is not open.",
+      "work-orders.schedule-needs-assignee": "Pick a valid assignee."
     },
     "sv": {
       "operations.extensions.define-field.title": "Nytt anpassat f\u00E4lt",
@@ -609,15 +632,19 @@
       "enums.cancelled": "Makulerad",
       "enums.closed": "Avslutat",
       "enums.completed": "Slutf\u00F6rd",
+      "enums.done": "Utf\u00F6rd",
       "enums.hour": "Timme",
+      "enums.in-progress": "P\u00E5g\u00E5r",
       "enums.kilogram": "Kilogram",
       "enums.litre": "Liter",
       "enums.meter": "Meter",
       "enums.open": "\u00D6ppen",
       "enums.piece": "Styck",
       "enums.project": "Projekt",
+      "enums.scheduled": "Planerad",
       "enums.service": "Service",
       "labels.active-only": "Endast aktiva",
+      "labels.assignee": "Utf\u00F6rare",
       "labels.budget": "Budget",
       "labels.company": "Bolag",
       "labels.customer": "Kund",
@@ -627,6 +654,7 @@
       "labels.estimated-total": "Uppskattat belopp",
       "labels.extensions": "Anpassade f\u00E4lt",
       "labels.is-active": "Aktiv",
+      "labels.location": "Plats",
       "labels.number": "Ordernummer",
       "labels.order-id": "Order",
       "labels.order-type": "Ordertyp",
@@ -635,13 +663,18 @@
       "labels.project-id": "Projekt",
       "labels.project-number": "Projektnummer",
       "labels.requested-date": "\u00D6nskat datum",
+      "labels.scheduled-date": "Planerat datum",
       "labels.sku": "Artikelnummer",
       "labels.stock-item": "Artikel",
       "labels.stock-item-id": "Artikel",
+      "labels.title": "Rubrik",
       "labels.unit": "Enhet",
       "labels.unit-price": "\u00C0-pris",
       "labels.visit-address": "Bes\u00F6ksadress",
       "labels.work-address": "Arbetsadress",
+      "labels.work-order": "Arbetsorder",
+      "labels.work-order-id": "Arbetsorder",
+      "labels.work-order-number": "Arbetsordernummer",
       "nav.admin": "Administration",
       "nav.administration": "Allm\u00E4nt",
       "nav.customers": "Kunder",
@@ -649,6 +682,7 @@
       "nav.projects": "Projekt",
       "nav.stock": "Artiklar",
       "nav.work": "Arbete",
+      "nav.work-orders": "Arbetsordrar",
       "operations.customers.create.title": "Ny kund",
       "operations.customers.edit-contact.title": "Redigera kund",
       "operations.orders.complete.title": "Slutf\u00F6r order",
@@ -661,6 +695,13 @@
       "operations.stock.create.title": "Ny artikel",
       "operations.stock.deactivate.title": "Inaktivera",
       "operations.stock.edit.title": "Redigera artikel",
+      "operations.work-orders.assign.title": "Tilldela",
+      "operations.work-orders.close.title": "Avsluta",
+      "operations.work-orders.complete.title": "Slutf\u00F6r",
+      "operations.work-orders.create.title": "Ny arbetsorder",
+      "operations.work-orders.edit-details.title": "Redigera arbetsorder",
+      "operations.work-orders.schedule.title": "Planera",
+      "operations.work-orders.start.title": "Starta arbete",
       "orders.already-completed": "Ordern \u00E4r redan slutf\u00F6rd.",
       "orders.cannot-complete-cancelled": "En makulerad order kan inte slutf\u00F6ras.",
       "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar.",
@@ -674,10 +715,61 @@
       "projects.not-found": "Projektet hittades inte.",
       "projects.not-open": "Projektet \u00E4r inte \u00F6ppet.",
       "stock.duplicate-sku": "Det finns redan en artikel med detta artikelnummer.",
-      "stock.not-found": "Artikeln hittades inte."
+      "stock.not-found": "Artikeln hittades inte.",
+      "work-orders.invalid-transition": "Steget \u00E4r inte till\u00E5tet fr\u00E5n nuvarande status.",
+      "work-orders.not-editable": "Arbetsordern kan inte l\u00E4ngre redigeras.",
+      "work-orders.not-found": "Arbetsordern hittades inte.",
+      "work-orders.project-not-open": "Projektet \u00E4r inte \u00F6ppet.",
+      "work-orders.schedule-needs-assignee": "V\u00E4lj en giltig utf\u00F6rare."
     }
   },
   "operations": {
+    "work-orders.assign": {
+      "permission": "work-orders.assign",
+      "titleKey": "operations.work-orders.assign.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "assigneeActorId",
+          "labelKey": "labels.assignee",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Scheduled",
+            "InProgress",
+            "Done",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
     "projects.close": {
       "permission": "projects.close",
       "titleKey": "operations.projects.close.title",
@@ -702,6 +794,42 @@
           "required": true,
           "options": [
             "Open",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "work-orders.close": {
+      "permission": "work-orders.close",
+      "titleKey": "operations.work-orders.close.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Scheduled",
+            "InProgress",
+            "Done",
             "Closed"
           ],
           "changeSet": false,
@@ -742,6 +870,42 @@
         "inspect",
         "invoicing"
       ]
+    },
+    "work-orders.complete": {
+      "permission": "work-orders.complete",
+      "titleKey": "operations.work-orders.complete.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Scheduled",
+            "InProgress",
+            "Done",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
     },
     "customers.create": {
       "permission": "customers.create",
@@ -1037,6 +1201,78 @@
       ],
       "gatedBy": []
     },
+    "work-orders.create": {
+      "permission": "work-orders.create",
+      "titleKey": "operations.work-orders.create.title",
+      "fields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "title",
+          "labelKey": "labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": true,
+          "maxLength": 1000,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "location",
+          "labelKey": "labels.location",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "extensibleEntity": "work-order",
+      "outputFields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.work-order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
     "stock.deactivate": {
       "permission": "stock.manage",
       "titleKey": "operations.stock.deactivate.title",
@@ -1309,6 +1545,68 @@
       ],
       "gatedBy": []
     },
+    "work-orders.edit-details": {
+      "permission": "work-orders.edit",
+      "titleKey": "operations.work-orders.edit-details.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "title",
+          "labelKey": "labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": false,
+          "maxLength": 1000,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "location",
+          "labelKey": "labels.location",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "extensibleEntity": "work-order",
+      "outputFields": [
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
     "projects.reopen": {
       "permission": "projects.close",
       "titleKey": "operations.projects.reopen.title",
@@ -1333,6 +1631,98 @@
           "required": true,
           "options": [
             "Open",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "work-orders.schedule": {
+      "permission": "work-orders.schedule",
+      "titleKey": "operations.work-orders.schedule.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "scheduledDate",
+          "labelKey": "labels.scheduled-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "assigneeActorId",
+          "labelKey": "labels.assignee",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Scheduled",
+            "InProgress",
+            "Done",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "work-orders.start": {
+      "permission": "work-orders.start",
+      "titleKey": "operations.work-orders.start.title",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Scheduled",
+            "InProgress",
+            "Done",
             "Closed"
           ],
           "changeSet": false,
@@ -3808,6 +4198,286 @@
       "defaultSort": "sku",
       "defaultSortDescending": false
     },
+    "work-orders.detail": {
+      "permission": "work-orders.read",
+      "queryFields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.work-order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "title",
+          "labelKey": "labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "projectNumber",
+          "labelKey": "labels.project-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": true,
+          "maxLength": 1000,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "location",
+          "labelKey": "labels.location",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Scheduled",
+            "InProgress",
+            "Done",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "scheduledDate",
+          "labelKey": "labels.scheduled-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "assignedToName",
+          "labelKey": "labels.assignee",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "extensions",
+          "labelKey": "labels.extensions",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false,
+      "extensibleEntity": "work-order"
+    },
+    "work-orders.list": {
+      "permission": "work-orders.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "number",
+          "labelKey": "labels.work-order-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "title",
+          "labelKey": "labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "projectNumber",
+          "labelKey": "labels.project-number",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "status",
+          "labelKey": "labels.status",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Draft",
+            "Scheduled",
+            "InProgress",
+            "Done",
+            "Closed"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "scheduledDate",
+          "labelKey": "labels.scheduled-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "assignedToName",
+          "labelKey": "labels.assignee",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "tenantId",
+          "labelKey": "labels.company",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "extensions",
+          "labelKey": "labels.extensions",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "number",
+        "scheduledDate",
+        "title"
+      ],
+      "filterable": [
+        "status",
+        "scheduledDate",
+        "projectNumber",
+        "assignedToName",
+        "tenantId"
+      ],
+      "defaultSort": "number",
+      "defaultSortDescending": true,
+      "extensibleEntity": "work-order",
+      "subtree": "tenantId"
+    },
     "extensions.fields": {
       "permission": "extensions.manage",
       "queryFields": [
@@ -6017,6 +6687,145 @@
       "includeExtensions": false,
       "serverDependencies": []
     },
+    "web.work-orders.create": {
+      "operation": "work-orders.create",
+      "fields": [
+        {
+          "name": "projectId",
+          "labelKey": "labels.project",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "title",
+          "labelKey": "labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": true,
+          "maxLength": 1000,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "location",
+          "labelKey": "labels.location",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": true,
+      "serverDependencies": []
+    },
+    "web.work-orders.edit": {
+      "operation": "work-orders.edit-details",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "title",
+          "labelKey": "labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "description",
+          "labelKey": "labels.description",
+          "type": "multiline-text",
+          "wireKind": "string",
+          "format": "multiline",
+          "required": false,
+          "maxLength": 1000,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "location",
+          "labelKey": "labels.location",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": true,
+      "serverDependencies": []
+    },
+    "web.work-orders.schedule": {
+      "operation": "work-orders.schedule",
+      "fields": [
+        {
+          "name": "workOrderId",
+          "labelKey": "labels.work-order",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "scheduledDate",
+          "labelKey": "labels.scheduled-date",
+          "type": "date",
+          "wireKind": "date",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "assigneeActorId",
+          "labelKey": "labels.assignee",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [
+        "workOrderId"
+      ]
+    },
     "web.stock.create": {
       "operation": "stock.create",
       "fields": [
@@ -6379,6 +7188,29 @@
       "includeExtensions": false,
       "contributedActions": []
     },
+    "web.work-orders.list": {
+      "view": "work-orders.list",
+      "columns": [
+        "number",
+        "tenantId",
+        "projectNumber",
+        "title",
+        "status",
+        "scheduledDate",
+        "assignedToName"
+      ],
+      "rowActions": [
+        "work-orders.schedule",
+        "work-orders.start",
+        "work-orders.complete",
+        "work-orders.close"
+      ],
+      "toolbarActions": [
+        "work-orders.create"
+      ],
+      "includeExtensions": true,
+      "contributedActions": []
+    },
     "web.stock.list": {
       "view": "stock.list",
       "columns": [
@@ -6439,7 +7271,19 @@
     "tenants.edit",
     "tenants.move",
     "tenants.read",
-    "users.manage"
+    "users.manage",
+    "work-orders.assign",
+    "work-orders.close",
+    "work-orders.complete",
+    "work-orders.complete-all",
+    "work-orders.create",
+    "work-orders.edit",
+    "work-orders.edit-all",
+    "work-orders.read",
+    "work-orders.read-all",
+    "work-orders.schedule",
+    "work-orders.start",
+    "work-orders.start-all"
   ],
   "revision": 0,
   "actorPermissions": [],
@@ -6477,6 +7321,16 @@
             "order": 10,
             "target": {
               "page": "orders"
+            },
+            "children": []
+          },
+          {
+            "id": "work-orders",
+            "kind": "page",
+            "labelKey": "nav.work-orders",
+            "order": 15,
+            "target": {
+              "page": "work-orders"
             },
             "children": []
           },
@@ -6759,6 +7613,25 @@
           }
         ]
       }
+    },
+    "work-orders": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "web.work-orders.list"
+        }
+      ],
+      "record": {
+        "detailView": "work-orders.detail",
+        "key": "workOrderId",
+        "titleField": "number",
+        "sections": [
+          {
+            "kind": "form",
+            "id": "web.work-orders.edit"
+          }
+        ]
+      }
     }
   },
   "slots": {
@@ -6825,6 +7698,13 @@
         "inspect",
         "invoicing"
       ]
+    },
+    "work-order-completed": {
+      "fields": [
+        "workOrderId",
+        "number"
+      ],
+      "subscribedBy": []
     }
   }
 }

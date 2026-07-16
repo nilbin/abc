@@ -25,6 +25,7 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<StockItem> Stock => Set<StockItem>();
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
     // Data Protection key ring in the shared DB (docs/25): survives restarts, shared across
     // instances — so encrypted secrets stay decryptable. One DbSet is the whole opt-in.
@@ -49,6 +50,13 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
             b.HasKey(x => x.Id);
             b.Property(x => x.Name).HasMaxLength(200);
             b.HasIndex(x => new { x.TenantId, x.Sku }).IsUnique();
+        });
+        modelBuilder.Entity<WorkOrder>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Title).HasMaxLength(200);
+            b.Property(x => x.Description).HasMaxLength(1000);
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
         });
         modelBuilder.Entity<Order>(b =>
         {

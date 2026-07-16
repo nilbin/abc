@@ -25,6 +25,7 @@ var model = new TamModelBuilder()
     // under "more" in the last mode automatically (nothing can be authored into invisibility).
     // Event contracts (docs/31 D-X5): what subscribers/triggers may bind to, with payload shape.
     .PublishesEvent("order-completed", "orderId", "number")
+    .PublishesEvent("work-order-completed", "workOrderId", "number")
 
     // The order detail is a CONTRIBUTION POINT (docs/31 D-X4): declared once, with the record
     // context it provides — every current and future plugin lands panels here unnamed.
@@ -64,9 +65,17 @@ var model = new TamModelBuilder()
             .Title("name")
             .Form("web.stock.edit")))
 
+    .Page("work-orders", page => page
+        .Grid("web.work-orders.list")
+        .Record(record => record
+            .Detail("work-orders.detail", key: "workOrderId")
+            .Title("number")
+            .Form("web.work-orders.edit")))
+
     .Nav("web", nav => nav
         .Mode("work", m => m
             .Page("orders", page: "orders", order: 10)   // declared page: permission derives
+            .Page("work-orders", page: "work-orders", order: 15)
             .Page("projects", page: "projects", order: 20)
             .Page("customers", page: "customers", order: 30)
             .Page("stock", page: "stock", order: 40))
@@ -126,6 +135,31 @@ var model = new TamModelBuilder()
         form.Field(x => x.Budget).Renderer("money");
     })
 
+    .Form<CreateWorkOrder.Input>("web.work-orders.create", "work-orders.create", form =>
+    {
+        form.Field(x => x.ProjectId);
+        form.Field(x => x.Title);
+        form.Field(x => x.Description);
+        form.Field(x => x.Location);
+        form.Extensions();
+    })
+
+    .Form<EditWorkOrderDetails.Input>("web.work-orders.edit", "work-orders.edit-details", form =>
+    {
+        form.Field(x => x.WorkOrderId).Renderer("hidden");
+        form.Field(x => x.Title);
+        form.Field(x => x.Description);
+        form.Field(x => x.Location);
+        form.Extensions();
+    })
+
+    .Form<ScheduleWorkOrder.Input>("web.work-orders.schedule", "work-orders.schedule", form =>
+    {
+        form.Field(x => x.WorkOrderId).Renderer("hidden");
+        form.Field(x => x.ScheduledDate);
+        form.Field(x => x.AssigneeActorId);   // options arrive via the assignees derivation
+    })
+
     // No configure: the record IS the form (docs/32 D-P6).
     .Form<CreateStockItem.Input>("web.stock.create", "stock.create")
 
@@ -172,6 +206,23 @@ var model = new TamModelBuilder()
         grid.RowAction("projects.close");
         grid.RowAction("projects.reopen");
         grid.ToolbarAction("projects.create");
+    })
+
+    .Grid<WorkOrderList.Result>("web.work-orders.list", "work-orders.list", grid =>
+    {
+        grid.Column(x => x.Number);
+        grid.Column(x => x.TenantId);   // the company column — rendered only above a leaf
+        grid.Column(x => x.ProjectNumber);
+        grid.Column(x => x.Title);
+        grid.Column(x => x.Status);
+        grid.Column(x => x.ScheduledDate);
+        grid.Column(x => x.AssignedToName);
+        grid.Extensions();
+        grid.RowAction("work-orders.schedule");
+        grid.RowAction("work-orders.start");
+        grid.RowAction("work-orders.complete");
+        grid.RowAction("work-orders.close");
+        grid.ToolbarAction("work-orders.create");
     })
 
     .Grid<StockList.Result>("web.stock.list", "stock.list", grid =>

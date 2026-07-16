@@ -8,6 +8,15 @@ export interface TypedOperationResponse<TOutput> extends OperationResponse {
   output?: TOutput & Record<string, unknown>;
 }
 
+export interface WorkOrdersAssignInput {
+  workOrderId: string;
+  assigneeActorId: string;
+}
+
+export interface WorkOrdersAssignOutput {
+  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+}
+
 export interface ProjectsCloseInput {
   projectId: string;
 }
@@ -16,12 +25,28 @@ export interface ProjectsCloseOutput {
   status: "open" | "closed";
 }
 
+export interface WorkOrdersCloseInput {
+  workOrderId: string;
+}
+
+export interface WorkOrdersCloseOutput {
+  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+}
+
 export interface OrdersCompleteInput {
   orderId: string;
 }
 
 export interface OrdersCompleteOutput {
   version: number;
+}
+
+export interface WorkOrdersCompleteInput {
+  workOrderId: string;
+}
+
+export interface WorkOrdersCompleteOutput {
+  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
 }
 
 export interface CustomersCreateInput {
@@ -71,6 +96,19 @@ export interface StockCreateInput {
 
 export interface StockCreateOutput {
   stockItemId: string;
+}
+
+export interface WorkOrdersCreateInput {
+  projectId: string;
+  title: string;
+  description: string;
+  location: string;
+  extensions?: Record<string, Change<unknown>>;
+}
+
+export interface WorkOrdersCreateOutput {
+  workOrderId: string;
+  number: string;
 }
 
 export interface StockDeactivateInput {
@@ -126,12 +164,42 @@ export interface StockEditOutput {
   stockItemId: string;
 }
 
+export interface WorkOrdersEditDetailsInput {
+  workOrderId: string;
+  title?: Change<string>;
+  description?: Change<string>;
+  location?: Change<string>;
+  extensions?: Record<string, Change<unknown>>;
+}
+
+export interface WorkOrdersEditDetailsOutput {
+  version: number;
+}
+
 export interface ProjectsReopenInput {
   projectId: string;
 }
 
 export interface ProjectsReopenOutput {
   status: "open" | "closed";
+}
+
+export interface WorkOrdersScheduleInput {
+  workOrderId: string;
+  scheduledDate: string;
+  assigneeActorId: string;
+}
+
+export interface WorkOrdersScheduleOutput {
+  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+}
+
+export interface WorkOrdersStartInput {
+  workOrderId: string;
+}
+
+export interface WorkOrdersStartOutput {
+  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
 }
 
 export interface ExtensionsDefineFieldInput {
@@ -581,6 +649,41 @@ export interface StockListQuery {
   search?: string;
 }
 
+export interface WorkOrdersDetailRow {
+  id: string;
+  number: string;
+  title: string;
+  projectNumber: string;
+  description: string;
+  location: string;
+  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+  scheduledDate?: string;
+  assignedToName?: string;
+  version: number;
+  extensions: Record<string, unknown>;
+}
+
+export interface WorkOrdersDetailQuery {
+  workOrderId?: string;
+}
+
+export interface WorkOrdersListRow {
+  id: string;
+  number: string;
+  title: string;
+  projectNumber: string;
+  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+  scheduledDate?: string;
+  assignedToName?: string;
+  tenantId: string;
+  version: number;
+  extensions: Record<string, unknown>;
+}
+
+export interface WorkOrdersListQuery {
+  search?: string;
+}
+
 export interface ExtensionsFieldsRow {
   id: string;
   entity: string;
@@ -806,14 +909,29 @@ export interface InvoicingInvoicesListQuery {
 export class TypedTamClient {
   constructor(readonly client: TamClient) {}
 
+  /** work-orders.assign (requires work-orders.assign) */
+  workOrdersAssign(input: WorkOrdersAssignInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersAssignOutput>> {
+    return this.client.operation("work-orders.assign", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersAssignOutput>>;
+  }
+
   /** projects.close (requires projects.close) */
   projectsClose(input: ProjectsCloseInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsCloseOutput>> {
     return this.client.operation("projects.close", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsCloseOutput>>;
   }
 
+  /** work-orders.close (requires work-orders.close) */
+  workOrdersClose(input: WorkOrdersCloseInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersCloseOutput>> {
+    return this.client.operation("work-orders.close", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersCloseOutput>>;
+  }
+
   /** orders.complete (requires orders.complete) */
   ordersComplete(input: OrdersCompleteInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersCompleteOutput>> {
     return this.client.operation("orders.complete", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersCompleteOutput>>;
+  }
+
+  /** work-orders.complete (requires work-orders.complete) */
+  workOrdersComplete(input: WorkOrdersCompleteInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersCompleteOutput>> {
+    return this.client.operation("work-orders.complete", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersCompleteOutput>>;
   }
 
   /** customers.create (requires customers.create) */
@@ -834,6 +952,11 @@ export class TypedTamClient {
   /** stock.create (requires stock.manage) */
   stockCreate(input: StockCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<StockCreateOutput>> {
     return this.client.operation("stock.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<StockCreateOutput>>;
+  }
+
+  /** work-orders.create (requires work-orders.create) */
+  workOrdersCreate(input: WorkOrdersCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersCreateOutput>> {
+    return this.client.operation("work-orders.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersCreateOutput>>;
   }
 
   /** stock.deactivate (requires stock.manage) */
@@ -861,9 +984,24 @@ export class TypedTamClient {
     return this.client.operation("stock.edit", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<StockEditOutput>>;
   }
 
+  /** work-orders.edit-details (requires work-orders.edit) */
+  workOrdersEditDetails(input: WorkOrdersEditDetailsInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersEditDetailsOutput>> {
+    return this.client.operation("work-orders.edit-details", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersEditDetailsOutput>>;
+  }
+
   /** projects.reopen (requires projects.close) */
   projectsReopen(input: ProjectsReopenInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsReopenOutput>> {
     return this.client.operation("projects.reopen", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsReopenOutput>>;
+  }
+
+  /** work-orders.schedule (requires work-orders.schedule) */
+  workOrdersSchedule(input: WorkOrdersScheduleInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersScheduleOutput>> {
+    return this.client.operation("work-orders.schedule", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersScheduleOutput>>;
+  }
+
+  /** work-orders.start (requires work-orders.start) */
+  workOrdersStart(input: WorkOrdersStartInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersStartOutput>> {
+    return this.client.operation("work-orders.start", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersStartOutput>>;
   }
 
   /** extensions.define-field (requires extensions.manage) */
@@ -1074,6 +1212,16 @@ export class TypedTamClient {
   /** view stock.list (requires stock.read) */
   stockList(query?: StockListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }> {
     return this.client.view("stock.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: StockListRow[] }>;
+  }
+
+  /** view work-orders.detail (requires work-orders.read) */
+  workOrdersDetail(query?: WorkOrdersDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersDetailRow[] }> {
+    return this.client.view("work-orders.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersDetailRow[] }>;
+  }
+
+  /** view work-orders.list (requires work-orders.read) */
+  workOrdersList(query?: WorkOrdersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersListRow[] }> {
+    return this.client.view("work-orders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersListRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

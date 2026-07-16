@@ -449,6 +449,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Field-service arc M2 (docs/34): WorkOrder — the real state machine, still zero framework
+  changes**: Draft → Scheduled → InProgress → Done → Closed as entity methods behind 7
+  intent operations (EDIT001 all the way — even scheduling is an intent that assigns AND
+  dates); start/complete own-scoped with -all pairs, so Tekla runs her own orders end to
+  end while Didrik works the board (both boundaries wire-proven incl. 403s); editing locks
+  once work starts; completion publishes work-order-completed (the M4 invoicing seam,
+  effect verified on the envelope). Assignees resolve against the framework's membership
+  table with the display name SNAPSHOT onto the entity (no cross-provider actor join —
+  friction logged), and the schedule form's options ride a ServerDerivation through the
+  resolve endpoint. The runtime custom field story generalized to the new entity on the
+  first try (boolean requiresLift, seeded like an admin would, riding list rows).
+  Verified: 18-check fieldm2 suite + the full 13-suite matrix on SQLite AND Postgres (RLS
+  on WorkOrders confirmed). Friction log: +3 entries (actor-reference rendering; the
+  missing declarative lookup renderer — now the arc's clearest framework ask; positive
+  cost-of-a-state-machine datapoint).
 - **Field-service arc M1 (docs/34): Project deepened + StockItem — the consumer baseline**:
   the stress-test arc's first slice, built with ZERO framework changes and zero React.
   Project gained number (unique per tenant), status, budget, and close/reopen INTENT
