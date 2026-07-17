@@ -3,6 +3,40 @@ using Tam;
 
 namespace Tam.Tests;
 
+/// <summary>Review round 5, F2: a tenant-authored PxConst deserializes to a JsonElement, and
+/// Truthy must normalize it — otherwise a const/field in a boolean position silently evaluated
+/// false server-side while the client fired. These pin the two evaluators together.</summary>
+public class PxTruthyTests
+{
+    private static Px Parse(string json) => JsonSerializer.Deserialize<Px>(json, TamJson.Options)!;
+
+    [Fact]
+    public void A_bare_true_const_is_truthy()
+    {
+        Assert.True(PxBinary.Truthy(Parse("""{"t":"const","v":true}""").Evaluate(_ => null)));
+        Assert.False(PxBinary.Truthy(Parse("""{"t":"const","v":false}""").Evaluate(_ => null)));
+    }
+
+    [Fact]
+    public void And_of_a_const_and_a_comparison_fires()
+    {
+        // and(const true, eq(field, 1)) — the const operand must not drag the whole thing false.
+        var px = Parse("""
+            {"t":"bin","op":"and",
+             "l":{"t":"const","v":true},
+             "r":{"t":"bin","op":"eq","l":{"t":"field","f":"x"},"r":{"t":"const","v":1}}}
+            """);
+        Assert.True(PxBinary.Truthy(px.Evaluate(n => n == "x" ? 1m : null)));
+    }
+
+    [Fact]
+    public void Not_of_a_false_const_is_true()
+    {
+        Assert.True(PxBinary.Truthy(Parse("""{"t":"un","op":"not","x":{"t":"const","v":false}}""")
+            .Evaluate(_ => null)));
+    }
+}
+
 /// <summary>The relative-date Px node (docs/22, RTFM #3's find): {"t":"fn","op":"today","days":N}
 /// evaluates fresh on every check — the policy never drifts the way a define-time constant does.</summary>
 public class PxFnTests

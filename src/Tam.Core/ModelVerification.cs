@@ -174,11 +174,20 @@ public sealed partial class TamModelBuilder
         }
 
         foreach (var declared in model.Events.Values)
+        {
             if (declared.Plugin is { } owner
                 && !declared.EventType.StartsWith(owner + ".", StringComparison.Ordinal)
                 && !model.Packages.ContainsKey(owner))
                 throw new InvalidOperationException(
                     $"PLG001: event '{declared.EventType}' is not under '{owner}.'.");
+            // The `rules.` prefix is RESERVED for tenant automation-rule publish-event actions
+            // (review round 5): a package declaring `rules.{x}` could later collide with a
+            // tenant's already-defined rule and turn it into a forged-payload source.
+            if (declared.EventType.StartsWith("rules.", StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"PLG009: event '{declared.EventType}' uses the reserved 'rules.' prefix — "
+                    + "that namespace belongs to tenant automation-rule actions.");
+        }
 
         foreach (var subscriber in model.Subscribers)
             if (!model.Events.ContainsKey(subscriber.EventType))

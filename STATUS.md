@@ -451,6 +451,28 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Review round 5 (rules-engine write paths): two adversarial agents, two confirmed bugs +
+  hardening**. The action catalog and row.* increments got a security + correctness audit;
+  both agents independently flagged the same HIGH, and the correctness agent found a live
+  evaluator bug. Fixed: (1) **set-field validation bypass** — the action write skipped every
+  check the wire channel enforces (ReadOnly/plugin-owned, field state, semantic type,
+  options); it now runs the SAME guard at define AND re-checks at execute (so a rule can't
+  outlive a field's constraints), degrading to the non-blocking warning on failure. (2)
+  **PxBinary.Truthy on a JsonElement const** — a tenant const/field in a boolean position
+  silently evaluated false server-side while the client fired; Truthy now normalizes, so the
+  two evaluators agree. Hardening: the `rules.` event prefix is RESERVED at build (closes the
+  temporal event-collision gap — no package may declare `rules.*`); action + finding rule
+  queries are deterministically ordered; the pure-phase row read DETACHES so it can't poison
+  the handler's identity map; the action pass caches specs per entity; condition/action
+  length is bounded at define; `PxFn.Today` is `[ThreadStatic]`; PLG002 already keyed on
+  handler type. Documented as accepted residual risk: per-write rule provenance on the audit
+  entry (rule definitions are themselves audited, so causation is reconstructable) and the
+  client-evaluator preview drifts (the server is authoritative and re-evaluates). Explicitly
+  cleared as solid by both agents: cross-tenant reach, deserialization/depth bombs (STJ
+  depth-64), idempotency replay (short-circuits before gates — no double-fire), rollback
+  (action writes are transaction-scoped), and the RLS interplay. Verified: 162 framework + 29
+  sample tests (F1/F2 regressions incl. bare-const truthiness and options rejection), full
+  16-suite matrix 238/238 on fresh SQLite AND Postgres.
 - **P5 action catalog BUILT — rules that DO, not just veto (docs/22)**: a rule's action is
   validated data from a closed set. `set-field` writes a REGISTERED extension field on the
   operation's target row — executed by a second, TRANSACTIONAL rules gate so the write rides

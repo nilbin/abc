@@ -75,12 +75,12 @@ internal sealed class RulesGate(ITamDb tam, TamModel model) : IOperationGate
 /// evaluates ACTION rules and performs their writes inside the operation's transaction
 /// (set-field rides the tracked row into the operation's own SaveChanges; publish-event is
 /// an outbox row in the same commit). Never blocks; only unevaluable rules warn.</summary>
-internal sealed class RuleActionsGate(ITamDb tam) : IOperationGate
+internal sealed class RuleActionsGate(ITamDb tam, IExtensionRegistry registry) : IOperationGate
 {
     public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
     {
         var findings = await RuleEvaluator.ExecuteActionsAsync(
-            tam.Db, gate.OperationId, gate.Input, gate.Context, ct);
+            tam.Db, gate.OperationId, gate.Input, gate.Context, registry, ct);
         return new Result { Findings = findings };
     }
 }
@@ -104,6 +104,7 @@ public static class RuleEvaluator
     {
         var rules = await db.Set<AutomationRuleEntity>()
             .Where(x => x.OnOperation == operationId && !x.Retired && x.ActionJson == null)
+            .OrderBy(x => x.Name)
             .ToListAsync(ct);
         if (rules.Count == 0) return [];
 
@@ -209,14 +210,18 @@ public static class RuleEvaluator
     /// the operation's wire input as payload — same commit, dispatched like any event.</summary>
     internal static async Task<List<Finding>> ExecuteActionsAsync(
         DbContext db, string operationId, JsonElement body, OperationContext context,
-        CancellationToken ct)
+        IExtensionRegistry registry, CancellationToken ct)
     {
+        // Deterministic order (review round 5, F4): two action rules that touch the same field
+        // must resolve the same way on every provider and run.
         var rules = await db.Set<AutomationRuleEntity>()
             .Where(x => x.OnOperation == operationId && !x.Retired && x.ActionJson != null)
+            .OrderBy(x => x.Name)
             .ToListAsync(ct);
         if (rules.Count == 0) return [];
 
         var findings = new List<Finding>();
+        var specCache = new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(StringComparer.Ordinal);
         foreach (var rule in rules)
         {
             try
@@ -238,9 +243,23 @@ public static class RuleEvaluator
                 var action = JsonSerializer.Deserialize<RuleAction>(rule.ActionJson!, TamJson.Options)!;
                 switch (action.Type)
                 {
-                    case "set-field" when row is IExtensible extensible && action.Field is { } field:
+                    case "set-field" when row is IExtensible extensible
+                            && rule.RowEntityKey is { } ek && action.Field is { } field:
+                        // Re-validate against the CURRENT registry, not the define-time snapshot
+                        // (review round 5, F1): a rule may not outlive a field's constraints. A
+                        // now-invalid target degrades to the same warning as an unevaluable rule.
+                        if (!specCache.TryGetValue(ek, out var specs))
+                            specCache[ek] = specs = await registry.For(context.TenantId, ek, ct);
+                        var key = field.StartsWith("ext.", StringComparison.Ordinal) ? field["ext.".Length..] : field;
+                        var spec = specs.FirstOrDefault(s => s.Key == key);
+                        if (spec is null || RejectSetFieldValue(spec, action.Value) is not null)
+                        {
+                            findings.Add(Finding.Warning("rules.evaluation-failed").With(("rule", rule.Name)));
+                            break;
+                        }
+                        var value = ConstValue(action.Value);
                         extensible.Extensions = extensible.Extensions.WithValue(
-                            field["ext.".Length..], ConstValue(action.Value));
+                            key, value is null ? null : spec.Semantic.Normalize(value));
                         break;
                     case "publish-event":
                         db.Add(new OutboxRecord
@@ -265,6 +284,26 @@ public static class RuleEvaluator
         return findings;
     }
 
+    /// <summary>The set-field guard shared by define AND execute (review round 5, F1): a rule
+    /// may write only ACTIVE, non-ReadOnly registered fields, and the value must pass the
+    /// field's own semantic type + options — exactly what ExtensionApplier and the packaged
+    /// writer enforce. Null = writable; a string = why not. Clearing (null value) is allowed.</summary>
+    internal static string? RejectSetFieldValue(ExtensionFieldSpec spec, JsonElement? value)
+    {
+        if (spec.ReadOnly)
+            return $"'ext.{spec.Key}' is plugin-owned (read-only) — a rule may not set it";
+        if (spec.State is not ExtensionFieldState.Active)
+            return $"'ext.{spec.Key}' is not an active field";
+        var raw = ConstValue(value);
+        if (raw is null) return null;
+        var normalized = spec.Semantic.Normalize(raw);
+        if (spec.Semantic.Validate(normalized) is not null)
+            return $"value for 'ext.{spec.Key}' fails its semantic type";
+        if (spec.Options is { Count: > 0 } options && normalized is string s && !options.Contains(s))
+            return $"value for 'ext.{spec.Key}' is not one of its declared options";
+        return null;
+    }
+
     private static object? ConstValue(JsonElement? value) => value is not { } v ? null : v.ValueKind switch
     {
         JsonValueKind.String => v.GetString(),
@@ -281,7 +320,15 @@ public static class RuleEvaluator
     /// on the wire. Null when the row (or a parsable id) is absent.</summary>
     private static async Task<JsonElement?> RowJsonAsync(
         DbContext db, string entityKey, object? idValue, OperationContext context, CancellationToken ct)
-        => (await RowAsync(db, entityKey, idValue, context, ct)).Json;
+    {
+        // Pure phase (finding conditions): DETACH the row after reading so the pre-transaction
+        // load never lingers in the identity map — the handler and the transactional action
+        // gate re-read it fresh inside the transaction rather than seeing this stale snapshot
+        // (review round 5, F3). The action gate's RowAsync keeps its own tracked read.
+        var (row, json) = await RowAsync(db, entityKey, idValue, context, ct);
+        if (row is not null) db.Entry(row).State = EntityState.Detached;
+        return json;
+    }
 
     private static async Task<(object? Row, JsonElement? Json)> RowAsync(
         DbContext db, string entityKey, object? idValue, OperationContext context, CancellationToken ct)
@@ -321,6 +368,14 @@ public static class DefineAutomationRule
     {
         if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
             return ValidationFindings.InvalidValue.At(nameof(Input.Name));
+
+        // Bound the stored/re-parsed payloads (review round 5): a condition/action is
+        // deserialized on every triggering operation, so an unbounded blob is a self-DoS.
+        // Generous ceilings — real rules are tiny; this only stops abuse.
+        if (input.Condition.Length > 8_000)
+            return ValidationFindings.TooLong.With(("max", 8_000)).At(nameof(Input.Condition));
+        if (input.Action is { Length: > 2_000 })
+            return ValidationFindings.TooLong.With(("max", 2_000)).At(nameof(Input.Action));
 
         // RUL001: the trigger must be a compiled operation — and an inactive plugin's
         // operations do not exist for this tenant, exactly as the pipeline's 404 says.
@@ -417,17 +472,24 @@ public static class DefineAutomationRule
             foreach (var f in rowFields.Where(f => rowKnown.Contains(f["row.".Length..])))
                 known.Add(f);
 
-            // RUL005 for set-field: only the target entity's REGISTERED extension fields are
-            // writable — compiled state stays behind intents (EDIT001, extended to tenants).
+            // RUL005 for set-field: the target must be one of the entity's REGISTERED, WRITABLE
+            // extension fields (compiled state stays behind intents — EDIT001 extended to
+            // tenants), and the value must pass that field's own semantic type + options —
+            // exactly the checks the wire channel and the packaged-field writer enforce
+            // (review round 5, F1). Validating here AND at execute (below) means a rule can
+            // never write past a field's constraints, even after the registry changes.
             if (action?.Type == "set-field")
             {
                 var key = action.Field is { } fieldRef && fieldRef.StartsWith("ext.", StringComparison.Ordinal)
                     ? fieldRef["ext.".Length..] : null;
-                if (key is null || rowSpecs.All(spec => spec.Key != key))
+                var spec = key is null ? null : rowSpecs.FirstOrDefault(s => s.Key == key);
+                if (spec is null)
                     return RuleFindings.InvalidAction
                         .With(("detail", $"set-field targets 'ext.{{key}}' on '{rowEntityKey}'; known: "
-                            + string.Join(", ", rowSpecs.Select(spec => $"ext.{spec.Key}"))))
+                            + string.Join(", ", rowSpecs.Select(s => $"ext.{s.Key}"))))
                         .At(nameof(Input.Action));
+                if (RuleEvaluator.RejectSetFieldValue(spec, action.Value) is { } why)
+                    return RuleFindings.InvalidAction.With(("detail", why)).At(nameof(Input.Action));
             }
         }
         var unknown = condition.Fields().Distinct().Where(f => !known.Contains(f)).ToList();

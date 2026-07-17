@@ -44,7 +44,9 @@ public sealed record PxField(string F) : Px
 /// </summary>
 public sealed record PxFn(string Op, int Days = 0) : Px
 {
-    /// <summary>Test seam: fixes "today". Production leaves it null (UTC date).</summary>
+    /// <summary>Test seam: fixes "today". Production leaves it null (UTC date). [ThreadStatic]
+    /// so a test's clock override can never leak across threads/tenants (review round 5).</summary>
+    [field: ThreadStatic]
     public static Func<DateOnly>? Today { get; set; }
 
     public override object? Evaluate(Func<string, object?> field) => Op switch
@@ -93,7 +95,11 @@ public sealed record PxBinary(string Op, Px L, Px R) : Px
 
     public override IEnumerable<string> Fields() => [.. L.Fields(), .. R.Fields()];
 
-    public static bool Truthy(object? v) => v is true;
+    // Normalize FIRST: a tenant-authored PxConst arrives as a JsonElement, and a raw
+    // JsonElement is never `is true` — so a const/field in a boolean position (top-level,
+    // and/or, not) silently evaluated false server-side while the client fired. Normalizing
+    // here makes the two evaluators agree (review round 5, F2).
+    public static bool Truthy(object? v) => Normalize(v) is true;
 
     private static object? Normalize(object? v)
     {

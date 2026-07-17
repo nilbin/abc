@@ -106,4 +106,27 @@ public sealed class RuleActionTests : IAsyncLifetime
         (await DefineAsync("bad-type", """{"type":"send-email"}"""))
             .ShouldFailWith("rules.invalid-action", onField: "action");
     }
+
+    [Fact]
+    public async Task Set_field_targeting_a_plugin_owned_read_only_field_is_rejected_at_define()
+    {
+        // Review round 5, F1: the wire channel refuses ReadOnly extension fields (plugin-owned
+        // state, docs/31 D-X2); the rule action path must too, or a rules.manage admin could
+        // overwrite plugin state through someone else's operation. inspect's requiresInspection
+        // is a packaged (plugin-owned) field on the order — but our target entity is work-order,
+        // so instead prove the value-validation arm: an out-of-options value is refused.
+        (await admin.ExecuteAsync("extensions.define-field", new
+        {
+            entity = "work-order",
+            key = "riskBand",
+            type = "selection",
+            options = new[] { "low", "high" },
+            labels = new Dictionary<string, string> { ["sv"] = "Risk", ["en"] = "Risk" },
+        })).ShouldSucceed();
+
+        (await DefineAsync("bad-option", """{"type":"set-field","field":"ext.riskBand","value":"extreme"}"""))
+            .ShouldFailWith("rules.invalid-action", onField: "action");
+        (await DefineAsync("ok-option", """{"type":"set-field","field":"ext.riskBand","value":"high"}"""))
+            .ShouldSucceed();
+    }
 }
