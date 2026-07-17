@@ -54,14 +54,26 @@ public sealed record PageDefinition(
         Sections.FirstOrDefault(s => s.Kind == PageSection.GridKind)?.Id;
 }
 
+/// <summary>How substantial a record surface is (docs/32): a MODAL record is a quick edit over
+/// the grid; a PAGE record is a workspace — a routed full surface replacing the grid. The model
+/// states the semantic; the client maps it to presentation. Derived from structure when not
+/// declared: tabs or child grids make a workspace.</summary>
+public enum RecordDisplay
+{
+    Modal,
+    Page,
+}
+
 /// <summary>The record surface: the detail VIEW fetched by <see cref="ContextKey"/> (filled
-/// from the clicked row's id), an optional detail field for the title, and ORDERED tabs of
-/// form/grid/slot sections. ONE representation: flat authoring already normalized into a
-/// single implicit tab at Build(), so every consumer walks tabs and nothing else.</summary>
+/// from the clicked row's id), an optional detail field for the title, the display semantic,
+/// and ORDERED tabs of form/grid/slot sections. ONE representation: flat authoring already
+/// normalized into a single implicit tab at Build(), so every consumer walks tabs and nothing
+/// else.</summary>
 public sealed record RecordDefinition(
     string DetailViewId,
     string ContextKey,
     string? TitleField,
+    RecordDisplay Display,
     IReadOnlyList<RecordTab> Tabs)
 {
     /// <summary>Every section across every tab — the walk verification and derivation use.</summary>
@@ -215,6 +227,17 @@ public sealed class RecordBuilder
         return this;
     }
 
+    /// <summary>Overrides the display semantic. Undeclared, it DERIVES from structure: a
+    /// record with several tabs or any child grid is a workspace (page); a plain form/slot
+    /// record is a quick edit (modal).</summary>
+    public RecordBuilder Display(RecordDisplay display)
+    {
+        this.display = display;
+        return this;
+    }
+
+    private RecordDisplay? display;
+
     internal RecordDefinition Build()
     {
         if (flat.Sections.Count > 0 && tabs.Count > 0)
@@ -229,9 +252,13 @@ public sealed class RecordBuilder
         if (duplicate is not null)
             throw new InvalidOperationException(
                 $"PAGE001: duplicate record tab id '{duplicate.Key}' (ids are camelCased — 'Details' and 'details' collide).");
+        var derived = normalized.Count > 1
+            || normalized.SelectMany(t => t.Sections).Any(s => s.Kind == RecordSection.GridKind)
+            ? RecordDisplay.Page
+            : RecordDisplay.Modal;
         return new RecordDefinition(
             detailViewId ?? throw new InvalidOperationException("PAGE001: record declares no detail view."),
             contextKey ?? "id",
-            titleField, normalized);
+            titleField, display ?? derived, normalized);
     }
 }

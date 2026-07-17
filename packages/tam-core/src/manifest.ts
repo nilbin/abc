@@ -118,6 +118,9 @@ export interface Manifest {
     sections: { kind: 'grid' | 'slot'; id: string; headingKey?: string }[];
     record?: {
       detailView: string; key: string; titleField?: string;
+      /** The record's semantic: a "modal" quick edit over the grid, or a "page" workspace —
+       *  a routed full surface replacing the grid. Derived from structure unless declared. */
+      display: 'modal' | 'page';
       tabs: { id: string; headingKey?: string; sections: RecordSection[]; slot?: string }[];
     };
   }>;

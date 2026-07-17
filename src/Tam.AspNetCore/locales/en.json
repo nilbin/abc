@@ -14,6 +14,7 @@
   "auth.pick-tenant": "Choose an organization to continue.",
   "auth.sign-in": "Sign in",
   "auth.sign-out": "Sign out",
+  "common.back": "Back",
   "common.no": "No",
   "common.no-matches": "No matches",
   "common.yes": "Yes",

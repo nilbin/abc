@@ -67,6 +67,12 @@ surface, extendable with new tabs (including plugin ones) without touching the o
 - The open record is **URL-routed** (`?record=<id>`, riding the nav's `?mode=&page=` grammar —
   one url.ts module owns all three params, and navigation clears the page-scoped `record`):
   a record view is deep-linkable and the browser Back button closes it.
+- **The display SEMANTIC**: the record declares how substantial it is — a `modal` quick edit
+  over the grid, or a `page` workspace (a routed full surface replacing the grid, with a back
+  affordance). Undeclared, it DERIVES from structure: several tabs or any child grid make a
+  workspace; a plain form/slot record stays a modal. `.Display(RecordDisplay.Page|Modal)`
+  overrides. The model states the semantic; the client maps it to presentation — a future
+  client could render `page` as a drawer without a model change.
 
 - **D-P1 (evolved, review round 4) — a page is a DECLARED composition of things the model
   already has**: one grid, and optionally a RECORD surface — detail view + context key,

@@ -474,6 +474,25 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Record display semantic + nav dedup (user-directed)**: two product calls. (1) THE RECORD
+  DISPLAY SEMANTIC: a record now declares how substantial it is — `modal` (a quick edit over
+  the grid) or `page` (a workspace: a routed full surface replacing the grid, back affordance,
+  URL-native). Undeclared it DERIVES from structure — several tabs or any child grid make a
+  workspace, a plain form/slot record stays a modal — with `.Display(RecordDisplay.Page|Modal)`
+  as the override; the manifest carries `display`, and the client maps semantic → presentation
+  (a future client could render `page` as a drawer with no model change). Orders and
+  work-orders became routed pages automatically; customers/projects/stock stayed quick-edit
+  modals; the derivation + override are tested. (2) NAV DEDUP: the standalone Tid and Material
+  work-mode pages — pre-record-tabs artifacts whose listings now live as tabs INSIDE the
+  work-order record (where time.approve still rides the grid) — are gone from work mode; the
+  materials page declaration is deleted outright (its grid lives on as the record tab), the
+  time page stays for the technician field mode's Min tid. Work mode reads Ordrar /
+  Arbetsordrar / Projekt / Kunder / Artiklar / Checklistor, and the Material-vs-Artiklar
+  (consumption-vs-catalog) confusion is dissolved rather than renamed around. Verified: suites
+  167+38 (display derivation/override tests), wire 18+22 fresh SQLite AND Postgres, additive
+  baseline (orders/work-orders records carry display "page", customers "modal"), Playwright —
+  the order record renders as a full routed page (back button + tabs, no modal), Back returns
+  to the grid, customers still opens the modal, field mode intact, zero page errors.
 - **Review round 6 — three-agent audit of the arc 3-4 span (FE correctness, server-model
   correctness, design/beauty), then the fixes**: the span mostly held the bar (the reviewers
   singled out shipping the invalidation bus and deleting it for TanStack one commit later as

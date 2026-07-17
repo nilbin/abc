@@ -84,26 +84,20 @@ public static class ErpModel
                 .Tab("materials", "erp.tabs.materials", s => s
                     .Grid("web.materials.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))))
 
-        // Time + materials (docs/34 M3): read-only record surfaces — bookings are history; the
-        // only state change is time.approve, an intent riding the grid as a row action.
+        // Time keeps a page for the technician's field mode (bookings are history; the only
+        // state change is time.approve, riding the grid as a row action). Time and materials
+        // read from the OFFICE's angle inside the work-order record's tabs — no standalone
+        // work-mode pages; the material grid exists only as the record tab.
         .Page("time", page => page
             .Grid("web.time.list")
             .Record(record => record
                 .Detail("time.detail", key: "timeEntryId")
                 .Title("workOrderNumber")))
 
-        .Page("materials", page => page
-            .Grid("web.materials.list")
-            .Record(record => record
-                .Detail("materials.detail", key: "materialLineId")
-                .Title("workOrderNumber")))
-
         .Nav("web", nav => nav
             .Mode("work", m => m
                 .Page("orders", page: "orders", order: 10)   // declared page: permission derives
                 .Page("work-orders", page: "work-orders", order: 15)
-                .Page("time", page: "time", order: 16)
-                .Page("materials", page: "materials", order: 17)
                 .Page("projects", page: "projects", order: 20)
                 .Page("customers", page: "customers", order: 30)
                 .Page("stock", page: "stock", order: 40))

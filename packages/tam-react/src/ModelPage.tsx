@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Group, Modal, Stack, Tabs, Text, Title } from '@mantine/core';
+import { Button, Group, Modal, Stack, Tabs, Text, Title } from '@mantine/core';
 import type { RecordSection } from '@tam/core';
 import { useTam } from './context';
 import { ViewGrid } from './ViewGrid';
@@ -201,6 +201,23 @@ export function ModelPage(props: { page: string }) {
     );
   };
 
+  // A PAGE record is a workspace (docs/32): the routed record surface replaces the grid —
+  // deep-linkable, and Back (or the button) returns to the listing. A MODAL record stays a
+  // quick edit over it. The semantic came from the model; this is just the mapping to pixels.
+  if (rec?.display === 'page' && record !== null) {
+    return (
+      <Stack gap="md">
+        <Group gap="sm">
+          <Button variant="subtle" size="compact-sm" onClick={closeRecord}>
+            ← {t('common.back')}
+          </Button>
+          <Title order={3}>{title}</Title>
+        </Group>
+        {recordBody()}
+      </Stack>
+    );
+  }
+
   return (
     <Stack gap="lg">
       {page.sections.map(s => (
@@ -216,7 +233,7 @@ export function ModelPage(props: { page: string }) {
             : <PluginSlot id={s.id} context={{}} />}
         </Stack>
       ))}
-      {rec && (
+      {rec && rec.display !== 'page' && (
         <Modal opened={record !== null} onClose={closeRecord}
           title={<Title order={4}>{title}</Title>} size="lg">
           {recordBody()}

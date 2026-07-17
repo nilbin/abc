@@ -170,8 +170,10 @@ public sealed record ManifestRecordTab(
     string Id, string? HeadingKey, IReadOnlyList<ManifestRecordSection> Sections,
     string? Slot = null);
 
+/// <summary>Display carries the record's semantic ("modal" quick edit vs "page" workspace,
+/// docs/32) — the client maps it to presentation.</summary>
 public sealed record ManifestRecord(
-    string DetailView, string Key, string? TitleField,
+    string DetailView, string Key, string? TitleField, string Display,
     IReadOnlyList<ManifestRecordTab> Tabs);
 
 public static class ManifestBuilder
@@ -322,6 +324,7 @@ public static class ManifestBuilder
                     kv.Value.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id, sec.HeadingKey)).ToList(),
                     kv.Value.Record is { } r
                         ? new ManifestRecord(r.DetailViewId, r.ContextKey, r.TitleField,
+                            r.Display == RecordDisplay.Page ? "page" : "modal",
                             r.Tabs.Select(tb => new ManifestRecordTab(tb.Id, tb.HeadingKey,
                                 tb.Sections.Select(RecordSectionOf).ToList(), tb.SlotId)).ToList())
                         : null)),

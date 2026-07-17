@@ -18,6 +18,7 @@
       "auth.pick-tenant": "Choose an organization to continue.",
       "auth.sign-in": "Sign in",
       "auth.sign-out": "Sign out",
+      "common.back": "Back",
       "common.no": "No",
       "common.no-matches": "No matches",
       "common.yes": "Yes",
@@ -405,13 +406,11 @@
       "nav.administration": "General",
       "nav.customers": "Customers",
       "nav.field": "Field work",
-      "nav.materials": "Materials",
       "nav.my-time": "My time",
       "nav.my-work": "My work orders",
       "nav.orders": "Orders",
       "nav.projects": "Projects",
       "nav.stock": "Stock items",
-      "nav.time": "Time",
       "nav.work": "Work",
       "nav.work-orders": "Work orders",
       "operations.customers.create.title": "New customer",
@@ -478,6 +477,7 @@
       "auth.pick-tenant": "V\u00E4lj en organisation f\u00F6r att forts\u00E4tta.",
       "auth.sign-in": "Logga in",
       "auth.sign-out": "Logga ut",
+      "common.back": "Tillbaka",
       "common.no": "Nej",
       "common.no-matches": "Inga tr\u00E4ffar",
       "common.yes": "Ja",
@@ -865,13 +865,11 @@
       "nav.administration": "Allm\u00E4nt",
       "nav.customers": "Kunder",
       "nav.field": "F\u00E4ltarbete",
-      "nav.materials": "Material",
       "nav.my-time": "Min tid",
       "nav.my-work": "Mina arbetsordrar",
       "nav.orders": "Ordrar",
       "nav.projects": "Projekt",
       "nav.stock": "Artiklar",
-      "nav.time": "Tid",
       "nav.work": "Arbete",
       "nav.work-orders": "Arbetsordrar",
       "operations.customers.create.title": "Ny kund",
@@ -9982,26 +9980,6 @@
             "children": []
           },
           {
-            "id": "time",
-            "kind": "page",
-            "labelKey": "nav.time",
-            "order": 16,
-            "target": {
-              "page": "time"
-            },
-            "children": []
-          },
-          {
-            "id": "materials",
-            "kind": "page",
-            "labelKey": "nav.materials",
-            "order": 17,
-            "target": {
-              "page": "materials"
-            },
-            "children": []
-          },
-          {
             "id": "projects",
             "kind": "page",
             "labelKey": "nav.projects",
@@ -10290,6 +10268,7 @@
         "detailView": "invoicing.invoices.detail",
         "key": "invoiceId",
         "titleField": "orderNumber",
+        "display": "modal",
         "tabs": []
       }
     },
@@ -10304,6 +10283,7 @@
         "detailView": "orders.detail",
         "key": "orderId",
         "titleField": "number",
+        "display": "page",
         "tabs": [
           {
             "id": "details",
@@ -10334,6 +10314,7 @@
         "detailView": "customers.detail",
         "key": "customerId",
         "titleField": "name",
+        "display": "modal",
         "tabs": [
           {
             "id": "record",
@@ -10358,6 +10339,7 @@
         "detailView": "projects.detail",
         "key": "projectId",
         "titleField": "number",
+        "display": "modal",
         "tabs": [
           {
             "id": "record",
@@ -10382,6 +10364,7 @@
         "detailView": "stock.detail",
         "key": "stockItemId",
         "titleField": "name",
+        "display": "modal",
         "tabs": [
           {
             "id": "record",
@@ -10406,6 +10389,7 @@
         "detailView": "work-orders.detail",
         "key": "workOrderId",
         "titleField": "number",
+        "display": "page",
         "tabs": [
           {
             "id": "details",
@@ -10457,20 +10441,7 @@
         "detailView": "time.detail",
         "key": "timeEntryId",
         "titleField": "workOrderNumber",
-        "tabs": []
-      }
-    },
-    "materials": {
-      "sections": [
-        {
-          "kind": "grid",
-          "id": "web.materials.list"
-        }
-      ],
-      "record": {
-        "detailView": "materials.detail",
-        "key": "materialLineId",
-        "titleField": "workOrderNumber",
+        "display": "modal",
         "tabs": []
       }
     }

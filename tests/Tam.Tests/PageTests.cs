@@ -100,12 +100,55 @@ public class PageTests
         Assert.Equal(("things.detail", "thingId", "name"),
             (page.Record!.DetailView, page.Record.Key, page.Record.TitleField));
         // Flat authoring normalizes to ONE implicit heading-less tab; declaration order IS
-        // layout order: slot declared BEFORE the form renders above it.
+        // layout order: slot declared BEFORE the form renders above it. A plain form/slot
+        // record derives the MODAL display semantic (docs/32).
         var implicit_ = Assert.Single(page.Record.Tabs);
         Assert.Null(implicit_.HeadingKey);
+        Assert.Equal("modal", page.Record.Display);
         Assert.Equal([("slot", "web.things.detail"), ("form", "web.things.edit")],
             implicit_.Sections.Select(sec => (sec.Kind, sec.Id)));
         Assert.Null(model.Nav["web"][0].Children[0].Permission);
+    }
+
+    [Fact]
+    public void Record_display_derives_from_structure_and_the_override_wins()
+    {
+        // Several tabs → a workspace: page.
+        ManifestRecord Record(Action<RecordBuilder> configure)
+        {
+            var model = Host()
+                .LocaleDefaults("en", new Dictionary<string, string>
+                {
+                    ["tabs.a"] = "A", ["tabs.b"] = "B",
+                })
+                .Page("things", page =>
+                {
+                    page.Grid("web.things");
+                    page.Record(configure);
+                })
+                .Build();
+            return ManifestBuilder.Build(
+                model, new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(), 0, null)
+                .Pages["things"].Record!;
+        }
+
+        Assert.Equal("page", Record(r => r.Detail("things.detail", key: "thingId")
+            .Tab("a", "tabs.a", s => s.Form("web.things.edit"))
+            .Tab("b", "tabs.b", s => s.Slot("web.things.detail"))).Display);
+
+        // A single flat child GRID also makes a workspace.
+        Assert.Equal("page", Record(r => r.Detail("things.detail", key: "thingId")
+            .Slot("web.things.detail")
+            .Grid("web.things", b => b.Query("search", fromRecord: "name"))).Display);
+
+        // The explicit override beats the derivation in both directions.
+        Assert.Equal("modal", Record(r => r.Detail("things.detail", key: "thingId")
+            .Display(RecordDisplay.Modal)
+            .Tab("a", "tabs.a", s => s.Form("web.things.edit"))
+            .Tab("b", "tabs.b", s => s.Slot("web.things.detail"))).Display);
+        Assert.Equal("page", Record(r => r.Detail("things.detail", key: "thingId")
+            .Display(RecordDisplay.Page)
+            .Form("web.things.edit").Slot("web.things.detail")).Display);
     }
 
     [Fact]
