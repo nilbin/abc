@@ -474,6 +474,34 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 3c — display cascade, URL-backed nav, record identity, string sweep**: the last
+  FE structural slice, closing arc 3. (1) DISPLAY-RENDERER REGISTRY: `displayFor(field)` — the
+  read-only twin of the input `rendererFor`, same cascade (renderer key → semantic type →
+  DefaultDisplay). A grid cell and a record's read view are the same question ("show this
+  value"), so they now share ONE registry: ViewGrid.cell delegates everything but the subtree
+  company-name to `displayFor`, and ModelPage's read-only record fields render through it too
+  (records get the grid's badges/money/boolean formatting for free instead of bare `String()`).
+  Apps register custom displays by renderer/type key, mirroring registerRenderer. (2) URL-BACKED
+  NAV: NavProvider's mode/page selection lives in the URL query (`?mode=&page=`) — bookmarkable,
+  survives reload, Back/forward works (popstate listener), and query-params keep the SPA at "/"
+  clear of the OIDC /callback. This is the seam arc-4's routed records hang off. (3) RECORD
+  IDENTITY: ModelPage's `__rowId`-stuffed-into-the-row and scattered `row.tenantId`/`row.id`
+  reads collapse into one typed `OpenRecord {row, key, actAs}` — the (id, tenant) convention is
+  read ONCE in openRecord, and downstream reads named fields. (4) STRING SWEEP: the rule
+  builder's hardcoded `"value"`/`"days"`/`"date"`/`"field"` placeholders and the scope-map's
+  `"orders"` hint became locale keys (rules.placeholder-*, roles.placeholder-resource, sv+en) —
+  no display text in code (D6), for the last FE holdouts. (5) TYPED-CLIENT DECISION: the
+  generated `TypedTamClient` (samples/web/src/generated/tam.ts) is imported nowhere and stays
+  that way BY DESIGN — the generic runtime (ViewGrid/OperationForm/ModelPage) is deliberately
+  manifest-driven and string-keyed, so it needs no per-operation types; the typed client is the
+  demonstrated manifest→types capability for HAND-WRITTEN app code and external consumers, and
+  the sample app has no hand-written data code to use it. Kept (the generator + baseline-diff
+  stay valuable), not wired into the generic runtime. Verified: web tsc + vite build; unit
+  suites 163+38; wire 18+22 on fresh SQLite (FE-only slice — server logic unchanged, manifest
+  additive on the new locale keys, so Postgres parity inherited); Playwright confirmed the
+  customers grid renders through the display cascade (boolean ✓/— column, dimmed nulls) and
+  URL-backed nav end to end (navigate → ?mode=work&page=customers; reload restored Kunder;
+  Back returned to Ordrar), zero page errors. Arc 3 complete.
 - **Beauty arc 3b — TanStack Query for the FE data layer (supersedes 3a's bus)**: the
   hand-rolled `dataVersion`/`invalidate()` bus was a stepping stone; the elegant answer for
   solved plumbing is not to hand-roll a cache (Tam's own tier rule — roll-your-own only for core

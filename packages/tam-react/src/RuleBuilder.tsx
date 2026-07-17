@@ -114,7 +114,7 @@ function ClauseValue({ p, reference, clause, onClause }: {
   if (reference && reference.options.length > 0) {
     return (
       <Select
-        placeholder="value" searchable
+        placeholder={p.tam.t('rules.placeholder-value')} searchable
         // Options arrive as declared names; the stored const must be the WIRE value (camel
         // enum) — the same toWireEnum mapping the default renderer applies, or the server's
         // ordinal comparison would never match.
@@ -130,7 +130,7 @@ function ClauseValue({ p, reference, clause, onClause }: {
   if (kind === 'boolean') {
     return (
       <Select
-        placeholder="value"
+        placeholder={p.tam.t('rules.placeholder-value')}
         data={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
         value={clause.value === true ? 'true' : clause.value === false ? 'false' : null}
         onChange={v => onClause({ ...clause, value: v === null ? null : v === 'true', relativeDays: null })}
@@ -141,7 +141,7 @@ function ClauseValue({ p, reference, clause, onClause }: {
   if (kind === 'number' || kind === 'integer') {
     return (
       <NumberInput
-        placeholder="value" style={{ flex: 1 }}
+        placeholder={p.tam.t('rules.placeholder-value')} style={{ flex: 1 }}
         value={typeof clause.value === 'number' ? clause.value : ''}
         onChange={v => onClause({ ...clause, value: typeof v === 'number' ? v : null, relativeDays: null })}
       />
@@ -161,13 +161,13 @@ function ClauseValue({ p, reference, clause, onClause }: {
         />
         {relative ? (
           <NumberInput
-            placeholder="days" style={{ flex: 1 }} allowDecimal={false}
+            placeholder={p.tam.t('rules.placeholder-days')} style={{ flex: 1 }} allowDecimal={false}
             value={typeof clause.relativeDays === 'number' ? clause.relativeDays : 0}
             onChange={v => onClause({ ...clause, relativeDays: typeof v === 'number' ? v : 0 })}
           />
         ) : (
           <DateInput
-            placeholder="date" style={{ flex: 1 }} valueFormat="YYYY-MM-DD" clearable
+            placeholder={p.tam.t('rules.placeholder-date')} style={{ flex: 1 }} valueFormat="YYYY-MM-DD" clearable
             value={typeof clause.value === 'string' && clause.value ? dayjs(clause.value).toDate() : null}
             onChange={v => onClause({ ...clause, value: v ? dayjs(v).format('YYYY-MM-DD') : null })}
           />
@@ -177,7 +177,7 @@ function ClauseValue({ p, reference, clause, onClause }: {
   }
   return (
     <TextInput
-      placeholder="value" style={{ flex: 1 }}
+      placeholder={p.tam.t('rules.placeholder-value')} style={{ flex: 1 }}
       value={clause.value === null || clause.value === undefined ? '' : String(clause.value)}
       onChange={e => onClause({ ...clause, value: e.currentTarget.value, relativeDays: null })}
     />
@@ -276,7 +276,7 @@ export function RuleConditionField(p: FieldRendererProps): React.ReactNode {
           <Stack key={i} gap={2}>
             <Group gap={4} align="flex-start" wrap="nowrap">
               <Select
-                placeholder="field" searchable style={{ flex: 1.4 }}
+                placeholder={p.tam.t('rules.placeholder-field')} searchable style={{ flex: 1.4 }}
                 data={refs.map(r => ({ value: r.path, label: refLabel(p, r) }))}
                 value={clause.path || null}
                 onChange={v => setClause(i, { path: v ?? '', op: clause.op })}

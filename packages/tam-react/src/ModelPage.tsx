@@ -3,7 +3,21 @@ import { Group, Modal, Stack, Text, Title } from '@mantine/core';
 import { useTam } from './context';
 import { ViewGrid } from './ViewGrid';
 import { OperationForm } from './OperationForm';
+import { displayFor } from './renderers';
 import { PluginSlot } from './PluginSlot';
+
+/**
+ * An open record: the detail view's row plus its IDENTITY kept separate from its data — the
+ * record key (the list row's id) and the acting node (the row's tenant, when a subtree grid
+ * hands us a child company's row). This replaces the old habit of stuffing `__rowId` into the
+ * row object and reading `row.tenantId` at the render sites: the (id, tenant) convention is
+ * read ONCE, in openRecord, and everything downstream reads named fields.
+ */
+interface OpenRecord {
+  row: Record<string, unknown>;
+  key: string;
+  actAs?: string;
+}
 
 /**
  * A framework-composed page (docs/32): ORDERED sections — grids and slots — plus an optional
@@ -12,22 +26,22 @@ import { PluginSlot } from './PluginSlot';
  * remains the escape hatch for genuinely custom pages.
  */
 export function ModelPage(props: { page: string }) {
-  const { manifest, client, t, can, invalidate } = useTam();
+  const tam = useTam();
+  const { manifest, client, t, can, invalidate } = tam;
   const page = manifest.pages?.[props.page];
-  const [record, setRecord] = useState<Record<string, unknown> | null>(null);
-  const [rowTenant, setRowTenant] = useState<string | undefined>(undefined);
+  const [record, setRecord] = useState<OpenRecord | null>(null);
   if (!page) throw new Error(`Unknown page '${props.page}'`);
   const rec = page.record;
   const primaryGrid = page.sections.find(s => s.kind === 'grid')?.id;
 
   const openRecord = async (row: Record<string, unknown>) => {
     if (!rec) return;
-    // Subtree grids may hand us a child company's row: read + act in the ROW's node.
+    // The (id, tenant) row convention, read once: subtree grids may hand us a child company's
+    // row, so read + act in the ROW's node.
     const actAs = typeof row.tenantId === 'string' ? row.tenantId : undefined;
     const detail = await client.view(rec.detailView, { [rec.key]: row.id },
       actAs ? { actAs } : undefined);
-    setRowTenant(actAs);
-    setRecord(detail.rows[0] ? { ...detail.rows[0], __rowId: row.id } : null);
+    setRecord(detail.rows[0] ? { row: detail.rows[0], key: String(row.id), actAs } : null);
   };
 
   const firstForm = rec?.sections.find(s => s.kind === 'form')?.id;
@@ -35,7 +49,7 @@ export function ModelPage(props: { page: string }) {
   const title = rec && record
     ? [
         titleOperation ? t(`operations.${titleOperation}.title`) : '',
-        rec.titleField ? String(record[rec.titleField] ?? '') : '',
+        rec.titleField ? String(record.row[rec.titleField] ?? '') : '',
       ].filter(Boolean).join(' — ')
     : '';
 
@@ -48,18 +62,18 @@ export function ModelPage(props: { page: string }) {
         <OperationForm
           key={section.id}
           form={section.id}
-          actAs={rowTenant}
+          actAs={record.actAs}
           initialValues={Object.fromEntries(form.fields
-            .map(f => [f.name, f.name === rec.key ? record.__rowId : record[f.name]])
+            .map(f => [f.name, f.name === rec.key ? record.key : record.row[f.name]])
             .filter(([, v]) => v !== undefined))}
-          initialExtensions={(record.extensions as Record<string, unknown>) ?? {}}
+          initialExtensions={(record.row.extensions as Record<string, unknown>) ?? {}}
           onSuccess={r => { setRecord(null); invalidate(r.effects); }}
         />
       );
     }
     return (
       <PluginSlot key={section.id} id={section.id}
-        context={{ [rec.key]: record.__rowId }} actAs={rowTenant} />
+        context={{ [rec.key]: record.key }} actAs={record.actAs} />
     );
   };
 
@@ -84,17 +98,17 @@ export function ModelPage(props: { page: string }) {
         <Modal opened={record !== null} onClose={() => setRecord(null)}
           title={<Title order={4}>{title}</Title>} size="lg">
           {/* A record with NO form (a plugin's read-model page, docs/32) shows the detail
-              view's fields read-only — otherwise the modal would be a bare title. */}
+              view's fields read-only through the SAME display cascade as the grid cells. */}
           {record && !rec.sections.some(s => s.kind === 'form') && (
             <Stack gap={6} mb="md">
               {(manifest.views[rec.detailView]?.resultFields ?? [])
                 .filter(f => f.name !== 'id' && f.name !== 'version'
-                  && f.wireKind !== 'object' && record[f.name] !== undefined
-                  && record[f.name] !== null)
+                  && f.wireKind !== 'object' && record.row[f.name] !== undefined
+                  && record.row[f.name] !== null)
                 .map(f => (
                   <Group key={f.name} gap="xs" wrap="nowrap">
                     <Text size="sm" c="dimmed" w={160}>{t(f.labelKey)}</Text>
-                    <Text size="sm">{String(record[f.name])}</Text>
+                    {displayFor(f)({ field: f, value: record.row[f.name], tam })}
                   </Group>
                 ))}
             </Stack>

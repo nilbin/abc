@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Button, Checkbox, Group, NumberInput, SegmentedControl, Select, Stack, Text, TextInput, Textarea } from '@mantine/core';
+import { Badge, Button, Checkbox, Group, NumberInput, SegmentedControl, Select, Stack, Text, TextInput, Textarea } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import dayjs from 'dayjs';
 import { ManifestField, enumLabel, toWireEnum } from '@tam/core';
 import { LookupSelect } from './LookupSelect';
+import { badgeColor } from './badges';
 import { TamContextValue } from './context';
 
 export interface FieldRendererProps {
@@ -39,6 +40,56 @@ export function rendererFor(field: ManifestField): FieldRenderer {
     ?? registry.get(`type:${field.type}`)
     ?? DefaultRenderer;
 }
+
+// ---- Display renderers: the READ-ONLY twin of the input registry. A grid cell and a record's
+// read view are the same question — "show this field's value" — so they share ONE cascade
+// (renderer key → semantic type → DefaultDisplay), the mirror of rendererFor. Displays are PURE
+// (no hooks): they are called as functions from a cell, not mounted as components.
+
+export interface FieldDisplayProps {
+  field: ManifestField;
+  value: unknown;
+  tam: TamContextValue;
+}
+
+export type FieldDisplay = (props: FieldDisplayProps) => React.ReactNode;
+
+const displays = new Map<string, FieldDisplay>();
+
+/** App-owned display: register by renderer key ("status-pill") or semantic type ("type:money"). */
+export function registerDisplay(key: string, display: FieldDisplay): void {
+  displays.set(key, display);
+}
+
+export function displayFor(field: ManifestField): FieldDisplay {
+  return displays.get(field.renderer ?? '')
+    ?? displays.get(`type:${field.type}`)
+    ?? DefaultDisplay;
+}
+
+/** The built-in value display: enum → badge, boolean → check, number → localized (money 2dp),
+ *  everything else → text. Nulls render as a dimmed dash. Grid cells and record read views both
+ *  land here unless an app registers a display for the field's renderer/type. */
+export const DefaultDisplay: FieldDisplay = ({ field, value, tam }) => {
+  if (value === null || value === undefined) return <Text c="dimmed" size="sm">—</Text>;
+  if (field.options) {
+    return (
+      <Badge variant="light" color={badgeColor(String(value))}>
+        {enumLabel(tam.manifest, tam.culture, value)}
+      </Badge>
+    );
+  }
+  switch (field.wireKind) {
+    case 'boolean': return value === true ? '✓' : '—';
+    case 'number': return (
+      <Text size="sm" ta="right">
+        {new Intl.NumberFormat(tam.culture, (field.format === 'money' || field.renderer === 'money')
+          ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {}).format(Number(value))}
+      </Text>
+    );
+    default: return <Text size="sm">{String(value)}</Text>;
+  }
+};
 
 /** Built-in: forms opt fields into a textarea with .Renderer("multiline"). */
 registerRenderer('multiline', (p) => (
@@ -118,7 +169,7 @@ export const keyValueMap = (choices: string[]) => function KeyValueMap(p: FieldR
         </Group>
       ))}
       <Group gap="xs">
-        <TextInput placeholder="orders" value={draft} style={{ flex: 1 }} error={p.error}
+        <TextInput placeholder={p.tam.t('roles.placeholder-resource')} value={draft} style={{ flex: 1 }} error={p.error}
           onChange={e => setDraft(e.currentTarget.value)} />
         <Button size="compact-sm" variant="light" disabled={!draftKey || draftTaken}
           onClick={() => { update(draftKey, choices[choices.length - 1]); setDraft(''); }}>+</Button>

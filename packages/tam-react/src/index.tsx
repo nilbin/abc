@@ -6,6 +6,8 @@ export { TamProvider, useTam, useView, viewKey } from './context';
 export type { TamContextValue } from './context';
 export { registerRenderer, DefaultRenderer, cultureText, keyValueMap } from './renderers';
 export type { FieldRenderer, FieldRendererProps } from './renderers';
+export { registerDisplay, DefaultDisplay, displayFor } from './renderers';
+export type { FieldDisplay, FieldDisplayProps } from './renderers';
 export { OperationForm } from './OperationForm';
 export type { OperationFormProps } from './OperationForm';
 export { ViewGrid } from './ViewGrid';

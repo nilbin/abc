@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import React, {
+  createContext, useContext, useEffect, useMemo, useState, type ReactNode,
+} from 'react';
 import { NavLink, SegmentedControl, Stack, Tabs } from '@mantine/core';
 import type { Manifest, NavNode } from '@tam/core';
 import { useTam } from './context';
@@ -54,15 +56,41 @@ export interface NavState {
 
 const NavStateContext = createContext<NavState | null>(null);
 
-/** Computes the effective nav off the manifest and carries mode/page selection. */
+// Nav selection lives in the URL query (?mode=&page=) so a page is bookmarkable and survives a
+// reload — and so the browser Back button works. Query params (not path segments) keep the SPA
+// at "/", clear of the server routes and the OIDC /callback. This is also the seam arc-4's
+// routed records hang off.
+const readNav = () => {
+  const p = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);
+  return { mode: p.get('mode'), page: p.get('page') };
+};
+
+const writeNav = (mode: string | null, page: string | null) => {
+  if (typeof window === 'undefined') return;
+  const p = new URLSearchParams(window.location.search);
+  mode ? p.set('mode', mode) : p.delete('mode');
+  page ? p.set('page', page) : p.delete('page');
+  const qs = p.toString();
+  window.history.pushState(null, '', qs ? `?${qs}` : window.location.pathname);
+};
+
+/** Computes the effective nav off the manifest and carries mode/page selection in the URL. */
 export function NavProvider(props: { surface?: string; children: ReactNode }) {
   const { manifest, can } = useTam();
   const surface = props.surface ?? 'web';
   const modes = useMemo(
     () => prune(manifest.nav?.[surface] ?? manifest.nav?.web ?? [], manifest, can),
     [manifest, can, surface]);
-  const [modeId, setModeId] = useState<string | null>(null);
-  const [pageId, setPageId] = useState<string | null>(null);
+  const initial = readNav();
+  const [modeId, setModeId] = useState<string | null>(initial.mode);
+  const [pageId, setPageId] = useState<string | null>(initial.page);
+
+  // Back/forward restores the selection the URL carried.
+  useEffect(() => {
+    const onPop = () => { const n = readNav(); setModeId(n.mode); setPageId(n.page); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const activeMode = modes.find(m => m.id === modeId) ?? modes[0] ?? null;
 
@@ -90,10 +118,10 @@ export function NavProvider(props: { surface?: string; children: ReactNode }) {
   const state: NavState = {
     modes,
     activeMode,
-    setMode: id => { setModeId(id); setPageId(null); },
+    setMode: id => { setModeId(id); setPageId(null); writeNav(id, null); },
     active: active ?? null,
     activeSub,
-    navigate: id => setPageId(id),
+    navigate: id => { setPageId(id); writeNav(activeMode?.id ?? modeId, id); },
   };
   return <NavStateContext.Provider value={state}>{props.children}</NavStateContext.Provider>;
 }

@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Badge, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text,
+  Alert, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text,
   Title, UnstyledButton,
 } from '@mantine/core';
-import { GridAction, ManifestField, enumLabel, toWireEnum } from '@tam/core';
+import { GridAction, ManifestField, toWireEnum } from '@tam/core';
 import { useTam, useView } from './context';
 import { OperationForm } from './OperationForm';
+import { displayFor } from './renderers';
 import { FilterControl } from './GridFilters';
-import { badgeColor } from './badges';
 
 export interface ViewGridProps {
   grid: string;
@@ -105,25 +105,19 @@ export function ViewGrid(props: ViewGridProps) {
   const loading = result.isPending;
   const loadError = result.isError;
 
+  // A cell is a value display (renderers.displayFor) — the same cascade the record read view
+  // uses. The one grid-local concern is the subtree column, which maps a tenant id to its
+  // company display name; everything else is the shared registry.
   const cell = (row: Record<string, unknown>, field: ManifestField): React.ReactNode => {
     const value = field.extension
       ? (row.extensions as Record<string, unknown> | undefined)?.[field.name]
       : row[field.name];
-    if (value === null || value === undefined) return <Text c="dimmed" size="sm">—</Text>;
-    if (field.name === subtreeField) return <Text size="sm">{companyName(value)}</Text>;
-    if (field.options) {
-      return <Badge variant="light" color={badgeColor(String(value))}>{enumLabel(manifest, culture, value)}</Badge>;
+    if (field.name === subtreeField) {
+      return value === null || value === undefined
+        ? <Text c="dimmed" size="sm">—</Text>
+        : <Text size="sm">{companyName(value)}</Text>;
     }
-    switch (field.wireKind) {
-      case 'boolean': return value === true ? '✓' : '—';
-      case 'number': return (
-        <Text size="sm" ta="right">
-          {new Intl.NumberFormat(culture, (field.format === 'money' || field.renderer === 'money')
-            ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {}).format(Number(value))}
-        </Text>
-      );
-      default: return <Text size="sm">{String(value)}</Text>;
-    }
+    return displayFor(field)({ field, value, tam });
   };
 
   const columns: ManifestField[] = [
