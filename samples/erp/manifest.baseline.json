@@ -84,6 +84,7 @@
       "labels.next-run-iso": "Next run",
       "labels.node-id": "Menu item",
       "labels.old-value": "Old value",
+      "labels.on-event": "On event",
       "labels.on-operation": "On operation",
       "labels.operation": "Operation",
       "labels.options": "Options",
@@ -511,6 +512,7 @@
       "labels.next-run-iso": "N\u00E4sta k\u00F6rning",
       "labels.node-id": "Menypunkt",
       "labels.old-value": "F\u00F6reg\u00E5ende v\u00E4rde",
+      "labels.on-event": "P\u00E5 h\u00E4ndelse",
       "labels.on-operation": "Vid operation",
       "labels.operation": "Operation",
       "labels.options": "Alternativ",
@@ -2541,7 +2543,7 @@
           "labelKey": "labels.on-operation",
           "type": "text",
           "wireKind": "string",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false,
           "readOnly": false
@@ -2579,6 +2581,16 @@
         {
           "name": "action",
           "labelKey": "labels.action",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "onEvent",
+          "labelKey": "labels.on-event",
           "type": "text",
           "wireKind": "string",
           "required": false,
@@ -7555,7 +7567,7 @@
           "labelKey": "labels.on-operation",
           "type": "text",
           "wireKind": "string",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false,
           "readOnly": false

@@ -147,6 +147,15 @@ public sealed class OutboxDispatcher(
             }
         }
 
+        // Tenant EFFECT-triggered rules (docs/22): tam.rules is a framework package (always
+        // active), so evaluate this tenant's event rules here — set-field only, on the pinned
+        // scope's db so any write rides the per-record SaveChanges. The evaluator isolates its
+        // own failures; a broken rule never wedges dispatch. The db is filtered to this record's
+        // tenant, so only that tenant's rules are seen.
+        if (services.GetService(typeof(IExtensionRegistry)) is IExtensionRegistry ruleRegistry)
+            await RuleEvaluator.ExecuteEventActionsAsync(
+                db, record.EventType, effect.Payload, record.TenantId, ruleRegistry, ct);
+
         // Event-triggered outbound integrations (docs/25): push to external systems on commit.
         // Each runs under its own deadline so a slow endpoint can't stall the dispatch loop, and a
         // failure enqueues an outbound task so the retry driver re-drives it with backoff.

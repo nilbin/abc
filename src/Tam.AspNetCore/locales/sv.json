@@ -80,6 +80,7 @@
   "labels.next-run-iso": "Nästa körning",
   "labels.node-id": "Menypunkt",
   "labels.old-value": "Föregående värde",
+  "labels.on-event": "På händelse",
   "labels.on-operation": "Vid operation",
   "labels.operation": "Operation",
   "labels.options": "Alternativ",

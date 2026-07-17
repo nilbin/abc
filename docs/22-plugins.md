@@ -1,6 +1,6 @@
 # 22 — Plugins: Packaged Extensibility
 
-**Status: P1–P3 and P5-v1 implemented and verified** (packaging, PLG001–PLG005, per-tenant activation, manifest/MCP/OpenAPI omission, 404 gating, packaged fields on host entities, gates on host operations, effect subscribers, **plugin-shipped inbound integrations** (samples/fortnox), tenant packages with dry-run/atomic install/version guard/retire-on-uninstall, and automation rules as Px-conditioned blocking findings with RUL001–003 — see STATUS.md). Plugins compose with **subscription entitlements** (docs/24): activation is gated by the tenant's plan, which is how a marketplace prices them. **P4 (custom objects) and the rest of P5 (effect-triggered rules, rule-builder UI) are design** — the action catalog is built. One correction from implementation: plugins address host entities and operations by *wire key* (`"order"`, `"orders.complete"`), not CLR types — a plugin references the host's contract, never its assembly. Decision summary: D8 in [19-decisions.md](19-decisions.md).
+**Status: P1–P3 and P5-v1 implemented and verified** (packaging, PLG001–PLG005, per-tenant activation, manifest/MCP/OpenAPI omission, 404 gating, packaged fields on host entities, gates on host operations, effect subscribers, **plugin-shipped inbound integrations** (samples/fortnox), tenant packages with dry-run/atomic install/version guard/retire-on-uninstall, and automation rules as Px-conditioned blocking findings with RUL001–003 — see STATUS.md). Plugins compose with **subscription entitlements** (docs/24): activation is gated by the tenant's plan, which is how a marketplace prices them. **P4 (custom objects) and the P5 rule-builder UI are design** — automation rules (conditions over input + `row.*`, relative-date `fn`, the action catalog, and effect-triggered rules) are all built. One correction from implementation: plugins address host entities and operations by *wire key* (`"order"`, `"orders.complete"`), not CLR types — a plugin references the host's contract, never its assembly. Decision summary: D8 in [19-decisions.md](19-decisions.md).
 
 ## The problem this solves
 
@@ -280,32 +280,30 @@ Ordering note: #2 needs only machinery that exists today (audit + pipeline + ove
 
 Each phase is independently shippable and independently valuable; nothing in P1–P3 waits on the JSONB query work that gates P4.
 
-### Effect-triggered rules (DESIGN — the last P5 rules slice)
+### Effect-triggered rules (BUILT — the last P5 rules slice)
 
-Today a rule's trigger is an OPERATION: it evaluates in the pipeline and its action rides the
-operation's own transaction. The remaining slice is a rule triggered by an EVENT — "when a
-work order completes, flag its project for review" — evaluated on the outbox dispatch path
-where plugin subscribers already run (docs/09-10). Shape:
+An operation-triggered rule evaluates in the pipeline and its action rides the operation's own
+transaction. An EVENT-triggered rule — "when an order is created, flag project-type orders for
+review" — evaluates on the outbox dispatch path where plugin subscribers already run
+(docs/09-10). As shipped:
 
-- **Trigger** is `OnEvent` (a declared DOMAIN event) instead of `OnOperation`; exactly one is
-  set. `rules.*` events are refused as triggers (RUL006).
+- **Trigger** is `onEvent` (a declared DOMAIN event) instead of `onOperation`; exactly one is
+  set (`onOperation` is now optional). `rules.*` events are refused as triggers (RUL006).
 - **Condition** reads the event PAYLOAD (its declared fields) and, via `row.*`, the entity the
   payload references by a `{entity}Id` field — the same row machinery, sourced from the
-  payload instead of an operation input.
-- **Action is set-field ONLY** (RUL007 forbids publish-event from an effect rule). This is the
-  load-bearing safety constraint: no-publish-event **plus** no-`rules.*`-trigger makes a
-  rule → event → rule cycle structurally impossible. The write goes through the same
-  `RejectSetFieldValue` guard (ReadOnly/state/semantic/options) and the same tenant-checked
-  row load as operation rules; findings make no sense post-commit, so an effect rule with no
-  action is rejected.
+  payload instead of an operation input (RUL004 still names a payload with no single target).
+- **Action is set-field ONLY** (RUL007 forbids publish-event from an effect rule; a
+  post-commit finding blocks nothing, so a set-field is required). This is the load-bearing
+  safety constraint: no-publish-event **plus** no-`rules.*`-trigger makes a rule → event → rule
+  cycle structurally impossible. The write goes through the same `RejectSetFieldValue` guard
+  (ReadOnly/state/semantic/options) and the same tenant-checked row load as operation rules,
+  and rides the dispatcher's per-record `SaveChanges` — isolated like a plugin subscriber, so
+  a broken rule never wedges dispatch.
 
-**Why this is designed, not built (yet):** every operation-triggered increment gates a
-single request — isolated, rolls back cleanly, reviewed. An effect rule writes on the
-**outbox dispatcher**, a multi-instance, lease-based, at-least-once hot path that carries
-every tenant's event delivery, and review round 5 showed these tenant-data-driven write
-paths hide real bugs (a validation bypass and a silently-dead evaluator). Adding writes there
-warrants a review pass in the loop, not an unsupervised ship — so the mechanism is specified
-here (loop-safety included) and left for a milestone that pairs the build with its review.
+Built with the round-5 review's findings applied as it was written (the dispatcher is a
+multi-instance, lease-based hot path; tenant-data writes there are exactly what round 5 showed
+can hide bugs). Verified: 3 harness tests + 4 wire checks proving the field is set on the
+referenced row when the event dispatches, on SQLite and Postgres.
 
 
 ## The plugin authoring reference (what the RTFM run proved must be written down)

@@ -252,6 +252,9 @@ public sealed class AutomationRuleEntity : ITenantScoped
     public string TenantId { get; set; } = "";
     public string Name { get; set; } = "";
     public string OnOperation { get; set; } = "";
+    // docs/22 effect-triggered rules: a rule triggers on EITHER an operation OR a domain event.
+    // Exactly one is set; OnEvent rules evaluate on the outbox dispatch path (set-field only).
+    public string? OnEvent { get; set; }
     public string ConditionJson { get; set; } = "";
     public string? TargetField { get; set; }
     public string MessagesJson { get; set; } = "{}";

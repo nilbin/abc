@@ -451,15 +451,23 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Effect-triggered rules BUILT (docs/22) — the last P5 rules slice, built with the user in
+  the loop for the dispatcher change**: a rule triggered by a DOMAIN EVENT (`onEvent`) instead
+  of an operation, evaluated on the outbox dispatch path after plugin subscribers. Condition
+  reads the event payload + `row.*` (the entity the payload references by `{entity}Id`); the
+  action is set-field ONLY — RUL007 forbids publish-event and RUL006 forbids a `rules.*`
+  trigger, which together make a rule→event→rule cycle structurally impossible. The write uses
+  the same round-5 `RejectSetFieldValue` guard and tenant-checked row load as operation rules,
+  rides the dispatcher's per-record SaveChanges, and is isolated like a subscriber (a broken
+  rule never wedges dispatch). `onOperation` became optional (baseline-safe: required→optional).
+  Verified: 3 harness tests + 4 wire checks ("order created → project orders flagged on
+  dispatch"), full 16-suite matrix 242/242 on fresh SQLite AND Postgres, additive baseline.
+  **P5 rules are now complete** — conditions over input + row state, relative dates, the action
+  catalog, and event triggers. Remaining P-work: the visual rule-builder UI (raw Px JSON today)
+  and P4 custom objects.
 - **P5 rules engine status**: BUILT — Px-conditioned findings; row.* conditions over the
   operation's target row; the PxFn relative-date node; the action catalog (set-field +
-  publish-event), hardened by review round 5. DESIGNED, not built — effect-triggered rules
-  (docs/22): a rule fired by a domain event, action executed on the outbox dispatch path.
-  Held deliberately: it writes on the multi-instance dispatcher hot path, and review round 5
-  showed these write paths hide real bugs, so it pairs the build with a review rather than
-  shipping unsupervised. Its loop-safety is specified (set-field only + no rules.* trigger →
-  no rule→event→rule cycles). Also remaining: the visual rule-builder UI (raw Px JSON today)
-  and P4 custom objects.
+  publish-event), hardened by review round 5; and effect-triggered rules (above).
 - **Review round 5 (rules-engine write paths): two adversarial agents, two confirmed bugs +
   hardening**. The action catalog and row.* increments got a security + correctness audit;
   both agents independently flagged the same HIGH, and the correctness agent found a live
