@@ -36,7 +36,7 @@ Note what is absent: no per-feature `Bindings.cs`. Bindings — forms, grids, na
 - [Step 9 — The tenant adds a custom field. Nobody deploys anything.](step-09.md) *(BUILT)*
 - [Step 10 — The integration is a mapping, not a sync engine](step-10.md) *(BUILT — `samples/fortnox`)*
 - [Step 11 — Tests exercise the contract, not the plumbing](step-11.md) *(BUILT — `Tam.Testing` + `samples/erp.Tests`)*
-- [Step 12 — Six months later: change impact](step-12.md) *(the unified report: DESIGNED, NOT BUILT)*
+- [Step 12 — Six months later: change impact](step-12.md) *(BUILT)*
 - [Step 13 — A partner ships a plugin](step-13.md) *(implemented — [22-plugins.md](../22-plugins.md), decision D8; running in samples/inspect)*
 - [Step 14 — Who is asking, and what have they paid for](step-14.md) *(implemented — [24-subscriptions.md](../24-subscriptions.md))*
 - [Step 15 — Norrservice becomes a group](step-15.md) *(implemented — [26](../26-tenancy-hierarchy-and-identity.md) + [27](../27-authorization-model.md))*

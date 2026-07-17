@@ -11,6 +11,21 @@ public static class TamManifestExport
     /// </summary>
     public static bool TryHandle(TamModel model, string[] args)
     {
+        if (args is ["impact", ..])
+        {
+            // Step 12: the consolidated change-impact report — the compiled model vs the
+            // committed baseline. Exit 2 on D4-breaking changes so scripts can branch on it;
+            // the CI gate proper stays scripts/check_manifest.py.
+            var baselinePath = args.Length > 1 ? args[1] : "manifest.baseline.json";
+            var baseline = JsonSerializer.Deserialize<ManifestDto>(
+                File.ReadAllText(baselinePath), TamJson.Options)!;
+            var report = TamImpact.Against(model, baseline);
+            Console.WriteLine($"impact vs {baselinePath}:");
+            Console.WriteLine(report.Format());
+            if (report.HasBreaks) Environment.ExitCode = 2;
+            return true;
+        }
+
         if (args is not ["manifest", ..]) return false;
         var path = args.Length > 1 ? args[1] : "manifest.baseline.json";
         var exported = ManifestBuilder.Build(

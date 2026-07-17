@@ -451,6 +451,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Step 12 BUILT — the consolidated change-impact report**: `TamImpact.Against(model,
+  baseline)` (Tam.Core) diffs the compiled model's manifest against the committed baseline
+  and prints the tutorial's unified answer: ✓ the silent greens stated per change (schemas,
+  bound forms/grids, MCP, TS-client regen), ✗ the D4 breaking classification (the same rules
+  the CI baseline gate enforces — shown BEFORE the push, with the tool exiting 2 so scripts
+  can branch), ! the couplings the manifest knows (gatedBy plugins, event subscribers,
+  integrations mapping the operation, RequiresView contracts over the changed view —
+  including a contract field no longer served, which is listed per plugin AND counted as a
+  break). Host CLI: `dotnet run -- impact [baseline]` via the same TamManifestExport hook as
+  the export mode. Verified: 4 unit tests (unchanged/new-required/removals/additive) + the
+  real erp report against a rolled-back baseline (output now IS the tutorial page). With
+  this, the deferral list is EMPTY — every designed-not-built marker from the one-night
+  review is either built or retired with rationale.
 - **Deferral sweep (post-M6)**: `ViewGrid.tsx` split (`GridFilters.tsx` + `badges.tsx`;
   identical bundle hash, clean tsc — the "on next touch" debt paid on the M6-triage touch);
   the "wildcard-gate set caching" and "packaged-writer unification" deferrals RETIRED with
