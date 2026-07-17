@@ -52,11 +52,14 @@ export interface FieldDisplayProps {
   tam: TamContextValue;
 }
 
+/** A read-only value display. PURE — no hooks: called as a function, never mounted. */
 export type FieldDisplay = (props: FieldDisplayProps) => React.ReactNode;
 
 const displays = new Map<string, FieldDisplay>();
 
-/** App-owned display: register by renderer key ("status-pill") or semantic type ("type:money"). */
+/** App-owned display: register by renderer key ("status-pill") or semantic type ("type:money").
+ *  A display must be a PURE function of its props — no hooks: it is called inline from grid
+ *  cells, not mounted as a component. */
 export function registerDisplay(key: string, display: FieldDisplay): void {
   displays.set(key, display);
 }

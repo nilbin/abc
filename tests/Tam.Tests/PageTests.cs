@@ -10,7 +10,7 @@ public class PageTests
     [Authorize("things.read")]
     private static class ThingsList
     {
-        public sealed record Query;
+        public sealed record Query(string? Search = null);
 
         public sealed record Result
         {
@@ -99,10 +99,95 @@ public class PageTests
             page.Sections.Select(sec => (sec.Kind, sec.Id)));
         Assert.Equal(("things.detail", "thingId", "name"),
             (page.Record!.DetailView, page.Record.Key, page.Record.TitleField));
-        // declaration order IS layout order: slot declared BEFORE the form renders above it
+        // Flat authoring normalizes to ONE implicit heading-less tab; declaration order IS
+        // layout order: slot declared BEFORE the form renders above it.
+        var implicit_ = Assert.Single(page.Record.Tabs);
+        Assert.Null(implicit_.HeadingKey);
         Assert.Equal([("slot", "web.things.detail"), ("form", "web.things.edit")],
-            page.Record.Sections.Select(sec => (sec.Kind, sec.Id)));
+            implicit_.Sections.Select(sec => (sec.Kind, sec.Id)));
         Assert.Null(model.Nav["web"][0].Children[0].Permission);
+    }
+
+    [Fact]
+    public void Record_tabs_export_with_binds_and_panel_tab_markers()
+    {
+        var model = Host()
+            .LocaleDefaults("en", new Dictionary<string, string>
+            {
+                ["tabs.details"] = "Details", ["tabs.related"] = "Related",
+            })
+            .Page("things", page => page
+                .Grid("web.things")
+                .Record(record => record
+                    .Detail("things.detail", key: "thingId")
+                    .Tab("details", "tabs.details", s => s.Form("web.things.edit"))
+                    .Tab("related", "tabs.related", s => s
+                        .Grid("web.things", bind => bind.Query("search", fromRecord: "name")))
+                    .PanelTabs("web.things.detail")))
+            .Build();
+
+        var manifest = ManifestBuilder.Build(
+            model, new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>(), 0, null);
+        var tabs = manifest.Pages["things"].Record!.Tabs;
+        Assert.Equal(3, tabs.Count);
+        Assert.Equal(("details", "tabs.details"), (tabs[0].Id, tabs[0].HeadingKey));
+        var bound = Assert.Single(tabs[1].Sections);
+        Assert.Equal(new Dictionary<string, string> { ["search"] = "name" }, bound.Bind);
+        // The panel-tabs marker: no sections of its own, the slot to expand client-side.
+        Assert.Equal("web.things.detail", tabs[2].Slot);
+        Assert.Empty(tabs[2].Sections);
+        // The marker references the slot like a slot section: auto-declared with the key.
+        Assert.Equal(["thingId"], model.Slots["web.things.detail"].ContextKeys);
+    }
+
+    [Fact]
+    public void PAGE001_rejects_broken_record_tabs()
+    {
+        // Flat sections AND tabs on one record.
+        Assert.Contains("flat sections OR tabs", Assert.Throws<InvalidOperationException>(() =>
+            Host().Page("p", page => page.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId")
+                    .Form("web.things.edit")
+                    .Tab("t", "tabs.t", s => s.Slot("web.things.detail")))).Build()).Message);
+
+        // Duplicate tab ids (camelization collides "Details" and "details").
+        Assert.Contains("duplicate record tab id", Assert.Throws<InvalidOperationException>(() =>
+            Host().Page("p", page => page.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId")
+                    .Tab("Details", "tabs.a", s => s.Form("web.things.edit"))
+                    .Tab("details", "tabs.b", s => s.Slot("web.things.detail")))).Build()).Message);
+
+        // A record grid section that is not a declared grid.
+        Assert.Contains("not a declared grid", Assert.Throws<InvalidOperationException>(() =>
+            Host().Page("p", page => page.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId")
+                    .Grid("web.ghost"))).Build()).Message);
+
+        // A bind FIELD that is not on the detail view.
+        Assert.Contains("not a result field", Assert.Throws<InvalidOperationException>(() =>
+            Host().Page("p", page => page.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId")
+                    .Grid("web.things", b => b.Query("search", fromRecord: "ghost")))).Build()).Message);
+
+        // A bind PARAM the target view neither takes nor filters on: the server ignores
+        // unknown params, so this would silently show EVERY row — a build error instead.
+        Assert.Contains("unfiltered", Assert.Throws<InvalidOperationException>(() =>
+            Host().Page("p", page => page.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId")
+                    .Grid("web.things", b => b.Query("ghostParam", fromRecord: "name")))).Build()).Message);
+    }
+
+    [Fact]
+    public void L10N001_gates_record_tab_headings()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() => Host()
+            .Page("things", page => page.Grid("web.things")
+                .Record(r => r.Detail("things.detail", key: "thingId")
+                    .Tab("details", "tabs.missing-heading", s => s
+                        .Form("web.things.edit").Slot("web.things.detail"))))
+            .Build());
+        Assert.StartsWith("L10N001", error.Message);
+        Assert.Contains("tabs.missing-heading", error.Message);
     }
 
     [Fact]

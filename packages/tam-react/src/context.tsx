@@ -1,4 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { Group, Loader } from '@mantine/core';
 import {
   QueryClient, QueryClientProvider, useQuery, useQueryClient, type UseQueryResult,
@@ -19,9 +21,7 @@ export interface TamContextValue {
    * response's `effects` (or the SSE payload's) and invalidation is TARGETED: each
    * `entity-modified` effect invalidates only the views over that entity (mapped through the
    * manifest's `extensibleEntity`), and a system/config write additionally refetches the
-   * manifest. TanStack Query owns the cache, dedup and stale-while-revalidate underneath — this
-   * is the one signal that used to be a refreshKey prop / localRefresh counter / onAction
-   * callback / per-grid SSE subscription.
+   * manifest. TanStack Query owns the cache, dedup and stale-while-revalidate underneath.
    */
   invalidate: (effects?: ReadonlyArray<Record<string, unknown>>) => void;
 }
@@ -137,6 +137,12 @@ function TamInner(props: {
     invalidateForEffects(queryClient, manifest, effects ?? []);
   }, [queryClient, manifest]);
 
+  // The SSE effect reads invalidate through a ref: its identity changes with the manifest, and
+  // re-running the effect would tear down the EventSource mid-debounce (dropping a batch) for
+  // what is only a callback swap.
+  const invalidateRef = useRef(invalidate);
+  invalidateRef.current = invalidate;
+
   useEffect(() => {
     // Committed effects (D5) invalidate the same way a local write does — the SSE payload carries
     // the operation's effects, so live refresh is as targeted as a mutation. Debounced so a burst
@@ -153,10 +159,10 @@ function TamInner(props: {
         if (parsed.effects) pending.push(...parsed.effects);
       } catch { /* a keep-alive comment or malformed frame — ignore */ }
       clearTimeout(timer);
-      timer = setTimeout(() => { const batch = pending; pending = []; invalidate(batch); }, 400);
+      timer = setTimeout(() => { const batch = pending; pending = []; invalidateRef.current(batch); }, 400);
     };
     return () => { clearTimeout(timer); source.close(); };
-  }, [props.client.baseUrl, props.client.actingAs, invalidate]);
+  }, [props.client.baseUrl, props.client.actingAs]);
 
   const setCulture = useCallback((next: string) => {
     props.client.culture = next;

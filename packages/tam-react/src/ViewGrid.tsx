@@ -3,7 +3,7 @@ import {
   Alert, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text,
   Title, UnstyledButton,
 } from '@mantine/core';
-import { GridAction, ManifestField, toWireEnum } from '@tam/core';
+import { GridAction, ManifestField, OperationResponse, findingMessage } from '@tam/core';
 import { useTam, useView } from './context';
 import { OperationForm } from './OperationForm';
 import { displayFor } from './renderers';
@@ -30,8 +30,8 @@ export function ViewGrid(props: ViewGridProps) {
     const operation = manifest.operations[operationId];
     return operation !== undefined && can(operation.permission);
   };
-  // ONE action list (docs/32): placement × mode decides rendering; a declared bind (plugin
-  // contributions, docs/31 D-X1) replaces the same-name input convention.
+  // ONE action list (docs/32): placement × mode decides rendering; a declared bind (docs/31
+  // D-X1) wins over the same-name input convention.
   const actions = (gridDef.actions ?? []).filter(a => allowed(a.operation));
   const toolbarActions = actions.filter(a => a.placement === 'toolbar');
   const rowActionList = actions.filter(a => a.placement === 'row');
@@ -52,6 +52,7 @@ export function ViewGrid(props: ViewGridProps) {
   // The open form modal: an operation, plus initial values when opened as a row EDIT (RowForm).
   const [modalAction, setModalAction] =
     useState<{ operation: string; initial?: Record<string, unknown> } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const pageSize = props.pageSize ?? 15;
 
@@ -96,8 +97,7 @@ export function ViewGrid(props: ViewGridProps) {
 
   // The view read is a TanStack query (context.useView): keyed by view + params + act-as +
   // culture, so two grids on the same view dedupe, remounts hit cache, and a committed write
-  // invalidates exactly this key. loading/error are the query's own states — no hand-rolled
-  // fetch effect, no rows/total/loading useState.
+  // invalidates exactly this key. loading/error are the query's own states.
   const query = { ...props.query, ...filters, page, pageSize, sort, dir: desc ? 'desc' : 'asc' };
   const result = useView(gridDef.view, query, props.actAs ? { actAs: props.actAs } : undefined);
   const rows = result.data?.rows ?? [];
@@ -131,6 +131,26 @@ export function ViewGrid(props: ViewGridProps) {
   const formForOperation = (operationId: string) =>
     Object.entries(manifest.forms).find(([, f]) => f.operation === operationId)?.[0];
 
+  // Every execute-mode action funnels through here: a server rejection surfaces as a
+  // localized Alert and does NOT invalidate (nothing was written — a refetch would read as
+  // success); a transport/parse failure surfaces the generic action-failed message.
+  const completeAction = (response: OperationResponse) => {
+    const error = response.findings.find(f => f.severity === 'error');
+    if (error) { setActionError(findingMessage(manifest, culture, error)); return; }
+    setActionError(null);
+    invalidate(response.effects);
+  };
+
+  const runOperation = async (operation: string, body: Record<string, unknown>,
+    actAs?: string) => {
+    try {
+      completeAction(await client.operation(operation, body,
+        actAs ? { actAs } : undefined));
+    } catch {
+      setActionError(t('grid.action-failed'));
+    }
+  };
+
   // Execute-mode: the declared bind (input ← row column) wins; without one, required inputs
   // map to same-named row columns with the row's id as fallback (orderId → row.id).
   const runRowAction = async (action: GridAction, row: Record<string, unknown>) => {
@@ -145,9 +165,8 @@ export function ViewGrid(props: ViewGridProps) {
     }
     const rowTenant = (subtreeField ? (row[subtreeField] as string | undefined) : undefined)
       ?? props.actAs;
-    const response = await client.operation(action.operation, body,
-      rowTenant && rowTenant !== acting ? { actAs: rowTenant } : undefined);
-    invalidate(response.effects);
+    await runOperation(action.operation, body,
+      rowTenant && rowTenant !== acting ? rowTenant : undefined);
   };
 
   // Form-mode on a row (docs/32): the row's result fields prefill same-named form fields —
@@ -183,7 +202,7 @@ export function ViewGrid(props: ViewGridProps) {
             <Button key={action.operation} size="sm"
               onClick={() => action.mode === 'form'
                 ? setModalAction({ operation: action.operation })
-                : void client.operation(action.operation, {}).then(r => invalidate(r.effects))}>
+                : void runOperation(action.operation, {})}>
               {t(`operations.${action.operation}.title`)}
             </Button>
           ))}
@@ -192,6 +211,12 @@ export function ViewGrid(props: ViewGridProps) {
 
       {loadError && (
         <Alert color="red" variant="light">{t('grid.load-failed')}</Alert>
+      )}
+      {actionError && (
+        <Alert color="red" variant="light" withCloseButton
+          onClose={() => setActionError(null)}>
+          {actionError}
+        </Alert>
       )}
 
       <Table.ScrollContainer minWidth={720}>
@@ -271,7 +296,7 @@ export function ViewGrid(props: ViewGridProps) {
           const form = formForOperation(modalAction.operation);
           return form
             ? <OperationForm form={form} initialValues={modalAction.initial}
-                onSuccess={r => { setModalAction(null); invalidate(r.effects); }} />
+                onSuccess={r => { setModalAction(null); setActionError(null); invalidate(r.effects); }} />
             : <Text>{modalAction.operation}</Text>;
         })()}
       </Modal>

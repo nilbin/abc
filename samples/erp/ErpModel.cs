@@ -34,17 +34,17 @@ public static class ErpModel
         // below DECLARES it (docs/34 M5 — placement is declaration; the record's key is its
         // context). model.Slot() would only be needed for external slots or a custom key.
 
-        // The orders page is a DECLARED COMPOSITION (docs/32): grid + record surface (detail →
-        // edit form → plugin panels). The hand-written OrdersPage React component is gone.
+        // The orders page is a DECLARED COMPOSITION (docs/32): grid + tabbed record surface.
         .Page("orders", page => page
             .Grid("web.orders.list")
             .Record(record => record
                 .Detail("orders.detail", key: "orderId")
                 .Title("number")
-                // Record TABS (docs/32 arc 4): the edit form and the plugin panels (inspect
-                // checklists, invoicing invoices) each get their own tab instead of stacking.
+                // Record TABS (docs/32 arc 4): the edit form gets its tab, and PanelTabs
+                // expands the detail slot into one tab per contributing PLUGIN — the host
+                // never names, counts, or labels the plugins (docs/31 D-X4).
                 .Tab("details", "erp.tabs.details", s => s.Form("web.orders.edit"))
-                .Tab("related", "erp.tabs.related", s => s.Slot("web.orders.detail"))))
+                .PanelTabs("web.orders.detail")))
 
         // The second declared page — the shape generalizes: grid + record (no slots here; the
         // customers surface is not a contribution point until a plugin needs it).

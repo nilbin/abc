@@ -44,20 +44,29 @@ surface, extendable with new tabs (including plugin ones) without touching the o
     .Tab("details", "erp.tabs.details", s => s.Form("web.work-orders.edit"))
     .Tab("time", "erp.tabs.time", s => s
         .Grid("web.time.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))
-    .Tab("materials", "erp.tabs.materials", s => s
-        .Grid("web.materials.list", bind => bind.Query("workOrderNumber", fromRecord: "number"))))
+    .PanelTabs("web.orders.detail"))
 ```
 
+- **ONE representation**: a record is ALWAYS tabs on the wire — flat authoring (`Form`/`Grid`/
+  `Slot` directly on the record) normalizes at Build() into a single implicit heading-less
+  tab, and the client renders tab chrome only when there is a choice. A record authors tabs
+  OR flat sections, never both (PAGE001).
 - A **`Grid` record section** is a child listing filtered off the open record: each
   `bind.Query(param, fromRecord: field)` fills a grid query param from a detail-view field, so
   the child filters MECHANICALLY (docs/20) — a work order's time entries, no dedicated view.
-  PAGE001 verifies the grid exists and every bound field is a detail-view result field.
-- **Tabs are the plugin extension point too**: a `Slot(...)` section in a tab surfaces plugin
-  detail panels (docs/31 D-X4) as their own tab — the host opts the slot into a tab once and
-  every current/future plugin lands there (the order detail's "checklists & invoices" tab).
-- A record declares tabs OR flat sections, not both (PAGE001).
-- The open record is **URL-routed** (`?record=<id>`, riding the nav's `?mode=&page=` from the
-  FE structural pass): a record view is deep-linkable and the browser Back button closes it.
+  PAGE001 verifies the grid exists, every bound field is a detail-view result field, AND every
+  bound param is a query field or declared filter of the grid's view — the server ignores
+  unknown params, so an unchecked typo would silently show every row as this record's children.
+- **`PanelTabs(slotId)` is the plugin extension point**: the marker expands client-side into
+  ONE TAB PER CONTRIBUTING PLUGIN (heading = the panel's headingKey, falling back to
+  `plugins.{id}.title`) — the host opts the slot in once and never names, counts, or labels
+  the plugins (docs/31 D-X4). Activation filtering applies per tenant for free, since the
+  expansion reads the manifest's panel list.
+- Tab headings are locale KEYS, L10N001-gated like every label; tab ids are camelCased and
+  must be unique (PAGE001).
+- The open record is **URL-routed** (`?record=<id>`, riding the nav's `?mode=&page=` grammar —
+  one url.ts module owns all three params, and navigation clears the page-scoped `record`):
+  a record view is deep-linkable and the browser Back button closes it.
 
 - **D-P1 (evolved, review round 4) — a page is a DECLARED composition of things the model
   already has**: one grid, and optionally a RECORD surface — detail view + context key,

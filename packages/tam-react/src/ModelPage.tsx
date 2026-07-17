@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Group, Modal, Stack, Tabs, Text, Title } from '@mantine/core';
 import type { RecordSection } from '@tam/core';
 import { useTam } from './context';
 import { ViewGrid } from './ViewGrid';
 import { OperationForm } from './OperationForm';
 import { displayFor } from './renderers';
-import { PluginSlot } from './PluginSlot';
+import { PluginSlot, visiblePanels } from './PluginSlot';
+import { readQuery, writeQuery } from './url';
 
 /**
  * An open record: the detail view's row plus its IDENTITY kept separate from its data — the
@@ -18,71 +19,95 @@ interface OpenRecord {
   actAs?: string;
 }
 
-// The open record rides the URL (?record=<id>) alongside nav's ?mode=&page= (arc 3c), so a
-// record view is deep-linkable and the browser Back button closes it. Written here, not in
-// NavProvider, so record routing stays local to the page that owns the record.
-const readRecordParam = () =>
-  typeof window === 'undefined' ? null
-    : new URLSearchParams(window.location.search).get('record');
-
-const writeRecordParam = (id: string | null) => {
-  if (typeof window === 'undefined') return;
-  const p = new URLSearchParams(window.location.search);
-  id ? p.set('record', id) : p.delete('record');
-  const qs = p.toString();
-  window.history.pushState(null, '', qs ? `?${qs}` : window.location.pathname);
-};
+/** A render-ready record tab: panel-tab markers already expanded to one tab per plugin. */
+interface ResolvedTab {
+  id: string;
+  headingKey?: string;
+  sections: RecordSection[];
+  /** Set on an expanded plugin tab: render the slot filtered to this plugin. */
+  slot?: string;
+  plugin?: string;
+}
 
 /**
  * A framework-composed page (docs/32): ORDERED sections — grids and slots — plus an optional
- * RECORD surface opened by rows of the page's FIRST grid. The record renders as flat sections
- * (form / grid / slot) or grouped into TABS. Declaration order is layout order. Zero app React;
- * registerPage() remains the escape hatch for genuinely custom pages.
+ * RECORD surface opened by rows of the page's FIRST grid. A record is ALWAYS tabs (flat
+ * authoring arrives as one implicit heading-less tab); tab chrome renders only when there is a
+ * choice. Zero app React; registerPage() remains the escape hatch for custom pages.
  */
 export function ModelPage(props: { page: string }) {
   const tam = useTam();
   const { manifest, client, t, can, invalidate } = tam;
   const page = manifest.pages?.[props.page];
   const [record, setRecord] = useState<OpenRecord | null>(null);
+  // The URL-sync effect reads the CURRENT open record through this ref — state in a listener
+  // closure would be stale (the popstate handler outlives renders).
+  const recordRef = useRef<OpenRecord | null>(null);
+  recordRef.current = record;
   if (!page) throw new Error(`Unknown page '${props.page}'`);
   const rec = page.record;
   const primaryGrid = page.sections.find(s => s.kind === 'grid')?.id;
 
-  // Fetch + open the record for an id (deep-link / row click). Row click also passes the row's
-  // tenant for cross-company subtree rows; a deep-link opens in the acting node.
+  // Fetch the record for an id (row click passes the row's tenant for cross-company subtree
+  // rows; a deep link opens in the acting node). A missing row or a failed fetch clears the
+  // record AND the URL param — the URL must never claim a record the modal doesn't show.
   const openById = async (id: string, actAs?: string) => {
     if (!rec) return;
-    const detail = await client.view(rec.detailView, { [rec.key]: id },
-      actAs ? { actAs } : undefined);
-    setRecord(detail.rows[0] ? { row: detail.rows[0], key: id, actAs } : null);
+    try {
+      const detail = await client.view(rec.detailView, { [rec.key]: id },
+        actAs ? { actAs } : undefined);
+      if (detail.rows[0]) {
+        setRecord({ row: detail.rows[0], key: id, actAs });
+      } else {
+        setRecord(null);
+        writeQuery({ record: null });
+      }
+    } catch {
+      setRecord(null);
+      writeQuery({ record: null });
+    }
   };
 
   const openRecord = async (row: Record<string, unknown>) => {
     if (!rec) return;
     const actAs = typeof row.tenantId === 'string' ? row.tenantId : undefined;
+    writeQuery({ record: String(row.id) });
     await openById(String(row.id), actAs);
-    writeRecordParam(String(row.id));
   };
 
-  const closeRecord = () => { setRecord(null); writeRecordParam(null); };
+  const closeRecord = () => { setRecord(null); writeQuery({ record: null }); };
 
-  // Deep-link + Back/forward: the URL's ?record drives what's open. On mount (or popstate) open
-  // it if present, close if gone. Keyed on the page so switching pages re-evaluates.
+  // Deep-link + Back/forward: the URL's ?record drives what's open. NavPage keys this
+  // component by page, so a page switch remounts with fresh state and this effect re-syncs.
   useEffect(() => {
     if (!rec) return;
     const sync = () => {
-      const id = readRecordParam();
-      if (id) { if (record?.key !== id) void openById(id); }
-      else setRecord(null);
+      const id = readQuery().record;
+      if (id === null) setRecord(null);
+      else if (recordRef.current?.key !== id) void openById(id);
     };
     sync();
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.page]);
+  }, []);
 
-  const firstForm = rec?.sections.find(s => s.kind === 'form')?.id
-    ?? rec?.tabs.flatMap(tb => tb.sections).find(s => s.kind === 'form')?.id;
+  // Panel-tab markers expand into one tab per contributing PLUGIN (docs/31 D-X4): heading from
+  // the plugin's first panel headingKey or its title — the host named neither.
+  const resolvedTabs: ResolvedTab[] = (rec?.tabs ?? []).flatMap(tb => {
+    if (!tb.slot) return [tb as ResolvedTab];
+    const plugins = [...new Set(visiblePanels(manifest, can, tb.slot).map(p => p.plugin))];
+    return plugins.map(plugin => ({
+      id: `${tb.id}:${plugin}`,
+      headingKey: visiblePanels(manifest, can, tb.slot!)
+        .find(p => p.plugin === plugin)?.headingKey ?? `plugins.${plugin}.title`,
+      sections: [],
+      slot: tb.slot,
+      plugin,
+    }));
+  });
+
+  const firstForm = resolvedTabs.flatMap(tb => tb.sections).find(s => s.kind === 'form')?.id;
   const titleOperation = firstForm ? manifest.forms[firstForm]?.operation : undefined;
   const title = rec && record
     ? [
@@ -121,43 +146,57 @@ export function ModelPage(props: { page: string }) {
     );
   };
 
+  // A record with NO form anywhere (a plugin read-model) shows the detail view's fields
+  // read-only through the SAME display cascade as the grid cells.
+  const readOnlyDetails = () => {
+    if (!record || !rec) return null;
+    if (resolvedTabs.some(tb => tb.sections.some(s => s.kind === 'form'))) return null;
+    return (
+      <Stack gap={6} mb="md">
+        {(manifest.views[rec.detailView]?.resultFields ?? [])
+          .filter(f => f.name !== 'id' && f.name !== 'version'
+            && f.wireKind !== 'object' && record.row[f.name] !== undefined
+            && record.row[f.name] !== null)
+          .map(f => (
+            <Group key={f.name} gap="xs" wrap="nowrap">
+              <Text size="sm" c="dimmed" w={160}>{t(f.labelKey)}</Text>
+              {displayFor(f)({ field: f, value: record.row[f.name], tam })}
+            </Group>
+          ))}
+      </Stack>
+    );
+  };
+
+  const tabBody = (tb: ResolvedTab): React.ReactNode =>
+    tb.slot && record && rec
+      ? <PluginSlot id={tb.slot} plugin={tb.plugin}
+          context={{ [rec.key]: record.key }} actAs={record.actAs} />
+      : <Stack gap="md">{tb.sections.map(section)}</Stack>;
+
   const recordBody = () => {
     if (!record || !rec) return null;
-    if (rec.tabs.length > 0) {
-      return (
-        <Tabs defaultValue={rec.tabs[0].id}>
+    // Tab chrome only when there is a choice: a single heading-less (implicit) tab renders
+    // its sections directly.
+    if (resolvedTabs.length === 1 && !resolvedTabs[0].headingKey) {
+      return <Stack gap="md">{readOnlyDetails()}{tabBody(resolvedTabs[0])}</Stack>;
+    }
+    return (
+      <Stack gap="md">
+        {readOnlyDetails()}
+        <Tabs defaultValue={resolvedTabs[0]?.id}>
           <Tabs.List>
-            {rec.tabs.map(tb => (
-              <Tabs.Tab key={tb.id} value={tb.id}>{t(tb.headingKey)}</Tabs.Tab>
+            {resolvedTabs.map(tb => (
+              <Tabs.Tab key={tb.id} value={tb.id}>
+                {t(tb.headingKey ?? tb.id)}
+              </Tabs.Tab>
             ))}
           </Tabs.List>
-          {rec.tabs.map(tb => (
+          {resolvedTabs.map(tb => (
             <Tabs.Panel key={tb.id} value={tb.id} pt="md">
-              <Stack gap="md">{tb.sections.map(section)}</Stack>
+              {tabBody(tb)}
             </Tabs.Panel>
           ))}
         </Tabs>
-      );
-    }
-    // Flat: a record with NO form (a plugin read-model) shows the detail fields read-only
-    // through the SAME display cascade as the grid cells, then its sections.
-    return (
-      <Stack gap="md">
-        {!rec.sections.some(s => s.kind === 'form') && (
-          <Stack gap={6}>
-            {(manifest.views[rec.detailView]?.resultFields ?? [])
-              .filter(f => f.name !== 'id' && f.name !== 'version'
-                && f.wireKind !== 'object' && record.row[f.name] !== undefined
-                && record.row[f.name] !== null)
-              .map(f => (
-                <Group key={f.name} gap="xs" wrap="nowrap">
-                  <Text size="sm" c="dimmed" w={160}>{t(f.labelKey)}</Text>
-                  {displayFor(f)({ field: f, value: record.row[f.name], tam })}
-                </Group>
-              ))}
-          </Stack>
-        )}
-        {rec.sections.map(section)}
       </Stack>
     );
   };

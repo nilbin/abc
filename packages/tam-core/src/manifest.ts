@@ -109,15 +109,16 @@ export interface Manifest {
   /** Declared navigation trees per surface class (docs/30); filter per actor at render. */
   nav?: Record<string, NavNode[]>;
   /** Framework-composed pages (docs/32): ORDERED sections (grids + slots) and an optional
-   *  record surface whose sections (form / grid / slot) render in declaration order, OR are
-   *  grouped into tabs (record tabs). A grid section carries its bind — query param ← record
-   *  field — so a child listing filters off the open record. */
+   *  record surface. A record is ALWAYS tabs on the wire — flat authoring is one implicit tab
+   *  with no headingKey (render tab chrome only when there is a choice). A tab carrying `slot`
+   *  is the panel-tabs marker: expand it into one tab per contributing plugin. A grid section
+   *  carries its bind — query param ← record field — so a child listing filters off the open
+   *  record. */
   pages?: Record<string, {
     sections: { kind: 'grid' | 'slot'; id: string; headingKey?: string }[];
     record?: {
       detailView: string; key: string; titleField?: string;
-      sections: RecordSection[];
-      tabs: { id: string; headingKey: string; sections: RecordSection[] }[];
+      tabs: { id: string; headingKey?: string; sections: RecordSection[]; slot?: string }[];
     };
   }>;
   /** Host slots and the active plugins' panels in them (docs/31 D-X4). */

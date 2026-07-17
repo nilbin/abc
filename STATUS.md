@@ -474,6 +474,47 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Review round 6 — three-agent audit of the arc 3-4 span (FE correctness, server-model
+  correctness, design/beauty), then the fixes**: the span mostly held the bar (the reviewers
+  singled out shipping the invalidation bus and deleting it for TanStack one commit later as
+  the tier rule practiced, and the display cascade as a one-concept win), but surfaced two
+  HIGHs, one confirmed cross-page bug, and a cluster of one-mechanism-where-two-grew debts.
+  All fixed: (1) SILENT ACTION FAILURES — execute-mode row/toolbar actions never checked the
+  findings envelope (the client deliberately doesn't throw on 422), so a rejection was
+  invisible AND amplified (empty effects read as a system write → full-app refetch). One
+  `completeAction` funnel now surfaces the error finding as a localized dismissible Alert
+  (grid.action-failed for transport failures) and only a SUCCESSFUL operation invalidates.
+  (2) BIND-PARAM GATE — PAGE001 validated only the bind's field side; the server silently
+  ignores unknown query params, so a typo'd param would show EVERY row as the record's
+  children. PAGE001 now also requires the param to be a query field or declared filter of the
+  target grid's view. (3) RECORD LEAK — `?record` survived navigation and the unkeyed
+  ModelPage kept the previous page's modal open over the new page's definition. One `url.ts`
+  module now owns the whole query grammar (mode/page/record; navigation clears the
+  page-scoped record), NavPage keys ModelPage by page, the sync effect reads the open record
+  through a ref (stale-closure eslint-disable deleted), and openById clears the record param
+  whenever the fetch fails or returns no row — the URL never claims a record the modal
+  doesn't show (a cross-company deep link degrades cleanly; carrying the tenant in the URL is
+  deferred). (4) ONE RECORD REPRESENTATION — flat sections normalize at Build() into a single
+  implicit heading-less tab; the wire carries tabs only, the client renders chrome only when
+  there's a choice, and the read-only detail stack (which the tabbed branch had silently
+  lost) computes over all sections. (5) PANELTABS — `record.PanelTabs(slotId)` replaces the
+  host-authored "checklists & invoices" roster tab: the marker expands client-side into one
+  tab per contributing PLUGIN (heading from the panel's headingKey or the plugin's title),
+  per-tenant activation filtering for free; verified live — the demo order record shows
+  Detaljer + Besiktning with the host naming nothing. Also: record tab headings joined the
+  L10N001 required set (typo'd key = build error, was silent raw-key render), duplicate tab
+  ids are PAGE001, the SSE effect reads invalidate through a ref (manifest churn no longer
+  tears down the EventSource mid-debounce), LookupSelect's loader keys off isFetching (stale
+  options no longer pose as final under placeholderData), the no-hooks display contract sits
+  on the exported registerDisplay/FieldDisplay jsdoc, and six new PageTests cover every new
+  gate (tabs export incl. binds + panel markers, all PAGE001 rejections, XOR, dup ids, L10N
+  tab headings). Deferred with this note: Sensitive-masked bind sources degrade to unfiltered
+  at runtime (policy needs thought), the three-bind-vocabulary unification (merge when a
+  fourth appears), element-mounted displays (the day an async display lands). Verified:
+  suites 166+38, wire 18+22 on fresh SQLite AND Postgres, record wire re-normalized in the
+  baseline (day-old shape, in-repo consumer), Playwright: WO tabs render, Back closes,
+  mismatched deep link clears the URL, same-company deep link reopens with tabs, zero page
+  errors.
 - **Beauty arc 4a — record tabs (the docs/32 page model grows a dimension)**: a record surface
   is no longer a single stacked form + slot — its sections group into TABS, and the section
   vocabulary gained a `grid` kind alongside form and slot. `RecordSection` is now

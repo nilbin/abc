@@ -163,13 +163,15 @@ public sealed record ManifestPageSection(string Kind, string Id, string? Heading
 public sealed record ManifestRecordSection(
     string Kind, string Id, IReadOnlyDictionary<string, string>? Bind = null);
 
-/// <summary>A record tab: an id, a heading label key, and its ordered sections (docs/32).</summary>
+/// <summary>A record tab (docs/32): ordered sections under one heading. A null heading is the
+/// single implicit tab of a flat record (no tab chrome). A tab carrying <see cref="Slot"/> is
+/// the panel-tabs marker — the client expands it into one tab per contributing plugin.</summary>
 public sealed record ManifestRecordTab(
-    string Id, string HeadingKey, IReadOnlyList<ManifestRecordSection> Sections);
+    string Id, string? HeadingKey, IReadOnlyList<ManifestRecordSection> Sections,
+    string? Slot = null);
 
 public sealed record ManifestRecord(
     string DetailView, string Key, string? TitleField,
-    IReadOnlyList<ManifestRecordSection> Sections,
     IReadOnlyList<ManifestRecordTab> Tabs);
 
 public static class ManifestBuilder
@@ -320,9 +322,8 @@ public static class ManifestBuilder
                     kv.Value.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id, sec.HeadingKey)).ToList(),
                     kv.Value.Record is { } r
                         ? new ManifestRecord(r.DetailViewId, r.ContextKey, r.TitleField,
-                            r.Sections.Select(RecordSectionOf).ToList(),
                             r.Tabs.Select(tb => new ManifestRecordTab(tb.Id, tb.HeadingKey,
-                                tb.Sections.Select(RecordSectionOf).ToList())).ToList())
+                                tb.Sections.Select(RecordSectionOf).ToList(), tb.SlotId)).ToList())
                         : null)),
             Slots = model.Slots.Keys.ToDictionary(
                 slotId => slotId,

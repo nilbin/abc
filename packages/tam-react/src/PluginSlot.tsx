@@ -10,6 +10,23 @@ export interface PluginSlotProps {
   context: Record<string, unknown>;
   /** Execute panel reads in another standable node (a subtree grid's cross-company row). */
   actAs?: string;
+  /** Render only ONE plugin's panels — the panel-tabs expansion (docs/32) mounts one
+   *  PluginSlot per plugin tab. The tab already carries the plugin's title, so panels
+   *  without their own headingKey render unheaded here. */
+  plugin?: string;
+}
+
+/** The slot's panels the acting user may see — the permission gate every consumer applies. */
+export function visiblePanels(
+  manifest: ReturnType<typeof useTam>['manifest'],
+  can: (permission: string) => boolean,
+  slotId: string,
+) {
+  return (manifest.slots?.[slotId] ?? []).filter(panel => {
+    const gridDef = manifest.grids[panel.grid];
+    const view = gridDef ? manifest.views[gridDef.view] : undefined;
+    return view !== undefined && can(view.permission);
+  });
 }
 
 /**
@@ -20,11 +37,8 @@ export interface PluginSlotProps {
  */
 export function PluginSlot(props: PluginSlotProps) {
   const { manifest, t, can } = useTam();
-  const panels = (manifest.slots?.[props.id] ?? []).filter(panel => {
-    const gridDef = manifest.grids[panel.grid];
-    const view = gridDef ? manifest.views[gridDef.view] : undefined;
-    return view !== undefined && can(view.permission);
-  });
+  const panels = visiblePanels(manifest, can, props.id)
+    .filter(panel => props.plugin === undefined || panel.plugin === props.plugin);
   if (panels.length === 0) return null;
 
   return (
@@ -33,9 +47,12 @@ export function PluginSlot(props: PluginSlotProps) {
         const query: Record<string, unknown> = {};
         for (const [queryField, contextKey] of Object.entries(panel.bind))
           query[queryField] = props.context[contextKey];
+        const heading = props.plugin !== undefined
+          ? panel.headingKey   // inside a plugin tab the tab title covers the fallback
+          : panel.headingKey ?? `plugins.${panel.plugin}.title`;
         return (
           <Stack key={panel.grid} gap="xs">
-            <Text size="sm" fw={600}>{t(panel.headingKey ?? `plugins.${panel.plugin}.title`)}</Text>
+            {heading && <Text size="sm" fw={600}>{t(heading)}</Text>}
             <ViewGrid grid={panel.grid} query={query} actAs={props.actAs} pageSize={5} />
           </Stack>
         );

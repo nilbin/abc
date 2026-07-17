@@ -41,7 +41,7 @@ export function LookupSelect(p: LookupSelectProps) {
     [p.searchParam ?? 'search']: debounced || undefined,
     pageSize: p.pageSize ?? 20,
   });
-  const loading = result.isPending;
+  const loading = result.isFetching;
   const options = (result.data?.rows ?? []).map(row => ({
     value: String(row[p.idField ?? 'id']),
     label: String(row[p.labelField ?? 'name']),

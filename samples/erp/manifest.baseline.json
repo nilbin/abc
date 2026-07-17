@@ -41,6 +41,7 @@
       "extensions.unknown-type": "Unknown field type.",
       "filters.from": "from",
       "filters.to": "to",
+      "grid.action-failed": "The action could not be completed. Try again.",
       "grid.load-failed": "Could not load the list. Try again.",
       "grid.total": "{count} records",
       "integrations.dead-letter-not-found": "No dead-lettered item with that id.",
@@ -353,7 +354,6 @@
       "enums.urgent": "Urgent",
       "erp.tabs.details": "Details",
       "erp.tabs.materials": "Materials",
-      "erp.tabs.related": "Checklists \u0026 invoices",
       "erp.tabs.time": "Time",
       "labels.active-only": "Active only",
       "labels.amount": "Amount",
@@ -501,6 +501,7 @@
       "extensions.unknown-type": "Ok\u00E4nd f\u00E4lttyp.",
       "filters.from": "fr\u00E5n",
       "filters.to": "till",
+      "grid.action-failed": "\u00C5tg\u00E4rden kunde inte genomf\u00F6ras. F\u00F6rs\u00F6k igen.",
       "grid.load-failed": "Kunde inte l\u00E4sa in listan. F\u00F6rs\u00F6k igen.",
       "grid.total": "{count} tr\u00E4ffar",
       "integrations.dead-letter-not-found": "Ingen k\u00F6ad post med det id:t.",
@@ -813,7 +814,6 @@
       "enums.urgent": "Akut",
       "erp.tabs.details": "Detaljer",
       "erp.tabs.materials": "Material",
-      "erp.tabs.related": "Kontroller \u0026 fakturor",
       "erp.tabs.time": "Tid",
       "labels.active-only": "Endast aktiva",
       "labels.amount": "Belopp",
@@ -10290,7 +10290,6 @@
         "detailView": "invoicing.invoices.detail",
         "key": "invoiceId",
         "titleField": "orderNumber",
-        "sections": [],
         "tabs": []
       }
     },
@@ -10305,7 +10304,6 @@
         "detailView": "orders.detail",
         "key": "orderId",
         "titleField": "number",
-        "sections": [],
         "tabs": [
           {
             "id": "details",
@@ -10318,14 +10316,9 @@
             ]
           },
           {
-            "id": "related",
-            "headingKey": "erp.tabs.related",
-            "sections": [
-              {
-                "kind": "slot",
-                "id": "web.orders.detail"
-              }
-            ]
+            "id": "web.orders.detail",
+            "sections": [],
+            "slot": "web.orders.detail"
           }
         ]
       }
@@ -10341,13 +10334,17 @@
         "detailView": "customers.detail",
         "key": "customerId",
         "titleField": "name",
-        "sections": [
+        "tabs": [
           {
-            "kind": "form",
-            "id": "web.customers.edit"
+            "id": "record",
+            "sections": [
+              {
+                "kind": "form",
+                "id": "web.customers.edit"
+              }
+            ]
           }
-        ],
-        "tabs": []
+        ]
       }
     },
     "projects": {
@@ -10361,13 +10358,17 @@
         "detailView": "projects.detail",
         "key": "projectId",
         "titleField": "number",
-        "sections": [
+        "tabs": [
           {
-            "kind": "form",
-            "id": "web.projects.edit"
+            "id": "record",
+            "sections": [
+              {
+                "kind": "form",
+                "id": "web.projects.edit"
+              }
+            ]
           }
-        ],
-        "tabs": []
+        ]
       }
     },
     "stock": {
@@ -10381,13 +10382,17 @@
         "detailView": "stock.detail",
         "key": "stockItemId",
         "titleField": "name",
-        "sections": [
+        "tabs": [
           {
-            "kind": "form",
-            "id": "web.stock.edit"
+            "id": "record",
+            "sections": [
+              {
+                "kind": "form",
+                "id": "web.stock.edit"
+              }
+            ]
           }
-        ],
-        "tabs": []
+        ]
       }
     },
     "work-orders": {
@@ -10401,7 +10406,6 @@
         "detailView": "work-orders.detail",
         "key": "workOrderId",
         "titleField": "number",
-        "sections": [],
         "tabs": [
           {
             "id": "details",
@@ -10453,7 +10457,6 @@
         "detailView": "time.detail",
         "key": "timeEntryId",
         "titleField": "workOrderNumber",
-        "sections": [],
         "tabs": []
       }
     },
@@ -10468,7 +10471,6 @@
         "detailView": "materials.detail",
         "key": "materialLineId",
         "titleField": "workOrderNumber",
-        "sections": [],
         "tabs": []
       }
     }

@@ -240,8 +240,13 @@ public sealed partial class TamModelBuilder
             if (record.TitleField is { } title && !detail.ResultFields.Any(f => f.WireName == title))
                 throw new InvalidOperationException(
                     $"PAGE001: page '{page.Id}' title field '{title}' is not on '{record.DetailViewId}'.");
-            // Flat sections and tab sections validate identically (docs/32 record tabs).
-            foreach (var section in RecordSections(record))
+            // A panel-tabs marker references its slot exactly like a slot section does.
+            foreach (var tab in record.Tabs.Where(t => t.SlotId is not null))
+                if (!model.Slots.ContainsKey(tab.SlotId!))
+                    throw new InvalidOperationException(
+                        $"PAGE001: page '{page.Id}' PanelTabs references undeclared slot '{tab.SlotId}'.");
+
+            foreach (var section in record.AllSections)
             {
                 if (section.Kind == RecordSection.FormKind)
                 {
@@ -261,12 +266,22 @@ public sealed partial class TamModelBuilder
                     if (!model.Grids.TryGetValue(section.Id, out var grid))
                         throw new InvalidOperationException(
                             $"PAGE001: page '{page.Id}' record grid '{section.Id}' is not a declared grid.");
-                    // Each bind reads a detail-view result field into a grid query param — the
-                    // field must exist or the child listing would filter on nothing.
+                    var gridView = model.Views[grid.ViewId];
                     foreach (var bind in section.Bind ?? [])
+                    {
+                        // The field side reads a detail-view result field — it must exist or
+                        // the child listing would filter on nothing.
                         if (!detail.ResultFields.Any(f => f.WireName == bind.Field))
                             throw new InvalidOperationException(
                                 $"PAGE001: page '{page.Id}' record grid '{section.Id}' binds from '{bind.Field}', which is not a result field of '{record.DetailViewId}'.");
+                        // The param side must be a query field or a declared filter of the
+                        // grid's view: the server IGNORES unknown query params, so a typo here
+                        // would silently show EVERY row as this record's children.
+                        if (!gridView.QueryFields.Any(f => f.WireName == bind.Param)
+                            && !gridView.Capabilities.Filterable.Contains(bind.Param))
+                            throw new InvalidOperationException(
+                                $"PAGE001: page '{page.Id}' record grid '{section.Id}' binds param '{bind.Param}', which is neither a query field nor Filterable on '{grid.ViewId}' — the child listing would show every row, unfiltered.");
+                    }
                 }
                 if (section.Kind == RecordSection.SlotKind && !model.Slots.ContainsKey(section.Id))
                     throw new InvalidOperationException(
@@ -277,7 +292,8 @@ public sealed partial class TamModelBuilder
         var referenced = model.Pages.Values.SelectMany(p =>
                 p.Sections.Where(s => s.Kind == PageSection.SlotKind).Select(s => s.Id)
                     .Concat(p.Record is { } r
-                        ? RecordSections(r).Where(s => s.Kind == RecordSection.SlotKind).Select(s => s.Id)
+                        ? r.AllSections.Where(s => s.Kind == RecordSection.SlotKind).Select(s => s.Id)
+                            .Concat(r.Tabs.Where(t => t.SlotId is not null).Select(t => t.SlotId!))
                         : []))
             .ToHashSet();
         foreach (var slot in model.Slots.Values)
@@ -285,10 +301,6 @@ public sealed partial class TamModelBuilder
                 throw new InvalidOperationException(
                     $"SLOT001: slot '{slot.Id}' is referenced by no declared page — panels contributed to it would never render. Reference it from a page, or declare it external: true (placed by app code).");
     }
-
-    /// <summary>Every record section — flat OR grouped into tabs (docs/32 record tabs).</summary>
-    private static IEnumerable<RecordSection> RecordSections(RecordDefinition record) =>
-        record.Sections.Concat(record.Tabs.SelectMany(t => t.Sections));
 
     /// <summary>SUB001: a subtree-read view's tenant field must be a real result field —
     /// the client renders the company column, tenant filter and row-action targeting off it.</summary>
@@ -495,7 +507,10 @@ public sealed partial class TamModelBuilder
             .Concat(model.Nav.Values.SelectMany(nodes => nodes.SelectMany(NavLabels)))
             // Page section headings (docs/34 M6) are product surface like any label.
             .Concat(model.Pages.Values.SelectMany(p => p.Sections
-                .Where(sec => sec.HeadingKey is not null).Select(sec => sec.HeadingKey!)));
+                .Where(sec => sec.HeadingKey is not null).Select(sec => sec.HeadingKey!)))
+            // Record tab headings likewise (docs/32 record tabs); the implicit tab has none.
+            .Concat(model.Pages.Values.SelectMany(p => p.Record?.Tabs
+                .Where(t => t.HeadingKey is not null).Select(t => t.HeadingKey!) ?? []));
 
         var missing = catalogs.MissingKeys(required, catalogs.DefaultCulture);
         if (missing.Count > 0)

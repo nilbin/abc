@@ -29,12 +29,17 @@ public sealed record RecordSection(string Kind, string Id, IReadOnlyList<RecordB
 /// <summary>A grid section's query param filled from a record (detail-view) field.</summary>
 public sealed record RecordBind(string Param, string Field);
 
-/// <summary>A group of record sections shown under one tab (docs/32 record tabs). Declaration
-/// order is tab order; each tab's sections keep declaration-order layout, exactly like a page.
-/// Plugin detail panels ride in as slot sections in a tab — the host opts the slot into a tab
-/// once and every current/future plugin lands there.</summary>
+/// <summary>
+/// A group of record sections shown under one tab (docs/32 record tabs). Declaration order is
+/// tab order; each tab's sections keep declaration-order layout, exactly like a page. A record
+/// is ALWAYS tabs on the wire — flat authoring normalizes to one implicit tab with a null
+/// <see cref="HeadingKey"/> (the client shows tab chrome only when there is something to
+/// choose). A tab carrying <see cref="SlotId"/> is a PANEL-TABS marker: the client expands it
+/// into one tab per contributing PLUGIN (docs/31 D-X4) — the host opts the slot in once and
+/// never names a plugin.
+/// </summary>
 public sealed record RecordTab(
-    string Id, string HeadingKey, IReadOnlyList<RecordSection> Sections);
+    string Id, string? HeadingKey, IReadOnlyList<RecordSection> Sections, string? SlotId = null);
 
 public sealed record PageDefinition(
     string Id, IReadOnlyList<PageSection> Sections, RecordDefinition? Record)
@@ -50,16 +55,18 @@ public sealed record PageDefinition(
 }
 
 /// <summary>The record surface: the detail VIEW fetched by <see cref="ContextKey"/> (filled
-/// from the clicked row's id), an optional detail field for the title, and EITHER flat ORDERED
-/// sections (form prefilled from same-named detail fields, grids/slots bound to the record) OR
-/// tabs grouping those same sections (docs/32 record tabs). A record declares one or the other,
-/// never both.</summary>
+/// from the clicked row's id), an optional detail field for the title, and ORDERED tabs of
+/// form/grid/slot sections. ONE representation: flat authoring already normalized into a
+/// single implicit tab at Build(), so every consumer walks tabs and nothing else.</summary>
 public sealed record RecordDefinition(
     string DetailViewId,
     string ContextKey,
     string? TitleField,
-    IReadOnlyList<RecordSection> Sections,
-    IReadOnlyList<RecordTab> Tabs);
+    IReadOnlyList<RecordTab> Tabs)
+{
+    /// <summary>Every section across every tab — the walk verification and derivation use.</summary>
+    public IEnumerable<RecordSection> AllSections => Tabs.SelectMany(t => t.Sections);
+}
 
 public sealed class PageBuilder
 {
@@ -147,6 +154,9 @@ public sealed class RecordBindBuilder
 
 public sealed class RecordBuilder
 {
+    /// <summary>The implicit tab id flat authoring normalizes into.</summary>
+    public const string ImplicitTabId = "record";
+
     private string? detailViewId;
     private string? contextKey;
     private string? titleField;
@@ -185,6 +195,19 @@ public sealed class RecordBuilder
         return this;
     }
 
+    /// <summary>
+    /// Expands a record-context slot into ONE TAB PER CONTRIBUTING PLUGIN (docs/31 D-X4): each
+    /// active plugin's panels become its own tab, headed by the panel's headingKey or the
+    /// plugin's title — the host opts the slot in once and never names, counts, or labels the
+    /// plugins. The tab-per-plugin expansion happens client-side from the manifest's panel
+    /// list, so activation filtering applies per tenant with no server work.
+    /// </summary>
+    public RecordBuilder PanelTabs(string slotId)
+    {
+        tabs.Add(new RecordTab(slotId, null, [], SlotId: slotId));
+        return this;
+    }
+
     /// <summary>A detail result field shown in the record title (e.g. the order number).</summary>
     public RecordBuilder Title(string detailField)
     {
@@ -197,9 +220,18 @@ public sealed class RecordBuilder
         if (flat.Sections.Count > 0 && tabs.Count > 0)
             throw new InvalidOperationException(
                 "PAGE001: a record declares flat sections OR tabs, not both.");
+        // ONE representation downstream: flat sections become the single implicit tab (no
+        // heading — the client shows tab chrome only when a choice exists).
+        IReadOnlyList<RecordTab> normalized = flat.Sections.Count > 0
+            ? [new RecordTab(ImplicitTabId, null, flat.Sections)]
+            : tabs;
+        var duplicate = normalized.GroupBy(t => t.Id).FirstOrDefault(g => g.Count() > 1);
+        if (duplicate is not null)
+            throw new InvalidOperationException(
+                $"PAGE001: duplicate record tab id '{duplicate.Key}' (ids are camelCased — 'Details' and 'details' collide).");
         return new RecordDefinition(
             detailViewId ?? throw new InvalidOperationException("PAGE001: record declares no detail view."),
             contextKey ?? "id",
-            titleField, flat.Sections, tabs);
+            titleField, normalized);
     }
 }
