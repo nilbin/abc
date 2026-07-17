@@ -8,7 +8,8 @@ export { registerRenderer, DefaultRenderer, cultureText, keyValueMap } from './r
 export type { FieldRenderer, FieldRendererProps } from './renderers';
 export { OperationForm } from './OperationForm';
 export type { OperationFormProps } from './OperationForm';
-export { ViewGrid, registerBadgeColors } from './ViewGrid';
+export { ViewGrid } from './ViewGrid';
+export { registerBadgeColors } from './badges';
 export type { ViewGridProps } from './ViewGrid';
 export { LookupSelect } from './LookupSelect';
 export { NavProvider, useNav, NavModeSwitcher, NavSidebar, NavTabs, NavPage, registerPage } from './nav';

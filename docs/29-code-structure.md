@@ -165,4 +165,23 @@ Done:
       "host code, not framework". Mechanical (npm workspace path, CI paths, doc references);
       tsc + vite build green, output still `samples/erp/wwwroot`.
 
+- [x] `ViewGrid.tsx` split on the M6-triage touch: `GridFilters.tsx` (the per-wire-kind
+      filter control set) and `badges.tsx` (badge color registry + `registerBadgeColors`,
+      re-exported from the index unchanged) extracted; proven mechanical by an IDENTICAL
+      web bundle hash and a clean full tsc.
+
+- [x] RETIRED without code — "wildcard-gate set caching": the ask predated the authoring
+      reshape; `ActivationCache` (request-scoped, per-tenant memo, one query per request)
+      already collapses the gate path's activation lookups, and the remaining per-execution
+      work is a list concat. Nothing left worth a cache.
+
+- [x] RETIRED without code — "packaged-writer unification onto the operation path": the
+      writer now independently enforces every invariant unification was meant to buy —
+      declared-field structural check (PLG010), the same semantic validation as the wire
+      channel, an explicit tenant re-check over FindAsync (review-round-4 F1),
+      plugin-attributed audit in the same transaction, and backplane refresh. Routing it
+      through the operation executor would add idempotency/gate machinery that does not
+      apply to subscriber-driven writes, for no additional invariant. If a future invariant
+      lands on the operation path, this decision is the first to revisit.
+
 Open: nothing — new debts get a checkbox here when they appear.

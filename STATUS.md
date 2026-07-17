@@ -451,6 +451,12 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Deferral sweep (post-M6)**: `ViewGrid.tsx` split (`GridFilters.tsx` + `badges.tsx`;
+  identical bundle hash, clean tsc — the "on next touch" debt paid on the M6-triage touch);
+  the "wildcard-gate set caching" and "packaged-writer unification" deferrals RETIRED with
+  written rationale in docs/29 (the first was already satisfied by `ActivationCache`, the
+  second's invariants are all independently enforced in the writer). Remaining designed-not-
+  built: Step 12 change-impact reports — now the only open item from the deferral list.
 - **M6 triage: the RTFM report's framework asks, built same-day**:
   `TamTestHost.DispatchOutboxAsync()` (outbox dispatch on the test's clock — production
   claim-lease/tenant-pinning/poison semantics via the dispatcher's extracted
