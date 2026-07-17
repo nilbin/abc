@@ -27,10 +27,37 @@ model.Page("orders", page => page
 ```
 
 A page is an ORDERED list of sections — any number of `Grid(...)` and page-level `Slot(...)`
-calls — and the record surface is likewise an ordered list of `Form(...)`/`Slot(...)` sections.
-A multi-section page labels its sections with `Grid(id, heading: "headings.key")` (docs/34
-M6) — a locale KEY, L10N001-gated like every label; single-section pages need none.
+calls — and the record surface is likewise an ordered list of `Form(...)`/`Grid(...)`/`Slot(...)`
+sections. A multi-section page labels its sections with `Grid(id, heading: "headings.key")`
+(docs/34 M6) — a locale KEY, L10N001-gated like every label; single-section pages need none.
 A slot declared before the form renders above it; a second grid renders after the first.
+
+### Record tabs (arc 4)
+
+A record's sections group into TABS instead of stacking — the record becomes a multi-page
+surface, extendable with new tabs (including plugin ones) without touching the others:
+
+```csharp
+.Record(record => record
+    .Detail("work-orders.detail", key: "workOrderId")
+    .Title("number")
+    .Tab("details", "erp.tabs.details", s => s.Form("web.work-orders.edit"))
+    .Tab("time", "erp.tabs.time", s => s
+        .Grid("web.time.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))
+    .Tab("materials", "erp.tabs.materials", s => s
+        .Grid("web.materials.list", bind => bind.Query("workOrderNumber", fromRecord: "number"))))
+```
+
+- A **`Grid` record section** is a child listing filtered off the open record: each
+  `bind.Query(param, fromRecord: field)` fills a grid query param from a detail-view field, so
+  the child filters MECHANICALLY (docs/20) — a work order's time entries, no dedicated view.
+  PAGE001 verifies the grid exists and every bound field is a detail-view result field.
+- **Tabs are the plugin extension point too**: a `Slot(...)` section in a tab surfaces plugin
+  detail panels (docs/31 D-X4) as their own tab — the host opts the slot into a tab once and
+  every current/future plugin lands there (the order detail's "checklists & invoices" tab).
+- A record declares tabs OR flat sections, not both (PAGE001).
+- The open record is **URL-routed** (`?record=<id>`, riding the nav's `?mode=&page=` from the
+  FE structural pass): a record view is deep-linkable and the browser Back button closes it.
 
 - **D-P1 (evolved, review round 4) — a page is a DECLARED composition of things the model
   already has**: one grid, and optionally a RECORD surface — detail view + context key,

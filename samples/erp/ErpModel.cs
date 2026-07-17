@@ -41,8 +41,10 @@ public static class ErpModel
             .Record(record => record
                 .Detail("orders.detail", key: "orderId")
                 .Title("number")
-                .Form("web.orders.edit")           // declaration order is layout order (docs/32)
-                .Slot("web.orders.detail")))
+                // Record TABS (docs/32 arc 4): the edit form and the plugin panels (inspect
+                // checklists, invoicing invoices) each get their own tab instead of stacking.
+                .Tab("details", "erp.tabs.details", s => s.Form("web.orders.edit"))
+                .Tab("related", "erp.tabs.related", s => s.Slot("web.orders.detail"))))
 
         // The second declared page — the shape generalizes: grid + record (no slots here; the
         // customers surface is not a contribution point until a plugin needs it).
@@ -68,12 +70,19 @@ public static class ErpModel
                 .Title("name")
                 .Form("web.stock.edit")))
 
+        // The record-tabs exemplar (docs/32 arc 4): a work order's Details form, then its child
+        // Time and Materials listings — bound grids filtering time.list / materials.list off the
+        // record's own number, mechanically, with no dedicated child view.
         .Page("work-orders", page => page
             .Grid("web.work-orders.list")
             .Record(record => record
                 .Detail("work-orders.detail", key: "workOrderId")
                 .Title("number")
-                .Form("web.work-orders.edit")))
+                .Tab("details", "erp.tabs.details", s => s.Form("web.work-orders.edit"))
+                .Tab("time", "erp.tabs.time", s => s
+                    .Grid("web.time.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))
+                .Tab("materials", "erp.tabs.materials", s => s
+                    .Grid("web.materials.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))))
 
         // Time + materials (docs/34 M3): read-only record surfaces — bookings are history; the
         // only state change is time.approve, an intent riding the grid as a row action.

@@ -158,9 +158,19 @@ public sealed record ManifestPage(
 
 public sealed record ManifestPageSection(string Kind, string Id, string? HeadingKey = null);
 
+/// <summary>A record section (form/grid/slot). A grid section carries its bind — query param ←
+/// record field — so the client filters the child listing off the open record.</summary>
+public sealed record ManifestRecordSection(
+    string Kind, string Id, IReadOnlyDictionary<string, string>? Bind = null);
+
+/// <summary>A record tab: an id, a heading label key, and its ordered sections (docs/32).</summary>
+public sealed record ManifestRecordTab(
+    string Id, string HeadingKey, IReadOnlyList<ManifestRecordSection> Sections);
+
 public sealed record ManifestRecord(
     string DetailView, string Key, string? TitleField,
-    IReadOnlyList<ManifestPageSection> Sections);
+    IReadOnlyList<ManifestRecordSection> Sections,
+    IReadOnlyList<ManifestRecordTab> Tabs);
 
 public static class ManifestBuilder
 {
@@ -310,7 +320,9 @@ public static class ManifestBuilder
                     kv.Value.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id, sec.HeadingKey)).ToList(),
                     kv.Value.Record is { } r
                         ? new ManifestRecord(r.DetailViewId, r.ContextKey, r.TitleField,
-                            r.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id)).ToList())
+                            r.Sections.Select(RecordSectionOf).ToList(),
+                            r.Tabs.Select(tb => new ManifestRecordTab(tb.Id, tb.HeadingKey,
+                                tb.Sections.Select(RecordSectionOf).ToList())).ToList())
                         : null)),
             Slots = model.Slots.Keys.ToDictionary(
                 slotId => slotId,
@@ -330,6 +342,10 @@ public static class ManifestBuilder
                         .Select(s => s.PluginId).Distinct().Order().ToList())),
         };
     }
+
+    /// <summary>A record section → manifest, carrying a grid section's bind as {param: field}.</summary>
+    private static ManifestRecordSection RecordSectionOf(RecordSection sec) =>
+        new(sec.Kind, sec.Id, sec.Bind?.ToDictionary(b => b.Param, b => b.Field));
 
     /// <summary>
     /// Read masking for the manifest (docs/27 D-A3): every field carrying a Sensitive atom the actor

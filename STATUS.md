@@ -474,6 +474,31 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 4a — record tabs (the docs/32 page model grows a dimension)**: a record surface
+  is no longer a single stacked form + slot — its sections group into TABS, and the section
+  vocabulary gained a `grid` kind alongside form and slot. `RecordSection` is now
+  `(Kind: form|grid|slot, Id, Bind?)`; `RecordTab(Id, HeadingKey, Sections)` groups them;
+  `RecordBuilder` gained `.Grid(id, bind => bind.Query(param, fromRecord: field))` and
+  `.Tab(id, heading, configure)` (a record declares tabs OR flat sections, PAGE001). A GRID
+  record section is a child listing filtered off the open record — each bind fills a grid query
+  param from a detail-view field, so the child filters MECHANICALLY (docs/20) with no dedicated
+  view; PAGE001 verifies the grid exists and every bound field is a detail result field, and the
+  slot auto-declaration + SLOT001 orphan check now walk tab sections too (a shared
+  `RecordSections` enumerator over flat+tabs). The open record is URL-ROUTED — `?record=<id>`
+  riding arc-3c's `?mode=&page=` nav — so a record view is deep-linkable and Back closes it.
+  ModelPage renders the record as Mantine Tabs when tabs are declared (flat otherwise), grid
+  sections as a bound ViewGrid, slot sections as PluginSlot. THE ERP EXEMPLAR: the work-order
+  detail is now Details (edit form) / Time / Materials — the Time and Materials tabs are
+  `time.list`/`materials.list` grids bound to the record's own `number`, and the order detail
+  splits into a Details tab and a "checklists & invoices" plugin-slot tab (inspect + invoicing
+  panels get their own tab). Verified: unit suites 163+38 (the SLOT001/PLG007/PAGE001 checks
+  caught the tab-walk gaps and now pass), wire 18+22 on fresh SQLite AND fresh Postgres, additive
+  baseline + regenerated types, docs/32 record-tabs section; Playwright drove the work-order
+  record — three tabs render, the Details tab shows the edit form, the bound Time/Materials grids
+  filter EXACTLY to the record (API ground-truth: global 4 entries → bound queries return each
+  WO's exact count), `?record=<id>` appears and Back closes the modal, zero page errors. The
+  riding-along ERP idiom uniformity (OrderFindings rename, orders.cancel, per-domain ErpModel
+  fragments, seed/stock deepening) is deferred to arc 4b with this note.
 - **Beauty arc 3c — display cascade, URL-backed nav, record identity, string sweep**: the last
   FE structural slice, closing arc 3. (1) DISPLAY-RENDERER REGISTRY: `displayFor(field)` — the
   read-only twin of the input `rendererFor`, same cascade (renderer key → semantic type →

@@ -15,12 +15,26 @@ public sealed record PageSection(string Kind, string Id, string? HeadingKey = nu
     public const string SlotKind = "slot";
 }
 
-/// <summary>One record-level section: the edit form, or a slot bound to the record context.</summary>
-public sealed record RecordSection(string Kind, string Id)
+/// <summary>One record-level section: the edit form, a GRID of related records (its query
+/// params bound to the open record's detail fields), or a slot bound to the record context.
+/// Grid binds mirror slot binds — a query param filled from a named record field — so a child
+/// listing (this work order's time entries) filters mechanically off the parent, no new view.</summary>
+public sealed record RecordSection(string Kind, string Id, IReadOnlyList<RecordBind>? Bind = null)
 {
     public const string FormKind = "form";
+    public const string GridKind = "grid";
     public const string SlotKind = "slot";
 }
+
+/// <summary>A grid section's query param filled from a record (detail-view) field.</summary>
+public sealed record RecordBind(string Param, string Field);
+
+/// <summary>A group of record sections shown under one tab (docs/32 record tabs). Declaration
+/// order is tab order; each tab's sections keep declaration-order layout, exactly like a page.
+/// Plugin detail panels ride in as slot sections in a tab — the host opts the slot into a tab
+/// once and every current/future plugin lands there.</summary>
+public sealed record RecordTab(
+    string Id, string HeadingKey, IReadOnlyList<RecordSection> Sections);
 
 public sealed record PageDefinition(
     string Id, IReadOnlyList<PageSection> Sections, RecordDefinition? Record)
@@ -36,13 +50,16 @@ public sealed record PageDefinition(
 }
 
 /// <summary>The record surface: the detail VIEW fetched by <see cref="ContextKey"/> (filled
-/// from the clicked row's id), an optional detail field for the title, and ORDERED sections —
-/// form(s) prefilled from same-named detail fields, slots receiving the record context.</summary>
+/// from the clicked row's id), an optional detail field for the title, and EITHER flat ORDERED
+/// sections (form prefilled from same-named detail fields, grids/slots bound to the record) OR
+/// tabs grouping those same sections (docs/32 record tabs). A record declares one or the other,
+/// never both.</summary>
 public sealed record RecordDefinition(
     string DetailViewId,
     string ContextKey,
     string? TitleField,
-    IReadOnlyList<RecordSection> Sections);
+    IReadOnlyList<RecordSection> Sections,
+    IReadOnlyList<RecordTab> Tabs);
 
 public sealed class PageBuilder
 {
@@ -83,12 +100,58 @@ public sealed class PageBuilder
     }
 }
 
+/// <summary>Collects record sections (form / grid / slot) in declaration order — the shared
+/// surface a flat record and a record TAB both author against.</summary>
+public sealed class RecordSectionBuilder
+{
+    internal List<RecordSection> Sections { get; } = [];
+
+    /// <summary>A form section, prefilled from same-named detail fields.</summary>
+    public RecordSectionBuilder Form(string formId)
+    {
+        Sections.Add(new RecordSection(RecordSection.FormKind, formId));
+        return this;
+    }
+
+    /// <summary>A grid of related records: its query params are filled from the open record's
+    /// detail fields (<c>bind.Query("workOrderNumber", fromRecord: "number")</c>), so the child
+    /// listing filters mechanically. With no bind the grid shows unfiltered.</summary>
+    public RecordSectionBuilder Grid(string gridId, Action<RecordBindBuilder>? bind = null)
+    {
+        var builder = new RecordBindBuilder();
+        bind?.Invoke(builder);
+        Sections.Add(new RecordSection(RecordSection.GridKind, gridId,
+            builder.Binds.Count > 0 ? builder.Binds : null));
+        return this;
+    }
+
+    /// <summary>A slot bound to the record context — plugin detail panels land here.</summary>
+    public RecordSectionBuilder Slot(string slotId)
+    {
+        Sections.Add(new RecordSection(RecordSection.SlotKind, slotId));
+        return this;
+    }
+}
+
+/// <summary>Declared-bind author for a record grid section: query param ← record field.</summary>
+public sealed class RecordBindBuilder
+{
+    internal List<RecordBind> Binds { get; } = [];
+
+    public RecordBindBuilder Query(string param, string fromRecord)
+    {
+        Binds.Add(new RecordBind(Naming.Camel(param), Naming.Camel(fromRecord)));
+        return this;
+    }
+}
+
 public sealed class RecordBuilder
 {
     private string? detailViewId;
     private string? contextKey;
     private string? titleField;
-    private readonly List<RecordSection> sections = [];
+    private readonly RecordSectionBuilder flat = new();
+    private readonly List<RecordTab> tabs = [];
 
     /// <summary>The detail view and the query field the clicked row's id fills.</summary>
     public RecordBuilder Detail(string viewId, string key)
@@ -98,11 +161,27 @@ public sealed class RecordBuilder
         return this;
     }
 
-    /// <summary>A form section, prefilled from same-named detail fields. Declaration order is
-    /// layout order — a slot declared before the form renders above it.</summary>
-    public RecordBuilder Form(string formId)
+    /// <summary>A flat form section (untabbed record). Declaration order is layout order.</summary>
+    public RecordBuilder Form(string formId) { flat.Form(formId); return this; }
+
+    /// <summary>A flat grid section (untabbed record), bound to the record.</summary>
+    public RecordBuilder Grid(string gridId, Action<RecordBindBuilder>? bind = null)
     {
-        sections.Add(new RecordSection(RecordSection.FormKind, formId));
+        flat.Grid(gridId, bind);
+        return this;
+    }
+
+    /// <summary>A flat slot section (untabbed record).</summary>
+    public RecordBuilder Slot(string slotId) { flat.Slot(slotId); return this; }
+
+    /// <summary>A TAB grouping record sections (docs/32 record tabs). Declaration order is tab
+    /// order. <paramref name="heading"/> is a locale KEY (L10N001-gated). A record uses tabs OR
+    /// flat sections, not both.</summary>
+    public RecordBuilder Tab(string id, string heading, Action<RecordSectionBuilder> configure)
+    {
+        var builder = new RecordSectionBuilder();
+        configure(builder);
+        tabs.Add(new RecordTab(Naming.Camel(id), heading, builder.Sections));
         return this;
     }
 
@@ -113,14 +192,14 @@ public sealed class RecordBuilder
         return this;
     }
 
-    public RecordBuilder Slot(string slotId)
+    internal RecordDefinition Build()
     {
-        sections.Add(new RecordSection(RecordSection.SlotKind, slotId));
-        return this;
+        if (flat.Sections.Count > 0 && tabs.Count > 0)
+            throw new InvalidOperationException(
+                "PAGE001: a record declares flat sections OR tabs, not both.");
+        return new RecordDefinition(
+            detailViewId ?? throw new InvalidOperationException("PAGE001: record declares no detail view."),
+            contextKey ?? "id",
+            titleField, flat.Sections, tabs);
     }
-
-    internal RecordDefinition Build() => new(
-        detailViewId ?? throw new InvalidOperationException("PAGE001: record declares no detail view."),
-        contextKey ?? "id",
-        titleField, sections);
 }

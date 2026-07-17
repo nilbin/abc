@@ -351,6 +351,10 @@
       "enums.scheduled": "Scheduled",
       "enums.service": "Service",
       "enums.urgent": "Urgent",
+      "erp.tabs.details": "Details",
+      "erp.tabs.materials": "Materials",
+      "erp.tabs.related": "Checklists \u0026 invoices",
+      "erp.tabs.time": "Time",
       "labels.active-only": "Active only",
       "labels.amount": "Amount",
       "labels.assignee": "Assignee",
@@ -807,6 +811,10 @@
       "enums.scheduled": "Planerad",
       "enums.service": "Service",
       "enums.urgent": "Akut",
+      "erp.tabs.details": "Detaljer",
+      "erp.tabs.materials": "Material",
+      "erp.tabs.related": "Kontroller \u0026 fakturor",
+      "erp.tabs.time": "Tid",
       "labels.active-only": "Endast aktiva",
       "labels.amount": "Belopp",
       "labels.assignee": "Utf\u00F6rare",
@@ -10282,7 +10290,8 @@
         "detailView": "invoicing.invoices.detail",
         "key": "invoiceId",
         "titleField": "orderNumber",
-        "sections": []
+        "sections": [],
+        "tabs": []
       }
     },
     "orders": {
@@ -10296,14 +10305,27 @@
         "detailView": "orders.detail",
         "key": "orderId",
         "titleField": "number",
-        "sections": [
+        "sections": [],
+        "tabs": [
           {
-            "kind": "form",
-            "id": "web.orders.edit"
+            "id": "details",
+            "headingKey": "erp.tabs.details",
+            "sections": [
+              {
+                "kind": "form",
+                "id": "web.orders.edit"
+              }
+            ]
           },
           {
-            "kind": "slot",
-            "id": "web.orders.detail"
+            "id": "related",
+            "headingKey": "erp.tabs.related",
+            "sections": [
+              {
+                "kind": "slot",
+                "id": "web.orders.detail"
+              }
+            ]
           }
         ]
       }
@@ -10324,7 +10346,8 @@
             "kind": "form",
             "id": "web.customers.edit"
           }
-        ]
+        ],
+        "tabs": []
       }
     },
     "projects": {
@@ -10343,7 +10366,8 @@
             "kind": "form",
             "id": "web.projects.edit"
           }
-        ]
+        ],
+        "tabs": []
       }
     },
     "stock": {
@@ -10362,7 +10386,8 @@
             "kind": "form",
             "id": "web.stock.edit"
           }
-        ]
+        ],
+        "tabs": []
       }
     },
     "work-orders": {
@@ -10376,10 +10401,43 @@
         "detailView": "work-orders.detail",
         "key": "workOrderId",
         "titleField": "number",
-        "sections": [
+        "sections": [],
+        "tabs": [
           {
-            "kind": "form",
-            "id": "web.work-orders.edit"
+            "id": "details",
+            "headingKey": "erp.tabs.details",
+            "sections": [
+              {
+                "kind": "form",
+                "id": "web.work-orders.edit"
+              }
+            ]
+          },
+          {
+            "id": "time",
+            "headingKey": "erp.tabs.time",
+            "sections": [
+              {
+                "kind": "grid",
+                "id": "web.time.list",
+                "bind": {
+                  "workOrderNumber": "number"
+                }
+              }
+            ]
+          },
+          {
+            "id": "materials",
+            "headingKey": "erp.tabs.materials",
+            "sections": [
+              {
+                "kind": "grid",
+                "id": "web.materials.list",
+                "bind": {
+                  "workOrderNumber": "number"
+                }
+              }
+            ]
           }
         ]
       }
@@ -10395,7 +10453,8 @@
         "detailView": "time.detail",
         "key": "timeEntryId",
         "titleField": "workOrderNumber",
-        "sections": []
+        "sections": [],
+        "tabs": []
       }
     },
     "materials": {
@@ -10409,7 +10468,8 @@
         "detailView": "materials.detail",
         "key": "materialLineId",
         "titleField": "workOrderNumber",
-        "sections": []
+        "sections": [],
+        "tabs": []
       }
     }
   },

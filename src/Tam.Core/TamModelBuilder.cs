@@ -381,7 +381,9 @@ public sealed partial class TamModelBuilder
         foreach (var page in pages.Values)
         {
             if (page.Record is { } record)
-                foreach (var section in record.Sections.Where(x => x.Kind == RecordSection.SlotKind))
+                foreach (var section in record.Sections
+                             .Concat(record.Tabs.SelectMany(t => t.Sections))
+                             .Where(x => x.Kind == RecordSection.SlotKind))
                     slots.TryAdd(section.Id, new SlotDefinition(section.Id, [record.ContextKey]));
             foreach (var section in page.Sections.Where(x => x.Kind == PageSection.SlotKind))
                 slots.TryAdd(section.Id, new SlotDefinition(section.Id, []));

@@ -240,7 +240,8 @@ public sealed partial class TamModelBuilder
             if (record.TitleField is { } title && !detail.ResultFields.Any(f => f.WireName == title))
                 throw new InvalidOperationException(
                     $"PAGE001: page '{page.Id}' title field '{title}' is not on '{record.DetailViewId}'.");
-            foreach (var section in record.Sections)
+            // Flat sections and tab sections validate identically (docs/32 record tabs).
+            foreach (var section in RecordSections(record))
             {
                 if (section.Kind == RecordSection.FormKind)
                 {
@@ -255,6 +256,18 @@ public sealed partial class TamModelBuilder
                         throw new InvalidOperationException(
                             $"PAGE001: page '{page.Id}' record form '{section.Id}' binds operation '{form.OperationId}', which has no '{record.ContextKey}' input — the record key could never prefill.");
                 }
+                if (section.Kind == RecordSection.GridKind)
+                {
+                    if (!model.Grids.TryGetValue(section.Id, out var grid))
+                        throw new InvalidOperationException(
+                            $"PAGE001: page '{page.Id}' record grid '{section.Id}' is not a declared grid.");
+                    // Each bind reads a detail-view result field into a grid query param — the
+                    // field must exist or the child listing would filter on nothing.
+                    foreach (var bind in section.Bind ?? [])
+                        if (!detail.ResultFields.Any(f => f.WireName == bind.Field))
+                            throw new InvalidOperationException(
+                                $"PAGE001: page '{page.Id}' record grid '{section.Id}' binds from '{bind.Field}', which is not a result field of '{record.DetailViewId}'.");
+                }
                 if (section.Kind == RecordSection.SlotKind && !model.Slots.ContainsKey(section.Id))
                     throw new InvalidOperationException(
                         $"PAGE001: page '{page.Id}' references undeclared slot '{section.Id}'.");
@@ -263,14 +276,19 @@ public sealed partial class TamModelBuilder
 
         var referenced = model.Pages.Values.SelectMany(p =>
                 p.Sections.Where(s => s.Kind == PageSection.SlotKind).Select(s => s.Id)
-                    .Concat(p.Record?.Sections
-                        .Where(s => s.Kind == RecordSection.SlotKind).Select(s => s.Id) ?? []))
+                    .Concat(p.Record is { } r
+                        ? RecordSections(r).Where(s => s.Kind == RecordSection.SlotKind).Select(s => s.Id)
+                        : []))
             .ToHashSet();
         foreach (var slot in model.Slots.Values)
             if (!slot.External && !referenced.Contains(slot.Id))
                 throw new InvalidOperationException(
                     $"SLOT001: slot '{slot.Id}' is referenced by no declared page — panels contributed to it would never render. Reference it from a page, or declare it external: true (placed by app code).");
     }
+
+    /// <summary>Every record section — flat OR grouped into tabs (docs/32 record tabs).</summary>
+    private static IEnumerable<RecordSection> RecordSections(RecordDefinition record) =>
+        record.Sections.Concat(record.Tabs.SelectMany(t => t.Sections));
 
     /// <summary>SUB001: a subtree-read view's tenant field must be a real result field —
     /// the client renders the company column, tenant filter and row-action targeting off it.</summary>
