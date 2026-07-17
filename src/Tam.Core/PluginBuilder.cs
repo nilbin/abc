@@ -198,6 +198,8 @@ public sealed class PluginBuilder
 
     public PluginBuilder AddViewType(Type type) { Model.AddViewType(type); return this; }
 
+    public PluginBuilder AddDerivationHost(Type type) { Model.AddDerivationHost(type); return this; }
+
     public PluginBuilder AddGateType(Type type) { Model.AddGateType(type); return this; }
 
     public PluginBuilder AddSubscriberType(Type type) { Model.AddSubscriberType(type); return this; }

@@ -197,6 +197,7 @@
   "rules.pick-trigger": "Choose a trigger first.",
   "rules.unknown-field": "Unknown field in condition: {field}.",
   "rules.unknown-operation": "Unknown operation: {operation}.",
+  "rules.value-required": "Value required — use 'is empty' / 'is set' for empty checks.",
   "rules.visual": "Visual",
   "subscriptions.entitlement-lost": "The plan covering this location no longer includes the active add-on {plugin} (at {tenant}); it will be deactivated at the next reconciliation.",
   "subscriptions.not-entitled": "Your plan does not include the {plugin} plugin. Upgrade to enable it.",

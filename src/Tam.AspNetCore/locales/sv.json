@@ -197,6 +197,7 @@
   "rules.pick-trigger": "Välj en utlösare först.",
   "rules.unknown-field": "Okänt fält i villkoret: {field}.",
   "rules.unknown-operation": "Okänd operation: {operation}.",
+  "rules.value-required": "Värde krävs — använd 'är tomt' / 'är satt' för tomhetskontroller.",
   "rules.visual": "Visuellt",
   "subscriptions.entitlement-lost": "Planen som täcker denna enhet omfattar inte längre det aktiva tillägget {plugin} (på {tenant}); det inaktiveras vid nästa avstämning.",
   "subscriptions.not-entitled": "Ditt abonnemang omfattar inte tillägget {plugin}. Uppgradera för att aktivera det.",

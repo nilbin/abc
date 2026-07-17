@@ -237,10 +237,22 @@ computed view fills exactly that gap:
   server-authoritative typing — the client only maps a wireKind to a widget.
 - **Round-trips to Px, losslessly**: the clause model serializes to the same portable AST
   the evaluator runs (`buildCondition`/`buildAction`), and `parseCondition` reads it back;
-  a hand-authored condition that does not fit the flat all/any-of-clauses shape drops to a
-  raw-JSON "Advanced" editor rather than silently losing structure. Honest limitation:
-  event payload fields are declared as NAMES only, so an event trigger's top-level payload
-  fields default to string/equality while its `row.*` fields get full typing.
+  a hand-authored condition that does not fit the flat all/any-of-clauses shape — or does
+  not parse at all — drops to a raw-JSON "Advanced" editor rather than silently losing
+  structure. Honest limitation: event payload fields are declared as NAMES only, so an
+  event trigger's top-level payload fields default to string/equality while its `row.*`
+  fields get full typing.
+- **The form dogfoods its own dynamics** (docs/05): `rules.define` is an ordinary form
+  whose builder fields are gated with the same `VisibleWhen`/`RequiredWhen` Px every other
+  form uses — Condition/Messages/Action appear once a trigger is chosen, TargetField only
+  for finding rules (it is the finding's anchor), and Messages flips required exactly when
+  RUL003 will demand it (no action). TargetField's options come from a **server
+  derivation** (`rules.define.target-fields`, recomputed on trigger change through the
+  resolve endpoint), so the finding's anchor is picked from the trigger's own localized
+  fields, never typed. Changing the trigger resets the dependent authoring — stale field
+  references cannot ride along invisibly. And a comparison against the null CONSTANT (the
+  unfinished-clause shape) is refused at define with a redirect to `isNull`/`isNotNull`,
+  mirrored by an inline "value required" hint in the builder.
 
 Verified: 3 backend view tests (typed row fields, empty-for-creates, unknown-trigger) and
 a 8-check wire suite on SQLite **and** Postgres (schema shape, enum options, the excluded

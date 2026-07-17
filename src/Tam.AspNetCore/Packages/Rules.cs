@@ -25,6 +25,7 @@ public sealed class TamRulesPackage : ITamPlugin
             .AddOperationType(typeof(RetireRule))
             .AddViewType(typeof(RuleList))
             .AddViewType(typeof(RuleSchema))
+            .AddDerivationHost(typeof(RuleDefineDerivations))
             .Form<DefineAutomationRule.Input>("web.rules.define", "rules.define", form =>
             {
                 form.Field(x => x.Name);
@@ -35,10 +36,20 @@ public sealed class TamRulesPackage : ITamPlugin
                 // The visual builders (docs/22): the condition/action editors resolve their
                 // referenceable fields, operators and value options from the chosen trigger via
                 // the rules.schema view — server-authoritative typing, no hand-authored Px JSON.
-                form.Field(x => x.Condition).Renderer("rule-condition");
-                form.Field(x => x.Messages).Renderer("culture-text");
-                form.Field(x => x.TargetField);
-                form.Field(x => x.Action).Renderer("rule-action");
+                // Everything below the trigger is gated on it with the form's OWN dynamics —
+                // the same VisibleWhen/RequiredWhen Px every other form uses, and a server
+                // derivation for TargetField's options (docs/05, dogfooded).
+                form.Field(x => x.Condition).Renderer("rule-condition")
+                    .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null);
+                form.Field(x => x.Messages).Renderer("culture-text")
+                    .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null)
+                    // RUL003 as form state: a FINDING rule (no action) must carry a message.
+                    .RequiredWhen(x => x.Action == null);
+                form.Field(x => x.TargetField)
+                    // The finding's anchor field — meaningless for action rules.
+                    .VisibleWhen(x => (x.OnOperation != null || x.OnEvent != null) && x.Action == null);
+                form.Field(x => x.Action).Renderer("rule-action")
+                    .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null);
             })
             .Grid<RuleList.Result>("web.rules", "rules.list", grid =>
             {
@@ -423,7 +434,9 @@ public static class DefineAutomationRule
         [property: LabelKey("labels.rule")] string Name,
         [property: LabelKey("labels.on-operation")] string? OnOperation,
         [property: LabelKey("labels.condition")] string Condition,
-        [property: LabelKey("labels.messages")] Dictionary<string, string> Messages,
+        // Optional at the wire (action rules carry no blocking text); RUL003 still demands the
+        // default culture for FINDING rules — the form mirrors that with RequiredWhen.
+        [property: LabelKey("labels.messages")] Dictionary<string, string>? Messages = null,
         [property: LabelKey("labels.target-field")] string? TargetField = null,
         [property: LabelKey("labels.action")] string? Action = null,
         [property: LabelKey("labels.on-event")] string? OnEvent = null);
@@ -513,6 +526,13 @@ public static class DefineAutomationRule
                 .At(nameof(Input.Condition));
         if (FirstUnsupported(condition) is { } bad)
             return RuleFindings.InvalidCondition.With(("op", bad)).At(nameof(Input.Condition));
+        // A comparison against the null CONSTANT is (almost) always an unfinished builder
+        // clause — and isNull/isNotNull exist for the real "is empty" intent. Refuse with the
+        // redirect rather than store a rule that silently means something else.
+        if (HasNullComparison(condition))
+            return RuleFindings.InvalidCondition
+                .With(("detail", "a comparison against null — use isNull/isNotNull"))
+                .At(nameof(Input.Condition));
 
         // RUL002: every top-level field the condition references must be a trigger field.
         var known = new HashSet<string>(triggerFields, StringComparer.Ordinal);
@@ -609,7 +629,7 @@ public static class DefineAutomationRule
 
         // RUL003: a FINDING rule's message is product surface — default culture is mandatory.
         // Action rules produce no blocking text; their messages are optional.
-        if (action is null && !input.Messages.ContainsKey(model.DefaultCulture))
+        if (action is null && input.Messages?.ContainsKey(model.DefaultCulture) is not true)
             return RuleFindings.MissingMessage.At(nameof(Input.Messages));
 
         var rule = await tam.Db.Set<AutomationRuleEntity>().SingleOrDefaultAsync(
@@ -630,7 +650,7 @@ public static class DefineAutomationRule
         rule.RowIdField = rowIdField;
         rule.ActionJson = action is null ? null : input.Action;
         rule.TargetField = input.TargetField;
-        rule.MessagesJson = JsonSerializer.Serialize(input.Messages);
+        rule.MessagesJson = JsonSerializer.Serialize(input.Messages ?? new Dictionary<string, string>());
         rule.Retired = false;
 
         return new Output(rule.Id);
@@ -649,6 +669,18 @@ public static class DefineAutomationRule
             : b.Op,
         _ => px.GetType().Name,
     };
+
+    private static bool HasNullComparison(Px px) => px switch
+    {
+        PxBinary { Op: "eq" or "ne" or "gt" or "ge" or "lt" or "le" } b
+            when IsNullConst(b.L) || IsNullConst(b.R) => true,
+        PxBinary b => HasNullComparison(b.L) || HasNullComparison(b.R),
+        PxUnary u => HasNullComparison(u.X),
+        _ => false,
+    };
+
+    private static bool IsNullConst(Px px) => px is PxConst c
+        && (c.V is null || c.V is JsonElement { ValueKind: JsonValueKind.Null });
 }
 
 [Operation("rules.retire")]
@@ -807,5 +839,54 @@ public static class RuleSchema
             || t == typeof(decimal) || t == typeof(double) || t == typeof(float)
             || t == typeof(DateOnly) || t == typeof(DateTimeOffset) || t == typeof(DateTime)
             || t == typeof(TimeOnly);
+    }
+}
+
+/// <summary>
+/// Server derivations for the rules.define form (docs/05, dogfooded): TargetField — the field a
+/// FINDING anchors to on the triggering operation's form — offers exactly the trigger's own
+/// top-level fields as OPTIONS, localized, recomputed when the trigger changes. Only top-level
+/// fields: a finding's target must anchor to a rendered form control, which row.* paths are not.
+/// </summary>
+public static class RuleDefineDerivations
+{
+    [ServerDerivation("rules.define.target-fields")]
+    [DependsOn(nameof(DefineAutomationRule.Input.OnOperation), nameof(DefineAutomationRule.Input.OnEvent))]
+    public static async Task<DerivationResult> TargetFields(
+        DefineAutomationRule.Input input, DerivationContext context, TamModel model,
+        IExtensionRegistry registry, CancellationToken ct)
+    {
+        var culture = context.Operation.Culture;
+        var catalog = model.Locales.Catalog(culture);
+        var fallback = model.Locales.Catalog(model.DefaultCulture);
+        string Label(string key, string path) =>
+            catalog.GetValueOrDefault(key) ?? fallback.GetValueOrDefault(key) ?? path;
+
+        var options = new List<Option>();
+        if (input.OnEvent is { Length: > 0 } onEvent)
+        {
+            // Event payloads declare names only — the name is the label.
+            if (model.Events.TryGetValue(onEvent, out var declared))
+                options.AddRange(declared.Fields.Select(f => new Option(f, f)));
+        }
+        else if (input.OnOperation is { Length: > 0 } onOperation
+            && model.Operations.TryGetValue(onOperation, out var operation))
+        {
+            options.AddRange(operation.InputFields
+                .Select(f => new Option(f.WireName, Label(f.LabelKey, f.WireName))));
+            if (operation.ExtensibleEntity is { } entity)
+            {
+                foreach (var spec in await registry.For(
+                    context.Operation.TenantId, TamModel.EntityKey(entity), ct))
+                {
+                    options.Add(new Option($"ext.{spec.Key}",
+                        spec.Labels.GetValueOrDefault(culture)
+                        ?? spec.Labels.Values.FirstOrDefault() ?? spec.Key));
+                }
+            }
+        }
+        return options.Count == 0
+            ? DerivationResult.Empty
+            : DerivationResult.Empty.AddOptions(nameof(DefineAutomationRule.Input.TargetField), options);
     }
 }

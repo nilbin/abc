@@ -451,6 +451,27 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Rule-builder round 2 — the form dogfoods its own dynamics (docs/05) + review fixes**:
+  `rules.define` now uses the framework's OWN form machinery instead of renderer-local gating:
+  `VisibleWhen` Px hides Condition/Messages/TargetField/Action until a trigger is chosen (and
+  TargetField whenever an action is set — it anchors a finding), `RequiredWhen` flips Messages
+  required exactly when RUL003 will demand it (Input.Messages became nullable — baseline-safe
+  required→optional), and a server derivation (`rules.define.target-fields`) supplies
+  TargetField's OPTIONS from the trigger's own localized fields via the resolve endpoint, so
+  the anchor is picked, never typed. Enablers and fixes from the self-review: OperationForm
+  renders field renderers as REAL component boundaries (own hook lists — hook-safe under
+  VisibleWhen mounting) and accumulates ALL keys changed in a batch for the resolve trigger
+  (a renderer may set several siblings at once); define REFUSES comparisons against the null
+  constant (the unfinished-clause shape) with a redirect to isNull/isNotNull, and the builder
+  shows an inline "value required" hint; changing the trigger resets condition/action/target
+  (hidden fields still submit — stale refs must not survive); unparseable Advanced JSON locks
+  the raw editor instead of round-tripping to an empty visual model; the rules.schema fetch is
+  cached per (revision, trigger) and shared by the condition + action editors. Verified: 6
+  definition tests (null-compare refused, isNull sanctioned, messages optional-for-action),
+  full suites 162+37, wire suite grown to 12 checks (resolve dynamics: hidden→visible,
+  required flip, derivation options) green on fresh SQLite AND Postgres, rulesgate 22/22 on
+  both, additive baseline + regenerated types, screenshot of the dynamic form with the inline
+  clause errors, the option-typed value select, and TargetField as a dropdown.
 - **Rule-builder UI BUILT (docs/22) — the P5 UI slice, "the BE Form way"**: the raw Px-JSON
   textareas on `rules.define` are replaced by a visual builder — a searchable trigger picker
   (operation OR event, the two clearing each other), typed condition clauses (field → operator

@@ -6,6 +6,7 @@ import {
 } from '@tam/core';
 import { useTam } from './context';
 import { rendererFor } from './renderers';
+import type { FieldRendererProps } from './renderers';
 
 export interface OperationFormProps {
   form: string;
@@ -51,7 +52,10 @@ export function OperationForm(props: OperationFormProps) {
   const [response, setResponse] = useState<OperationResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const seq = useRef(0);                       // local request sequence: stale-response rejection
-  const lastChanged = useRef<string | null>(null);
+  // ALL keys set since the last effect run — a renderer may set several fields in one batch
+  // (the rule-builder's trigger picker clears its dependents), and the resolve trigger must
+  // see every one of them, not just the last.
+  const lastChanged = useRef<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   // Read through a ref inside async continuations: the closure's `touched` may predate the
   // user touching a field while a resolve was in flight — the ref never lies.
@@ -63,8 +67,8 @@ export function OperationForm(props: OperationFormProps) {
     [values]);
 
   // Batched, debounced, stale-rejecting server resolution (docs/05).
-  const scheduleResolve = useCallback((changedField: string) => {
-    if (!formDef.serverDependencies.includes(changedField)) return;
+  const scheduleResolve = useCallback((changedFields: string[]) => {
+    if (!changedFields.some(f => formDef.serverDependencies.includes(f))) return;
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const sent = ++seq.current;
@@ -73,10 +77,10 @@ export function OperationForm(props: OperationFormProps) {
         const v = values[f.name];
         if (v !== undefined && v !== null && !f.changeSet) input[f.name] = v;
       }
-      input[changedField] = values[changedField] ?? null;
+      for (const f of changedFields) input[f] = values[f] ?? null;
       try {
         const resolved = await client.resolve(
-          props.form, input, [changedField], manifest.revision);
+          props.form, input, changedFields, manifest.revision);
         if (sent === seq.current) {
           setResolveState(resolved);
           // Suggestions apply to untouched fields only: RecomputeIfUntouched (docs/05).
@@ -96,15 +100,16 @@ export function OperationForm(props: OperationFormProps) {
   }, [client, formDef, props.form, values, manifest.revision]);
 
   const setField = useCallback((key: string, value: unknown) => {
-    lastChanged.current = key;
+    lastChanged.current.push(key);
     setValues(prev => ({ ...prev, [key]: value }));
     setTouched(prev => new Set(prev).add(key));
     setResponse(null);
   }, []);
 
   useEffect(() => {
-    const changed = lastChanged.current;
-    if (changed && !changed.startsWith('ext:')) scheduleResolve(changed);
+    const changed = lastChanged.current.filter(key => !key.startsWith('ext:'));
+    lastChanged.current = [];
+    if (changed.length > 0) scheduleResolve(changed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values]);
 
@@ -172,22 +177,25 @@ export function OperationForm(props: OperationFormProps) {
         const warning = resolveState?.fields[field.name]?.findings
           .find(f => f.severity === 'warning');
         const label = field.extension ? t(`ext.${field.name}`) : t(field.labelKey);
-        const Renderer = rendererFor(field);
+        // A REAL component boundary per field (not a plain function call): each renderer owns
+        // its hook list, so a renderer with state/effects composes with VisibleWhen — fields
+        // mounting and unmounting can never corrupt the form's hook order.
+        const Renderer = rendererFor(field) as React.ComponentType<FieldRendererProps>;
         return (
           <Box key={key}>
-            {Renderer({
-              field,
-              label,
-              value: values[key] ?? null,
-              onChange: v => setField(key, v),
-              required,
-              error: error ? findingMessage(manifest, culture, error) : undefined,
-              warning: warning ? findingMessage(manifest, culture, warning) : undefined,
-              options: resolveState?.fields[field.name]?.options,
-              tam,
-              form: values,
-              setField,
-            })}
+            <Renderer
+              field={field}
+              label={label}
+              value={values[key] ?? null}
+              onChange={v => setField(key, v)}
+              required={required}
+              error={error ? findingMessage(manifest, culture, error) : undefined}
+              warning={warning ? findingMessage(manifest, culture, warning) : undefined}
+              options={resolveState?.fields[field.name]?.options}
+              tam={tam}
+              form={values}
+              setField={setField}
+            />
           </Box>
         );
       })}

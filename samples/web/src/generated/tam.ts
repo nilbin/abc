@@ -322,7 +322,7 @@ export interface RulesDefineInput {
   name: string;
   onOperation?: string;
   condition: string;
-  messages: Record<string, unknown>;
+  messages?: Record<string, unknown>;
   targetField?: string;
   action?: string;
   onEvent?: string;

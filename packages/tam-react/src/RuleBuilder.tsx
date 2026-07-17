@@ -22,7 +22,25 @@ function resolveTrigger(form: Record<string, unknown> | undefined): Trigger | nu
   return null;
 }
 
-/** Fetch the trigger's server schema (target-row compiled fields). Empty when the trigger has no
+// One schema fetch per (manifest revision, trigger) shared by the condition AND action editors —
+// the view is pure over the compiled model, so the answer cannot change within a revision.
+const schemaCache = new Map<string, Promise<RuleSchemaRow[]>>();
+
+function fetchSchema(p: FieldRendererProps, trigger: Trigger): Promise<RuleSchemaRow[]> {
+  const key = `${p.tam.manifest.revision}|${trigger.kind}|${trigger.id}`;
+  let hit = schemaCache.get(key);
+  if (!hit) {
+    if (schemaCache.size > 64) schemaCache.clear();
+    hit = p.tam.client
+      .view('rules.schema', { trigger: trigger.id, kind: trigger.kind, pageSize: 200 })
+      .then(res => res.rows as unknown as RuleSchemaRow[]);
+    schemaCache.set(key, hit);
+    hit.catch(() => schemaCache.delete(key));
+  }
+  return hit;
+}
+
+/** The trigger's server schema (target-row compiled fields). Empty when the trigger has no
  *  single target row, or before a trigger is chosen. Races are rejected by a sequence guard. */
 function useRuleSchema(p: FieldRendererProps, trigger: Trigger | null): RuleSchemaRow[] {
   const [rows, setRows] = useState<RuleSchemaRow[]>([]);
@@ -30,11 +48,10 @@ function useRuleSchema(p: FieldRendererProps, trigger: Trigger | null): RuleSche
   useEffect(() => {
     if (!trigger) { setRows([]); return; }
     const sent = ++seq.current;
-    p.tam.client
-      .view('rules.schema', { trigger: trigger.id, kind: trigger.kind, pageSize: 200 })
-      .then(res => { if (sent === seq.current) setRows(res.rows as unknown as RuleSchemaRow[]); })
+    fetchSchema(p, trigger)
+      .then(fetched => { if (sent === seq.current) setRows(fetched); })
       .catch(() => { if (sent === seq.current) setRows([]); });
-  }, [p.tam.client, trigger?.id, trigger?.kind]);
+  }, [p.tam.client, p.tam.manifest.revision, trigger?.id, trigger?.kind]);
   return rows;
 }
 
@@ -54,6 +71,18 @@ const OP_LABEL: Record<ClauseOp, string> = {
 
 // ---- trigger pickers ----------------------------------------------------------------------------
 
+/** Trigger change semantics shared by both pickers: exactly one trigger set (the other clears),
+ *  and the dependent authoring resets — the condition/action reference the OLD trigger's fields,
+ *  and a hidden field's value still submits, so stale refs must not survive the switch. */
+function changeTrigger(p: FieldRendererProps, next: string | null, otherTrigger: string): void {
+  if (next === ((p.value ?? null) as string | null)) return;
+  p.onChange(next);
+  if (next) p.setField?.(otherTrigger, null);
+  p.setField?.('condition', null);
+  p.setField?.('action', null);
+  p.setField?.('targetField', null);
+}
+
 export function RuleTriggerOperation(p: FieldRendererProps): React.ReactNode {
   const data = Object.keys(p.tam.manifest.operations).sort().map(id => ({
     value: id, label: p.tam.t(`operations.${id}.title`) === `operations.${id}.title`
@@ -64,7 +93,7 @@ export function RuleTriggerOperation(p: FieldRendererProps): React.ReactNode {
       label={p.label} description={p.warning} error={p.error} searchable clearable
       data={data}
       value={p.value === null || p.value === undefined ? null : String(p.value)}
-      onChange={v => { p.onChange(v || null); if (v) p.setField?.('onEvent', null); }}
+      onChange={v => changeTrigger(p, v || null, 'onEvent')}
     />
   );
 }
@@ -77,7 +106,7 @@ export function RuleTriggerEvent(p: FieldRendererProps): React.ReactNode {
       label={p.label} description={p.warning} error={p.error} searchable clearable
       data={data}
       value={p.value === null || p.value === undefined ? null : String(p.value)}
-      onChange={v => { p.onChange(v || null); if (v) p.setField?.('onOperation', null); }}
+      onChange={v => changeTrigger(p, v || null, 'onOperation')}
     />
   );
 }
@@ -168,9 +197,15 @@ export function RuleConditionField(p: FieldRendererProps): React.ReactNode {
     () => trigger ? conditionRefs(p.tam.manifest, schema, trigger.id, trigger.kind) : [],
     [p.tam.manifest, schema, trigger?.id, trigger?.kind]);
 
-  // The stored value is the source of truth; parse it into the clause model. null → the expression
-  // is not clause-shaped (a nested/hand-authored condition) → raw-JSON editing.
-  const parsed = useMemo<ParsedCondition | null>(() => parseCondition(safeParsePx(p.value)), [p.value]);
+  // The stored value is the source of truth; parse it into the clause model. null → raw-JSON
+  // editing, both for a non-clause-shaped expression (nested groups, computed sides) AND for
+  // text that does not parse at all — otherwise a broken Advanced draft would round-trip
+  // through an empty visual model and be silently overwritten.
+  const parsed = useMemo<ParsedCondition | null>(() => {
+    const px = safeParsePx(p.value);
+    if (px === null && typeof p.value === 'string' && p.value.trim() !== '') return null;
+    return parseCondition(px);
+  }, [p.value]);
   const [rawMode, setRawMode] = useState(false);
   const advanced = rawMode || parsed === null;
 
@@ -236,23 +271,31 @@ export function RuleConditionField(p: FieldRendererProps): React.ReactNode {
       {model.clauses.map((clause, i) => {
         const ref = refs.find(r => r.path === clause.path);
         const ops = operatorsFor(ref?.wireKind ?? 'string');
+        // A comparison clause without a value would serialize as compare-against-null — the
+        // server refuses that at define (invalid-condition), so flag it here as the user types.
+        const incomplete = !isUnary(clause.op)
+          && (clause.value === null || clause.value === undefined)
+          && (clause.relativeDays === null || clause.relativeDays === undefined);
         return (
-          <Group key={i} gap={4} align="flex-start" wrap="nowrap">
-            <Select
-              placeholder="field" searchable style={{ flex: 1.4 }}
-              data={refs.map(r => ({ value: r.path, label: refLabel(p, r) }))}
-              value={clause.path || null}
-              onChange={v => setClause(i, { path: v ?? '', op: clause.op })}
-            />
-            <Select
-              style={{ width: 96 }}
-              data={ops.map(o => ({ value: o, label: OP_LABEL[o] }))}
-              value={ops.includes(clause.op) ? clause.op : 'eq'}
-              onChange={v => setClause(i, { ...clause, op: (v as ClauseOp) ?? 'eq' })}
-            />
-            <ClauseValue p={p} reference={ref} clause={clause} onClause={next => setClause(i, next)} />
-            <ActionIcon variant="subtle" color="red" onClick={() => removeClause(i)} aria-label="remove">✕</ActionIcon>
-          </Group>
+          <Stack key={i} gap={2}>
+            <Group gap={4} align="flex-start" wrap="nowrap">
+              <Select
+                placeholder="field" searchable style={{ flex: 1.4 }}
+                data={refs.map(r => ({ value: r.path, label: refLabel(p, r) }))}
+                value={clause.path || null}
+                onChange={v => setClause(i, { path: v ?? '', op: clause.op })}
+              />
+              <Select
+                style={{ width: 96 }}
+                data={ops.map(o => ({ value: o, label: OP_LABEL[o] }))}
+                value={ops.includes(clause.op) ? clause.op : 'eq'}
+                onChange={v => setClause(i, { ...clause, op: (v as ClauseOp) ?? 'eq' })}
+              />
+              <ClauseValue p={p} reference={ref} clause={clause} onClause={next => setClause(i, next)} />
+              <ActionIcon variant="subtle" color="red" onClick={() => removeClause(i)} aria-label="remove">✕</ActionIcon>
+            </Group>
+            {incomplete && <Text size="xs" c="red">{p.tam.t('rules.value-required')}</Text>}
+          </Stack>
         );
       })}
 

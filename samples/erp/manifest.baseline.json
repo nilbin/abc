@@ -201,6 +201,7 @@
       "rules.pick-trigger": "Choose a trigger first.",
       "rules.unknown-field": "Unknown field in condition: {field}.",
       "rules.unknown-operation": "Unknown operation: {operation}.",
+      "rules.value-required": "Value required \u2014 use \u0027is empty\u0027 / \u0027is set\u0027 for empty checks.",
       "rules.visual": "Visual",
       "subscriptions.entitlement-lost": "The plan covering this location no longer includes the active add-on {plugin} (at {tenant}); it will be deactivated at the next reconciliation.",
       "subscriptions.not-entitled": "Your plan does not include the {plugin} plugin. Upgrade to enable it.",
@@ -643,6 +644,7 @@
       "rules.pick-trigger": "V\u00E4lj en utl\u00F6sare f\u00F6rst.",
       "rules.unknown-field": "Ok\u00E4nt f\u00E4lt i villkoret: {field}.",
       "rules.unknown-operation": "Ok\u00E4nd operation: {operation}.",
+      "rules.value-required": "V\u00E4rde kr\u00E4vs \u2014 anv\u00E4nd \u0027\u00E4r tomt\u0027 / \u0027\u00E4r satt\u0027 f\u00F6r tomhetskontroller.",
       "rules.visual": "Visuellt",
       "subscriptions.entitlement-lost": "Planen som t\u00E4cker denna enhet omfattar inte l\u00E4ngre det aktiva till\u00E4gget {plugin} (p\u00E5 {tenant}); det inaktiveras vid n\u00E4sta avst\u00E4mning.",
       "subscriptions.not-entitled": "Ditt abonnemang omfattar inte till\u00E4gget {plugin}. Uppgradera f\u00F6r att aktivera det.",
@@ -2591,7 +2593,7 @@
           "labelKey": "labels.messages",
           "type": "object",
           "wireKind": "object",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false,
           "readOnly": false
@@ -7701,6 +7703,32 @@
           "required": true,
           "changeSet": false,
           "extension": false,
+          "visibleWhen": {
+            "t": "bin",
+            "op": "or",
+            "l": {
+              "t": "bin",
+              "op": "ne",
+              "l": {
+                "t": "field",
+                "f": "onOperation"
+              },
+              "r": {
+                "t": "const"
+              }
+            },
+            "r": {
+              "t": "bin",
+              "op": "ne",
+              "l": {
+                "t": "field",
+                "f": "onEvent"
+              },
+              "r": {
+                "t": "const"
+              }
+            }
+          },
           "renderer": "rule-condition",
           "readOnly": false
         },
@@ -7709,9 +7737,46 @@
           "labelKey": "labels.messages",
           "type": "object",
           "wireKind": "object",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false,
+          "visibleWhen": {
+            "t": "bin",
+            "op": "or",
+            "l": {
+              "t": "bin",
+              "op": "ne",
+              "l": {
+                "t": "field",
+                "f": "onOperation"
+              },
+              "r": {
+                "t": "const"
+              }
+            },
+            "r": {
+              "t": "bin",
+              "op": "ne",
+              "l": {
+                "t": "field",
+                "f": "onEvent"
+              },
+              "r": {
+                "t": "const"
+              }
+            }
+          },
+          "requiredWhen": {
+            "t": "bin",
+            "op": "eq",
+            "l": {
+              "t": "field",
+              "f": "action"
+            },
+            "r": {
+              "t": "const"
+            }
+          },
           "renderer": "culture-text",
           "readOnly": false
         },
@@ -7723,6 +7788,47 @@
           "required": false,
           "changeSet": false,
           "extension": false,
+          "visibleWhen": {
+            "t": "bin",
+            "op": "and",
+            "l": {
+              "t": "bin",
+              "op": "or",
+              "l": {
+                "t": "bin",
+                "op": "ne",
+                "l": {
+                  "t": "field",
+                  "f": "onOperation"
+                },
+                "r": {
+                  "t": "const"
+                }
+              },
+              "r": {
+                "t": "bin",
+                "op": "ne",
+                "l": {
+                  "t": "field",
+                  "f": "onEvent"
+                },
+                "r": {
+                  "t": "const"
+                }
+              }
+            },
+            "r": {
+              "t": "bin",
+              "op": "eq",
+              "l": {
+                "t": "field",
+                "f": "action"
+              },
+              "r": {
+                "t": "const"
+              }
+            }
+          },
           "readOnly": false
         },
         {
@@ -7733,12 +7839,41 @@
           "required": false,
           "changeSet": false,
           "extension": false,
+          "visibleWhen": {
+            "t": "bin",
+            "op": "or",
+            "l": {
+              "t": "bin",
+              "op": "ne",
+              "l": {
+                "t": "field",
+                "f": "onOperation"
+              },
+              "r": {
+                "t": "const"
+              }
+            },
+            "r": {
+              "t": "bin",
+              "op": "ne",
+              "l": {
+                "t": "field",
+                "f": "onEvent"
+              },
+              "r": {
+                "t": "const"
+              }
+            }
+          },
           "renderer": "rule-action",
           "readOnly": false
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": [],
+      "serverDependencies": [
+        "onOperation",
+        "onEvent"
+      ],
       "plugin": "tam.rules"
     },
     "web.tenants.create": {
