@@ -35,6 +35,7 @@ The framework's inference principle applies to text: keys are derived, not decla
 | Text for | Convention key | Authored where |
 | --- | --- | --- |
 | Field / column label | `labels.{kebab(member)}` — e.g. `labels.requested-date` | Once per member *name*, model-wide |
+| Output field (operation results are surface too) | same `labels.{kebab(member)}` — no operation prefix | Once per member name, shared with inputs/columns |
 | Enum member | `enums.{kebab(value)}` — e.g. `enums.completed` | Once per value name, model-wide |
 | Finding message | the finding **code** is the key | Once per code |
 | Operation title | `operations.{id}.title` — e.g. `operations.orders.create.title` | Once per operation |

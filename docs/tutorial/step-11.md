@@ -89,4 +89,11 @@ What this harness deliberately does NOT cover: HTTP concerns (auth handshakes, h
 status codes — the wire suites' job), the React runtime, and cross-instance behavior
 (SSE backplane, outbox dispatch timing). Those stay verified against the running sample.
 
+**Outbox caveat (M6 finding):** the harness WRITES outbox rows (`ShouldPublish` asserts the
+record) but never DISPATCHES them — no background services run, so `[OnEffect]` subscribers
+do not fire inside a test. Asserting subscriber behavior today means either driving the
+subscriber's effects through their own operations, or running the production dispatcher
+against the harness database (awkward — see the docs/34 friction log; a
+`DispatchOutboxAsync()` seam on the host is the logged candidate fix).
+
 ---

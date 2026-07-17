@@ -153,6 +153,31 @@ Rules are registry data (RUL### diagnostics at definition: unknown field, type m
 
 What rules never get: arbitrary code, HTTP calls (that's the integration channel, via the enqueue action), or writes to compiled fields (operations own compiled state transitions — EDIT001's philosophy extended to tenants).
 
+### The `row.*` increment (design — the next P5 slice, ahead of the action catalog)
+
+v1 conditions see the **operation input only**. That covers create/edit operations (rich
+inputs) but nearly nothing on INTENT operations — EDIT001 makes intents deliberately thin
+(`orders.complete` carries an id), so the very operations tenants most want policy on are
+the ones an input-only rule cannot inspect. The field-service arc hit this wall
+(docs/34 M6): "service orders can't complete without an approved checklist" is not
+expressible over `{ orderId }`.
+
+The bounded fix: a second Px namespace, `row.*`, resolved by the rule gate from the
+operation's TARGET row — the entity binding the merge/audit machinery already knows.
+Boundaries that keep Px an expression language and not a query language:
+
+- One row: the operation's own target, hydrated read-only pre-transaction. No joins, no
+  aggregates, no navigation. ("All checklist items done" stays plugin-gate CODE.)
+- RUL002 extends: `row.` fields verify against that entity's field model at definition
+  time — compiled fields and extension fields alike (typed JSON predicates exist).
+- Honesty in the manifest: a rule using `row.*` loses client-side parity (the browser has
+  no row); the manifest marks it server-only instead of pretending.
+- Operations without a resolvable single target (creates, bulk) simply don't offer
+  `row.*` — RUL002 rejects it there.
+
+Why this ordering: the action catalog widens what rules can DO; `row.*` widens what they
+can SEE — and the arc showed the seeing gap binds first.
+
 ## The marketplace: three tiers, one trust model
 
 "Pick and choose from a marketplace" needs no tenant code upload — it decomposes onto the channels above:
@@ -196,7 +221,7 @@ Each phase is independently shippable and independently valuable; nothing in P1�
 Two documentation-only implementers built plugins against this chapter; everything below is
 what they had to discover through compiler errors. Normative from now on:
 
-- **Data access**: plugin operations/views/gates take **`ITamDb`** (namespace `Tam.AspNetCore`;
+- **Data access**: plugin operations/views/gates take **`ITamDb`** (namespace `Tam.EntityFrameworkCore`;
   surface `tam.Db.Set<T>()`) as an ordinary handler parameter — never a host DbContext type.
   Host reads go through **`IHostViewReader`**: actor mode
   `RowsAsync(viewId, IReadOnlyDictionary<string, string?> query, OperationContext, ct)`

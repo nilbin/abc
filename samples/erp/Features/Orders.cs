@@ -73,7 +73,17 @@ public static class CreateOrder
             input.EstimatedTotal);
 
         db.Orders.Add(order);
-        return new Output(order.Id, order.Number);
+        // The creation is a committed fact other modules build on (docs/31 D-X5): the event
+        // carries the wire keys a subscriber needs — the inspect plugin instantiates matching
+        // checklist templates from orderType. The wire value ("service"/"project"), never the
+        // CLR enum, is the contract.
+        return new Result<Output> { Output = new Output(order.Id, order.Number) }
+            .Effect(new EventPublished("order-created", new
+            {
+                orderId = order.Id.Value,
+                number = order.Number.Value,
+                orderType = order.Type,
+            }));
     }
 }
 

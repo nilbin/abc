@@ -171,6 +171,12 @@ The chapter's narrative order (each beat names its seam; NEW = built in this mil
    "exists, completed, visible to me" (NEW: D-X3).
 4. **The draft writes itself** — the `order-completed` subscriber, idempotent, order number
    harvested from the payload.
+
+Payload values serialize with the platform's wire JSON options: camelCase names and — the
+part that matters for cross-module contracts — **enums as their wire strings** (an
+`OrderType.Service` payload field arrives as `"service"`, never a number or Pascal name).
+A subscriber may match on those strings verbatim; normalizing case is still good hygiene
+at a module boundary.
 5. **Invoicing pushes back** — the gate on `orders.complete`; manifest shows `gatedBy`.
 6. **The order wears its invoice status** — packaged field + the writer (NEW: D-X2); the
    column/filter appear on the host grid with zero host changes.

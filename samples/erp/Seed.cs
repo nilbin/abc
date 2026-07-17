@@ -105,7 +105,10 @@ public static class Seed
             "users.lookup",
             // Time is own-scoped by default; the office reads the whole board and approves.
             "time.read", "time.read-all", "time.book", "time.approve",
-            "materials.read", "materials.add");
+            "materials.read", "materials.add",
+            // Inspect v2 (docs/34 M6): the office curates templates and works checklists.
+            "inspect.templates.read", "inspect.templates.manage",
+            "inspect.checklists.read", "inspect.checklists.manage");
         // "viewer" is authored as ACCESS LEVELS (docs/27 D-A1): { orders: view, customers: view }
         // expands to the read atoms at load time — the level shape and the atom shape coexist.
         db.Add(new RoleEntity
@@ -124,7 +127,9 @@ public static class Seed
             // Base atoms only: a technician books and reads her OWN time; materials follow
             // the work order (no own scope — see materials.add).
             "time.read", "time.book",
-            "materials.read", "materials.add");
+            "materials.read", "materials.add",
+            // Technicians check checklist lines off on site; templates stay the office's.
+            "inspect.checklists.read", "inspect.checklists.manage");
 
         // The tenant node (docs/26): the demo tenant is the root of its own hierarchy, so its
         // materialized Path is just its own id. Nesting adds children with Path = "demo.<child>".
@@ -206,6 +211,55 @@ public static class Seed
                 new("info@bergsoner.se"), new("+46 33 10 20 30")),
             Customer.Create(Tenant2, new("Lidköping Kyl AB"), new("Fabriksgatan 9, Lidköping"),
                 new("kontakt@lidkyl.se"), null));
+
+        // Inspect v2 (docs/34 M6): checklist templates keyed on order type — one MANDATORY
+        // service template (its checklists gate orders.complete) and one non-mandatory
+        // (never blocks), so the demo shows both behaviors. Seeded exactly as the tenant
+        // admin would author them through inspect.templates.define / add-item.
+        var safety = Inspect.ChecklistTemplate.Create(
+            Tenant, "Säkerhetskontroll", "service", mandatory: true);
+        var handover = Inspect.ChecklistTemplate.Create(
+            Tenant, "Överlämning till kund", "service", mandatory: false);
+        db.AddRange(safety, handover,
+            Inspect.ChecklistTemplateItem.Create(Tenant, safety.Id, 1, "Bryt och lås spänningen"),
+            Inspect.ChecklistTemplateItem.Create(Tenant, safety.Id, 2, "Kontrollera tryckkärl och slangar"),
+            Inspect.ChecklistTemplateItem.Create(Tenant, safety.Id, 3, "Fotografera arbetsplatsen före arbete"),
+            Inspect.ChecklistTemplateItem.Create(Tenant, handover.Id, 1, "Gå igenom utfört arbete med kunden"),
+            Inspect.ChecklistTemplateItem.Create(Tenant, handover.Id, 2, "Lämna serviceprotokoll"));
+
+        // Checklists the templates WOULD have instantiated (seeded orders bypass the
+        // pipeline, so the subscriber's work is mirrored here): the open service order
+        // 2026-01415 carries both — its mandatory one blocks orders.complete until the
+        // lines are checked off; 2026-01416's shows a partially completed non-mandatory one.
+        void Instantiate(Inspect.ChecklistTemplate template, Order order, int doneLines)
+        {
+            var checklist = Inspect.Checklist.Create(
+                Tenant, $"{template.Name} — {order.Number.Value}", order.Id.Value,
+                template.Mandatory, template.Id);
+            db.Add(checklist);
+            var lines = db.ChangeTracker.Entries<Inspect.ChecklistTemplateItem>()
+                .Select(e => e.Entity).Where(x => x.TemplateId == template.Id)
+                .OrderBy(x => x.Position).ToList();
+            foreach (var line in lines)
+            {
+                var item = Inspect.ChecklistItem.Create(
+                    Tenant, checklist.Id, order.Id.Value, line.Position, line.Text);
+                item.Done = line.Position <= doneLines;
+                db.Add(item);
+            }
+        }
+        Instantiate(safety, orders[3], doneLines: 0);
+        Instantiate(handover, orders[3], doneLines: 0);
+        Instantiate(handover, orders[4], doneLines: 1);
+
+        // The demo tenant has already clicked Activate for inspect (plugins.activate writes
+        // this row at runtime; seeding it keeps the checklist demo one boot away).
+        db.Add(new PluginActivationEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            PluginId = "inspect",
+        });
 
         // The tenant's subscription (docs/24): a "standard" plan, 10 seats, entitled plugins.
         // A billing provider would drive this via subscriptions.set-plan. This row is the tree's

@@ -26,6 +26,7 @@ public static class ErpModel
         // section collects every package/plugin page that SUGGESTS it; anything uncollected lands
         // under "more" in the last mode automatically (nothing can be authored into invisibility).
         // Event contracts (docs/31 D-X5): what subscribers/triggers may bind to, with payload shape.
+        .PublishesEvent("order-created", "orderId", "number", "orderType")
         .PublishesEvent("order-completed", "orderId", "number")
         .PublishesEvent("work-order-completed", "workOrderId", "number")
 

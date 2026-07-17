@@ -203,14 +203,41 @@
       "labels.rule-id": "Rule",
       "labels.user-id": "User",
       "plugins.inspect.title": "Inspections",
+      "nav.inspect.templates": "Checklist templates",
+      "nav.inspect.checklists": "Checklists",
       "operations.inspect.checklists.create.title": "New checklist",
       "operations.inspect.checklists.pass.title": "Pass",
+      "operations.inspect.templates.define.title": "New checklist template",
+      "operations.inspect.templates.add-item.title": "Add line",
+      "operations.inspect.templates.retire.title": "Retire",
+      "operations.inspect.items.check.title": "Check off",
+      "operations.inspect.items.uncheck.title": "Un-check",
       "inspect.labels.title": "Checklist",
       "inspect.labels.passed": "Passed",
       "inspect.labels.order": "Order",
       "inspect.labels.checklist-id": "Checklist",
+      "inspect.labels.template": "Template",
+      "inspect.labels.template-name": "Template name",
+      "inspect.labels.order-type": "Order type",
+      "inspect.labels.mandatory": "Mandatory",
+      "inspect.labels.retired": "Retired",
+      "inspect.labels.item-count": "Lines",
+      "inspect.labels.item": "Line",
+      "inspect.labels.item-text": "Line",
+      "inspect.labels.position": "No.",
+      "inspect.labels.done": "Done",
+      "inspect.labels.open-items": "Open lines",
+      "labels.template-id": "Template",
+      "labels.item-id": "Line",
+      "labels.position": "No.",
+      "labels.checklist-passed": "Checklist passed",
       "ext.inspect.requiresInspection": "Requires inspection",
-      "inspect.checklist-incomplete": "The order has an unpassed checklist.",
+      "inspect.checklist-incomplete": "The mandatory checklist \u0022{title}\u0022 has {open} open lines \u2014 the order cannot be completed.",
+      "inspect.items-open": "The checklist still has {open} open lines.",
+      "inspect.template-retired": "The template is retired and cannot take new lines.",
+      "inspect.item-text-required": "Enter a line text.",
+      "inspect.name-required": "Enter a template name.",
+      "inspect.order-type-required": "Enter the order type the template applies to.",
       "labels.checklist-id": "Checklist",
       "plugins.fortnox.title": "Fortnox",
       "approvals.email.requested-body": "A request ({operation}) is awaiting your approval.",
@@ -593,14 +620,41 @@
       "labels.rule-id": "Regel",
       "labels.user-id": "Anv\u00E4ndare",
       "plugins.inspect.title": "Besiktning",
+      "nav.inspect.templates": "Checklistemallar",
+      "nav.inspect.checklists": "Checklistor",
       "operations.inspect.checklists.create.title": "Ny checklista",
       "operations.inspect.checklists.pass.title": "Godk\u00E4nn",
+      "operations.inspect.templates.define.title": "Ny checklistemall",
+      "operations.inspect.templates.add-item.title": "L\u00E4gg till rad",
+      "operations.inspect.templates.retire.title": "Avveckla",
+      "operations.inspect.items.check.title": "Bocka av",
+      "operations.inspect.items.uncheck.title": "\u00C5ngra avbockning",
       "inspect.labels.title": "Checklista",
       "inspect.labels.passed": "Godk\u00E4nd",
       "inspect.labels.order": "Order",
       "inspect.labels.checklist-id": "Checklista",
+      "inspect.labels.template": "Mall",
+      "inspect.labels.template-name": "Mallnamn",
+      "inspect.labels.order-type": "Ordertyp",
+      "inspect.labels.mandatory": "Obligatorisk",
+      "inspect.labels.retired": "Avvecklad",
+      "inspect.labels.item-count": "Rader",
+      "inspect.labels.item": "Rad",
+      "inspect.labels.item-text": "Rad",
+      "inspect.labels.position": "Nr",
+      "inspect.labels.done": "Klar",
+      "inspect.labels.open-items": "\u00D6ppna rader",
+      "labels.template-id": "Mall",
+      "labels.item-id": "Rad",
+      "labels.position": "Nr",
+      "labels.checklist-passed": "Checklista godk\u00E4nd",
       "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
-      "inspect.checklist-incomplete": "Ordern har en checklista som inte \u00E4r godk\u00E4nd.",
+      "inspect.checklist-incomplete": "Den obligatoriska checklistan \u0022{title}\u0022 har {open} \u00F6ppna rader \u2014 ordern kan inte slutf\u00F6ras.",
+      "inspect.items-open": "Checklistan har fortfarande {open} \u00F6ppna rader.",
+      "inspect.template-retired": "Mallen \u00E4r avvecklad och kan inte f\u00E5 nya rader.",
+      "inspect.item-text-required": "Ange en radtext.",
+      "inspect.name-required": "Ange ett mallnamn.",
+      "inspect.order-type-required": "Ange vilken ordertyp mallen g\u00E4ller.",
       "labels.checklist-id": "Checklista",
       "plugins.fortnox.title": "Fortnox",
       "approvals.email.requested-body": "En beg\u00E4ran ({operation}) v\u00E4ntar p\u00E5 ditt godk\u00E4nnande.",
@@ -3184,6 +3238,96 @@
       "plugin": "tam.nav",
       "gatedBy": []
     },
+    "inspect.templates.add-item": {
+      "permission": "inspect.templates.manage",
+      "titleKey": "operations.inspect.templates.add-item.title",
+      "fields": [
+        {
+          "name": "templateId",
+          "labelKey": "inspect.labels.template",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "labelKey": "inspect.labels.item-text",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "itemId",
+          "labelKey": "labels.item-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "position",
+          "labelKey": "labels.position",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "inspect",
+      "gatedBy": []
+    },
+    "inspect.items.check": {
+      "permission": "inspect.checklists.manage",
+      "titleKey": "operations.inspect.items.check.title",
+      "fields": [
+        {
+          "name": "itemId",
+          "labelKey": "inspect.labels.item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "checklistId",
+          "labelKey": "labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "checklistPassed",
+          "labelKey": "labels.checklist-passed",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "inspect",
+      "gatedBy": []
+    },
     "inspect.checklists.create": {
       "permission": "inspect.checklists.manage",
       "titleKey": "operations.inspect.checklists.create.title",
@@ -3207,12 +3351,72 @@
           "changeSet": false,
           "extension": false,
           "readOnly": false
+        },
+        {
+          "name": "mandatory",
+          "labelKey": "inspect.labels.mandatory",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
         }
       ],
       "outputFields": [
         {
           "name": "checklistId",
           "labelKey": "labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "inspect",
+      "gatedBy": []
+    },
+    "inspect.templates.define": {
+      "permission": "inspect.templates.manage",
+      "titleKey": "operations.inspect.templates.define.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "inspect.labels.template-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "orderType",
+          "labelKey": "inspect.labels.order-type",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "mandatory",
+          "labelKey": "inspect.labels.mandatory",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "templateId",
+          "labelKey": "labels.template-id",
           "type": "reference",
           "wireKind": "string",
           "required": true,
@@ -3231,6 +3435,66 @@
         {
           "name": "checklistId",
           "labelKey": "inspect.labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "checklistId",
+          "labelKey": "labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "inspect",
+      "gatedBy": []
+    },
+    "inspect.templates.retire": {
+      "permission": "inspect.templates.manage",
+      "titleKey": "operations.inspect.templates.retire.title",
+      "fields": [
+        {
+          "name": "templateId",
+          "labelKey": "inspect.labels.template",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "templateId",
+          "labelKey": "labels.template-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "inspect",
+      "gatedBy": []
+    },
+    "inspect.items.uncheck": {
+      "permission": "inspect.checklists.manage",
+      "titleKey": "operations.inspect.items.uncheck.title",
+      "fields": [
+        {
+          "name": "itemId",
+          "labelKey": "inspect.labels.item",
           "type": "reference",
           "wireKind": "string",
           "required": true,
@@ -6396,6 +6660,94 @@
       "defaultSortDescending": false,
       "plugin": "tam.nav"
     },
+    "inspect.items.list": {
+      "permission": "inspect.checklists.read",
+      "queryFields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "checklistId",
+          "labelKey": "labels.checklist-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "checklistTitle",
+          "labelKey": "inspect.labels.title",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "position",
+          "labelKey": "inspect.labels.position",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "labelKey": "inspect.labels.item-text",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "done",
+          "labelKey": "inspect.labels.done",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "position",
+        "checklistTitle"
+      ],
+      "filterable": [
+        "done",
+        "checklistTitle"
+      ],
+      "defaultSort": "position",
+      "defaultSortDescending": false,
+      "plugin": "inspect"
+    },
     "inspect.checklists.list": {
       "permission": "inspect.checklists.read",
       "queryFields": [
@@ -6403,6 +6755,16 @@
           "name": "search",
           "labelKey": "labels.search",
           "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
           "wireKind": "string",
           "required": false,
           "changeSet": false,
@@ -6432,6 +6794,26 @@
           "readOnly": false
         },
         {
+          "name": "mandatory",
+          "labelKey": "inspect.labels.mandatory",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "openItems",
+          "labelKey": "inspect.labels.open-items",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
           "name": "passed",
           "labelKey": "inspect.labels.passed",
           "type": "boolean",
@@ -6447,9 +6829,166 @@
       ],
       "filterable": [
         "passed",
-        "title"
+        "title",
+        "mandatory"
       ],
       "defaultSort": "title",
+      "defaultSortDescending": false,
+      "plugin": "inspect"
+    },
+    "inspect.templates.items": {
+      "permission": "inspect.templates.read",
+      "queryFields": [
+        {
+          "name": "templateId",
+          "labelKey": "labels.template-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "templateName",
+          "labelKey": "inspect.labels.template-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "position",
+          "labelKey": "inspect.labels.position",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "labelKey": "inspect.labels.item-text",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "templateName",
+        "position"
+      ],
+      "filterable": [
+        "templateName"
+      ],
+      "defaultSort": "position",
+      "defaultSortDescending": false,
+      "plugin": "inspect"
+    },
+    "inspect.templates.list": {
+      "permission": "inspect.templates.read",
+      "queryFields": [
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "inspect.labels.template-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "orderType",
+          "labelKey": "inspect.labels.order-type",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "mandatory",
+          "labelKey": "inspect.labels.mandatory",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "itemCount",
+          "labelKey": "inspect.labels.item-count",
+          "type": "integer",
+          "wireKind": "integer",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "retired",
+          "labelKey": "inspect.labels.retired",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "name",
+        "orderType"
+      ],
+      "filterable": [
+        "orderType",
+        "mandatory",
+        "retired"
+      ],
+      "defaultSort": "name",
       "defaultSortDescending": false,
       "plugin": "inspect"
     },
@@ -7115,6 +7654,73 @@
       "serverDependencies": [],
       "plugin": "tam.nav"
     },
+    "inspect.web.templates.define": {
+      "operation": "inspect.templates.define",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "inspect.labels.template-name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "orderType",
+          "labelKey": "inspect.labels.order-type",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "mandatory",
+          "labelKey": "inspect.labels.mandatory",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "inspect"
+    },
+    "inspect.web.templates.add-item": {
+      "operation": "inspect.templates.add-item",
+      "fields": [
+        {
+          "name": "templateId",
+          "labelKey": "inspect.labels.template",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "labelKey": "inspect.labels.item-text",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": [],
+      "plugin": "inspect"
+    },
     "inspect.web.create": {
       "operation": "inspect.checklists.create",
       "fields": [
@@ -7133,6 +7739,16 @@
           "labelKey": "inspect.labels.order",
           "type": "reference",
           "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "mandatory",
+          "labelKey": "inspect.labels.mandatory",
+          "type": "boolean",
+          "wireKind": "boolean",
           "required": false,
           "changeSet": false,
           "extension": false,
@@ -8129,10 +8745,45 @@
       "plugin": "tam.nav",
       "contributedActions": []
     },
+    "inspect.web.templates": {
+      "view": "inspect.templates.list",
+      "columns": [
+        "name",
+        "orderType",
+        "mandatory",
+        "itemCount",
+        "retired"
+      ],
+      "rowActions": [
+        "inspect.templates.add-item",
+        "inspect.templates.retire"
+      ],
+      "toolbarActions": [
+        "inspect.templates.define"
+      ],
+      "includeExtensions": false,
+      "plugin": "inspect",
+      "contributedActions": []
+    },
+    "inspect.web.template-items": {
+      "view": "inspect.templates.items",
+      "columns": [
+        "templateName",
+        "position",
+        "text"
+      ],
+      "rowActions": [],
+      "toolbarActions": [],
+      "includeExtensions": false,
+      "plugin": "inspect",
+      "contributedActions": []
+    },
     "inspect.web.checklists": {
       "view": "inspect.checklists.list",
       "columns": [
         "title",
+        "mandatory",
+        "openItems",
         "passed"
       ],
       "rowActions": [
@@ -8141,6 +8792,23 @@
       "toolbarActions": [
         "inspect.checklists.create"
       ],
+      "includeExtensions": false,
+      "plugin": "inspect",
+      "contributedActions": []
+    },
+    "inspect.web.items": {
+      "view": "inspect.items.list",
+      "columns": [
+        "checklistTitle",
+        "position",
+        "text",
+        "done"
+      ],
+      "rowActions": [
+        "inspect.items.check",
+        "inspect.items.uncheck"
+      ],
+      "toolbarActions": [],
       "includeExtensions": false,
       "plugin": "inspect",
       "contributedActions": []
@@ -8333,6 +9001,8 @@
     "extensions.manage",
     "inspect.checklists.manage",
     "inspect.checklists.read",
+    "inspect.templates.manage",
+    "inspect.templates.read",
     "integrations.manage",
     "invoicing.manage",
     "invoicing.read",
@@ -8492,6 +9162,17 @@
             },
             "plugin": "invoicing",
             "children": []
+          },
+          {
+            "id": "inspect.checklists",
+            "kind": "page",
+            "labelKey": "nav.inspect.checklists",
+            "order": 50,
+            "target": {
+              "page": "inspect.checklists"
+            },
+            "plugin": "inspect",
+            "children": []
           }
         ]
       },
@@ -8599,6 +9280,17 @@
                 "children": []
               },
               {
+                "id": "inspect.templates",
+                "kind": "page",
+                "labelKey": "nav.inspect.templates",
+                "order": 60,
+                "target": {
+                  "page": "inspect.templates"
+                },
+                "plugin": "inspect",
+                "children": []
+              },
+              {
                 "id": "audit",
                 "kind": "page",
                 "labelKey": "nav.audit",
@@ -8647,16 +9339,6 @@
                 },
                 "plugin": "approvals",
                 "children": []
-              },
-              {
-                "id": "inspect",
-                "kind": "page",
-                "labelKey": "plugins.inspect.title",
-                "target": {
-                  "plugin": "inspect"
-                },
-                "plugin": "inspect",
-                "children": []
               }
             ]
           }
@@ -8665,6 +9347,30 @@
     ]
   },
   "pages": {
+    "inspect.templates": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "inspect.web.templates"
+        },
+        {
+          "kind": "grid",
+          "id": "inspect.web.template-items"
+        }
+      ]
+    },
+    "inspect.checklists": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "inspect.web.checklists"
+        },
+        {
+          "kind": "grid",
+          "id": "inspect.web.items"
+        }
+      ]
+    },
     "invoicing.invoices": {
       "sections": [
         {
@@ -8810,6 +9516,20 @@
   "slots": {
     "web.orders.detail": [
       {
+        "grid": "inspect.web.checklists",
+        "plugin": "inspect",
+        "bind": {
+          "orderId": "orderId"
+        }
+      },
+      {
+        "grid": "inspect.web.items",
+        "plugin": "inspect",
+        "bind": {
+          "orderId": "orderId"
+        }
+      },
+      {
         "grid": "invoicing.web.invoices",
         "plugin": "invoicing",
         "bind": {
@@ -8861,6 +9581,16 @@
         "orderId"
       ],
       "subscribedBy": []
+    },
+    "order-created": {
+      "fields": [
+        "orderId",
+        "number",
+        "orderType"
+      ],
+      "subscribedBy": [
+        "inspect"
+      ]
     },
     "order-completed": {
       "fields": [

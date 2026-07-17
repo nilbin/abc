@@ -7,47 +7,24 @@ using Tam.Generated;
 namespace Inspect;
 
 /// <summary>
-/// The tutorial's step-13 plugin (docs/22): inspection checklists as a compiled, namespaced
-/// module. The host adds one line — <c>AddPlugin&lt;InspectionPlugin&gt;()</c> — and activates
-/// per tenant at runtime; everything registered here is tagged "inspect" and omitted from the
-/// manifest for tenants that haven't.
+/// Inspect v2 (docs/34 M6): the tutorial's step-13 plugin grown into a real feature —
+/// tenant-defined checklist TEMPLATES keyed on order type, auto-instantiated onto new
+/// orders, per-item check-off intents, and a completion gate that blocks orders.complete
+/// while a MANDATORY checklist has open items. The host still adds one line
+/// (<c>AddPlugin&lt;InspectionPlugin&gt;()</c>) plus the storage opt-in; activation stays
+/// per tenant. Configure is a table of contents over cohesive PARTS (the invoicing shape).
 /// </summary>
 [TamPlugin("inspect")]
 public sealed class InspectionPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        // The plugin's own compile-time discovery — the generated class is internal per
-        // assembly, so host and plugins never collide.
-        plugin.Model.AddDiscovered();
-
-        // Embedded locales/*.json by convention; application locale files override.
-        plugin.LocaleDefaults();
-
-        // No configure: the record IS the form (docs/32). Title + OrderId, declaration order.
-        plugin.Form<CreateChecklist.Input>(
-            "inspect.web.create", "inspect.checklists.create");
-
-        // Columns default to the result record (docs/32); only the ACTIONS are a decision.
-        plugin.Grid<ChecklistList.Result>(
-            "inspect.web.checklists", "inspect.checklists.list", grid =>
-        {
-            grid.RowAction("inspect.checklists.pass");
-            grid.ToolbarAction("inspect.checklists.create");
-        });
-
-        // P2 — a packaged field on the HOST's entity: rides the same extension channel as
-        // tenant custom fields (forms, grids, audit, MCP, D7 filters come free), key-prefixed
-        // and present only where the plugin is active. Label lives in the locale files above.
-        plugin.ExtensionField("order", "requiresInspection", "boolean");
-
-        // P2 — the gate and subscriber register from their OWN attributes ([Gate]/[OnEffect]
-        // below, picked up by AddDiscovered like [Operation]/[View]): declaration lives on the
-        // behavior. Only the payload CONTRACT is declared here (PLG009).
-        plugin.RequiresEvent("order-completed", "orderId", "number");
-        plugin.PublishesEvent("inspect.checklist-passed", "checklistId");
+        plugin.Model.AddDiscovered();   // operations, views, [Gate]/[OnEffect] behaviors
+        plugin.LocaleDefaults();        // embedded locales/*.json; application files override
+        plugin.AddPart<OrdersContract>();     // everything host-facing
+        plugin.AddPart<TemplateAdminSurface>();   // the tenant admin's template UI
+        plugin.AddPart<ChecklistSurface>();       // the checklist UI (page + order panel)
     }
-
 
     /// <summary>Host opt-in for the plugin's storage: one line in the host's OnModelCreating.
     /// The plugin's tables live in the host database and migrate with it (docs/22).</summary>
@@ -59,14 +36,144 @@ public sealed class InspectionPlugin : ITamPlugin
             b.HasKey(x => x.Id);
             b.Property(x => x.Title).HasMaxLength(200);
             b.HasIndex(x => new { x.TenantId, x.Passed });
+            // The gate's hot read: mandatory-open checklists for (tenant, order).
+            b.HasIndex(x => new { x.TenantId, x.OrderId });
+        });
+        modelBuilder.Entity<ChecklistItem>(b =>
+        {
+            b.ToTable("inspect_checklist_items");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Text).HasMaxLength(500);
+            b.HasIndex(x => new { x.TenantId, x.ChecklistId });
+            b.HasIndex(x => new { x.TenantId, x.OrderId });
+        });
+        modelBuilder.Entity<ChecklistTemplate>(b =>
+        {
+            b.ToTable("inspect_templates");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(200);
+            b.Property(x => x.OrderType).HasMaxLength(50);
+            // The subscriber's hot read: active templates for (tenant, order type).
+            b.HasIndex(x => new { x.TenantId, x.OrderType });
+        });
+        modelBuilder.Entity<ChecklistTemplateItem>(b =>
+        {
+            b.ToTable("inspect_template_items");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Text).HasMaxLength(500);
+            b.HasIndex(x => new { x.TenantId, x.TemplateId });
         });
         return modelBuilder;
     }
 }
 
-/// <summary>An order with an unpassed linked checklist cannot complete — the gate reads the
-/// wire input and the plugin's OWN data, never host CLR types (docs/22 P2). Registration is
-/// the attribute; the manifest still shows orders.complete.gatedBy: ["inspect"].</summary>
+/// <summary>
+/// The host-facing contract in one place (the docs/31 D-X5 shape): the packaged field the
+/// plugin puts on orders, the events it consumes, the event it publishes, and where its
+/// panels land on host surfaces. This part IS the install screen's story.
+/// </summary>
+internal sealed class OrdersContract : IPluginPart
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        // P2 — a packaged field on the HOST's entity, key-prefixed, present only where the
+        // plugin is active. Label lives in the plugin's locale files.
+        plugin.ExtensionField("order", "requiresInspection", "boolean");
+
+        // Event contracts (PLG009): payload shapes are declared, never folklore.
+        // order-created is the v2 seam — matching templates instantiate onto the new order.
+        plugin.RequiresEvent("order-created", "orderId", "number", "orderType");
+        plugin.RequiresEvent("order-completed", "orderId", "number");
+        plugin.PublishesEvent("inspect.checklist-passed", "checklistId");
+
+        // The order detail wears its checklists (docs/31 D-X4): two panels bound to the
+        // slot's record context — the checklist headers, then the line items with the
+        // check/uncheck row actions. The host opted the surface in once; it never names us.
+        plugin.Panel("web.orders.detail", grid: "inspect.web.checklists",
+            bind => bind.Query("orderId", fromContext: "orderId"));
+        plugin.Panel("web.orders.detail", grid: "inspect.web.items",
+            bind => bind.Query("orderId", fromContext: "orderId"));
+    }
+}
+
+/// <summary>The tenant admin's surface: define templates, add lines, retire — a declared
+/// page (grid + the template-lines grid), suggested into the host's administration area.</summary>
+internal sealed class TemplateAdminSurface : IPluginPart
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        // No configure: the record IS the form (docs/32 D-P6).
+        plugin.Form<DefineTemplate.Input>(
+            "inspect.web.templates.define", "inspect.templates.define");
+
+        // Reached as a row action on the templates grid — the template arrives prefilled.
+        plugin.Form<AddTemplateItem.Input>(
+            "inspect.web.templates.add-item", "inspect.templates.add-item", form =>
+        {
+            form.Field(x => x.TemplateId).Renderer("hidden");
+            form.Field(x => x.Text);
+        });
+
+        plugin.Grid<TemplateList.Result>(
+            "inspect.web.templates", "inspect.templates.list", grid =>
+        {
+            grid.RowAction("inspect.templates.add-item");
+            grid.RowAction("inspect.templates.retire");
+            grid.ToolbarAction("inspect.templates.define");
+        });
+
+        plugin.Grid<TemplateItemList.Result>(
+            "inspect.web.template-items", "inspect.templates.items");
+
+        // Templates, then every line they will stamp — ordered sections (docs/32 D-P4).
+        plugin.Page("inspect.templates", page => page
+            .Grid("inspect.web.templates")
+            .Grid("inspect.web.template-items"));
+
+        plugin.Nav(nav => nav.Page("inspect.templates",
+            page: "inspect.templates", suggest: "administration", order: 60));
+    }
+}
+
+/// <summary>The checklist work surface: the plugin's own page (checklists + items), kept
+/// beside the order-detail panels the OrdersContract part contributes.</summary>
+internal sealed class ChecklistSurface : IPluginPart
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        // No configure: the record IS the form (docs/32). Title, OrderId, Mandatory.
+        plugin.Form<CreateChecklist.Input>(
+            "inspect.web.create", "inspect.checklists.create");
+
+        // Columns default to the result record (docs/32); only the ACTIONS are a decision.
+        plugin.Grid<ChecklistList.Result>(
+            "inspect.web.checklists", "inspect.checklists.list", grid =>
+        {
+            grid.RowAction("inspect.checklists.pass");
+            grid.ToolbarAction("inspect.checklists.create");
+        });
+
+        plugin.Grid<ChecklistItemList.Result>(
+            "inspect.web.items", "inspect.items.list", grid =>
+        {
+            grid.RowAction("inspect.items.check");
+            grid.RowAction("inspect.items.uncheck");
+        });
+
+        plugin.Page("inspect.checklists", page => page
+            .Grid("inspect.web.checklists")
+            .Grid("inspect.web.items"));
+
+        plugin.Nav(nav => nav.Page("inspect.checklists",
+            page: "inspect.checklists", suggest: "work", order: 50));
+    }
+}
+
+/// <summary>An order with a MANDATORY unpassed checklist cannot complete — the gate reads
+/// the wire input and the plugin's OWN data, never host CLR types (docs/22 P2).
+/// Mandatoriness is template data the checklist carries; non-mandatory checklists never
+/// block (docs/34 M6 — deliberately NOT a tenant automation rule: v1 rule conditions see
+/// only the input, and orders.complete carries just an id).</summary>
 [Gate("orders.complete")]
 internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
 {
@@ -76,14 +183,73 @@ internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
             || !idElement.TryGetGuid(out var orderId))
             return Result.Success();
 
-        var blocked = await tam.Db.Set<Checklist>().AnyAsync(
-            x => x.OrderId == orderId && !x.Passed, ct);
-        return blocked ? InspectFindings.ChecklistIncomplete : Result.Success();
+        var blocking = await tam.Db.Set<Checklist>()
+            .Where(x => x.OrderId == orderId && x.Mandatory && !x.Passed)
+            .Select(x => new
+            {
+                x.Title,
+                Open = tam.Db.Set<ChecklistItem>().Count(i => i.ChecklistId == x.Id && !i.Done),
+            })
+            .FirstOrDefaultAsync(ct);
+        return blocking is null
+            ? Result.Success()
+            : InspectFindings.ChecklistIncomplete.With(
+                ("title", blocking.Title), ("open", blocking.Open));
     }
 }
 
-/// <summary>When the host commits an order completion, open a follow-up checklist — post-
-/// commit via the outbox, tenant-pinned, idempotent (at-least-once delivery).</summary>
+/// <summary>Inspect v2's core seam: when the host commits an order creation, every ACTIVE
+/// template matching the order's type instantiates as a checklist (with its items) attached
+/// to that order — post-commit via the outbox, tenant-pinned, idempotent per
+/// (order, template) since delivery is at-least-once.</summary>
+[OnEffect("order-created")]
+internal sealed class InstantiateTemplates(ITamDb tam) : IEffectHandler
+{
+    public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
+    {
+        if (!effect.Payload.TryGetProperty("orderId", out var idElement)
+            || !idElement.TryGetGuid(out var orderId))
+            return;
+        var orderType = effect.Payload.TryGetProperty("orderType", out var typeElement)
+            && typeElement.ValueKind == JsonValueKind.String
+            ? typeElement.GetString() ?? "" : "";
+        if (orderType.Length == 0) return;
+        var number = effect.Payload.TryGetProperty("number", out var numberElement)
+            ? numberElement.GetString() ?? "" : "";
+
+        var normalized = orderType.Trim().ToLowerInvariant();
+        var templates = await tam.Db.Set<ChecklistTemplate>()
+            .Where(x => !x.Retired && x.OrderType == normalized)
+            .ToListAsync(ct);
+        if (templates.Count == 0) return;
+
+        var changed = false;
+        foreach (var template in templates)
+        {
+            // At-least-once delivery: one checklist per (order, template), ever.
+            if (await tam.Db.Set<Checklist>().AnyAsync(
+                    x => x.OrderId == orderId && x.TemplateId == template.Id, ct))
+                continue;
+
+            var title = number.Length > 0 ? $"{template.Name} — {number}" : template.Name;
+            var checklist = Checklist.Create(
+                effect.TenantId, title, orderId, template.Mandatory, template.Id);
+            tam.Db.Add(checklist);
+            var items = await tam.Db.Set<ChecklistTemplateItem>()
+                .Where(x => x.TemplateId == template.Id)
+                .OrderBy(x => x.Position)
+                .ToListAsync(ct);
+            foreach (var item in items)
+                tam.Db.Add(ChecklistItem.Create(
+                    effect.TenantId, checklist.Id, orderId, item.Position, item.Text));
+            changed = true;
+        }
+        if (changed) await tam.Db.SaveChangesAsync(ct);
+    }
+}
+
+/// <summary>v1 behavior, kept: when the host commits an order completion, open a follow-up
+/// checklist — post-commit via the outbox, tenant-pinned, idempotent.</summary>
 [OnEffect("order-completed")]
 internal sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
 {

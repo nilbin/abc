@@ -468,13 +468,43 @@ export interface NavRetireOutput {
   nodeId: string;
 }
 
+export interface InspectTemplatesAddItemInput {
+  templateId: string;
+  text: string;
+}
+
+export interface InspectTemplatesAddItemOutput {
+  itemId: string;
+  position: number;
+}
+
+export interface InspectItemsCheckInput {
+  itemId: string;
+}
+
+export interface InspectItemsCheckOutput {
+  checklistId: string;
+  checklistPassed: boolean;
+}
+
 export interface InspectChecklistsCreateInput {
   title: string;
   orderId?: string;
+  mandatory?: boolean;
 }
 
 export interface InspectChecklistsCreateOutput {
   checklistId: string;
+}
+
+export interface InspectTemplatesDefineInput {
+  name: string;
+  orderType: string;
+  mandatory?: boolean;
+}
+
+export interface InspectTemplatesDefineOutput {
+  templateId: string;
 }
 
 export interface InspectChecklistsPassInput {
@@ -482,6 +512,22 @@ export interface InspectChecklistsPassInput {
 }
 
 export interface InspectChecklistsPassOutput {
+  checklistId: string;
+}
+
+export interface InspectTemplatesRetireInput {
+  templateId: string;
+}
+
+export interface InspectTemplatesRetireOutput {
+  templateId: string;
+}
+
+export interface InspectItemsUncheckInput {
+  itemId: string;
+}
+
+export interface InspectItemsUncheckOutput {
   checklistId: string;
 }
 
@@ -980,13 +1026,53 @@ export interface NavOverridesQuery {
 
 }
 
+export interface InspectItemsListRow {
+  id: string;
+  checklistTitle: string;
+  position: number;
+  text: string;
+  done: boolean;
+}
+
+export interface InspectItemsListQuery {
+  orderId?: string;
+  checklistId?: string;
+}
+
 export interface InspectChecklistsListRow {
   id: string;
   title: string;
+  mandatory: boolean;
+  openItems: number;
   passed: boolean;
 }
 
 export interface InspectChecklistsListQuery {
+  search?: string;
+  orderId?: string;
+}
+
+export interface InspectTemplatesItemsRow {
+  id: string;
+  templateName: string;
+  position: number;
+  text: string;
+}
+
+export interface InspectTemplatesItemsQuery {
+  templateId?: string;
+}
+
+export interface InspectTemplatesListRow {
+  id: string;
+  name: string;
+  orderType: string;
+  mandatory: boolean;
+  itemCount: number;
+  retired: boolean;
+}
+
+export interface InspectTemplatesListQuery {
   search?: string;
 }
 
@@ -1265,14 +1351,39 @@ export class TypedTamClient {
     return this.client.operation("nav.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<NavRetireOutput>>;
   }
 
+  /** inspect.templates.add-item (requires inspect.templates.manage) */
+  inspectTemplatesAddItem(input: InspectTemplatesAddItemInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectTemplatesAddItemOutput>> {
+    return this.client.operation("inspect.templates.add-item", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectTemplatesAddItemOutput>>;
+  }
+
+  /** inspect.items.check (requires inspect.checklists.manage) */
+  inspectItemsCheck(input: InspectItemsCheckInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectItemsCheckOutput>> {
+    return this.client.operation("inspect.items.check", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectItemsCheckOutput>>;
+  }
+
   /** inspect.checklists.create (requires inspect.checklists.manage) */
   inspectChecklistsCreate(input: InspectChecklistsCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsCreateOutput>> {
     return this.client.operation("inspect.checklists.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsCreateOutput>>;
   }
 
+  /** inspect.templates.define (requires inspect.templates.manage) */
+  inspectTemplatesDefine(input: InspectTemplatesDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectTemplatesDefineOutput>> {
+    return this.client.operation("inspect.templates.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectTemplatesDefineOutput>>;
+  }
+
   /** inspect.checklists.pass (requires inspect.checklists.manage) */
   inspectChecklistsPass(input: InspectChecklistsPassInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectChecklistsPassOutput>> {
     return this.client.operation("inspect.checklists.pass", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectChecklistsPassOutput>>;
+  }
+
+  /** inspect.templates.retire (requires inspect.templates.manage) */
+  inspectTemplatesRetire(input: InspectTemplatesRetireInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectTemplatesRetireOutput>> {
+    return this.client.operation("inspect.templates.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectTemplatesRetireOutput>>;
+  }
+
+  /** inspect.items.uncheck (requires inspect.checklists.manage) */
+  inspectItemsUncheck(input: InspectItemsUncheckInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectItemsUncheckOutput>> {
+    return this.client.operation("inspect.items.uncheck", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectItemsUncheckOutput>>;
   }
 
   /** approvals.approve (requires approvals.review) */
@@ -1480,9 +1591,24 @@ export class TypedTamClient {
     return this.client.view("nav.overrides", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: NavOverridesRow[] }>;
   }
 
+  /** view inspect.items.list (requires inspect.checklists.read) */
+  inspectItemsList(query?: InspectItemsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InspectItemsListRow[] }> {
+    return this.client.view("inspect.items.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InspectItemsListRow[] }>;
+  }
+
   /** view inspect.checklists.list (requires inspect.checklists.read) */
   inspectChecklistsList(query?: InspectChecklistsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InspectChecklistsListRow[] }> {
     return this.client.view("inspect.checklists.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InspectChecklistsListRow[] }>;
+  }
+
+  /** view inspect.templates.items (requires inspect.templates.read) */
+  inspectTemplatesItems(query?: InspectTemplatesItemsQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InspectTemplatesItemsRow[] }> {
+    return this.client.view("inspect.templates.items", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InspectTemplatesItemsRow[] }>;
+  }
+
+  /** view inspect.templates.list (requires inspect.templates.read) */
+  inspectTemplatesList(query?: InspectTemplatesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: InspectTemplatesListRow[] }> {
+    return this.client.view("inspect.templates.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: InspectTemplatesListRow[] }>;
   }
 
   /** view approvals.groups.list (requires approvals.manage) */

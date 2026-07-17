@@ -451,6 +451,30 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Field-service arc M6 (docs/34): Inspect v2 — checklists by order type, built DOCS-ONLY
+  by RTFM agent #2 (zero framework edits, zero React)**: the P2 proof-piece plugin became a
+  real feature. Tenant-defined checklist TEMPLATES keyed on order type (an opaque wire
+  string — plugins never reference host CLR types), auto-instantiated onto new orders
+  through a new order-created event (the host's contract grew: orderId/number/orderType;
+  subscriber idempotent per order×template), per-item check/uncheck intents where the last
+  check passes the checklist atomically and uncheck re-opens it, and the evolved gate
+  blocks orders.complete only while a MANDATORY checklist is unpassed — non-mandatory
+  never blocks. Mandatoriness is template data enforced by plugin gate CODE, deliberately
+  NOT an automation rule: v1 rule conditions are input-only and orders.complete carries
+  just an id (that wall is now docs/22's `row.*` design note, queued ahead of the action
+  catalog). Two plugin panels on the orders record surface, template admin under
+  administration, checklists page under work; seeded mandatory safety + non-mandatory
+  handover templates demo both behaviors on boot. Verified independently after the agent:
+  149 framework + 14 sample tests, 16-suite wire matrix **226/226 on fresh SQLite AND
+  Postgres** (RLS on all four new tables), additive manifest baseline, new fieldm6 suite
+  covering the whole arc on the wire including outbox-driven instantiation. The feature
+  changing demo completion semantics rippled into three older suites (updated: inspectv2
+  opts into mandatory, invoicing clears checklists first, nav gained the two pages) — a
+  plugin gating a host operation is SUPPOSED to do that. The agent filed 9 doc gaps + 6
+  frictions (docs/34 log); four doc errors fixed immediately (ITamDb namespace, outbox
+  caveat in Step 11, event-payload enum serialization in docs/31, output-label row in
+  docs/21). Standout gap: Tam.Testing cannot dispatch the outbox — subscriber tests need a
+  hand-built dispatcher; `TamTestHost.DispatchOutboxAsync()` is the candidate fix.
 - **Field-service arc M5 (docs/34): the friction triage — all nine fixes BUILT, under one
   principle: the type carries the defaults (docs/02)**. Semantic wrapper types now own
   their `[Format]`, `[LabelKey]` and NEW `[Lookup("view.id")]`; resolution is member attr →

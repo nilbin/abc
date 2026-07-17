@@ -127,6 +127,39 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
       slots auto-declare (standalone `model.Slot` remains only for external slots). Verified:
       149 framework + 8 harness tests, full 15-suite matrix (210 checks) on SQLite AND
       Postgres, additive-only manifest baseline.
+- [x] M6 — Inspect v2 via RTFM: checklists driven by ORDER TYPE. **BUILT — docs-only
+      RTFM build #2, zero framework edits, zero React.** Templates (items + mandatory,
+      order type as an opaque WIRE string — a plugin never references the host's CLR enum),
+      auto-instantiation via the new order-created event (host contract grew:
+      PublishesEvent orderId/number/orderType; the subscriber is idempotent per
+      order×template), items.check/uncheck intents (the LAST check passes the checklist in
+      the same intent, so item and checklist state cannot disagree; uncheck re-opens the
+      gate — inspections get amended), the gate blocks orders.complete only while a
+      MANDATORY checklist is unpassed, two plugin panels on web.orders.detail, template
+      admin page under administration, checklists page under work. Verified independently:
+      149 + 14 tests, 16-suite wire matrix **226/226 on fresh SQLite AND Postgres** (RLS
+      confirmed on all four new tables), manifest baseline additive, new fieldm6 suite
+      (blocked → check items → passes → completes with non-mandatory still open;
+      auto-instantiation through the real outbox; project orders get nothing; retired
+      templates stop instantiating). The build DELIBERATELY changed demo semantics —
+      completing a service order now requires its safety checklist — which rippled into
+      three older wire suites (inspectv2 opts its manual checklist into mandatory,
+      invoicing clears checklists before completing, nav expects the two new pages):
+      the cost of a plugin that gates a host operation, working as designed. The agent's
+      report filed 9 doc gaps + 6 frictions (log below). The existing inspect
+      plugin (P2's proof piece) grows into a real feature, built DOCS-ONLY by an RTFM
+      agent like M3 — the M5-reshaped docs get their first consumer who wasn't in the
+      room. Scope: tenant-defined checklist TEMPLATES keyed on order type (items +
+      mandatory flag; admin ops/grid under the plugin prefix), auto-instantiation onto new
+      orders via an order-created event subscriber (the host does not publish order-created
+      yet — the event contract must GROW consumer-side, like M4's), per-item check-off
+      intents, the completion gate blocking orders.complete while a MANDATORY checklist
+      has open items (gate reads the order row + items — plugin gates are code), and a
+      detail-slot panel on the orders page showing checklist state. Where mandatoriness
+      lives is the design lesson: template data + plugin gate — NOT an automation rule,
+      because v1 rule conditions are input-only and orders.complete carries just an id
+      (that wall is now the docs/22 `row.*` design note). Success = zero framework edits;
+      every doc gap and friction goes in the log below.
 
 ## Friction log
 
@@ -220,3 +253,40 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   resolve 500 → 400 with the expected `{"input": ...}` shape in the finding. The pattern
   in the fixes: every one moved a per-usage decision onto a DECLARATION the model already
   had — the type, the view, the placement ([02-domain-state.md](02-domain-state.md)).
+- (M6) Tam.Testing writes the outbox but never DISPATCHES it: `[OnEffect]` subscribers do
+  not fire in a test, and nothing says so — the required "order create instantiates
+  checklist" test needed a five-step contortion (EF internals → ApplicationServiceProvider
+  → scope factory → hand-built dispatcher → drain-poll), plus a first attempt that died on
+  `ObjectDisposedException`. Every consumer testing a subscriber will re-invent this.
+  Candidate: `TamTestHost.DispatchOutboxAsync()`. (Step 11 now carries a loud caveat.)
+- (M6) `EventPublished` payload serialization was unspecified — whether a CLR enum crosses
+  as "service", "Service", or 2 is the whole ballgame for a cross-module contract keyed on
+  order type. It is the wire string (docs/31 now says so); the agent still coded defensive
+  normalization because it couldn't know.
+- (M6) Output-record fields are L10N-gated with plain `labels.*` keys, but the key table
+  didn't list outputs — authoring-by-diagnostic (the L10N001 error names the keys, so
+  recovery is mechanical, but the doc should have said it first; docs/21 now has the row).
+- (M6) Seeding/testing plugin ACTIVATION is undocumented: the agent found
+  `PluginActivationEntity` by opening the SQLite file and reflecting. The tutorial only
+  ever clicks Activate in the UI.
+- (M6) `TamTestHost`'s surface (QueryDbAsync, ActorWithId semantics, SeedAsync scoping, no
+  service-provider accessor) is documented only by example — the agent reflected over
+  Tam.Testing.dll for the member list.
+- (M6) Whether one slot takes TWO panels from the same plugin is unstated; it works
+  (PLG007 silent), but it was a gamble. The row-action prefill matching rule is likewise
+  imprecise (docs/32 says "matches the row's id field"; the actual convention that made
+  `ItemId`/`TemplateId` inputs work is imitation of samples, not the text).
+- (M6) Order type on the template is honest wire-string design with a dishonest FORM: free
+  text, so a typo silently defines a template that never fires. Wanted: a plugin-consumable
+  way to offer the HOST's enum values as options (host-view-sourced selection, or the
+  lookup seam pointed at enums).
+- (M6) Two grids on one declared page render as one unlabeled pile — sections have order
+  but no heading key. First thing a designer would ask for.
+- (M6, sample bug found by the consumer) v1's `Checklist` never implemented `ITenantScoped`
+  though docs/22 mandates it for plugin entities — the agent added it; nothing had caught
+  it because v1 tests never crossed tenants on that table.
+- (M6, positive) The capability sweep covered all four new views — two with correlated
+  subqueries, two with joins — for zero new test code; the finding-args → ICU → localized
+  wire message chain worked first try; and the docs/22 authoring reference plus invoicing's
+  IPluginPart shape were enough to structure the whole plugin without seeing a line of
+  framework source. Doc errors found and FIXED this round: ITamDb's namespace in docs/22.
