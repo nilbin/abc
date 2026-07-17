@@ -256,6 +256,11 @@ public sealed class AutomationRuleEntity : ITenantScoped
     public string? TargetField { get; set; }
     public string MessagesJson { get; set; } = "{}";
     public bool Retired { get; set; }
+
+    // docs/22 row.* increment: resolved ONCE at rules.define when the condition references
+    // row.* — the target entity's wire key and the operation input field carrying its id.
+    public string? RowEntityKey { get; set; }
+    public string? RowIdField { get; set; }
 }
 
 /// <summary>Non-secret per-tenant integration config (docs/25): base URLs, account ids, flags.

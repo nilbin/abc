@@ -153,7 +153,7 @@ Rules are registry data (RUL### diagnostics at definition: unknown field, type m
 
 What rules never get: arbitrary code, HTTP calls (that's the integration channel, via the enqueue action), or writes to compiled fields (operations own compiled state transitions — EDIT001's philosophy extended to tenants).
 
-### The `row.*` increment (design — the next P5 slice, ahead of the action catalog)
+### The `row.*` increment (BUILT — the P5 slice the field-service arc queued)
 
 v1 conditions see the **operation input only**. That covers create/edit operations (rich
 inputs) but nearly nothing on INTENT operations — EDIT001 makes intents deliberately thin
@@ -162,21 +162,31 @@ the ones an input-only rule cannot inspect. The field-service arc hit this wall
 (docs/34 M6): "service orders can't complete without an approved checklist" is not
 expressible over `{ orderId }`.
 
-The bounded fix: a second Px namespace, `row.*`, resolved by the rule gate from the
-operation's TARGET row — the entity binding the merge/audit machinery already knows.
-Boundaries that keep Px an expression language and not a query language:
+The bounded fix, as shipped: a second Px namespace, `row.*`, resolved by the rule gate
+from the operation's TARGET row. Boundaries that keep Px an expression language and not a
+query language:
 
-- One row: the operation's own target, hydrated read-only pre-transaction. No joins, no
-  aggregates, no navigation. ("All checklist items done" stays plugin-gate CODE.)
-- RUL002 extends: `row.` fields verify against that entity's field model at definition
-  time — compiled fields and extension fields alike (typed JSON predicates exist).
-- Honesty in the manifest: a rule using `row.*` loses client-side parity (the browser has
-  no row); the manifest marks it server-only instead of pretending.
-- Operations without a resolvable single target (creates, bulk) simply don't offer
-  `row.*` — RUL002 rejects it there.
+- **One row**: the target resolves at DEFINE time from the operation's single `{entity}Id`
+  input (`projects.close` + `projectId` → the project row); zero or several candidate id
+  inputs is RUL004 (`rules.no-target-row`) — creates and bulk operations simply don't
+  offer `row.*`, named at define, never hit at runtime. No joins, no aggregates, no
+  navigation ("all checklist items done" stays plugin-gate CODE).
+- **RUL002 extends over the row**: `row.{member}` verifies against the entity's members
+  and `row.ext.{key}` against the tenant's extension registry, at definition time.
+- **Wire-identical semantics**: the hydrated row is serialized through the platform's
+  JSON options before Px sees it — enums compare as their wire strings, `Tam.Money` as a
+  plain number, wrappers unwrap — so a row condition reads exactly like an input one.
+- **Fail-safe shape**: the row loads read-only pre-transaction, tenant-checked explicitly
+  (FindAsync bypasses the global filter — the packaged-writer lesson applied); a MISSING
+  row means the rule does not fire (the pipeline's own not-found follows), and only a rule
+  that cannot EVALUATE emits the non-blocking `rules.evaluation-failed` warning.
+- Client-side parity: rules do not ride the manifest at all yet; when they do, `row.*`
+  rules will be marked server-only (the browser has no row) instead of pretending.
 
 Why this ordering: the action catalog widens what rules can DO; `row.*` widens what they
-can SEE — and the arc showed the seeing gap binds first.
+can SEE — and the arc showed the seeing gap binds first. Verified: 4 evaluator unit tests
+(fire/quiet/missing-row/tenant-boundary over real Money + enum members) and 6 wire checks
+in the rules suite (define-resolve, block, pass, RUL004, RUL002-over-row, retire).
 
 ## Where a feature goes: package vs plugin, one vs many
 

@@ -451,6 +451,20 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **P5 `row.*` BUILT — rule conditions over the operation's target row (docs/22)**: the
+  intent-operation blind spot closed. rules.define resolves the target entity from the
+  operation's single `{entity}Id` input and stores it on the rule (RUL004 names the wall
+  when there is no single target — orders.create with two id inputs is the wire-proven
+  case); RUL002 now verifies `row.{member}` against the entity and `row.ext.{key}` against
+  the tenant registry. At evaluation the row hydrates once per (entity, id), read-only,
+  pre-transaction, explicitly tenant-checked, and is serialized through TamJson before Px
+  sees it — so `row.budget` (Money) compares as a number and `row.status` (enum) as
+  "open", wire-identical to input conditions. A missing row means the rule does not fire;
+  only unevaluable rules warn. "Big open projects can't be closed" is now a tenant-authored
+  rule, no deploy. Verified: 4 evaluator unit tests (157 total), rules wire suite grown to
+  12 checks (define/block/pass/RUL004/RUL002-over-row/retire), full 16-suite matrix
+  232/232 on fresh SQLite AND Postgres, manifest untouched (rules are data — the impact
+  tool confirms "no manifest changes").
 - **Step 12 BUILT — the consolidated change-impact report**: `TamImpact.Against(model,
   baseline)` (Tam.Core) diffs the compiled model's manifest against the committed baseline
   and prints the tutorial's unified answer: ✓ the silent greens stated per change (schemas,

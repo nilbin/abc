@@ -45,6 +45,7 @@ public static class RuleFindings
     public static readonly FindingFactory UnknownOperation = Finding.Error("rules.unknown-operation"); // RUL001
     public static readonly FindingFactory UnknownField = Finding.Error("rules.unknown-field");         // RUL002
     public static readonly FindingFactory MissingMessage = Finding.Error("rules.missing-message");     // RUL003
+    public static readonly FindingFactory NoTargetRow = Finding.Error("rules.no-target-row");           // RUL004
     public static readonly FindingFactory InvalidCondition = Finding.Error("rules.invalid-condition");
 }
 
@@ -88,13 +89,30 @@ public static class RuleEvaluator
         if (rules.Count == 0) return [];
 
         var findings = new List<Finding>();
+        var rowCache = new Dictionary<string, JsonElement?>(StringComparer.Ordinal);
         foreach (var rule in rules)
         {
             bool fired;
             try
             {
                 var condition = JsonSerializer.Deserialize<Px>(rule.ConditionJson, TamJson.Options)!;
-                fired = PxBinary.Truthy(condition.Evaluate(name => FieldValue(body, name)));
+                // docs/22 row.* increment: hydrate the operation's target row once per
+                // (entity, id) — read-only, pre-transaction, tenant-checked. A missing row
+                // means the rule does not FIRE (the pipeline's own not-found follows); only
+                // a rule that cannot EVALUATE warns.
+                JsonElement? row = null;
+                if (rule is { RowEntityKey: { } entityKey, RowIdField: { } idField })
+                {
+                    var cacheKey = $"{entityKey}|{FieldValue(body, idField)}";
+                    if (!rowCache.TryGetValue(cacheKey, out row))
+                        rowCache[cacheKey] = row =
+                            await RowJsonAsync(db, entityKey, FieldValue(body, idField), context, ct);
+                    if (row is null) continue;
+                }
+                fired = PxBinary.Truthy(condition.Evaluate(name =>
+                    name.StartsWith("row.", StringComparison.Ordinal)
+                        ? row is { } r ? FieldValue(r, name["row.".Length..]) : null
+                        : FieldValue(body, name)));
             }
             catch (Exception e) when (e is JsonException or NotSupportedException
                 or ArgumentException or FormatException or InvalidOperationException)
@@ -162,6 +180,28 @@ public static class RuleEvaluator
             _ => null,
         };
     }
+
+    /// <summary>The row.* namespace, made WIRE-IDENTICAL: the target row is loaded by primary
+    /// key (entity resolved by wire key — no CLR coupling in the stored rule), tenant-checked
+    /// explicitly (FindAsync bypasses the global filter, same lesson as the packaged writer),
+    /// and serialized through TamJson so enums, wrappers and money compare exactly as they do
+    /// on the wire. Null when the row (or a parsable id) is absent.</summary>
+    private static async Task<JsonElement?> RowJsonAsync(
+        DbContext db, string entityKey, object? idValue, OperationContext context, CancellationToken ct)
+    {
+        if (idValue is not string idText || !Guid.TryParse(idText, out var id)) return null;
+        var entityType = db.Model.GetEntityTypes()
+            .FirstOrDefault(t => TamModel.EntityKey(t.ClrType) == entityKey);
+        if (entityType is null) return null;
+
+        var keyType = entityType.FindPrimaryKey()!.Properties.Single().ClrType;
+        var keyValue = keyType == typeof(Guid) ? id : ValueWrapper.Wrap(keyType, id);
+        var row = await db.FindAsync(entityType.ClrType, [keyValue], ct);
+        if (row is null) return null;
+        if (row is ITenantScoped scoped && scoped.TenantId != context.TenantId.Value) return null;
+
+        return JsonSerializer.SerializeToElement(row, entityType.ClrType, TamJson.Options);
+    }
 }
 
 [Operation("rules.define")]
@@ -219,6 +259,39 @@ public static class DefineAutomationRule
             var specs = await registry.For(context.TenantId, TamModel.EntityKey(entity), ct);
             foreach (var spec in specs) known.Add($"ext.{spec.Key}");
         }
+        // docs/22 row.* increment: conditions may read the operation's TARGET row — one row,
+        // resolved from the single input field named {entity}Id, verified here so evaluation
+        // can never reference a field the entity does not have.
+        string? rowEntityKey = null, rowIdField = null;
+        var rowFields = condition.Fields().Where(f => f.StartsWith("row.", StringComparison.Ordinal))
+            .Distinct().ToList();
+        if (rowFields.Count > 0)
+        {
+            var inputNames = operation.InputFields.Select(f => f.WireName)
+                .ToHashSet(StringComparer.Ordinal);
+            var targets = tam.Db.Model.GetEntityTypes()
+                .Select(t => t.ClrType)
+                .Where(t => inputNames.Contains(Naming.Camel(t.Name) + "Id"))
+                .ToList();
+            // RUL004: creates, bulk ops, and anything without exactly ONE {entity}Id input
+            // simply do not offer row.* — the wall is named at define time, not hit at runtime.
+            if (targets.Count != 1)
+                return RuleFindings.NoTargetRow.With(("operation", input.OnOperation))
+                    .At(nameof(Input.Condition));
+            var rowEntity = targets[0];
+            rowEntityKey = TamModel.EntityKey(rowEntity);
+            rowIdField = Naming.Camel(rowEntity.Name) + "Id";
+
+            // RUL002 over the row namespace: compiled members by camel name, extension fields
+            // as row.ext.{key} against the tenant's registry for that entity.
+            var rowKnown = rowEntity.GetProperties(
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                .Select(p => Naming.Camel(p.Name)).ToHashSet(StringComparer.Ordinal);
+            var rowSpecs = await registry.For(context.TenantId, rowEntityKey, ct);
+            foreach (var spec in rowSpecs) rowKnown.Add($"ext.{spec.Key}");
+            foreach (var f in rowFields.Where(f => rowKnown.Contains(f["row.".Length..])))
+                known.Add(f);
+        }
         var unknown = condition.Fields().Distinct().Where(f => !known.Contains(f)).ToList();
         if (unknown.Count > 0)
         {
@@ -248,6 +321,8 @@ public static class DefineAutomationRule
         }
         rule.OnOperation = input.OnOperation;
         rule.ConditionJson = input.Condition;
+        rule.RowEntityKey = rowEntityKey;
+        rule.RowIdField = rowIdField;
         rule.TargetField = input.TargetField;
         rule.MessagesJson = JsonSerializer.Serialize(input.Messages);
         rule.Retired = false;
