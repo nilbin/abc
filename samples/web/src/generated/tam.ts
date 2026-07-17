@@ -938,6 +938,19 @@ export interface RulesListQuery {
   search?: string;
 }
 
+export interface RulesSchemaRow {
+  path: string;
+  labelKey: string;
+  wireKind: string;
+  options: Record<string, unknown>;
+  entityKey: string;
+}
+
+export interface RulesSchemaQuery {
+  trigger?: string;
+  kind?: string;
+}
+
 export interface TenantsListRow {
   id: string;
   displayName: string;
@@ -1563,6 +1576,11 @@ export class TypedTamClient {
   /** view rules.list (requires rules.manage) */
   rulesList(query?: RulesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }> {
     return this.client.view("rules.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RulesListRow[] }>;
+  }
+
+  /** view rules.schema (requires rules.manage) */
+  rulesSchema(query?: RulesSchemaQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: RulesSchemaRow[] }> {
+    return this.client.view("rules.schema", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: RulesSchemaRow[] }>;
   }
 
   /** view tenants.list (requires tenants.read) */

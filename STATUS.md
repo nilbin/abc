@@ -451,6 +451,28 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Rule-builder UI BUILT (docs/22) — the P5 UI slice, "the BE Form way"**: the raw Px-JSON
+  textareas on `rules.define` are replaced by a visual builder — a searchable trigger picker
+  (operation OR event, the two clearing each other), typed condition clauses (field → operator
+  → value), and a set-field/finding/publish-event action editor — all rendered from data the
+  SERVER types. The one thing the manifest can't give (a target ROW's compiled field types) is
+  filled by a new computed **`rules.schema` view** (`?trigger&kind`, behind `rules.manage`):
+  one row per compiled row field `{path, labelKey, wireKind, options, entityKey}` through the
+  same `FieldModel` path that types operation fields, so `row.status` arrives as a string with
+  its enum options and `row.budget` as a number; RUL004-shaped (no single `{entity}Id` → empty),
+  pure and synchronous (extension fields come from the manifest overlay the client already has).
+  The client only ASSEMBLES: `conditionRefs` unions input/payload + extension + row fields,
+  `operatorsFor(wireKind)` picks operators, the value control follows wireKind/options (enum →
+  localized select, number → numeric, date → specific OR relative `fn` "today ± N", boolean →
+  true/false); `buildCondition`/`parseCondition` round-trip losslessly to the Px the evaluator
+  runs, with a raw-JSON "Advanced" fallback for expressions that don't fit the flat clause shape.
+  New renderer props `form`/`setField` let a renderer read/coordinate siblings (the trigger).
+  Honest limit: event payload fields are names-only, so an event trigger's top-level fields
+  default to string/equality while its `row.*` fields get full typing. Verified: 3 backend view
+  tests + an 8-check wire suite on SQLite AND Postgres (schema shape, enum options, excluded
+  extension bag, event target row), rulesgate regression 22/22 on both, web tsc + vite build
+  clean, additive baseline + regenerated typed client, and a UI screenshot of the populated
+  builder with `row.status` offering its localized `Öppen`/`Avslutat` options. **P5 is done.**
 - **Effect-triggered rules BUILT (docs/22) — the last P5 rules slice, built with the user in
   the loop for the dispatcher change**: a rule triggered by a DOMAIN EVENT (`onEvent`) instead
   of an operation, evaluated on the outbox dispatch path after plugin subscribers. Condition
@@ -463,8 +485,8 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   Verified: 3 harness tests + 4 wire checks ("order created → project orders flagged on
   dispatch"), full 16-suite matrix 242/242 on fresh SQLite AND Postgres, additive baseline.
   **P5 rules are now complete** — conditions over input + row state, relative dates, the action
-  catalog, and event triggers. Remaining P-work: the visual rule-builder UI (raw Px JSON today)
-  and P4 custom objects.
+  catalog, and event triggers. (The visual rule-builder UI followed, above; remaining P-work is
+  P4 custom objects.)
 - **P5 rules engine status**: BUILT — Px-conditioned findings; row.* conditions over the
   operation's target row; the PxFn relative-date node; the action catalog (set-field +
   publish-event), hardened by review round 5; and effect-triggered rules (above).

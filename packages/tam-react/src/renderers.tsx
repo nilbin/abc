@@ -16,6 +16,13 @@ export interface FieldRendererProps {
   warning?: string;
   options?: { value: unknown; label: string }[];
   tam: TamContextValue;
+  /** Current wire values of the SIBLING fields on the same form (own fields keyed by wire name).
+   *  A renderer that reacts to another field reads it here — e.g. the rule builder resolving its
+   *  referenceable fields from the chosen trigger. Undefined outside a form context. */
+  form?: Record<string, unknown>;
+  /** Set a SIBLING field's value — for a renderer that coordinates fields (e.g. the trigger
+   *  picker clearing the other trigger so exactly one is set). Undefined outside a form. */
+  setField?: (key: string, value: unknown) => void;
 }
 
 export type FieldRenderer = (props: FieldRendererProps) => React.ReactNode;
@@ -149,6 +156,18 @@ registerRenderer('string-list', function StringList(p: FieldRendererProps) {
     </Stack>
   );
 });
+
+// The rule-builder renderers (docs/22): visual condition/action editors + trigger pickers that
+// resolve their referenceable fields and value options from the server (manifest + rules.schema).
+// Registered here so they load with the form, exactly like the other built-ins; the components
+// live in RuleBuilder.tsx (which imports only types from this module — no runtime cycle).
+import {
+  RuleTriggerOperation, RuleTriggerEvent, RuleConditionField, RuleActionField,
+} from './RuleBuilder';
+registerRenderer('rule-trigger-operation', RuleTriggerOperation);
+registerRenderer('rule-trigger-event', RuleTriggerEvent);
+registerRenderer('rule-condition', RuleConditionField);
+registerRenderer('rule-action', RuleActionField);
 
 export const DefaultRenderer: FieldRenderer = (p) => {
   const common = {

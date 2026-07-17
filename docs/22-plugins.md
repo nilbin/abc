@@ -1,6 +1,6 @@
 # 22 — Plugins: Packaged Extensibility
 
-**Status: P1–P3 and P5-v1 implemented and verified** (packaging, PLG001–PLG005, per-tenant activation, manifest/MCP/OpenAPI omission, 404 gating, packaged fields on host entities, gates on host operations, effect subscribers, **plugin-shipped inbound integrations** (samples/fortnox), tenant packages with dry-run/atomic install/version guard/retire-on-uninstall, and automation rules as Px-conditioned blocking findings with RUL001–003 — see STATUS.md). Plugins compose with **subscription entitlements** (docs/24): activation is gated by the tenant's plan, which is how a marketplace prices them. **P4 (custom objects) and the P5 rule-builder UI are design** — automation rules (conditions over input + `row.*`, relative-date `fn`, the action catalog, and effect-triggered rules) are all built. One correction from implementation: plugins address host entities and operations by *wire key* (`"order"`, `"orders.complete"`), not CLR types — a plugin references the host's contract, never its assembly. Decision summary: D8 in [19-decisions.md](19-decisions.md).
+**Status: P1–P3 and P5-v1 implemented and verified** (packaging, PLG001–PLG005, per-tenant activation, manifest/MCP/OpenAPI omission, 404 gating, packaged fields on host entities, gates on host operations, effect subscribers, **plugin-shipped inbound integrations** (samples/fortnox), tenant packages with dry-run/atomic install/version guard/retire-on-uninstall, and automation rules as Px-conditioned blocking findings with RUL001–003 — see STATUS.md). Plugins compose with **subscription entitlements** (docs/24): activation is gated by the tenant's plan, which is how a marketplace prices them. **P4 (custom objects) is design; the P5 rule-builder UI is built** — automation rules (conditions over input + `row.*`, relative-date `fn`, the action catalog, effect-triggered rules, and the visual builder over the `rules.schema` view) are all built. One correction from implementation: plugins address host entities and operations by *wire key* (`"order"`, `"orders.complete"`), not CLR types — a plugin references the host's contract, never its assembly. Decision summary: D8 in [19-decisions.md](19-decisions.md).
 
 ## The problem this solves
 
@@ -201,13 +201,51 @@ query language:
   (FindAsync bypasses the global filter — the packaged-writer lesson applied); a MISSING
   row means the rule does not fire (the pipeline's own not-found follows), and only a rule
   that cannot EVALUATE emits the non-blocking `rules.evaluation-failed` warning.
-- Client-side parity: rules do not ride the manifest at all yet; when they do, `row.*`
-  rules will be marked server-only (the browser has no row) instead of pretending.
+- Client-side parity: the visual builder (below) resolves `row.*` fields server-side via
+  the `rules.schema` view — the browser has no row, so it asks rather than pretends.
 
 Why this ordering: the action catalog widens what rules can DO; `row.*` widens what they
 can SEE — and the arc showed the seeing gap binds first. Verified: 4 evaluator unit tests
 (fire/quiet/missing-row/tenant-boundary over real Money + enum members) and 6 wire checks
 in the rules suite (define-resolve, block, pass, RUL004, RUL002-over-row, retire).
+
+### The visual rule builder (BUILT — the P5 UI slice)
+
+Authoring a rule as raw Px JSON is fine for the platform team and impossible for an
+admin. The builder replaces the JSON textareas on `rules.define` with a **trigger picker →
+typed condition clauses → set-field/finding/publish-event action**, all rendered from
+data the *server* owns — the "BE Form way": the client contributes pixels, never field
+semantics.
+
+The one thing the manifest cannot supply is the target ROW's field types (compiled entity
+properties are not in the manifest, only operation/view field descriptors), so a small
+computed view fills exactly that gap:
+
+- **`rules.schema` view** (`?trigger={id}&kind=operation|event`, behind `rules.manage`):
+  returns one row per referenceable compiled row field — `{ path, labelKey, wireKind,
+  options, entityKey }` — resolved through the SAME `FieldModel` path that types operation
+  fields, so `row.status` arrives as a `string` carrying its enum options and `row.budget`
+  as a `number`. It mirrors RUL004: a trigger with no single `{entity}Id` returns nothing,
+  so the builder offers neither `row.*` nor set-field for it. Pure and synchronous — the
+  extension fields (`ext.*`, `row.ext.*`) come from the manifest overlay the client already
+  holds, keeping tenant typing where it lives and the view free of the async registry read.
+- **The client assembles**, it does not re-derive: `conditionRefs(manifest, schema, …)`
+  unions the trigger's input/payload fields, its extension fields, and the schema's row
+  fields; `operatorsFor(wireKind)` picks the operator list; the value control is chosen by
+  `wireKind`/`options` (enum → localized select, number → numeric, date → a specific date
+  **or** the relative `fn` "today ± N days", boolean → true/false). All of this is
+  server-authoritative typing — the client only maps a wireKind to a widget.
+- **Round-trips to Px, losslessly**: the clause model serializes to the same portable AST
+  the evaluator runs (`buildCondition`/`buildAction`), and `parseCondition` reads it back;
+  a hand-authored condition that does not fit the flat all/any-of-clauses shape drops to a
+  raw-JSON "Advanced" editor rather than silently losing structure. Honest limitation:
+  event payload fields are declared as NAMES only, so an event trigger's top-level payload
+  fields default to string/equality while its `row.*` fields get full typing.
+
+Verified: 3 backend view tests (typed row fields, empty-for-creates, unknown-trigger) and
+a 8-check wire suite on SQLite **and** Postgres (schema shape, enum options, the excluded
+extension bag, the event target row), plus a UI screenshot of the populated builder with a
+`row.status` value control offering its localized `Öppen`/`Avslutat` options.
 
 ## Where a feature goes: package vs plugin, one vs many
 

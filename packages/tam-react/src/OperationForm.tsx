@@ -185,6 +185,8 @@ export function OperationForm(props: OperationFormProps) {
               warning: warning ? findingMessage(manifest, culture, warning) : undefined,
               options: resolveState?.fields[field.name]?.options,
               tam,
+              form: values,
+              setField,
             })}
           </Box>
         );

@@ -24,14 +24,21 @@ public sealed class TamRulesPackage : ITamPlugin
             .AddOperationType(typeof(DefineAutomationRule))
             .AddOperationType(typeof(RetireRule))
             .AddViewType(typeof(RuleList))
+            .AddViewType(typeof(RuleSchema))
             .Form<DefineAutomationRule.Input>("web.rules.define", "rules.define", form =>
             {
                 form.Field(x => x.Name);
-                form.Field(x => x.OnOperation);
-                form.Field(x => x.Condition).Renderer("multiline");
+                // Trigger: an operation OR a domain event (exactly one — the pickers clear the
+                // other). Searchable selects over the manifest, not free-typed ids.
+                form.Field(x => x.OnOperation).Renderer("rule-trigger-operation");
+                form.Field(x => x.OnEvent).Renderer("rule-trigger-event");
+                // The visual builders (docs/22): the condition/action editors resolve their
+                // referenceable fields, operators and value options from the chosen trigger via
+                // the rules.schema view — server-authoritative typing, no hand-authored Px JSON.
+                form.Field(x => x.Condition).Renderer("rule-condition");
                 form.Field(x => x.Messages).Renderer("culture-text");
                 form.Field(x => x.TargetField);
-                form.Field(x => x.Action).Renderer("multiline");
+                form.Field(x => x.Action).Renderer("rule-action");
             })
             .Grid<RuleList.Result>("web.rules", "rules.list", grid =>
             {
@@ -694,4 +701,111 @@ public static class RuleList
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>
         caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
+}
+
+/// <summary>
+/// The rule-builder's server-authoritative schema (docs/22): given the chosen trigger, the ONE
+/// thing the manifest cannot supply — the TARGET ROW entity's identity and its compiled field
+/// types. The client already holds the trigger's input/payload fields and every entity's
+/// extension fields (the manifest), and derives operators + value controls from each field's
+/// wireKind; only the row.* namespace needs the server, because compiled entity property types
+/// are not in the manifest. Returns one Result per referenceable compiled row field, or nothing
+/// when the trigger has no single {entity}Id target row (creates, bulk ops, id-less events) —
+/// the same RUL004 shape the define operation enforces, so the builder offers exactly what a
+/// rule may reference. Pure, synchronous, tenant-agnostic (compiled model only): extension typing
+/// stays in the manifest overlay where it already lives.
+/// </summary>
+[View("rules.schema")]
+[Authorize("rules.manage")]
+public static class RuleSchema
+{
+    /// <param name="Trigger">Operation id or event type to describe.</param>
+    /// <param name="Kind">"operation" (default) or "event".</param>
+    public sealed record Query(string? Trigger = null, string? Kind = null);
+
+    public sealed record Result
+    {
+        /// <summary>The Px field path a condition references, e.g. "row.status".</summary>
+        public string Path { get; init; } = "";
+        /// <summary>Catalog key for the field's label (client localizes; falls back to the path).</summary>
+        public string LabelKey { get; init; } = "";
+        /// <summary>The field's wire kind — the client maps it to operators and a value control.</summary>
+        public string WireKind { get; init; } = "";
+        /// <summary>Enum/selection values, empty for free values.</summary>
+        public IReadOnlyList<string> Options { get; init; } = [];
+        /// <summary>The target row entity's key — the client pulls its extension fields
+        /// (row.ext.* references and set-field targets) from the manifest overlay.</summary>
+        public string EntityKey { get; init; } = "";
+    }
+
+    public static IQueryable<Result> Execute(Query query, TamModel model, ITamDb tam)
+    {
+        var empty = Enumerable.Empty<Result>().AsQueryable();
+        if (string.IsNullOrEmpty(query.Trigger)) return empty;
+
+        // The field names the trigger offers at the TOP level — used only to find the {entity}Id
+        // that names the target row (the reference typing itself is the manifest's job).
+        HashSet<string> triggerFields;
+        if (string.Equals(query.Kind, "event", StringComparison.Ordinal))
+        {
+            if (!model.Events.TryGetValue(query.Trigger, out var declared)) return empty;
+            triggerFields = declared.Fields.ToHashSet(StringComparer.Ordinal);
+        }
+        else
+        {
+            if (!model.Operations.TryGetValue(query.Trigger, out var operation)) return empty;
+            triggerFields = operation.InputFields.Select(f => f.WireName).ToHashSet(StringComparer.Ordinal);
+        }
+
+        // RUL004 mirror: exactly one {entity}Id names the target row; otherwise there is no
+        // row.* namespace and no set-field, so the builder offers neither.
+        var targets = tam.Db.Model.GetEntityTypes()
+            .Select(t => t.ClrType)
+            .Where(t => triggerFields.Contains(Naming.Camel(t.Name) + "Id"))
+            .Distinct()
+            .ToList();
+        if (targets.Count != 1) return empty;
+        var rowEntity = targets[0];
+        var entityKey = TamModel.EntityKey(rowEntity);
+
+        // The compiled scalar properties, typed exactly as operation/view fields are (same
+        // FieldModel path), so wireKind, enum options and label keys match everything else the
+        // client renders. Non-scalar members (navigations, collections, the extension bag) never
+        // JSON-serialize to a comparable value, so they are not offered.
+        var nullability = new System.Reflection.NullabilityInfoContext();
+        var results = rowEntity.GetProperties(
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Where(p => p.CanRead && IsScalar(p.PropertyType))
+            .Select(p =>
+            {
+                var field = FieldModel.From(p, nullability);
+                return new Result
+                {
+                    Path = "row." + field.WireName,
+                    LabelKey = field.LabelKey,
+                    WireKind = field.Semantic.WireKind,
+                    Options = field.EnumOptions ?? [],
+                    EntityKey = entityKey,
+                };
+            })
+            .OrderBy(r => r.Path, StringComparer.Ordinal)
+            .ToList();
+        return results.AsQueryable();
+    }
+
+    /// <summary>A property whose value JSON-serializes to something a Px condition can compare:
+    /// primitives, enums, dates, and single-value wrappers over them (Nullable unwrapped).
+    /// Navigations, collections and the extension bag are excluded.</summary>
+    private static bool IsScalar(Type type)
+    {
+        var t = Nullable.GetUnderlyingType(type) ?? type;
+        if (ValueWrapper.IsWrapper(t)) t = ValueWrapper.UnderlyingType(t) ?? t;
+        t = Nullable.GetUnderlyingType(t) ?? t;
+        return t.IsEnum
+            || t == typeof(string) || t == typeof(bool) || t == typeof(Guid)
+            || t == typeof(int) || t == typeof(long) || t == typeof(short) || t == typeof(byte)
+            || t == typeof(decimal) || t == typeof(double) || t == typeof(float)
+            || t == typeof(DateOnly) || t == typeof(DateTimeOffset) || t == typeof(DateTime)
+            || t == typeof(TimeOnly);
+    }
 }
