@@ -13,9 +13,16 @@ export interface TamContextValue {
   t: (key: string, args?: Record<string, unknown>) => string;
   /** Effective-permission check from the manifest's actor overlay (decision D1). */
   can: (permission: string) => boolean;
-  /** Subscribe to committed-operation effects over SSE (decision D5); returns unsubscribe.
-   *  Identity is stable across renders — safe to use directly in effect dependencies. */
-  subscribeEffects: (callback: () => void) => () => void;
+  /**
+   * The data-invalidation bus (decision D5). A single monotonic counter that bumps whenever
+   * server data changed — a committed write (form success, row action) OR a committed effect
+   * arriving over SSE (debounced, so bursts collapse into one bump). Anything reading server
+   * data depends on it and reloads; this ONE signal replaces the old refreshKey prop / internal
+   * localRefresh state / per-grid SSE subscription / onAction callback tangle.
+   */
+  dataVersion: number;
+  /** Publish to the bus: a write committed, reload every subscribed view now (no SSE wait). */
+  invalidate: () => void;
 }
 
 const TamContext = createContext<TamContextValue | null>(null);
@@ -33,7 +40,9 @@ export function TamProvider(props: {
 }) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [culture, setCultureState] = useState(props.initialCulture ?? props.client.culture);
-  const effectListeners = useRef(new Set<() => void>());
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const invalidate = useCallback(() => setDataVersion(v => v + 1), []);
 
   const refreshManifest = useCallback(async () => {
     setManifest(await props.client.manifest());
@@ -42,19 +51,17 @@ export function TamProvider(props: {
   useEffect(() => { void refreshManifest(); }, [refreshManifest]);
 
   useEffect(() => {
-    // EventSource cannot set headers, so the acting-company header (docs/26 D-H4) rides a query
-    // param instead — the server applies the same standable validation either way.
+    // Committed effects (D5) publish to the ONE bus, debounced so a burst collapses into a
+    // single reload across every subscribed view. EventSource cannot set headers, so the
+    // acting-company header (docs/26 D-H4) rides a query param instead — the server applies
+    // the same standable validation either way.
     const actAs = props.client.actingAs;
     const query = actAs ? `?actAs=${encodeURIComponent(actAs)}` : '';
     const source = new EventSource(`${props.client.baseUrl}/api/events${query}`);
-    source.onmessage = () => effectListeners.current.forEach(listener => listener());
-    return () => source.close();
-  }, [props.client.baseUrl, props.client.actingAs]);
-
-  const subscribeEffects = useCallback((callback: () => void) => {
-    effectListeners.current.add(callback);
-    return () => { effectListeners.current.delete(callback); };
-  }, []);
+    let timer: ReturnType<typeof setTimeout>;
+    source.onmessage = () => { clearTimeout(timer); timer = setTimeout(invalidate, 400); };
+    return () => { clearTimeout(timer); source.close(); };
+  }, [props.client.baseUrl, props.client.actingAs, invalidate]);
 
   const setCulture = useCallback((next: string) => {
     props.client.culture = next;
@@ -74,11 +81,27 @@ export function TamProvider(props: {
         || granted.includes(permission)
         || granted.includes(`${permission}:own`);
     },
-    subscribeEffects,
-  }), [manifest, culture, props.client, setCulture, refreshManifest, subscribeEffects]);
+    dataVersion,
+    invalidate,
+  }), [manifest, culture, props.client, setCulture, refreshManifest, dataVersion, invalidate]);
 
   if (!value) {
     return <Group justify="center" p="xl"><Loader /></Group>;
   }
   return <TamContext.Provider value={value}>{props.children}</TamContext.Provider>;
+}
+
+/**
+ * Runs `callback` whenever data is invalidated — NOT on mount. For side effects a bare view
+ * reload doesn't cover: an admin surface refetching the effective manifest after a write that
+ * changed permissions, nav, or fields (grids already reload off `dataVersion` themselves).
+ */
+export function useInvalidation(callback: () => void): void {
+  const { dataVersion } = useTam();
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    callback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataVersion]);
 }

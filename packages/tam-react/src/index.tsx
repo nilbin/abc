@@ -2,7 +2,7 @@
 // with a default renderer pack built on Mantine. Server-defined semantics, client-defined
 // presentation (docs/06): nothing here knows about orders or customers.
 
-export { TamProvider, useTam } from './context';
+export { TamProvider, useTam, useInvalidation } from './context';
 export type { TamContextValue } from './context';
 export { registerRenderer, DefaultRenderer, cultureText, keyValueMap } from './renderers';
 export type { FieldRenderer, FieldRendererProps } from './renderers';

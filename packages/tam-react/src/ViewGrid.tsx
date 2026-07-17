@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Badge, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text,
+  Alert, Badge, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text,
   Title, UnstyledButton,
 } from '@mantine/core';
 import { GridAction, ManifestField, enumLabel, toWireEnum } from '@tam/core';
@@ -13,8 +13,6 @@ export interface ViewGridProps {
   grid: string;
   query?: Record<string, unknown>;
   onRowClick?: (row: Record<string, unknown>) => void;
-  refreshKey?: number;
-  onAction?: () => void;
   pageSize?: number;
   /** Read/act in another standable node (docs/26 D-H4) — slot panels on cross-company rows. */
   actAs?: string;
@@ -22,7 +20,7 @@ export interface ViewGridProps {
 
 export function ViewGrid(props: ViewGridProps) {
   const tam = useTam();
-  const { manifest, client, t, culture, can, subscribeEffects } = tam;
+  const { manifest, client, t, culture, can, dataVersion, invalidate } = tam;
   const gridDef = manifest.grids[props.grid];
   if (!gridDef) throw new Error(`Unknown grid '${props.grid}'`);
   const view = manifest.views[gridDef.view];
@@ -54,10 +52,10 @@ export function ViewGrid(props: ViewGridProps) {
   const [sort, setSort] = useState<string | undefined>(view.defaultSort);
   const [desc, setDesc] = useState(view.defaultSortDescending);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   // The open form modal: an operation, plus initial values when opened as a row EDIT (RowForm).
   const [modalAction, setModalAction] =
     useState<{ operation: string; initial?: Record<string, unknown> } | null>(null);
-  const [localRefresh, setLocalRefresh] = useState(0);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const pageSize = props.pageSize ?? 15;
 
@@ -112,24 +110,17 @@ export function ViewGrid(props: ViewGridProps) {
     client.view(gridDef.view, {
       ...props.query, ...filters, page, pageSize, sort, dir: desc ? 'desc' : 'asc',
     }, props.actAs ? { actAs: props.actAs } : undefined).then(result => {
-      if (!cancelled) { setRows(result.rows); setTotal(result.total); }
-    }).finally(() => { if (!cancelled) setLoading(false); });
+      if (!cancelled) { setRows(result.rows); setTotal(result.total); setLoadError(false); }
+    }).catch(() => { if (!cancelled) setLoadError(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
+    // dataVersion is the invalidation bus (context): a committed write or a debounced SSE burst
+    // bumps it and every subscribed view reloads — the one dependency that used to be three.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, gridDef.view, page, pageSize, sort, desc, culture,
-      props.refreshKey, localRefresh, queryKey]);
+  }, [client, gridDef.view, page, pageSize, sort, desc, culture, dataVersion, queryKey]);
 
-  const refresh = () => { setLocalRefresh(x => x + 1); props.onAction?.(); };
-
-  // Live refresh from committed effects (D5): debounced, so bursts collapse into one reload.
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    const unsubscribe = subscribeEffects(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => setLocalRefresh(x => x + 1), 400);
-    });
-    return () => { clearTimeout(timer); unsubscribe(); };
-  }, [subscribeEffects]);
+  // A committed write reloads this grid AND any sibling reading the same data — one bus bump.
+  const refresh = () => invalidate();
 
   const cell = (row: Record<string, unknown>, field: ManifestField): React.ReactNode => {
     const value = field.extension
@@ -221,6 +212,10 @@ export function ViewGrid(props: ViewGridProps) {
           ))}
         </Group>
       </Group>
+
+      {loadError && (
+        <Alert color="red" variant="light">{t('grid.load-failed')}</Alert>
+      )}
 
       <Table.ScrollContainer minWidth={720}>
         <Table striped highlightOnHover withTableBorder>

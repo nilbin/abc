@@ -474,6 +474,24 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 3a — the invalidation bus (FE structural pass, slice 1)**: the review's
+  headline FE tangle collapsed. Four parallel "reload this grid" mechanisms — a `refreshKey`
+  prop threaded parent→grid, an internal `localRefresh` counter, an `onAction` callback bubbled
+  up for manifest refresh, and a per-grid SSE `subscribeEffects` debounce — became ONE concept:
+  `dataVersion` + `invalidate()` on the context (`@tam/react`). A committed write (form success,
+  row action) or a committed effect over SSE (now debounced once, centrally) bumps the counter;
+  every subscribed view depends on it and reloads. ViewGrid lost three props and its own SSE
+  wiring; ModelPage's record-form success calls `invalidate()` instead of bumping a private key
+  (so the primary grid reloads through the bus, not cross-component plumbing); the
+  manifest-refresh-after-admin-write policy moved to ONE place — a `GenericGrids` wrapper that
+  `useInvalidation(refreshManifest)` — so declared domain pages no longer over-refetch the
+  manifest on every order create. The grid also gained a real fetch-error surface (`loadError`
+  → a localized Alert, `grid.load-failed`) where a failed view load used to silently show an
+  empty table. Verified: web tsc + vite build; unit suites 163+38; wire 18+22 on fresh SQLite
+  AND Postgres; Playwright drove a live create — the orders grid reloaded 6→7 rows with the
+  modal auto-closing, proving the bus end to end (screenshots). Remaining arc-3 items
+  (display-renderer registry, URL-backed nav, ModelPage record-identity cleanup, hardcoded
+  strings → locale keys, typed-client decision) are the next slice.
 - **Beauty arc 2b — plugin ergonomics**: the authoring surface a vendor actually touches,
   deburred. (1) TYPED WIRE READS: new core `WireValues` — one accessor family over gate
   inputs, effect payloads and host view rows (`gate.Guid("orderId")`,

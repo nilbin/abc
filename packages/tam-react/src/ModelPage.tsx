@@ -12,11 +12,10 @@ import { PluginSlot } from './PluginSlot';
  * remains the escape hatch for genuinely custom pages.
  */
 export function ModelPage(props: { page: string }) {
-  const { manifest, client, t, can, refreshManifest } = useTam();
+  const { manifest, client, t, can, invalidate } = useTam();
   const page = manifest.pages?.[props.page];
   const [record, setRecord] = useState<Record<string, unknown> | null>(null);
   const [rowTenant, setRowTenant] = useState<string | undefined>(undefined);
-  const [refreshKey, setRefreshKey] = useState(0);
   if (!page) throw new Error(`Unknown page '${props.page}'`);
   const rec = page.record;
   const primaryGrid = page.sections.find(s => s.kind === 'grid')?.id;
@@ -54,7 +53,7 @@ export function ModelPage(props: { page: string }) {
             .map(f => [f.name, f.name === rec.key ? record.__rowId : record[f.name]])
             .filter(([, v]) => v !== undefined))}
           initialExtensions={(record.extensions as Record<string, unknown>) ?? {}}
-          onSuccess={() => { setRecord(null); setRefreshKey(k => k + 1); }}
+          onSuccess={() => { setRecord(null); invalidate(); }}
         />
       );
     }
@@ -76,8 +75,6 @@ export function ModelPage(props: { page: string }) {
               <ViewGrid
                 grid={section.id}
                 onRowClick={rec && section.id === primaryGrid ? row => void openRecord(row) : undefined}
-                refreshKey={refreshKey}
-                onAction={() => void refreshManifest()}
               />
             )
             : <PluginSlot id={section.id} context={{}} />}

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { NavLink, SegmentedControl, Stack, Tabs } from '@mantine/core';
 import type { Manifest, NavNode } from '@tam/core';
-import { useTam } from './context';
+import { useTam, useInvalidation } from './context';
 import { ViewGrid } from './ViewGrid';
 import { ModelPage } from './ModelPage';
 
@@ -155,10 +155,23 @@ export function NavTabs() {
   );
 }
 
+/** The generic (admin) grid surfaces: a bare view grid, or the per-plugin grid stack. A write
+ *  on one of these can flip the effective manifest (activation, role edits, tenant moves, field
+ *  definitions), so it subscribes to the invalidation bus and refetches the manifest — the ONE
+ *  place that policy lives now, instead of an onAction callback threaded through every grid.
+ *  Declared domain pages (ModelPage) never mount this, so an order create never refetches. */
+function GenericGrids(props: { grids: string[] }) {
+  const { refreshManifest } = useTam();
+  useInvalidation(() => void refreshManifest());
+  return props.grids.length === 1
+    ? <ViewGrid grid={props.grids[0]} />
+    : <Stack gap="lg">{props.grids.map(id => <ViewGrid key={id} grid={id} />)}</Stack>;
+}
+
 /** Renders the ACTIVE page: registered custom page, single grid, or the generic per-plugin
  *  grid stack (the mechanical fallback — PluginPage, absorbed into the framework). */
 export function NavPage() {
-  const { manifest, refreshManifest } = useTam();
+  const { manifest } = useTam();
   const nav = useNav();
   const node = nav.activeSub ?? nav.active;
   if (!node?.target) return null;
@@ -169,19 +182,12 @@ export function NavPage() {
     if (manifest.pages?.[node.target.page]) return <ModelPage page={node.target.page} />;
     return null;
   }
-  // Generic pages refresh the manifest after any action (one GET): activation, role edits,
-  // tenant moves and field definitions all flip the effective manifest.
-  const onAction = () => void refreshManifest();
-  if (node.target.grid) return <ViewGrid grid={node.target.grid} onAction={onAction} />;
+  if (node.target.grid) return <GenericGrids grids={[node.target.grid]} />;
   if (node.target.plugin) {
     const grids = Object.entries(manifest.grids)
       .filter(([, g]) => g.plugin === node.target!.plugin)
       .map(([id]) => id);
-    return (
-      <Stack gap="lg">
-        {grids.map(id => <ViewGrid key={id} grid={id} onAction={onAction} />)}
-      </Stack>
-    );
+    return <GenericGrids grids={grids} />;
   }
   return null;
 }
