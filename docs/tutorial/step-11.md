@@ -89,11 +89,44 @@ What this harness deliberately does NOT cover: HTTP concerns (auth handshakes, h
 status codes — the wire suites' job), the React runtime, and cross-instance behavior
 (SSE backplane, outbox dispatch timing). Those stay verified against the running sample.
 
-**Outbox caveat (M6 finding):** the harness WRITES outbox rows (`ShouldPublish` asserts the
-record) but never DISPATCHES them — no background services run, so `[OnEffect]` subscribers
-do not fire inside a test. Asserting subscriber behavior today means either driving the
-subscriber's effects through their own operations, or running the production dispatcher
-against the harness database (awkward — see the docs/34 friction log; a
-`DispatchOutboxAsync()` seam on the host is the logged candidate fix).
+**The outbox is under the TEST'S control:** the harness runs no background loops, so an
+operation's `ShouldPublish` asserts the outbox ROW — subscribers have not fired yet. When a
+test needs subscriber effects (a plugin reacting to an event), it says so:
+
+```csharp
+(await admin.ExecuteAsync("orders.create", new { ... })).ShouldSucceed();
+await host.DispatchOutboxAsync();   // the production dispatch pass, on demand
+// ...assert what the subscriber wrote
+```
+
+`DispatchOutboxAsync` drains every due row with production semantics (claim-lease, tenant
+pinning per record, plugin-activation gating, poison isolation) and returns how many rows
+finished. Deterministic by construction — no polling, no timing (an M6 RTFM finding: the
+first consumer had to hand-build this; now it is the API).
+
+## The harness surface (the whole of it)
+
+- `TamTestHost<TDb>.CreateSqliteAsync(model)` — isolated in-memory SQLite, schema created,
+  gone on dispose. `CreateAsync(model, options => options.UseNpgsql(...), configureServices)`
+  is the provider-true overload.
+- `host.Actor(tenant, ...atoms)` — a (tenant, grant-set) caller. `ActorWithId(tenant, id,
+  ...atoms)` fixes the actor id for own-scope scenarios (the id rows record as owner).
+- `actor.ExecuteAsync(operationId, input, idempotencyKey?)` — full pipeline; `input` is any
+  object whose JSON matches the Input record (`Change` fields:
+  `new { original = ..., value = ... }`).
+- `actor.QueryAsync(viewId, query?)` — wire-shaped query params (`sort`, `page`, filters,
+  `ext.key`).
+- `host.SeedAsync(tenant, db => ...)` — arrange state in an ambient tenant scope (global
+  filter + stamping active); saves on return. `QueryDbAsync(tenant, db => ...)` is the
+  read twin.
+- `host.DispatchOutboxAsync()` — above. `host.Model` — the built model.
+- `CapabilitySweep.RunAsync(host, actor factory)` — next section.
+- There is deliberately NO service-provider accessor: the pipeline is the API. Needing one
+  is a signal the scenario belongs in a wire suite.
+
+**Testing plugin activation**: entitle the plan, then activate through the front door —
+seed a `SubscriptionEntity` (`EntitlementsJson: ["yourplugin"]`) in `SeedAsync`, then
+`ExecuteAsync("plugins.activate", new { pluginId = "yourplugin" })` as an actor holding
+`plugins.manage`. That is the admin's real path, entitlement gate included.
 
 ---

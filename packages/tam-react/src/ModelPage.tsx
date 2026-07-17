@@ -66,17 +66,23 @@ export function ModelPage(props: { page: string }) {
 
   return (
     <Stack gap="lg">
-      {page.sections.map(section => section.kind === 'grid'
-        ? (
-          <ViewGrid
-            key={section.id}
-            grid={section.id}
-            onRowClick={rec && section.id === primaryGrid ? row => void openRecord(row) : undefined}
-            refreshKey={refreshKey}
-            onAction={() => void refreshManifest()}
-          />
-        )
-        : <PluginSlot key={section.id} id={section.id} context={{}} />)}
+      {page.sections.map(section => (
+        <Stack key={section.id} gap="xs">
+          {/* Multi-section pages label their sections (docs/34 M6) — the key is
+              L10N001-gated server-side, so t() always has text. */}
+          {section.headingKey && <Title order={5}>{t(section.headingKey)}</Title>}
+          {section.kind === 'grid'
+            ? (
+              <ViewGrid
+                grid={section.id}
+                onRowClick={rec && section.id === primaryGrid ? row => void openRecord(row) : undefined}
+                refreshKey={refreshKey}
+                onAction={() => void refreshManifest()}
+              />
+            )
+            : <PluginSlot id={section.id} context={{}} />}
+        </Stack>
+      ))}
       {rec && (
         <Modal opened={record !== null} onClose={() => setRecord(null)}
           title={<Title order={4}>{title}</Title>} size="lg">

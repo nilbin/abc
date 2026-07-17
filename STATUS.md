@@ -451,6 +451,20 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **M6 triage: the RTFM report's framework asks, built same-day**:
+  `TamTestHost.DispatchOutboxAsync()` (outbox dispatch on the test's clock — production
+  claim-lease/tenant-pinning/poison semantics via the dispatcher's extracted
+  `DispatchPendingAsync`; the M6 tests' hand-built dispatcher contortion is deleted),
+  `FormFieldBuilder.EnumOptions("order-type")` (a plugin form offers another module's enum
+  vocabulary as options through the model's new `Enums` registry — kebab wire name, no CLR
+  coupling, ENUM001 at Build; adopted by inspect's template form, closing the free-text
+  order-type wart), page section headings (`Grid(id, heading: "headings.key")` —
+  locale-keyed, L10N001-gated, rendered by ModelPage; the templates page's two grids are
+  now labeled), and the M6 doc batch: Step 11 harness API reference + plugin-activation
+  testing recipe, docs/22 authoring additions, docs/31 multi-panel note, docs/32 row-action
+  paragraph corrected against the code (row actions execute with same-name/row-id fallback —
+  they never opened prefilled forms; typed-input operations belong on record surfaces or
+  toolbars).
 - **Field-service arc M6 (docs/34): Inspect v2 — checklists by order type, built DOCS-ONLY
   by RTFM agent #2 (zero framework edits, zero React)**: the P2 proof-piece plugin became a
   real feature. Tenant-defined checklist TEMPLATES keyed on order type (an opaque wire

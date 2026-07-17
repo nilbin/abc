@@ -154,7 +154,7 @@ public sealed record ManifestEvent(
 public sealed record ManifestPage(
     IReadOnlyList<ManifestPageSection> Sections, ManifestRecord? Record);
 
-public sealed record ManifestPageSection(string Kind, string Id);
+public sealed record ManifestPageSection(string Kind, string Id, string? HeadingKey = null);
 
 public sealed record ManifestRecord(
     string DetailView, string Key, string? TitleField,
@@ -231,6 +231,10 @@ public static class ManifestBuilder
                         VisibleWhen = config.VisibleWhen,
                         RequiredWhen = config.RequiredWhen,
                         ReadOnly = field.ReadOnly || config.ReadOnly,
+                        // docs/34 M6: a string field borrowing another module's enum vocabulary
+                        // becomes a selection over the registry's values (ENUM001-verified).
+                        Type = config.OptionsFromEnum is null ? field.Type : "selection",
+                        Options = config.OptionsFromEnum is { } e ? model.Enums[e] : field.Options,
                     };
                 }).ToList();
 
@@ -296,7 +300,7 @@ public static class ManifestBuilder
                 .ToDictionary(
                 kv => kv.Key,
                 kv => new ManifestPage(
-                    kv.Value.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id)).ToList(),
+                    kv.Value.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id, sec.HeadingKey)).ToList(),
                     kv.Value.Record is { } r
                         ? new ManifestRecord(r.DetailViewId, r.ContextKey, r.TitleField,
                             r.Sections.Select(sec => new ManifestPageSection(sec.Kind, sec.Id)).ToList())

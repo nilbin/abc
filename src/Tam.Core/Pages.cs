@@ -9,7 +9,7 @@ namespace Tam;
 
 /// <summary>One page-level section: a grid, or a slot (page-level slots carry no record
 /// context — their panels render unbound, e.g. dashboard-style plugin widgets).</summary>
-public sealed record PageSection(string Kind, string Id)
+public sealed record PageSection(string Kind, string Id, string? HeadingKey = null)
 {
     public const string GridKind = "grid";
     public const string SlotKind = "slot";
@@ -50,17 +50,19 @@ public sealed class PageBuilder
     private RecordDefinition? record;
 
     /// <summary>A grid section. The FIRST grid's rows open the record surface (if declared);
-    /// later grids are additional listings. Declaration order is layout order.</summary>
-    public PageBuilder Grid(string id)
+    /// later grids are additional listings. Declaration order is layout order. A page with
+    /// several sections labels them via <paramref name="heading"/> — a locale KEY (docs/34 M6;
+    /// L10N001-gated), never text; a single-section page usually needs none.</summary>
+    public PageBuilder Grid(string id, string? heading = null)
     {
-        sections.Add(new PageSection(PageSection.GridKind, id));
+        sections.Add(new PageSection(PageSection.GridKind, id, heading));
         return this;
     }
 
     /// <summary>A page-level slot section: plugin panels without record context.</summary>
-    public PageBuilder Slot(string slotId)
+    public PageBuilder Slot(string slotId, string? heading = null)
     {
-        sections.Add(new PageSection(PageSection.SlotKind, slotId));
+        sections.Add(new PageSection(PageSection.SlotKind, slotId, heading));
         return this;
     }
 

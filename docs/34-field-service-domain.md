@@ -290,3 +290,16 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   wire message chain worked first try; and the docs/22 authoring reference plus invoicing's
   IPluginPart shape were enough to structure the whole plugin without seeing a line of
   framework source. Doc errors found and FIXED this round: ITamDb's namespace in docs/22.
+- (M6 triage, resolutions) The report's four candidates all landed the same day:
+  `TamTestHost.DispatchOutboxAsync()` — the production dispatch pass callable on demand
+  (the dispatcher's tick extracted as `DispatchPendingAsync`; InspectV2Tests' five-step
+  contortion deleted and rebuilt on the API); `.EnumOptions("order-type")` on form fields —
+  another module's enum vocabulary as options via the model's new enum registry, ENUM001-
+  verified (the template form's free-text wart closed; typo now = build error, not a dead
+  template); page section HEADINGS — `Grid(id, heading: "headings.key")`, locale-keyed and
+  L10N001-gated, rendered by ModelPage (the templates page's two grids now read as two
+  surfaces); and the doc batch — Step 11 gained the full harness API reference plus the
+  activation-testing recipe, docs/22 the cross-module-options/multi-panel/testing bullets,
+  docs/31 the multi-panel note, and docs/32's row-action paragraph was corrected against
+  the CODE (row actions EXECUTE with same-name/row-id fallback; they never opened forms —
+  the M3-era text described a design, not the build).

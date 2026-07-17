@@ -132,7 +132,9 @@ plugin.Panel("web.orders.detail", grid: "invoicing.web.invoices",
     bind => bind.Query("orderId", fromContext: "orderId"));                        // plugin
 ```
 
-PLG007 validates slot existence + bind shape; the manifest gains `slots`; `@tam/react` ships
+PLG007 validates slot existence + bind shape (a plugin may contribute SEVERAL panels to one
+slot — they render in contribution order; the inspect plugin's checklists + line-items pair
+on `web.orders.detail` is the shipped example); the manifest gains `slots`; `@tam/react` ships
 `<PluginSlot id context>`; the host's custom page drops one line in and every current and
 future plugin lands there unnamed. **Deferred** because Step 17 degrades gracefully without it
 (the host can `Place()` the plugin's invoices page as a tab beside Orders today) and because

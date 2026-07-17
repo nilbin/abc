@@ -98,7 +98,7 @@ export interface Manifest {
   /** Framework-composed pages (docs/32): ORDERED sections (grids + slots) and an optional
    *  record surface whose sections (forms + slots) render in declaration order. */
   pages?: Record<string, {
-    sections: { kind: 'grid' | 'slot'; id: string }[];
+    sections: { kind: 'grid' | 'slot'; id: string; headingKey?: string }[];
     record?: {
       detailView: string; key: string; titleField?: string;
       sections: { kind: 'form' | 'slot'; id: string }[];

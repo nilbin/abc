@@ -102,9 +102,15 @@ internal sealed class TemplateAdminSurface : IPluginPart
 {
     public void Configure(PluginBuilder plugin)
     {
-        // No configure: the record IS the form (docs/32 D-P6).
         plugin.Form<DefineTemplate.Input>(
-            "inspect.web.templates.define", "inspect.templates.define");
+            "inspect.web.templates.define", "inspect.templates.define", form =>
+        {
+            form.Field(x => x.Name);
+            // The HOST's order-type vocabulary as options, without referencing its CLR enum
+            // (docs/34 M6): a typo can no longer define a template that never fires.
+            form.Field(x => x.OrderType).EnumOptions("order-type");
+            form.Field(x => x.Mandatory);
+        });
 
         // Reached as a row action on the templates grid — the template arrives prefilled.
         plugin.Form<AddTemplateItem.Input>(
@@ -125,10 +131,11 @@ internal sealed class TemplateAdminSurface : IPluginPart
         plugin.Grid<TemplateItemList.Result>(
             "inspect.web.template-items", "inspect.templates.items");
 
-        // Templates, then every line they will stamp — ordered sections (docs/32 D-P4).
+        // Templates, then every line they will stamp — ordered sections (docs/32 D-P4),
+        // labeled so the two grids read as two surfaces (docs/34 M6 headings).
         plugin.Page("inspect.templates", page => page
-            .Grid("inspect.web.templates")
-            .Grid("inspect.web.template-items"));
+            .Grid("inspect.web.templates", heading: "inspect.headings.templates")
+            .Grid("inspect.web.template-items", heading: "inspect.headings.template-items"));
 
         plugin.Nav(nav => nav.Page("inspect.templates",
             page: "inspect.templates", suggest: "administration", order: 60));

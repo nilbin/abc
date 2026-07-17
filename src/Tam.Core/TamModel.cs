@@ -59,6 +59,12 @@ public sealed class TamModel
     /// both, which is how projects once inherited "Order number". Hosts log these at startup.</summary>
     public IReadOnlyList<string> Warnings { get; init; } = [];
 
+    /// <summary>Every enum the model's fields use, by kebab wire name ("order-type") — the
+    /// registry a plugin form references with .EnumOptions() to offer another module's
+    /// vocabulary without CLR coupling (docs/34 M6; verified by ENUM001).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> Enums { get; init; } =
+        new Dictionary<string, IReadOnlyList<string>>();
+
     /// <summary>Plugin panels in host slots, by slot id (docs/31 D-X4).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<PanelContribution>> Panels { get; init; } =
         new Dictionary<string, IReadOnlyList<PanelContribution>>();

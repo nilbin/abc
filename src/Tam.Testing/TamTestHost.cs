@@ -91,6 +91,31 @@ public sealed class TamTestHost<TDb> : IAsyncDisposable where TDb : DbContext
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Dispatches every due outbox row NOW, exactly as the production background dispatcher
+    /// would (claim-lease, per-record tenant pinning, plugin activation gating, poison
+    /// isolation) — the harness runs no background services, so subscriber effects only happen
+    /// when a test asks for them. Deterministic by design: call it after the operation that
+    /// published the event, then assert the subscriber's writes. Loops until a pass moves
+    /// nothing (rows that failed and are inside their retry lease stay pending — like
+    /// production, delivery is at-least-once and subscribers are idempotent). Returns the
+    /// number of rows dispatched or dead-lettered.
+    /// </summary>
+    public async Task<int> DispatchOutboxAsync(CancellationToken ct = default)
+    {
+        var dispatcher = new OutboxDispatcher(
+            services.GetRequiredService<IServiceScopeFactory>(),
+            s => s.GetRequiredService<TDb>(),
+            Model);
+        var total = 0;
+        while (true)
+        {
+            var finished = await dispatcher.DispatchPendingAsync(ct);
+            if (finished == 0) return total;
+            total += finished;
+        }
+    }
+
     /// <summary>Read-side twin of <see cref="SeedAsync"/>.</summary>
     public async Task<T> QueryDbAsync<T>(string tenantId, Func<TDb, Task<T>> query)
     {

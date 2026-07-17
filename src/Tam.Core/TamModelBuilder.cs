@@ -396,6 +396,7 @@ public sealed partial class TamModelBuilder
             Pages = pages,
             Slots = slots,
             Warnings = CollectLabelWarnings(operations, views),
+            Enums = CollectEnums(operations, views),
             Panels = panels.GroupBy(p => p.SlotId)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<PanelContribution>)g.ToList()),
             Events = events,
@@ -420,6 +421,7 @@ public sealed partial class TamModelBuilder
         VerifySlotsAndEvents(model, eventRequirements);
         VerifyPages(model);
         VerifyLookups(model);
+        VerifyEnumOptions(model);
         VerifyLocalization(model, catalogs);
         return model;
     }

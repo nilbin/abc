@@ -387,6 +387,36 @@ public sealed partial class TamModelBuilder
                     $"LOOKUP001: field '{field.WireName}' declares [Lookup(\"{view}\")] but no such view exists.");
     }
 
+    /// <summary>The model's enum registry (docs/34 M6): every enum any field uses, keyed by
+    /// kebab wire name — what a plugin form's .EnumOptions("order-type") resolves against.</summary>
+    private static Dictionary<string, IReadOnlyList<string>> CollectEnums(
+        IReadOnlyDictionary<string, OperationDefinition> operations,
+        IReadOnlyDictionary<string, ViewDefinition> views)
+    {
+        var enums = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        var fields = operations.Values.SelectMany(o => o.InputFields)
+            .Concat(views.Values.SelectMany(v => v.QueryFields.Concat(v.ResultFields)));
+        foreach (var field in fields)
+        {
+            var t = Nullable.GetUnderlyingType(field.EffectiveType) ?? field.EffectiveType;
+            if (t.IsEnum) enums.TryAdd(Naming.Kebab(t.Name), Enum.GetNames(t));
+        }
+        return enums;
+    }
+
+    /// <summary>ENUM001 (docs/34 M6): a form field's .EnumOptions must name an enum the model
+    /// actually has — a typo here would otherwise render an empty select and fail silently,
+    /// the exact wart the seam exists to close.</summary>
+    private static void VerifyEnumOptions(TamModel model)
+    {
+        foreach (var form in model.Forms.Values)
+            foreach (var config in form.Fields)
+                if (config.OptionsFromEnum is { } key && !model.Enums.ContainsKey(key))
+                    throw new InvalidOperationException(
+                        $"ENUM001: form '{form.Id}' field '{config.WireName}' references enum options " +
+                        $"'{key}' but the model has no such enum. Known: {string.Join(", ", model.Enums.Keys.OrderBy(k => k))}.");
+    }
+
     /// <summary>L10N005 (WARNING, docs/34 M5): DIFFERENT semantic wrapper types claiming the
     /// same convention-derived label key — the exact trap where Project.Number silently wore
     /// orders' "Order number" text. Plain string/enum members sharing generic keys ("Name",
@@ -435,7 +465,10 @@ public sealed partial class TamModelBuilder
             .Concat(model.Operations.Values.Select(o => o.TitleKey))
             .Concat(model.Views.Values.SelectMany(v => v.ResultFields.Select(f => f.LabelKey)))
             .Concat(model.Plugins.Values.Select(p => p.TitleKey))
-            .Concat(model.Nav.Values.SelectMany(nodes => nodes.SelectMany(NavLabels)));
+            .Concat(model.Nav.Values.SelectMany(nodes => nodes.SelectMany(NavLabels)))
+            // Page section headings (docs/34 M6) are product surface like any label.
+            .Concat(model.Pages.Values.SelectMany(p => p.Sections
+                .Where(sec => sec.HeadingKey is not null).Select(sec => sec.HeadingKey!)));
 
         var missing = catalogs.MissingKeys(required, catalogs.DefaultCulture);
         if (missing.Count > 0)

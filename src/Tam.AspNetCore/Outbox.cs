@@ -25,7 +25,16 @@ public sealed class OutboxDispatcher(
     /// <summary>Poison cap: a row that keeps throwing is dead-lettered instead of blocking the stream.</summary>
     private const int MaxAttempts = 5;
 
-    protected override async Task TickAsync(CancellationToken ct)
+    protected override Task TickAsync(CancellationToken ct) => DispatchPendingAsync(ct);
+
+    /// <summary>
+    /// One dispatch pass over up to 50 due rows — the exact work of a background tick, callable
+    /// on demand. Returns how many rows finished (dispatched or dead-lettered) so a caller can
+    /// drain deterministically (Tam.Testing's DispatchOutboxAsync loops until a pass moves
+    /// nothing). Semantics are identical to production: claim-lease, per-record tenant pinning,
+    /// poison isolation, at-least-once.
+    /// </summary>
+    public async Task<int> DispatchPendingAsync(CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = dbResolver(scope.ServiceProvider);
@@ -44,6 +53,7 @@ public sealed class OutboxDispatcher(
 
         // One activation lookup per tenant per tick, shared across records and subscribers.
         var activations = new Dictionary<string, IReadOnlySet<string>>();
+        var finished = 0;
 
         foreach (var record in pending)
         {
@@ -67,6 +77,7 @@ public sealed class OutboxDispatcher(
                 // Persist per record: a crash mid-batch must not redeliver what already went out.
                 // Delivery remains at-least-once; subscribers stay idempotent.
                 await db.SaveChangesAsync(ct);
+                finished++;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -81,11 +92,15 @@ public sealed class OutboxDispatcher(
                 record.LastError = e.GetType().Name;
                 record.ClaimedUntilIso = null;
                 if (record.Attempts >= MaxAttempts)
+                {
                     record.DeadAtIso = IsoTime.Now();
+                    finished++;   // dead-lettered rows leave the pending set too
+                }
                 try { await db.SaveChangesAsync(ct); }
                 catch { db.Entry(record).State = EntityState.Detached; }
             }
         }
+        return finished;
     }
 
     /// <summary>

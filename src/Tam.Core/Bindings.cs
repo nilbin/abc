@@ -21,6 +21,11 @@ public sealed record FormFieldConfig(
     /// <summary>docs/34 M5: a computed-display seat — rendered disabled, fed by suggestions;
     /// the server's value stays authoritative. Ends the editable-input-the-server-ignores wart.</summary>
     public bool ReadOnly { get; init; }
+
+    /// <summary>docs/34 M6: a plugin's string field offers the HOST's enum values as options —
+    /// referenced by the enum's kebab wire name, verified at Build (ENUM001). Keeps the field an
+    /// opaque wire string (no CLR coupling) while ending the typo-defines-a-dead-template wart.</summary>
+    public string? OptionsFromEnum { get; init; }
 }
 
 public sealed record FormDefinition(
@@ -98,6 +103,15 @@ public sealed class FormFieldBuilder<TInput>(FormBuilder<TInput> form, int index
     public FormFieldBuilder<TInput> ReadOnly()
     {
         form.Update(index, f => f with { ReadOnly = true });
+        return this;
+    }
+
+    /// <summary>Offers another module's enum values as this string field's options — by the
+    /// enum's kebab wire name (e.g. "order-type"), so a plugin form can present the host's
+    /// vocabulary without referencing its CLR types. Verified at Build (ENUM001).</summary>
+    public FormFieldBuilder<TInput> EnumOptions(string enumWireName)
+    {
+        form.Update(index, f => f with { OptionsFromEnum = enumWireName });
         return this;
     }
 }

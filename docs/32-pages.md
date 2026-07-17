@@ -28,6 +28,8 @@ model.Page("orders", page => page
 
 A page is an ORDERED list of sections — any number of `Grid(...)` and page-level `Slot(...)`
 calls — and the record surface is likewise an ordered list of `Form(...)`/`Slot(...)` sections.
+A multi-section page labels its sections with `Grid(id, heading: "headings.key")` (docs/34
+M6) — a locale KEY, L10N001-gated like every label; single-section pages need none.
 A slot declared before the form renders above it; a second grid renders after the first.
 
 - **D-P1 (evolved, review round 4) — a page is a DECLARED composition of things the model
@@ -67,11 +69,15 @@ object-shaped fields). Configure exists to DEVIATE — subset, reorder, renderer
 actions — never to enumerate what the record already states. An empty column/field list in a
 provided configure gets the same defaults, so a grid that only declares actions stays one line.
 
-**Row actions prefill the same way** (an M3 RTFM finding — the convention was only
-inferable from the sample): a grid `RowAction("op")` opens the operation's form with the
-input field whose wire name matches the ROW's id field prefilled from the clicked row (hide
-it with `.Renderer("hidden")`); every other input starts empty or from its suggestion
-derivations. That is how `time.book` rides the work-orders grid with `WorkOrderId` filled.
+**Row actions execute; they do not open forms** (M6 corrected this paragraph against the
+code): a grid `RowAction("op")` runs the operation IMMEDIATELY on click, filling each
+REQUIRED input from the same-named row column and falling back to the row's `id`
+(`orderId → row.orderId ?? row.id`). That fits id-shaped intents — complete, retire,
+check — which is what row actions are for. An operation that needs typed input belongs on
+a record surface (its form prefills from same-named detail fields) or as a toolbar action
+(opens the operation's form blank). Plugin-contributed grid actions are the third shape:
+their `bind` map states input ← column explicitly (docs/31). A declared action-input
+mapping in the manifest remains the designed replacement for the same-name convention.
 
 Form prefill is the row-action convention made declarative: each form field takes the
 same-named detail result field; the record's `key` field takes the clicked row's id. The

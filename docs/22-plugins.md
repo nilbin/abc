@@ -242,6 +242,17 @@ what they had to discover through compiler errors. Normative from now on:
   `plugin.LocaleDefaults()`. Required keys beyond your fields: `plugins.{id}.title`, and
   `ext.{id}.{key}` for every packaged extension field. Every label key — inputs, OUTPUTS,
   results, nav — is L10N-gated in the default culture at Build().
+- **Cross-module options**: a plugin field that stores another module's vocabulary stays a
+  wire string — and offers that vocabulary as options with
+  `form.Field(x => x.OrderType).EnumOptions("order-type")` (the enum's kebab wire name,
+  resolved from the model's enum registry, ENUM001-verified at Build). No CLR coupling, no
+  free-text typos.
+- **Slots take multiple panels**: one plugin may contribute several `plugin.Panel(...)` to
+  the same slot — they render in contribution order (docs/31).
+- **Testing** (Step 11): activation is testable through the front door — seed a
+  `SubscriptionEntity` whose `EntitlementsJson` includes your plugin id, then execute
+  `plugins.activate`. Subscriber effects fire when the test calls
+  `host.DispatchOutboxAsync()`.
 - **csproj**: copy a sample plugin's project file — the contract is references to
   Tam.Core/Tam.EntityFrameworkCore/Tam.AspNetCore, `Tam.Compiler` as
   `OutputItemType="Analyzer"`, `AdditionalFiles` + `EmbeddedResource` for `locales/*.json`.

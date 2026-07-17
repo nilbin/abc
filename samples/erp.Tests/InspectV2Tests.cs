@@ -15,14 +15,12 @@ namespace Erp.Tests;
 /// never block. Activation is real: the tests click the same plugins.activate the tenant
 /// admin would.
 ///
-/// The harness does not run the outbox loop (step 11 scopes dispatch timing out), so this
-/// class starts the production OutboxDispatcher itself and drains the outbox before
-/// asserting on subscriber-produced state — the same at-least-once path the web host runs.
+/// The harness runs no background loops, so subscriber effects happen exactly when a test
+/// calls host.DispatchOutboxAsync() — the production dispatch pass, on demand.
 /// </summary>
 public sealed class InspectV2Tests : IAsyncLifetime
 {
     private TamTestHost<ErpDbContext> host = null!;
-    private Tam.AspNetCore.OutboxDispatcher dispatcher = null!;
     private Guid customerId;
     private TestActor<ErpDbContext> admin = null!;
 
@@ -46,20 +44,6 @@ public sealed class InspectV2Tests : IAsyncLifetime
             return Task.CompletedTask;
         });
 
-        // The production dispatcher over the harness's service provider, reached through
-        // the seeded context's options (the harness exposes no DI seam of its own).
-        var scopeFactory = await host.QueryDbAsync("demo", db =>
-        {
-            var provider = Microsoft.EntityFrameworkCore.Infrastructure.AccessorExtensions
-                .GetService<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptions>(db)
-                .FindExtension<Microsoft.EntityFrameworkCore.Infrastructure.CoreOptionsExtension>()!
-                .ApplicationServiceProvider!;
-            return Task.FromResult(provider.GetRequiredService<IServiceScopeFactory>());
-        });
-        dispatcher = new Tam.AspNetCore.OutboxDispatcher(
-            scopeFactory, sp => sp.GetRequiredService<ErpDbContext>(), host.Model);
-        await dispatcher.StartAsync(CancellationToken.None);
-
         admin = host.Actor("demo",
             "plugins.manage",
             "orders.create", "orders.complete", "orders.complete-all",
@@ -69,28 +53,11 @@ public sealed class InspectV2Tests : IAsyncLifetime
             .ShouldSucceed();
     }
 
-    public async Task DisposeAsync()
-    {
-        await dispatcher.StopAsync(CancellationToken.None);
-        dispatcher.Dispose();
-        await host.DisposeAsync();
-    }
+    public async Task DisposeAsync() => await host.DisposeAsync();
 
-    /// <summary>Deterministic wait: subscriber effects are at-least-once and async — assert
-    /// only after every outbox row is dispatched (or dead) within the timeout.</summary>
-    private async Task DrainOutboxAsync()
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(15);
-        while (DateTime.UtcNow < deadline)
-        {
-            var pending = await host.QueryDbAsync("demo", db =>
-                db.Set<Tam.EntityFrameworkCore.OutboxRecord>().IgnoreQueryFilters()
-                    .CountAsync(x => x.DispatchedAtIso == null && x.DeadAtIso == null));
-            if (pending == 0) return;
-            await Task.Delay(50);
-        }
-        throw new TimeoutException("The outbox did not drain within 15 s.");
-    }
+    /// <summary>Subscriber effects happen when the test says so: one production dispatch
+    /// pass over every due outbox row (docs/34 M6 — the friction this API closed).</summary>
+    private Task DrainOutboxAsync() => host.DispatchOutboxAsync();
 
     private async Task<Guid> DefineTemplateAsync(
         string name, string orderType, bool mandatory, params string[] items)
