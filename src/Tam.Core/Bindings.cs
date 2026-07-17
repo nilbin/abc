@@ -137,29 +137,33 @@ public sealed class FormFieldBuilder<TInput>(FormBuilder<TInput> form, int index
     }
 }
 
+public enum GridActionPlacement { Row, Toolbar }
+
+public enum GridActionMode { Execute, Form }
+
+/// <summary>ONE descriptor for "an operation affordance on a grid" (docs/32): placement (on
+/// each row, or on the toolbar) times mode (execute immediately, or open the operation's form —
+/// prefilled from the row when row-placed). The builder verbs below are sugar over it, and a
+/// plugin contribution (docs/31 D-X1) is the same descriptor with a bind and a plugin id added
+/// at manifest build — a future affordance extends this record, never a fifth parallel list.</summary>
+public sealed record GridActionSpec(
+    string Operation, GridActionPlacement Placement, GridActionMode Mode);
+
 public sealed record GridDefinition(
     string Id,
     string ViewId,
     IReadOnlyList<string> Columns,
-    IReadOnlyList<string> RowActions,
-    IReadOnlyList<string> ToolbarActions,
+    IReadOnlyList<GridActionSpec> Actions,
     bool IncludeExtensions)
 {
     /// <summary>Owning plugin id, or null for host-defined grids (docs/22).</summary>
     public string? Plugin { get; init; }
-
-    /// <summary>Row actions that OPEN the operation's form prefilled from the row (docs/32) —
-    /// the edit affordance — where RowActions execute immediately (complete, retire). The row's
-    /// result fields prefill same-named form fields, so an upsert operation edits in place.</summary>
-    public IReadOnlyList<string> RowForms { get; init; } = [];
 }
 
 public sealed class GridBuilder<TResult>
 {
     private readonly List<string> columns = [];
-    private readonly List<string> rowActions = [];
-    private readonly List<string> rowForms = [];
-    private readonly List<string> toolbarActions = [];
+    private readonly List<GridActionSpec> actions = [];
     private bool includeExtensions;
 
     public GridBuilder<TResult> Column<TValue>(Expression<Func<TResult, TValue>> member)
@@ -168,23 +172,26 @@ public sealed class GridBuilder<TResult>
         return this;
     }
 
+    /// <summary>An id-shaped intent on each row (complete, retire): executes immediately,
+    /// required inputs filled from same-named row columns.</summary>
     public GridBuilder<TResult> RowAction(string operationId)
     {
-        rowActions.Add(operationId);
+        actions.Add(new(operationId, GridActionPlacement.Row, GridActionMode.Execute));
         return this;
     }
 
-    /// <summary>An EDIT row action: opens <paramref name="operationId"/>'s form prefilled from
-    /// the row (same-named fields), instead of executing immediately like RowAction.</summary>
+    /// <summary>The EDIT affordance (docs/32): opens <paramref name="operationId"/>'s form
+    /// prefilled from the row (same-named fields), instead of executing immediately.</summary>
     public GridBuilder<TResult> RowForm(string operationId)
     {
-        rowForms.Add(operationId);
+        actions.Add(new(operationId, GridActionPlacement.Row, GridActionMode.Form));
         return this;
     }
 
+    /// <summary>Opens the operation's form blank — the create affordance.</summary>
     public GridBuilder<TResult> ToolbarAction(string operationId)
     {
-        toolbarActions.Add(operationId);
+        actions.Add(new(operationId, GridActionPlacement.Toolbar, GridActionMode.Form));
         return this;
     }
 
@@ -195,8 +202,5 @@ public sealed class GridBuilder<TResult>
     }
 
     internal GridDefinition Build(string id, string viewId) =>
-        new(id, viewId, columns, rowActions, toolbarActions, includeExtensions)
-        {
-            RowForms = rowForms,
-        };
+        new(id, viewId, columns, actions, includeExtensions);
 }

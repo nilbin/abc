@@ -131,11 +131,12 @@ public sealed class PluginBuilder
     /// its query fields bound to the slot's record-context keys. The host opts a surface in
     /// once; panels land there without the host naming any plugin. Validated at Build (PLG007).
     /// </summary>
-    public PluginBuilder Panel(string slotId, string grid, Action<PanelBindBuilder> bind)
+    public PluginBuilder Panel(string slotId, string grid, Action<PanelBindBuilder> bind,
+        string? heading = null, int? order = null)
     {
         var builder = new PanelBindBuilder();
         bind(builder);
-        Model.Panel(slotId, grid, builder.Binds);
+        Model.Panel(slotId, grid, heading, order, builder.Binds);
         return this;
     }
 

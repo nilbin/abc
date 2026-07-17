@@ -15,6 +15,7 @@ public sealed class TamRolesPackage : ITamPlugin
         plugin.Nav(nav => nav.Page("roles", grid: "web.roles", suggest: "administration", order: 20));
         plugin
             .AddOperationType(typeof(DefineRole))
+            .AddOperationType(typeof(RetireRole))
             .AddViewType(typeof(RoleList))
             .Form<DefineRole.Input>("web.roles.define", "roles.define", form =>
             {
@@ -27,7 +28,9 @@ public sealed class TamRolesPackage : ITamPlugin
                 grid.Column(x => x.Name);
                 grid.Column(x => x.Levels);
                 grid.Column(x => x.Permissions);
+                grid.Column(x => x.Retired);
                 grid.ToolbarAction("roles.define");
+                grid.RowAction("roles.retire");
             });
     }
 }
@@ -118,8 +121,31 @@ public static class DefineRole
         }
         role.PermissionsJson = JsonSerializer.Serialize(input.Permissions ?? []);
         role.LevelsJson = JsonSerializer.Serialize(input.Levels ?? []);
+        role.Retired = false;   // redefining a retired name revives it, like rules
 
         return new Output(role.Id);
+    }
+}
+
+/// <summary>Retire by natural key, like every define-by-name surface (docs/29 conventions):
+/// the role stops granting anything; the name and audit referents stay.</summary>
+[Operation("roles.retire")]
+[Authorize("roles.manage")]
+public static class RetireRole
+{
+    public sealed record Input(string Name);
+
+    public sealed record Output(string Name);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ITamDb tam, CancellationToken ct)
+    {
+        var role = await tam.Db.Set<RoleEntity>().SingleOrDefaultAsync(
+            x => x.Name == input.Name, ct);
+        if (role is null) return PipelineFindings.NotFound.Create();
+
+        role.Retired = true;
+        return new Output(role.Name);
     }
 }
 
@@ -135,6 +161,7 @@ public static class RoleList
         public string Name { get; init; } = "";
         public string Permissions { get; init; } = "";
         public string Levels { get; init; } = "";
+        public bool Retired { get; init; }
     }
 
     public static IQueryable<Result> Execute(Query query, ITamDb tam, OperationContext context) =>
@@ -142,6 +169,7 @@ public static class RoleList
             .Select(x => new Result
             {
                 Id = x.Id, Name = x.Name, Permissions = x.PermissionsJson, Levels = x.LevelsJson,
+                Retired = x.Retired,
             });
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>

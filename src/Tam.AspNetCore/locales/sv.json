@@ -148,6 +148,7 @@
   "operations.plugins.activate.title": "Aktivera tillägg",
   "operations.plugins.deactivate.title": "Inaktivera tillägg",
   "operations.roles.define.title": "Definiera roll",
+  "operations.roles.retire.title": "Avveckla roll",
   "operations.rules.define.title": "Definiera regel",
   "operations.rules.retire.title": "Avveckla regel",
   "operations.secrets.set.title": "Ange hemlighet",

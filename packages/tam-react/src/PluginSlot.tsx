@@ -35,7 +35,7 @@ export function PluginSlot(props: PluginSlotProps) {
           query[queryField] = props.context[contextKey];
         return (
           <Stack key={panel.grid} gap="xs">
-            <Text size="sm" fw={600}>{t(`plugins.${panel.plugin}.title`)}</Text>
+            <Text size="sm" fw={600}>{t(panel.headingKey ?? `plugins.${panel.plugin}.title`)}</Text>
             <ViewGrid grid={panel.grid} query={query} actAs={props.actAs} pageSize={5} />
           </Stack>
         );

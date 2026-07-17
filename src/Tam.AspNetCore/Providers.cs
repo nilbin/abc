@@ -59,7 +59,7 @@ public class RoleActorProvider(
 
         // The global query filter already scopes the role lookup to the ambient tenant.
         var role = db.Set<RoleEntity>().FirstOrDefault(
-            x => x.Name == name);
+            x => x.Name == name && !x.Retired);
 
         return new Actor(
             name,

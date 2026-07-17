@@ -152,6 +152,7 @@
       "operations.plugins.activate.title": "Activate plugin",
       "operations.plugins.deactivate.title": "Deactivate plugin",
       "operations.roles.define.title": "Define role",
+      "operations.roles.retire.title": "Retire role",
       "operations.rules.define.title": "Define rule",
       "operations.rules.retire.title": "Retire rule",
       "operations.secrets.set.title": "Set secret",
@@ -597,6 +598,7 @@
       "operations.plugins.activate.title": "Aktivera till\u00E4gg",
       "operations.plugins.deactivate.title": "Inaktivera till\u00E4gg",
       "operations.roles.define.title": "Definiera roll",
+      "operations.roles.retire.title": "Avveckla roll",
       "operations.rules.define.title": "Definiera regel",
       "operations.rules.retire.title": "Avveckla regel",
       "operations.secrets.set.title": "Ange hemlighet",
@@ -2283,9 +2285,19 @@
       "titleKey": "operations.extensions.retire-field.title",
       "fields": [
         {
-          "name": "fieldId",
-          "labelKey": "labels.field-id",
-          "type": "reference",
+          "name": "entity",
+          "labelKey": "labels.entity",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "key",
+          "labelKey": "labels.key",
+          "type": "text",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
@@ -2348,6 +2360,36 @@
           "name": "roleId",
           "labelKey": "labels.role-id",
           "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "plugin": "tam.roles",
+      "gatedBy": []
+    },
+    "roles.retire": {
+      "permission": "roles.manage",
+      "titleKey": "operations.roles.retire.title",
+      "fields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
           "wireKind": "string",
           "required": true,
           "changeSet": false,
@@ -5946,6 +5988,16 @@
           "changeSet": false,
           "extension": false,
           "readOnly": false
+        },
+        {
+          "name": "retired",
+          "labelKey": "labels.retired",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
         }
       ],
       "sortable": [
@@ -9132,30 +9184,43 @@
         "required",
         "state"
       ],
-      "rowActions": [],
-      "toolbarActions": [
-        "extensions.define-field"
+      "actions": [
+        {
+          "operation": "extensions.define-field",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "extensions.retire-field",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "tam.extensions",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.extensions"
     },
     "web.roles": {
       "view": "roles.list",
       "columns": [
         "name",
         "levels",
-        "permissions"
+        "permissions",
+        "retired"
       ],
-      "rowActions": [],
-      "toolbarActions": [
-        "roles.define"
+      "actions": [
+        {
+          "operation": "roles.define",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "roles.retire",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "tam.roles",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.roles"
     },
     "web.audit.list": {
       "view": "audit.entries",
@@ -9169,12 +9234,9 @@
         "oldValue",
         "newValue"
       ],
-      "rowActions": [],
-      "toolbarActions": [],
+      "actions": [],
       "includeExtensions": false,
-      "plugin": "tam.audit",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.audit"
     },
     "web.plugins": {
       "view": "plugins.list",
@@ -9182,15 +9244,20 @@
         "pluginId",
         "active"
       ],
-      "rowActions": [
-        "plugins.activate",
-        "plugins.deactivate"
+      "actions": [
+        {
+          "operation": "plugins.activate",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "plugins.deactivate",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
-      "toolbarActions": [],
       "includeExtensions": false,
-      "plugin": "tam.plugins",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.plugins"
     },
     "web.packages": {
       "view": "packages.list",
@@ -9199,16 +9266,20 @@
         "version",
         "installedAt"
       ],
-      "rowActions": [
-        "packages.uninstall"
-      ],
-      "toolbarActions": [
-        "packages.install"
+      "actions": [
+        {
+          "operation": "packages.install",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "packages.uninstall",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "tam.tenantpackages",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.tenantpackages"
     },
     "web.rules": {
       "view": "rules.list",
@@ -9217,18 +9288,25 @@
         "onOperation",
         "retired"
       ],
-      "rowActions": [
-        "rules.retire"
-      ],
-      "toolbarActions": [
-        "rules.define"
+      "actions": [
+        {
+          "operation": "rules.define",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "rules.define",
+          "placement": "row",
+          "mode": "form"
+        },
+        {
+          "operation": "rules.retire",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "tam.rules",
-      "rowForms": [
-        "rules.define"
-      ],
-      "contributedActions": []
+      "plugin": "tam.rules"
     },
     "web.tenants": {
       "view": "tenants.list",
@@ -9237,16 +9315,25 @@
         "displayName",
         "path"
       ],
-      "rowActions": [],
-      "toolbarActions": [
-        "tenants.create",
-        "tenants.move",
-        "tenants.rename"
+      "actions": [
+        {
+          "operation": "tenants.create",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "tenants.move",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "tenants.rename",
+          "placement": "toolbar",
+          "mode": "form"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "tam.tenancy",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.tenancy"
     },
     "web.users": {
       "view": "users.list",
@@ -9256,16 +9343,20 @@
         "roles",
         "active"
       ],
-      "rowActions": [
-        "users.deactivate"
-      ],
-      "toolbarActions": [
-        "users.invite"
+      "actions": [
+        {
+          "operation": "users.invite",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "users.deactivate",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "tam.users",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.users"
     },
     "web.nav": {
       "view": "nav.overrides",
@@ -9276,16 +9367,20 @@
         "parent",
         "labels"
       ],
-      "rowActions": [
-        "nav.retire"
-      ],
-      "toolbarActions": [
-        "nav.override"
+      "actions": [
+        {
+          "operation": "nav.override",
+          "placement": "toolbar",
+          "mode": "form"
+        },
+        {
+          "operation": "nav.retire",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "tam.nav",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "tam.nav"
     },
     "inspect.web.templates": {
       "view": "inspect.templates.list",
@@ -9296,17 +9391,25 @@
         "itemCount",
         "retired"
       ],
-      "rowActions": [
-        "inspect.templates.add-item",
-        "inspect.templates.retire"
-      ],
-      "toolbarActions": [
-        "inspect.templates.define"
+      "actions": [
+        {
+          "operation": "inspect.templates.add-item",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "inspect.templates.retire",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "inspect.templates.define",
+          "placement": "toolbar",
+          "mode": "form"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "inspect",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "inspect"
     },
     "inspect.web.template-items": {
       "view": "inspect.templates.items",
@@ -9315,12 +9418,9 @@
         "position",
         "text"
       ],
-      "rowActions": [],
-      "toolbarActions": [],
+      "actions": [],
       "includeExtensions": false,
-      "plugin": "inspect",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "inspect"
     },
     "inspect.web.checklists": {
       "view": "inspect.checklists.list",
@@ -9330,16 +9430,20 @@
         "openItems",
         "passed"
       ],
-      "rowActions": [
-        "inspect.checklists.pass"
-      ],
-      "toolbarActions": [
-        "inspect.checklists.create"
+      "actions": [
+        {
+          "operation": "inspect.checklists.pass",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "inspect.checklists.create",
+          "placement": "toolbar",
+          "mode": "form"
+        }
       ],
       "includeExtensions": false,
-      "plugin": "inspect",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "inspect"
     },
     "inspect.web.items": {
       "view": "inspect.items.list",
@@ -9349,15 +9453,20 @@
         "text",
         "done"
       ],
-      "rowActions": [
-        "inspect.items.check",
-        "inspect.items.uncheck"
+      "actions": [
+        {
+          "operation": "inspect.items.check",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "inspect.items.uncheck",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
-      "toolbarActions": [],
       "includeExtensions": false,
-      "plugin": "inspect",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "inspect"
     },
     "approvals.web.requests": {
       "view": "approvals.requests.list",
@@ -9367,15 +9476,20 @@
         "status",
         "createdAtIso"
       ],
-      "rowActions": [
-        "approvals.approve",
-        "approvals.reject"
+      "actions": [
+        {
+          "operation": "approvals.approve",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "approvals.reject",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
-      "toolbarActions": [],
       "includeExtensions": false,
-      "plugin": "approvals",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "approvals"
     },
     "invoicing.web.invoices": {
       "view": "invoicing.invoices.list",
@@ -9385,15 +9499,20 @@
         "amount",
         "created"
       ],
-      "rowActions": [
-        "invoicing.finalize",
-        "invoicing.mark-paid"
+      "actions": [
+        {
+          "operation": "invoicing.finalize",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "invoicing.mark-paid",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
-      "toolbarActions": [],
       "includeExtensions": false,
-      "plugin": "invoicing",
-      "rowForms": [],
-      "contributedActions": []
+      "plugin": "invoicing"
     },
     "web.orders.list": {
       "view": "orders.list",
@@ -9406,23 +9525,28 @@
         "requestedDate",
         "estimatedTotal"
       ],
-      "rowActions": [
-        "orders.complete"
-      ],
-      "toolbarActions": [
-        "orders.create"
-      ],
-      "includeExtensions": true,
-      "rowForms": [],
-      "contributedActions": [
+      "actions": [
+        {
+          "operation": "orders.complete",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "orders.create",
+          "placement": "toolbar",
+          "mode": "form"
+        },
         {
           "operation": "invoicing.create-from-order",
-          "plugin": "invoicing",
+          "placement": "row",
+          "mode": "execute",
           "bind": {
             "orderId": "id"
-          }
+          },
+          "plugin": "invoicing"
         }
-      ]
+      ],
+      "includeExtensions": true
     },
     "web.customers.list": {
       "view": "customers.list",
@@ -9433,13 +9557,14 @@
         "visitAddress",
         "isActive"
       ],
-      "rowActions": [],
-      "toolbarActions": [
-        "customers.create"
+      "actions": [
+        {
+          "operation": "customers.create",
+          "placement": "toolbar",
+          "mode": "form"
+        }
       ],
-      "includeExtensions": false,
-      "rowForms": [],
-      "contributedActions": []
+      "includeExtensions": false
     },
     "web.projects.list": {
       "view": "projects.list",
@@ -9451,16 +9576,24 @@
         "status",
         "budget"
       ],
-      "rowActions": [
-        "projects.close",
-        "projects.reopen"
+      "actions": [
+        {
+          "operation": "projects.close",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "projects.reopen",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "projects.create",
+          "placement": "toolbar",
+          "mode": "form"
+        }
       ],
-      "toolbarActions": [
-        "projects.create"
-      ],
-      "includeExtensions": false,
-      "rowForms": [],
-      "contributedActions": []
+      "includeExtensions": false
     },
     "web.work-orders.list": {
       "view": "work-orders.list",
@@ -9474,21 +9607,49 @@
         "scheduledDate",
         "assignedToName"
       ],
-      "rowActions": [
-        "work-orders.schedule",
-        "work-orders.set-priority",
-        "work-orders.start",
-        "work-orders.complete",
-        "work-orders.close",
-        "time.book",
-        "materials.add"
+      "actions": [
+        {
+          "operation": "work-orders.schedule",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "work-orders.set-priority",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "work-orders.start",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "work-orders.complete",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "work-orders.close",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "time.book",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "materials.add",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "work-orders.create",
+          "placement": "toolbar",
+          "mode": "form"
+        }
       ],
-      "toolbarActions": [
-        "work-orders.create"
-      ],
-      "includeExtensions": true,
-      "rowForms": [],
-      "contributedActions": []
+      "includeExtensions": true
     },
     "web.time.list": {
       "view": "time.list",
@@ -9501,13 +9662,14 @@
         "amount",
         "status"
       ],
-      "rowActions": [
-        "time.approve"
+      "actions": [
+        {
+          "operation": "time.approve",
+          "placement": "row",
+          "mode": "execute"
+        }
       ],
-      "toolbarActions": [],
-      "includeExtensions": false,
-      "rowForms": [],
-      "contributedActions": []
+      "includeExtensions": false
     },
     "web.materials.list": {
       "view": "materials.list",
@@ -9520,11 +9682,8 @@
         "unitPrice",
         "amount"
       ],
-      "rowActions": [],
-      "toolbarActions": [],
-      "includeExtensions": false,
-      "rowForms": [],
-      "contributedActions": []
+      "actions": [],
+      "includeExtensions": false
     },
     "web.stock.list": {
       "view": "stock.list",
@@ -9535,15 +9694,19 @@
         "unitPrice",
         "isActive"
       ],
-      "rowActions": [
-        "stock.deactivate"
+      "actions": [
+        {
+          "operation": "stock.deactivate",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "stock.create",
+          "placement": "toolbar",
+          "mode": "form"
+        }
       ],
-      "toolbarActions": [
-        "stock.create"
-      ],
-      "includeExtensions": false,
-      "rowForms": [],
-      "contributedActions": []
+      "includeExtensions": false
     }
   },
   "extensions": {},

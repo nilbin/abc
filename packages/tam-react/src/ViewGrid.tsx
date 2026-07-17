@@ -3,7 +3,7 @@ import {
   Badge, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text,
   Title, UnstyledButton,
 } from '@mantine/core';
-import { ManifestField, enumLabel, toWireEnum } from '@tam/core';
+import { GridAction, ManifestField, enumLabel, toWireEnum } from '@tam/core';
 import { useTam } from './context';
 import { OperationForm } from './OperationForm';
 import { FilterControl } from './GridFilters';
@@ -32,13 +32,11 @@ export function ViewGrid(props: ViewGridProps) {
     const operation = manifest.operations[operationId];
     return operation !== undefined && can(operation.permission);
   };
-  const toolbarActions = gridDef.toolbarActions.filter(allowed);
-  const rowActions = gridDef.rowActions.filter(allowed);
-  // Edit affordances (docs/32): open the operation's form PREFILLED from the row.
-  const rowForms = (gridDef.rowForms ?? []).filter(allowed);
-  // Plugin-contributed actions (docs/31 D-X1): rendered after host actions, same permission
-  // gate; the DECLARED bind replaces the name-convention input mapping below.
-  const contributedActions = (gridDef.contributedActions ?? []).filter(a => allowed(a.operation));
+  // ONE action list (docs/32): placement × mode decides rendering; a declared bind (plugin
+  // contributions, docs/31 D-X1) replaces the same-name input convention.
+  const actions = (gridDef.actions ?? []).filter(a => allowed(a.operation));
+  const toolbarActions = actions.filter(a => a.placement === 'toolbar');
+  const rowActionList = actions.filter(a => a.placement === 'row');
 
   const resultByName = useMemo(
     () => new Map(view.resultFields.map(f => [f.name, f])),
@@ -165,24 +163,27 @@ export function ViewGrid(props: ViewGridProps) {
   const formForOperation = (operationId: string) =>
     Object.entries(manifest.forms).find(([, f]) => f.operation === operationId)?.[0];
 
-  // Known limitation: required input fields map to same-named row columns (orderId → row.id
-  // fallback). A declared action-input mapping in the manifest is the designed replacement.
-  const runRowAction = async (operationId: string, row: Record<string, unknown>) => {
-    const operation = manifest.operations[operationId];
+  // Execute-mode: the declared bind (input ← row column) wins; without one, required inputs
+  // map to same-named row columns with the row's id as fallback (orderId → row.id).
+  const runRowAction = async (action: GridAction, row: Record<string, unknown>) => {
     const body: Record<string, unknown> = {};
-    for (const field of operation.fields) {
-      if (!field.required) continue;
-      body[field.name] = row[field.name] ?? row.id;
+    if (action.bind) {
+      for (const [input, column] of Object.entries(action.bind)) body[input] = row[column];
+    } else {
+      for (const field of manifest.operations[action.operation].fields) {
+        if (!field.required) continue;
+        body[field.name] = row[field.name] ?? row.id;
+      }
     }
     const rowTenant = (subtreeField ? (row[subtreeField] as string | undefined) : undefined)
       ?? props.actAs;
-    await client.operation(operationId, body,
+    await client.operation(action.operation, body,
       rowTenant && rowTenant !== acting ? { actAs: rowTenant } : undefined);
     refresh();
   };
 
-  // RowForm (docs/32): the row's result fields prefill same-named form fields — the contract
-  // an upsert operation's list view provides deliberately (e.g. rules.list ↔ rules.define).
+  // Form-mode on a row (docs/32): the row's result fields prefill same-named form fields —
+  // the contract an upsert operation's list view provides deliberately (rules.list ↔ define).
   const openRowForm = (operationId: string, row: Record<string, unknown>) => {
     const form = formForOperation(operationId);
     if (!form) return;
@@ -191,19 +192,6 @@ export function ViewGrid(props: ViewGridProps) {
       if (row[field.name] !== undefined) initial[field.name] = row[field.name];
     }
     setModalAction({ operation: operationId, initial });
-  };
-
-  const runContributedAction = async (
-    action: { operation: string; bind: Record<string, string> },
-    row: Record<string, unknown>,
-  ) => {
-    const body: Record<string, unknown> = {};
-    for (const [input, column] of Object.entries(action.bind)) body[input] = row[column];
-    const rowTenant = (subtreeField ? (row[subtreeField] as string | undefined) : undefined)
-      ?? props.actAs;
-    await client.operation(action.operation, body,
-      rowTenant && rowTenant !== acting ? { actAs: rowTenant } : undefined);
-    refresh();
   };
 
   return (
@@ -224,8 +212,11 @@ export function ViewGrid(props: ViewGridProps) {
         </Group>
         <Group>
           {toolbarActions.map(action => (
-            <Button key={action} size="sm" onClick={() => setModalAction({ operation: action })}>
-              {t(`operations.${action}.title`)}
+            <Button key={action.operation} size="sm"
+              onClick={() => action.mode === 'form'
+                ? setModalAction({ operation: action.operation })
+                : void client.operation(action.operation, {}).then(refresh)}>
+              {t(`operations.${action.operation}.title`)}
             </Button>
           ))}
         </Group>
@@ -255,7 +246,7 @@ export function ViewGrid(props: ViewGridProps) {
                   </Table.Th>
                 );
               })}
-              {(rowActions.length > 0 || rowForms.length > 0 || contributedActions.length > 0) && <Table.Th />}
+              {rowActionList.length > 0 && <Table.Th />}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -271,24 +262,14 @@ export function ViewGrid(props: ViewGridProps) {
                 {columns.map(field => (
                   <Table.Td key={field.name}>{cell(row, field)}</Table.Td>
                 ))}
-                {(rowActions.length > 0 || rowForms.length > 0 || contributedActions.length > 0) && (
+                {rowActionList.length > 0 && (
                   <Table.Td onClick={e => e.stopPropagation()}>
                     <Group gap="xs" justify="flex-end">
-                      {rowForms.map(action => (
-                        <Button key={`form:${action}`} size="compact-xs" variant="light"
-                          onClick={() => openRowForm(action, row)}>
-                          {t(`operations.${action}.title`)}
-                        </Button>
-                      ))}
-                      {rowActions.map(action => (
-                        <Button key={action} size="compact-xs" variant="light"
-                          onClick={() => void runRowAction(action, row)}>
-                          {t(`operations.${action}.title`)}
-                        </Button>
-                      ))}
-                      {contributedActions.map(action => (
+                      {rowActionList.map(action => (
                         <Button key={action.operation} size="compact-xs" variant="light"
-                          onClick={() => void runContributedAction(action, row)}>
+                          onClick={() => action.mode === 'form'
+                            ? openRowForm(action.operation, row)
+                            : void runRowAction(action, row)}>
                           {t(`operations.${action.operation}.title`)}
                         </Button>
                       ))}

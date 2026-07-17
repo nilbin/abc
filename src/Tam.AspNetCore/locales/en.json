@@ -148,6 +148,7 @@
   "operations.plugins.activate.title": "Activate plugin",
   "operations.plugins.deactivate.title": "Deactivate plugin",
   "operations.roles.define.title": "Define role",
+  "operations.roles.retire.title": "Retire role",
   "operations.rules.define.title": "Define rule",
   "operations.rules.retire.title": "Retire rule",
   "operations.secrets.set.title": "Set secret",

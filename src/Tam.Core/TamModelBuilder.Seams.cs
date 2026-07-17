@@ -59,12 +59,12 @@ public sealed partial class TamModelBuilder
         return this;
     }
 
-    internal void Panel(string slotId, string gridId,
+    internal void Panel(string slotId, string gridId, string? headingKey, int? order,
         IReadOnlyList<(string QueryField, string ContextKey)> bind)
     {
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: panels can only be contributed by a plugin.");
-        panels.Add(new PanelContribution(slotId, gridId, currentPlugin, bind));
+        panels.Add(new PanelContribution(slotId, gridId, currentPlugin, bind, headingKey, order));
     }
 
     internal void RequireEvent(string eventType, IReadOnlyList<string> fields)

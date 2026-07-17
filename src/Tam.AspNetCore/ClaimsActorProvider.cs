@@ -69,7 +69,7 @@ public sealed class ClaimsActorProvider : IActorProvider
         // time (docs/27 D-A1), so a new action on a resource flows into existing Manage roles
         // without a role edit.
         var roleRows = db.Set<RoleEntity>().AcrossTenants()
-            .Where(r => chainIds.Contains(r.TenantId))
+            .Where(r => chainIds.Contains(r.TenantId) && !r.Retired)
             .ToList();
         var byNodeAndName = roleRows.ToDictionary(r => (r.TenantId, r.Name));
 

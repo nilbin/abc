@@ -296,7 +296,7 @@ public sealed partial class TamModelBuilder
                 };
             }
 
-            foreach (var action in def.RowActions.Concat(def.ToolbarActions))
+            foreach (var action in def.Actions.Select(a => a.Operation))
                 if (!operations.ContainsKey(action))
                     throw new InvalidOperationException($"GRID002: grid '{id}' action references unknown operation '{action}'.");
 

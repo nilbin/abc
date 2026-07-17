@@ -224,6 +224,10 @@ public sealed class RoleEntity : ITenantScoped
     public string PermissionsJson { get; set; } = "[]";
     public string LevelsJson { get; set; } = "{}";
 
+    /// <summary>Retire-don't-drop (docs/29 conventions): grants stop applying, the audit
+    /// trail keeps its referent, and roles.define under the same name un-retires.</summary>
+    public bool Retired { get; set; }
+
     public IReadOnlySet<string> Permissions() =>
         System.Text.Json.JsonSerializer.Deserialize<HashSet<string>>(PermissionsJson) ?? [];
 

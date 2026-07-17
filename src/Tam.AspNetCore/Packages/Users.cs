@@ -121,7 +121,8 @@ internal static class MembershipRules
     public static async Task<List<Finding>> ValidateAssignmentsAsync(
         ITamDb tam, List<string> roles, string rolesField, CancellationToken ct)
     {
-        var knownRoles = await tam.Db.Set<RoleEntity>().Select(x => x.Name).ToListAsync(ct);
+        var knownRoles = await tam.Db.Set<RoleEntity>()
+            .Where(x => !x.Retired).Select(x => x.Name).ToListAsync(ct);
         return roles.Where(r => !knownRoles.Contains(r)).Select(r =>
             UserFindings.UnknownRole.With(("role", r)).At(rolesField)).ToList();
     }

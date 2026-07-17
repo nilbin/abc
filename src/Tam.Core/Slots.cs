@@ -13,10 +13,12 @@ namespace Tam;
 public sealed record SlotDefinition(string Id, IReadOnlyList<string> ContextKeys, bool External = false);
 
 /// <summary>A plugin panel in a host slot: the plugin's OWN grid, its query fields bound to
-/// the slot's context keys.</summary>
+/// the slot's context keys. Heading and order are the same pair page sections carry (docs/32)
+/// — a titled, deterministically ordered surface instead of anonymous registration-order stacks.</summary>
 public sealed record PanelContribution(
     string SlotId, string GridId, string PluginId,
-    IReadOnlyList<(string QueryField, string ContextKey)> Bind);
+    IReadOnlyList<(string QueryField, string ContextKey)> Bind,
+    string? HeadingKey = null, int? Order = null);
 
 public sealed class SlotContextBuilder
 {

@@ -261,7 +261,8 @@ export interface ExtensionsDefineFieldOutput {
 }
 
 export interface ExtensionsRetireFieldInput {
-  fieldId: string;
+  entity: string;
+  key: string;
 }
 
 export interface ExtensionsRetireFieldOutput {
@@ -276,6 +277,14 @@ export interface RolesDefineInput {
 
 export interface RolesDefineOutput {
   roleId: string;
+}
+
+export interface RolesRetireInput {
+  name: string;
+}
+
+export interface RolesRetireOutput {
+  name: string;
 }
 
 export interface PluginsActivateInput {
@@ -884,6 +893,7 @@ export interface RolesListRow {
   name: string;
   permissions: string;
   levels: string;
+  retired: boolean;
 }
 
 export interface RolesListQuery {
@@ -1286,6 +1296,11 @@ export class TypedTamClient {
   /** roles.define (requires roles.manage) */
   rolesDefine(input: RolesDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<RolesDefineOutput>> {
     return this.client.operation("roles.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RolesDefineOutput>>;
+  }
+
+  /** roles.retire (requires roles.manage) */
+  rolesRetire(input: RolesRetireInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<RolesRetireOutput>> {
+    return this.client.operation("roles.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<RolesRetireOutput>>;
   }
 
   /** plugins.activate (requires plugins.manage) */

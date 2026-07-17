@@ -127,29 +127,26 @@ public sealed record ManifestForm(
 public sealed record ManifestGrid(
     string View,
     IReadOnlyList<string> Columns,
-    IReadOnlyList<string> RowActions,
-    IReadOnlyList<string> ToolbarActions,
+    IReadOnlyList<ManifestGridAction> Actions,
     bool IncludeExtensions)
 {
     public string? Plugin { get; init; }
-
-    /// <summary>Row actions that open the operation's form PREFILLED from the row (the edit
-    /// affordance, docs/32) — RowActions execute immediately, these author.</summary>
-    public IReadOnlyList<string> RowForms { get; init; } = [];
-
-    /// <summary>Plugin row actions on this grid (docs/31 D-X1) — activation-filtered like
-    /// GatedBy; the host's own RowActions stay untouched. Bind maps operation input wire
-    /// names to row column wire names.</summary>
-    public IReadOnlyList<ManifestGridAction> ContributedActions { get; init; } = [];
 }
 
+/// <summary>One operation affordance on a grid (docs/32): placement "row"|"toolbar" × mode
+/// "execute"|"form" (form prefills from the row when row-placed). Plugin contributions
+/// (docs/31 D-X1) are the same descriptor carrying a bind (input wire name ← row column) and
+/// the owning plugin id — activation-filtered like every contribution.</summary>
 public sealed record ManifestGridAction(
-    string Operation, string Plugin, IReadOnlyDictionary<string, string> Bind);
+    string Operation, string Placement, string Mode,
+    IReadOnlyDictionary<string, string>? Bind = null, string? Plugin = null);
 
 /// <summary>A plugin panel in a host slot: render the grid with its bound query params filled
-/// from the slot's record context.</summary>
+/// from the slot's record context. HeadingKey overrides the plugin-title default; order sorts
+/// panels deterministically (declaration order breaks ties).</summary>
 public sealed record ManifestPanel(
-    string Grid, string Plugin, IReadOnlyDictionary<string, string> Bind);
+    string Grid, string Plugin, IReadOnlyDictionary<string, string> Bind,
+    string? HeadingKey = null, int? Order = null);
 
 public sealed record ManifestEvent(
     IReadOnlyList<string> Fields, IReadOnlyList<string> SubscribedBy);
@@ -258,17 +255,20 @@ public static class ManifestBuilder
             .ToDictionary(
             kv => kv.Key,
             kv => new ManifestGrid(
-                kv.Value.ViewId, kv.Value.Columns, kv.Value.RowActions,
-                kv.Value.ToolbarActions, kv.Value.IncludeExtensions)
+                kv.Value.ViewId,
+                kv.Value.Columns,
+                kv.Value.Actions
+                    .Select(a => new ManifestGridAction(a.Operation,
+                        a.Placement.ToString().ToLowerInvariant(), a.Mode.ToString().ToLowerInvariant()))
+                    .Concat(model.GridActions.TryGetValue(kv.Key, out var contributed)
+                        ? contributed.Where(a => Included(a.PluginId))
+                            .Select(a => new ManifestGridAction(a.OperationId, "row", "execute",
+                                a.Bind.ToDictionary(b => b.Input, b => b.Column), a.PluginId))
+                        : [])
+                    .ToList(),
+                kv.Value.IncludeExtensions)
             {
                 Plugin = kv.Value.Plugin,
-                RowForms = kv.Value.RowForms,
-                ContributedActions = model.GridActions.TryGetValue(kv.Key, out var contributed)
-                    ? contributed.Where(a => Included(a.PluginId))
-                        .Select(a => new ManifestGridAction(a.OperationId, a.PluginId,
-                            a.Bind.ToDictionary(b => b.Input, b => b.Column)))
-                        .ToList()
-                    : [],
             });
 
         var extensions = extensionOverlay.ToDictionary(
@@ -316,8 +316,10 @@ public static class ManifestBuilder
                 slotId => slotId,
                 slotId => (IReadOnlyList<ManifestPanel>)(model.Panels.TryGetValue(slotId, out var contributed)
                     ? contributed.Where(p => Included(p.PluginId))
+                        .OrderBy(p => p.Order ?? int.MaxValue)
                         .Select(p => new ManifestPanel(p.GridId, p.PluginId,
-                            p.Bind.ToDictionary(b => b.QueryField, b => b.ContextKey)))
+                            p.Bind.ToDictionary(b => b.QueryField, b => b.ContextKey),
+                            p.HeadingKey, p.Order))
                         .ToList()
                     : [])),
             Events = model.Events.ToDictionary(

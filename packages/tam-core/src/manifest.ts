@@ -45,6 +45,17 @@ export interface ManifestField {
   resetOn?: string[];
 }
 
+/** One operation affordance on a grid: where it sits and what clicking does. */
+export interface GridAction {
+  operation: string;
+  placement: 'row' | 'toolbar';
+  mode: 'execute' | 'form';
+  /** Declared input ← row-column mapping (plugin contributions); absent means the
+   *  same-name convention applies for execute, prefill-by-name for form. */
+  bind?: Record<string, string>;
+  plugin?: string;
+}
+
 export interface Manifest {
   version: string;
   defaultCulture: string;
@@ -81,16 +92,12 @@ export interface Manifest {
   grids: Record<string, {
     view: string;
     columns: string[];
-    rowActions: string[];
-    /** Row actions that open the operation's form PREFILLED from the row (the edit
-     *  affordance) — rowActions execute immediately, these author. */
-    rowForms?: string[];
-    toolbarActions: string[];
+    /** One descriptor per operation affordance: placement (row/toolbar) × mode (execute
+     *  immediately / open the form — prefilled from the row when row-placed). Plugin
+     *  contributions carry a bind (input wire name ← row column) and their plugin id. */
+    actions: GridAction[];
     includeExtensions: boolean;
     plugin?: string;
-    /** Plugin row actions contributed onto this grid (docs/31 D-X1), activation-filtered.
-     *  bind maps operation input wire names to row column wire names. */
-    contributedActions?: { operation: string; plugin: string; bind: Record<string, string> }[];
   }>;
   extensions: Record<string, ManifestField[]>;
   permissions: string[];
@@ -111,7 +118,7 @@ export interface Manifest {
     };
   }>;
   /** Host slots and the active plugins' panels in them (docs/31 D-X4). */
-  slots?: Record<string, { grid: string; plugin: string; bind: Record<string, string> }[]>;
+  slots?: Record<string, { grid: string; plugin: string; bind: Record<string, string>; headingKey?: string; order?: number }[]>;
   /** Declared domain events with the active plugins subscribed to each (docs/31 D-X5). */
   events?: Record<string, { fields: string[]; subscribedBy: string[] }>;
   revision: number;

@@ -58,12 +58,12 @@ decides whether the user does.
   (a plugin never re-points host actions or another plugin's); every bound input field exists on
   the operation; every bound column exists on the target grid's view Result; duplicate
   (grid, operation) rejected like PLG002.
-- **Manifest**: `ManifestGrid` gains `contributedActions: [{operation, plugin, bind}]`, merged
-  per tenant exactly like `GatedBy` — the host's declared `rowActions` stay byte-identical
-  (additive, D4-safe). The client renders them after host actions through the same
-  permission/existence filter, and the declared bind replaces the name-convention input mapping
-  for contributed actions (the convention hack stays for host actions until they migrate — a
-  noted follow-up, not part of this milestone).
+- **Manifest** (unified in the beauty arc): every grid affordance — host RowAction/RowForm/
+  ToolbarAction AND plugin contributions — is ONE descriptor in `ManifestGrid.actions`:
+  `{operation, placement: row|toolbar, mode: execute|form, bind?, plugin?}`. A contribution is
+  the same descriptor carrying a bind (input ← row column) and the owning plugin id, merged per
+  tenant exactly like `GatedBy`. The client renders one list through one permission/existence
+  filter; a declared bind replaces the name-convention input mapping wherever present.
 - **No veto in v1** (owner call): activation is the tenant's switch and permissions are the
   user's — a tenant that doesn't want the button doesn't activate the plugin. A host-level
   `Suppress(pluginId)` and per-tenant hiding ride the nav-override registry pattern later,

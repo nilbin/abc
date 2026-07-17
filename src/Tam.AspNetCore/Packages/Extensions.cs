@@ -34,8 +34,54 @@ public sealed class TamExtensionsPackage : ITamPlugin
                 grid.Column(x => x.Required);
                 grid.Column(x => x.State);
                 grid.ToolbarAction("extensions.define-field");
+                grid.RowAction("extensions.retire-field");
             });
     }
+}
+
+/// <summary>The registry's field-definition rule set, shared by extensions.define-field and
+/// the package-install path — the RoleRules lesson applied to fields (one rule set, two
+/// doors): a constraint added here covers BOTH ways a field enters the registry. Targets are
+/// caller-supplied because define anchors findings to its form members while install anchors
+/// them to the packaged field's ext path.</summary>
+internal static class ExtensionFieldRules
+{
+    public static List<Finding> Validate(
+        string entity, string key, string type, IReadOnlyDictionary<string, string> labels,
+        TamModel model, FieldPath entityAt, FieldPath typeAt, FieldPath keyAt, FieldPath labelsAt)
+    {
+        var findings = new List<Finding>();
+        if (!model.ExtensibleEntityKeys.Contains(entity))
+            findings.Add(ExtensionFindings.UnknownEntity.With(("entity", entity)).At(entityAt));   // EXT007
+        if (!SemanticTypes.ByKey.ContainsKey(type))
+            findings.Add(ExtensionFindings.UnknownType.At(typeAt));
+        if (!Naming.IsCamelKey(key))
+            findings.Add(ExtensionFindings.InvalidKey.At(keyAt));
+        if (!labels.ContainsKey(model.DefaultCulture))
+            findings.Add(ExtensionFindings.MissingLabel.At(labelsAt));                             // EXT006
+        return findings;
+    }
+
+    /// <summary>The one place a validated spec becomes a registry row — both doors write the
+    /// same shape (TenantId stamps ambiently; Package only from the install path).</summary>
+    public static ExtensionFieldEntity Build(
+        string entity, string key, string type, bool required, int? maxLength,
+        IReadOnlyDictionary<string, string> labels,
+        IReadOnlyDictionary<string, string>? descriptions,
+        IReadOnlyList<string>? options, string? package = null) => new()
+    {
+        Id = Guid.NewGuid(),
+        Entity = entity,
+        Key = key,
+        Type = type,
+        Required = required,
+        MaxLength = maxLength,
+        LabelsJson = JsonSerializer.Serialize(labels),
+        DescriptionsJson = descriptions is null ? null : JsonSerializer.Serialize(descriptions),
+        OptionsJson = options is null ? null : JsonSerializer.Serialize(options),
+        State = ExtensionFieldState.Active,
+        Package = package,
+    };
 }
 
 /// <summary>
@@ -61,48 +107,34 @@ public static class DefineExtensionField
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
     {
-        // Registry-time diagnostics: the runtime twin of the compiler's rule set.
-        if (!model.ExtensibleEntityKeys.Contains(input.Entity))
-            return ExtensionFindings.UnknownEntity.With(("entity", input.Entity)).At(nameof(Input.Entity));   // EXT007
-        if (!SemanticTypes.ByKey.ContainsKey(input.Type))
-            return ExtensionFindings.UnknownType.At(nameof(Input.Type));
-
-        if (!Naming.IsCamelKey(input.Key))
-            return ExtensionFindings.InvalidKey.At(nameof(Input.Key));
+        // Registry-time diagnostics: the runtime twin of the compiler's rule set — ONE rule
+        // set with the package-install path (ExtensionFieldRules).
+        var invalid = ExtensionFieldRules.Validate(
+            input.Entity, input.Key, input.Type, input.Labels, model,
+            FieldPath.For(nameof(Input.Entity)), FieldPath.For(nameof(Input.Type)),
+            FieldPath.For(nameof(Input.Key)), FieldPath.For(nameof(Input.Labels)));
+        if (invalid.Count > 0) return new Result<Output> { Findings = invalid };
 
         var collision = await tam.Db.Set<ExtensionFieldEntity>().AnyAsync(
             x => x.Entity == input.Entity && x.Key == input.Key, ct);
         if (collision)
             return ExtensionFindings.KeyConflict.At(nameof(Input.Key));       // EXT005
 
-        if (!input.Labels.ContainsKey(model.DefaultCulture))
-            return ExtensionFindings.MissingLabel.At(nameof(Input.Labels));   // EXT006
-
-        var entity = new ExtensionFieldEntity
-        {
-            Id = Guid.NewGuid(),
-            Entity = input.Entity,
-            Key = input.Key,
-            Type = input.Type,
-            Required = input.Required,
-            MaxLength = input.MaxLength,
-            LabelsJson = JsonSerializer.Serialize(input.Labels),
-            DescriptionsJson = input.Descriptions is null
-                ? null
-                : JsonSerializer.Serialize(input.Descriptions),
-            OptionsJson = input.Options is null ? null : JsonSerializer.Serialize(input.Options),
-            State = ExtensionFieldState.Active,
-        };
+        var entity = ExtensionFieldRules.Build(
+            input.Entity, input.Key, input.Type, input.Required, input.MaxLength,
+            input.Labels, input.Descriptions, input.Options);
         tam.Db.Add(entity);
         return new Output(entity.Id);
     }
 }
 
+/// <summary>Retire by NATURAL KEY (docs/29 conventions): define upserts by (entity, key), so
+/// retire addresses the same pair — never a surrogate Guid the admin has to fish out.</summary>
 [Operation("extensions.retire-field")]
 [Authorize("extensions.manage")]
 public static class RetireExtensionField
 {
-    public sealed record Input(Guid FieldId);
+    public sealed record Input(string Entity, string Key);
 
     public sealed record Output(Guid FieldId);
 
@@ -110,7 +142,7 @@ public static class RetireExtensionField
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
         var field = await tam.Db.Set<ExtensionFieldEntity>().SingleOrDefaultAsync(
-            x => x.Id == input.FieldId, ct);
+            x => x.Entity == input.Entity && x.Key == input.Key, ct);
         if (field is null) return PipelineFindings.NotFound.Create();
 
         field.State = ExtensionFieldState.Retired;   // data preserved, key reserved forever

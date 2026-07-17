@@ -77,14 +77,16 @@ public class CrossDomainTests
         // ACTIVE tenant: the contributed action is on the grid; host actions untouched.
         var extensions = new Dictionary<string, IReadOnlyList<ExtensionFieldSpec>>();
         var active = ManifestBuilder.Build(model, extensions, 0, new HashSet<string> { "billing" });
-        var contributed = Assert.Single(active.Grids["web.things"].ContributedActions);
+        var contributed = Assert.Single(active.Grids["web.things"].Actions, a => a.Plugin is not null);
         Assert.Equal("billing.charge", contributed.Operation);
-        Assert.Equal("id", contributed.Bind["thingId"]);
-        Assert.Empty(active.Grids["web.things"].RowActions);
+        Assert.Equal("row", contributed.Placement);
+        Assert.Equal("execute", contributed.Mode);
+        Assert.Equal("id", contributed.Bind!["thingId"]);
+        Assert.DoesNotContain(active.Grids["web.things"].Actions, a => a.Plugin is null);
 
         // INACTIVE tenant: the action does not exist, like every plugin contribution.
         var inactive = ManifestBuilder.Build(model, extensions, 0, new HashSet<string>());
-        Assert.Empty(inactive.Grids["web.things"].ContributedActions);
+        Assert.Empty(inactive.Grids["web.things"].Actions);
         Assert.DoesNotContain("billing.charge", inactive.Operations.Keys);
     }
 

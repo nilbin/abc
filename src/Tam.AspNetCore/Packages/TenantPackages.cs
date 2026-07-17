@@ -112,24 +112,13 @@ public static class InstallPackage
         foreach (var field in document.Fields ?? [])
         {
             var path = FieldPath.Extension(field.Key);
-            if (!model.ExtensibleEntityKeys.Contains(field.Entity))
+            // ONE rule set with extensions.define-field (ExtensionFieldRules) — a constraint
+            // added there covers this door automatically.
+            var invalid = ExtensionFieldRules.Validate(
+                field.Entity, field.Key, field.Type, field.Labels, model, path, path, path, path);
+            if (invalid.Count > 0)
             {
-                findings.Add(ExtensionFindings.UnknownEntity.With(("entity", field.Entity)).At(path));
-                continue;
-            }
-            if (!SemanticTypes.ByKey.ContainsKey(field.Type))
-            {
-                findings.Add(ExtensionFindings.UnknownType.At(path));
-                continue;
-            }
-            if (!Naming.IsCamelKey(field.Key))
-            {
-                findings.Add(ExtensionFindings.InvalidKey.At(path));
-                continue;
-            }
-            if (!field.Labels.ContainsKey(model.DefaultCulture))
-            {
-                findings.Add(ExtensionFindings.MissingLabel.At(path));       // EXT006
+                findings.AddRange(invalid);
                 continue;
             }
             var existing = existingFields.FirstOrDefault(
@@ -159,20 +148,9 @@ public static class InstallPackage
             // TenantId is stamped AMBIENTLY for pipeline writes (the interceptor, like
             // roles.define and extensions.define-field) — explicit stamps are for seed and
             // background writes only. Stated once; the other creates below follow it.
-            toAdd.Add(new ExtensionFieldEntity
-            {
-                Id = Guid.NewGuid(),
-                Entity = field.Entity,
-                Key = field.Key,
-                Type = field.Type,
-                Required = field.Required,
-                MaxLength = field.MaxLength,
-                LabelsJson = JsonSerializer.Serialize(field.Labels),
-                DescriptionsJson = field.Descriptions is null ? null : JsonSerializer.Serialize(field.Descriptions),
-                OptionsJson = field.Options is null ? null : JsonSerializer.Serialize(field.Options),
-                State = ExtensionFieldState.Active,
-                Package = document.Package,
-            });
+            toAdd.Add(ExtensionFieldRules.Build(
+                field.Entity, field.Key, field.Type, field.Required, field.MaxLength,
+                field.Labels, field.Descriptions, field.Options, document.Package));
         }
 
         var roleSpecs = document.Roles ?? [];
@@ -209,6 +187,7 @@ public static class InstallPackage
                 tam.Db.Add(entity);
             }
             entity.PermissionsJson = JsonSerializer.Serialize(role.Permissions);
+            entity.Retired = false;
         }
 
         if (installed is null)

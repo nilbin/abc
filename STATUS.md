@@ -474,6 +474,31 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 2a — structural unifications**: four parallel mechanisms collapsed into single
+  descriptors, and one canon finished. (1) GRID ACTIONS: RowActions/RowForms/ToolbarActions and
+  contributed actions were four lists carrying one idea — now ONE `GridActionSpec(Operation,
+  Placement: Row|Toolbar, Mode: Execute|Form)`; the wire shape is a single `actions` array
+  (`{operation, placement, mode, bind?, plugin?}`), plugin contributions merge in as
+  row/execute descriptors with their bind maps, the builder verbs stay as sugar
+  (`RowAction`/`RowForm`/`ToolbarAction`), and ViewGrid renders from one filtered list instead
+  of four code paths. Panels grew `headingKey`/`order` so contributed detail panels title and
+  sort themselves declaratively. (2) RULE ENGINE TIER SPLIT: the evaluator lived inside
+  Packages/Rules.cs — but "the service is core; the package is only the surface" (the RoleStore
+  rule), so RulesGate/RuleActionsGate/RuleEvaluator moved to their own RuleEngine.cs, and the
+  extraction paid for itself: the three near-identical evaluate loops (gate, transactional
+  actions, dispatch actions) deduped into one `EvaluateRuleAsync` core (a `Firing` record,
+  pure-pass row detach + memoization, one shared rule-fault exception list, one shared
+  set-field applicator) — Packages/Rules.cs shrank 354 lines to surface-only. (3)
+  `ExtensionFieldRules`: extensions.define-field and package install validated + built field
+  rows separately; now one Validate (UnknownEntity/UnknownType/InvalidKey/MissingLabel with
+  caller-supplied finding paths) and one Build row-factory serve both doors — the RoleRules
+  pattern repeated. (4) RETIRE CANON: wherever define upserts by natural key, retire addresses
+  the same key — `extensions.retire-field` now takes (entity, key) instead of a Guid (an
+  INTENTIONAL baseline break, committed per the D4 procedure; no callers existed), the fields
+  grid gained the retire row action, and roles — the one define-family without a retire — got
+  `roles.retire` (Retired flag, consumers filter, define revives). Verified: suites 162+38,
+  wire 18+22 green on fresh SQLite AND Postgres, docs 29/31/32 synced, regenerated types,
+  baseline re-exported with the one documented break.
 - **ResetOn promoted + rules editable in place (rule-builder round 3)**: the trigger-picker
   coordination graduated from renderer code into a FRAMEWORK primitive — `ResetOn`, the
   DependsOn twin for VALUES (docs/05): `form.Field(x => x.Condition).ResetOn(x => x.OnOperation,
