@@ -1,8 +1,9 @@
-import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Group, Loader } from '@mantine/core';
-import { Manifest, TamClient, translate } from '@tam/core';
+import {
+  QueryClient, QueryClientProvider, useQuery, useQueryClient, type UseQueryResult,
+} from '@tanstack/react-query';
+import { Manifest, TamClient, ViewResponse, translate } from '@tam/core';
 
 export interface TamContextValue {
   client: TamClient;
@@ -14,15 +15,15 @@ export interface TamContextValue {
   /** Effective-permission check from the manifest's actor overlay (decision D1). */
   can: (permission: string) => boolean;
   /**
-   * The data-invalidation bus (decision D5). A single monotonic counter that bumps whenever
-   * server data changed — a committed write (form success, row action) OR a committed effect
-   * arriving over SSE (debounced, so bursts collapse into one bump). Anything reading server
-   * data depends on it and reloads; this ONE signal replaces the old refreshKey prop / internal
-   * localRefresh state / per-grid SSE subscription / onAction callback tangle.
+   * Invalidate cached server state after a committed write (decision D5). Pass the operation
+   * response's `effects` (or the SSE payload's) and invalidation is TARGETED: each
+   * `entity-modified` effect invalidates only the views over that entity (mapped through the
+   * manifest's `extensibleEntity`), and a system/config write additionally refetches the
+   * manifest. TanStack Query owns the cache, dedup and stale-while-revalidate underneath — this
+   * is the one signal that used to be a refreshKey prop / localRefresh counter / onAction
+   * callback / per-grid SSE subscription.
    */
-  dataVersion: number;
-  /** Publish to the bus: a write committed, reload every subscribed view now (no SSE wait). */
-  invalidate: () => void;
+  invalidate: (effects?: ReadonlyArray<Record<string, unknown>>) => void;
 }
 
 const TamContext = createContext<TamContextValue | null>(null);
@@ -33,33 +34,127 @@ export function useTam(): TamContextValue {
   return context;
 }
 
+/** The query key for a view read: prefix `['view', id]` so a targeted invalidation of one
+ *  view catches every page/filter/act-as/culture variant of it. */
+export const viewKey = (
+  viewId: string, params: Record<string, unknown>, actAs: string | undefined, culture: string,
+) => ['view', viewId, params, actAs ?? null, culture] as const;
+
+/**
+ * A cached view read (TanStack Query). Every grid, picker and panel reads through this, so two
+ * surfaces on the same view share one request and a committed write reloads exactly them.
+ */
+export function useView(
+  viewId: string, params: Record<string, unknown>, options?: { actAs?: string; enabled?: boolean },
+): UseQueryResult<ViewResponse> {
+  const { client, culture } = useTam();
+  return useQuery({
+    queryKey: viewKey(viewId, params, options?.actAs, culture),
+    queryFn: () => client.view(viewId, params, options?.actAs ? { actAs: options.actAs } : undefined),
+    enabled: options?.enabled ?? true,
+    placeholderData: prev => prev,   // keep the old page visible while the next loads
+  });
+}
+
+/**
+ * Turns a set of committed effects into precise cache invalidations. Domain writes name an
+ * EXTENSIBLE entity (`order`, `project`, …) → only that entity's views reload. A system/config
+ * write (roles, activations, fields, nav) names a non-extensible entity, or the effect set is
+ * unknown → the effective manifest may have changed, so refetch it plus every view. The domain
+ * vs system split derives from the manifest's own `extensibleEntity` set — no hardcoded list.
+ */
+function invalidateForEffects(
+  queryClient: QueryClient, manifest: Manifest, effects: ReadonlyArray<Record<string, unknown>>,
+): void {
+  const viewsByEntity = new Map<string, string[]>();
+  const extensible = new Set<string>();
+  for (const [id, view] of Object.entries(manifest.views)) {
+    const entity = view.extensibleEntity;
+    if (!entity) continue;
+    extensible.add(entity);
+    (viewsByEntity.get(entity) ?? viewsByEntity.set(entity, []).get(entity)!).push(id);
+  }
+
+  const entities = effects
+    .map(e => (typeof e.entity === 'string' ? e.entity : null))
+    .filter((e): e is string => e !== null);
+  const systemWrite = entities.length === 0 || entities.some(e => !extensible.has(e));
+
+  for (const entity of entities) {
+    for (const id of viewsByEntity.get(entity) ?? [])
+      void queryClient.invalidateQueries({ queryKey: ['view', id] });
+  }
+  if (systemWrite) {
+    // config/permissions/nav may have changed — the manifest and every view are suspect.
+    void queryClient.invalidateQueries({ queryKey: ['manifest'] });
+    void queryClient.invalidateQueries({ queryKey: ['view'] });
+  }
+}
+
 export function TamProvider(props: {
   client: TamClient;
   initialCulture?: string;
   children: React.ReactNode;
 }) {
-  const [manifest, setManifest] = useState<Manifest | null>(null);
-  const [culture, setCultureState] = useState(props.initialCulture ?? props.client.culture);
-  const [dataVersion, setDataVersion] = useState(0);
+  // One client per provider instance: App.tsx remounts the provider on identity/act-as change,
+  // so a tenant switch starts with a clean cache by construction.
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: { staleTime: 15_000, refetchOnWindowFocus: false, retry: 1 },
+    },
+  }));
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TamInner client={props.client} initialCulture={props.initialCulture}>
+        {props.children}
+      </TamInner>
+    </QueryClientProvider>
+  );
+}
 
-  const invalidate = useCallback(() => setDataVersion(v => v + 1), []);
+function TamInner(props: {
+  client: TamClient;
+  initialCulture?: string;
+  children: React.ReactNode;
+}) {
+  const queryClient = useQueryClient();
+  const [culture, setCultureState] = useState(props.initialCulture ?? props.client.culture);
+
+  // The manifest is just another cached resource: refreshManifest() invalidates it; a
+  // system/config write invalidates it through invalidateForEffects.
+  const { data: manifest } = useQuery({
+    queryKey: ['manifest'],
+    queryFn: () => props.client.manifest(),
+    staleTime: 60_000,
+  });
 
   const refreshManifest = useCallback(async () => {
-    setManifest(await props.client.manifest());
-  }, [props.client]);
+    await queryClient.invalidateQueries({ queryKey: ['manifest'] });
+  }, [queryClient]);
 
-  useEffect(() => { void refreshManifest(); }, [refreshManifest]);
+  const invalidate = useCallback((effects?: ReadonlyArray<Record<string, unknown>>) => {
+    if (!manifest) return;
+    invalidateForEffects(queryClient, manifest, effects ?? []);
+  }, [queryClient, manifest]);
 
   useEffect(() => {
-    // Committed effects (D5) publish to the ONE bus, debounced so a burst collapses into a
-    // single reload across every subscribed view. EventSource cannot set headers, so the
-    // acting-company header (docs/26 D-H4) rides a query param instead — the server applies
-    // the same standable validation either way.
+    // Committed effects (D5) invalidate the same way a local write does — the SSE payload carries
+    // the operation's effects, so live refresh is as targeted as a mutation. Debounced so a burst
+    // collapses. EventSource cannot set headers, so the acting-company header (docs/26 D-H4) rides
+    // a query param; the server applies the same standable validation either way.
     const actAs = props.client.actingAs;
     const query = actAs ? `?actAs=${encodeURIComponent(actAs)}` : '';
     const source = new EventSource(`${props.client.baseUrl}/api/events${query}`);
     let timer: ReturnType<typeof setTimeout>;
-    source.onmessage = () => { clearTimeout(timer); timer = setTimeout(invalidate, 400); };
+    let pending: Record<string, unknown>[] = [];
+    source.onmessage = event => {
+      try {
+        const parsed = JSON.parse(event.data) as { effects?: Record<string, unknown>[] };
+        if (parsed.effects) pending.push(...parsed.effects);
+      } catch { /* a keep-alive comment or malformed frame — ignore */ }
+      clearTimeout(timer);
+      timer = setTimeout(() => { const batch = pending; pending = []; invalidate(batch); }, 400);
+    };
     return () => { clearTimeout(timer); source.close(); };
   }, [props.client.baseUrl, props.client.actingAs, invalidate]);
 
@@ -68,7 +163,7 @@ export function TamProvider(props: {
     setCultureState(next);
   }, [props.client]);
 
-  const value = useMemo<TamContextValue | null>(() => manifest && ({
+  const value = useMemo<TamContextValue | null>(() => manifest ? ({
     client: props.client,
     manifest,
     culture,
@@ -81,27 +176,11 @@ export function TamProvider(props: {
         || granted.includes(permission)
         || granted.includes(`${permission}:own`);
     },
-    dataVersion,
     invalidate,
-  }), [manifest, culture, props.client, setCulture, refreshManifest, dataVersion, invalidate]);
+  }) : null, [manifest, culture, props.client, setCulture, refreshManifest, invalidate]);
 
   if (!value) {
     return <Group justify="center" p="xl"><Loader /></Group>;
   }
   return <TamContext.Provider value={value}>{props.children}</TamContext.Provider>;
-}
-
-/**
- * Runs `callback` whenever data is invalidated — NOT on mount. For side effects a bare view
- * reload doesn't cover: an admin surface refetching the effective manifest after a write that
- * changed permissions, nav, or fields (grids already reload off `dataVersion` themselves).
- */
-export function useInvalidation(callback: () => void): void {
-  const { dataVersion } = useTam();
-  const mounted = useRef(false);
-  useEffect(() => {
-    if (!mounted.current) { mounted.current = true; return; }
-    callback();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataVersion]);
 }

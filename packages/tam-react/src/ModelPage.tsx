@@ -53,7 +53,7 @@ export function ModelPage(props: { page: string }) {
             .map(f => [f.name, f.name === rec.key ? record.__rowId : record[f.name]])
             .filter(([, v]) => v !== undefined))}
           initialExtensions={(record.extensions as Record<string, unknown>) ?? {}}
-          onSuccess={() => { setRecord(null); invalidate(); }}
+          onSuccess={r => { setRecord(null); invalidate(r.effects); }}
         />
       );
     }

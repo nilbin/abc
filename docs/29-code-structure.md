@@ -23,6 +23,8 @@ src/Tam.Testing            the in-process test harness (tutorial Step 11): TamTe
                            the app pipeline.
 packages/tam-core          TS manifest types, Px evaluator, localization, HTTP client.
 packages/tam-react         React runtime: context, renderers, OperationForm, ViewGrid.
+                           Server state (view reads) goes through TanStack Query (useView);
+                           a committed write's effects drive TARGETED invalidateQueries.
 samples/web                   the sample SPA (Norrservice ERP) — host code, not framework.
 samples/erp                the reference host: domain, bindings, seed, Program wiring.
 samples/inspect|fortnox|approvals   vendor-plugin exemplars (the plugin shapes to copy).

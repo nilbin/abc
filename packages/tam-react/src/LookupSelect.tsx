@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader, Select } from '@mantine/core';
-import { useTam } from './context';
+import { useTam, useView } from './context';
 
 export interface LookupSelectProps {
   /** Lookup view id (e.g. "customers.lookup"). The view's Search query member drives the search. */
@@ -22,33 +22,30 @@ export interface LookupSelectProps {
 
 /**
  * Reference picker backed by a lookup view: the typed text becomes a debounced server-side
- * search, so the option list never needs the full table client-side. The current selection
- * stays visible even when the latest search response doesn't contain it.
+ * search through the same cached view reads as the grids (TanStack Query), so repeating a search
+ * is instant and the same lookup shared across pickers dedupes. The current selection stays
+ * visible even when the latest search response doesn't contain it.
  */
 export function LookupSelect(p: LookupSelectProps) {
-  const { client, t } = useTam();
+  const { t } = useTam();
   const [search, setSearch] = useState('');
-  const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [debounced, setDebounced] = useState('');
   const selected = useRef<{ value: string; label: string } | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    const timer = setTimeout(() => {
-      client.view(p.view, {
-        [p.searchParam ?? 'search']: search || undefined,
-        pageSize: p.pageSize ?? 20,
-      }).then(result => {
-        if (cancelled) return;
-        setOptions(result.rows.map(row => ({
-          value: String(row[p.idField ?? 'id']),
-          label: String(row[p.labelField ?? 'name']),
-        })));
-      }).finally(() => { if (!cancelled) setLoading(false); });
-    }, search ? 200 : 0);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [client, p.view, p.searchParam, p.pageSize, p.idField, p.labelField, search]);
+    const timer = setTimeout(() => setDebounced(search), search ? 200 : 0);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const result = useView(p.view, {
+    [p.searchParam ?? 'search']: debounced || undefined,
+    pageSize: p.pageSize ?? 20,
+  });
+  const loading = result.isPending;
+  const options = (result.data?.rows ?? []).map(row => ({
+    value: String(row[p.idField ?? 'id']),
+    label: String(row[p.labelField ?? 'name']),
+  }));
 
   const value = p.value === null || p.value === undefined || p.value === ''
     ? null : String(p.value);

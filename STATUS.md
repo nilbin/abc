@@ -474,7 +474,33 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
-- **Beauty arc 3a — the invalidation bus (FE structural pass, slice 1)**: the review's
+- **Beauty arc 3b — TanStack Query for the FE data layer (supersedes 3a's bus)**: the
+  hand-rolled `dataVersion`/`invalidate()` bus was a stepping stone; the elegant answer for
+  solved plumbing is not to hand-roll a cache (Tam's own tier rule — roll-your-own only for core
+  semantics; those all live on the server). The generic data layer now runs on TanStack Query.
+  `useView(viewId, params, {actAs})` is the one cached read every grid, picker and panel goes
+  through — keyed by `['view', id, params, actAs, culture]`, so two surfaces on one view dedupe,
+  remounts hit cache (stale-while-revalidate), and loading/error are the query's own states (the
+  hand-rolled rows/total/loading useState and the fetch effect are gone; the grid.load-failed
+  Alert now renders off `isError`). The manifest is just another query (`['manifest']`), so
+  `refreshManifest` is `invalidateQueries(['manifest'])`. INVALIDATION IS TARGETED and unified:
+  `invalidate(effects)` reads each committed `entity-modified` effect and invalidates only the
+  views over that entity — the entity→view map derives from the manifest's own `extensibleEntity`
+  set (no hardcoded list), and a system/config write (a non-extensible entity, or an unknown
+  effect set) additionally refetches the manifest. The SAME function serves mutations (operation
+  response effects) and live refresh (SSE payload effects, debounced), so a committed write and a
+  cross-client event invalidate identically — the four-mechanism tangle (refreshKey / localRefresh
+  / onAction / per-grid subscribeEffects) is now one effect-keyed call, and the GenericGrids
+  manifest-refresh special-case is deleted (a system write names a system entity → the manifest
+  refetches itself). LookupSelect rides the same cache (searches dedupe/cache). `@tanstack/react-
+  query` is a real dependency in the framework runtime — accepted because it is UI-agnostic
+  plumbing (orthogonal to Mantine), not pixels. Verified: web tsc + vite build; unit suites
+  163+38; wire 18+22 on fresh SQLite (server binary and manifest byte-identical to 2248ab2, so
+  Postgres parity is inherited from its green run — zero server delta this commit); Playwright
+  drove a live create → the grid reloaded 8 rows via targeted invalidateQueries with the modal
+  closing and ZERO page errors (screenshots). Remaining arc-3 items (display-renderer registry,
+  URL-backed nav, ModelPage record-identity cleanup, hardcoded strings, typed-client note) follow.
+- **Beauty arc 3a — the invalidation bus (FE structural pass, slice 1; SUPERSEDED by 3b)**: the review's
   headline FE tangle collapsed. Four parallel "reload this grid" mechanisms — a `refreshKey`
   prop threaded parent→grid, an internal `localRefresh` counter, an `onAction` callback bubbled
   up for manifest refresh, and a per-grid SSE `subscribeEffects` debounce — became ONE concept:
