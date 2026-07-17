@@ -28,10 +28,13 @@ public static class ScheduleIntegration
 {
     public sealed record Input(
         [property: LabelKey("labels.integration")] string IntegrationId,
-        [property: LabelKey("labels.spec")] string Spec,
-        [property: LabelKey("labels.enabled")] bool Enabled = true);
+        string Spec,
+        bool Enabled = true);
 
-    public sealed record Output(string IntegrationId, string NextRunIso);
+    public sealed record Output(
+        string IntegrationId,
+        // The Iso suffix is storage encoding, not product vocabulary — relabel, keep the wire name.
+        [property: LabelKey("labels.next-run")] string NextRunIso);
 
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, TamModel model, CancellationToken ct)
@@ -112,11 +115,8 @@ public static class IntegrationRunList
         public Guid Id { get; init; }
         [LabelKey("labels.integration")]
         public string IntegrationId { get; init; } = "";
-        [LabelKey("labels.trigger")]
         public string Trigger { get; init; } = "";
-        [LabelKey("labels.status")]
         public string Status { get; init; } = "";
-        [LabelKey("labels.detail")]
         public string? Detail { get; init; }
         [LabelKey("labels.timestamp")]
         public string RanAt { get; init; } = "";
@@ -158,9 +158,7 @@ public static class DeadLetterList
         public string Kind { get; init; } = "";        // inbound | outbound
         [LabelKey("labels.integration")]
         public string IntegrationId { get; init; } = "";
-        [LabelKey("labels.reference")]
         public string Reference { get; init; } = "";    // inbound: idempotency key; outbound: trigger
-        [LabelKey("labels.attempts")]
         public int Attempts { get; init; }
         [LabelKey("labels.detail")]
         public string? LastError { get; init; }
@@ -202,7 +200,7 @@ public static class DeadLetterList
 [Authorize("integrations.manage")]
 public static class RequeueDeadLetter
 {
-    public sealed record Input([property: LabelKey("labels.id")] Guid Id);
+    public sealed record Input(Guid Id);
 
     public sealed record Output(Guid Id, string Kind);
 

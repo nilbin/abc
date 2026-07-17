@@ -40,12 +40,10 @@ public static class CreateFromOrder
             new Dictionary<string, string?> { ["orderId"] = input.OrderId.ToString() }, context, ct);
         if (orders.Rows.Count == 0)
             return InvoicingFindings.OrderNotFound.At(nameof(Input.OrderId));
-        var order = (IDictionary<string, object?>?)null;
         var row = System.Text.Json.JsonSerializer.SerializeToElement(orders.Rows[0], TamJson.Options);
         var number = row.TryGetProperty("number", out var n) ? n.GetString() ?? "" : "";
         var amount = row.TryGetProperty("estimatedTotal", out var a) && a.ValueKind
             is System.Text.Json.JsonValueKind.Number ? a.GetDecimal() : 0m;
-        _ = order;
 
         var invoice = Invoice.Create(context.TenantId.Value, input.OrderId, number, amount);
         tam.Db.Add(invoice);

@@ -116,10 +116,10 @@ public sealed class OutboxDispatcher(
 
         if (!activations.TryGetValue(record.TenantId, out var active))
         {
-            // Framework packages are always active (docs/22 package tier) — union them in so
-            // package-shipped subscribers and event triggers fire for every tenant.
-            var stored = await PluginActivations.ActiveAsync(db, record.TenantId, ct);
-            activations[record.TenantId] = active = stored.Union(model!.Packages.Keys).ToHashSet();
+            // One authority for the active set (packages always unioned in) — the dispatcher
+            // only memoizes it per tenant across the batch.
+            activations[record.TenantId] = active =
+                await ActivationCache.ForAsync(services, db, record.TenantId, ct);
         }
         var payload = System.Text.Json.JsonDocument.Parse(
             string.IsNullOrEmpty(record.PayloadJson) ? "{}" : record.PayloadJson);

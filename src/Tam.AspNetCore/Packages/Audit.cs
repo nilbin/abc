@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Tam.EntityFrameworkCore;
 
-namespace Tam.AspNetCore.SystemOps;
+namespace Tam.AspNetCore;
 
 /// <summary>The audit READ side (D3). Capture stays in the pipeline transaction — core,
 /// unconditionally; this package is only the history surface.</summary>
@@ -32,19 +32,15 @@ public static class AuditLog
     public sealed record Result
     {
         public Guid Id { get; init; }
-        [LabelKey("labels.timestamp")]
         public string Timestamp { get; init; } = "";
         [LabelKey("labels.operation")]
         public string OperationId { get; init; } = "";
         [LabelKey("labels.actor")]
         public string ActorName { get; init; } = "";
         public string Entity { get; init; } = "";
-        [LabelKey("labels.entity-id")]
         public string EntityId { get; init; } = "";
         public string Field { get; init; } = "";
-        [LabelKey("labels.old-value")]
         public string? OldValue { get; init; }
-        [LabelKey("labels.new-value")]
         public string? NewValue { get; init; }
     }
 

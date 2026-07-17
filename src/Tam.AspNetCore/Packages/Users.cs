@@ -77,6 +77,47 @@ internal static class MembershipRules
 
     /// <summary>Role names resolve against the ACTIVE tenant's registry — the same validation
     /// for define and invite. Returns field-targeted findings, empty when valid.</summary>
+    /// <summary>The trunk users.define and users.invite share: validate the role
+    /// assignments, find-or-create the account and THIS tenant's membership — consuming a
+    /// seat exactly when the membership is new or inactive — then stamp roles + active.
+    /// Callers keep only their tails: define sets credentials, invite mails the token.</summary>
+    public static async Task<(AccountEntity? Account, List<Finding> Findings)>
+        EnsureActiveMembershipAsync(
+            ITamDb tam, OperationContext context, string email, string displayName,
+            List<string> roles, string onField, string rolesField, CancellationToken ct)
+    {
+        var invalid = await ValidateAssignmentsAsync(tam, roles, rolesField, ct);
+        if (invalid.Count > 0) return (null, invalid);
+
+        var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(tam, email, ct);
+
+        if (membership is null || !membership.Active)
+        {
+            if (await ConsumeSeatAsync(tam, context.TenantId.Value, ct) is { } over)
+                return (null, [over.At(onField)]);
+        }
+
+        if (account is null)
+        {
+            account = new AccountEntity { Id = Guid.NewGuid(), Email = email, DisplayName = displayName };
+            tam.Db.Add(account);
+        }
+
+        if (membership is null)
+        {
+            membership = new TenantMembershipEntity
+            {
+                Id = Guid.NewGuid(),
+                TenantId = context.TenantId.Value,   // explicit: seed/background inserts aren't stamped
+                AccountId = account.Id,
+            };
+            tam.Db.Add(membership);
+        }
+        membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(roles);
+        membership.Active = true;
+        return (account, []);
+    }
+
     public static async Task<List<Finding>> ValidateAssignmentsAsync(
         ITamDb tam, List<string> roles, string rolesField, CancellationToken ct)
     {
@@ -109,10 +150,10 @@ internal static class UserLookup
 public static class DefineUser
 {
     public sealed record Input(
-        [property: LabelKey("labels.user-name")] string UserName,
-        [property: LabelKey("labels.display-name")] string DisplayName,
-        [property: LabelKey("labels.password")] string? Password,
-        [property: LabelKey("labels.roles")] List<string> Roles);
+        string UserName,
+        string DisplayName,
+        string? Password,
+        List<string> Roles);
 
     public sealed record Output(Guid UserId);
 
@@ -122,41 +163,15 @@ public static class DefineUser
         if (!System.Text.RegularExpressions.Regex.IsMatch(input.UserName, "^[a-z][a-z0-9.-]*$"))
             return UserFindings.InvalidName.At(nameof(Input.UserName));
 
-        var invalid = await MembershipRules.ValidateAssignmentsAsync(
-            tam, input.Roles, nameof(Input.Roles), ct);
-        if (invalid.Count > 0) return new Result<Output> { Findings = invalid };
+        var (account, findings) = await MembershipRules.EnsureActiveMembershipAsync(
+            tam, context, input.UserName, input.DisplayName, input.Roles,
+            onField: nameof(Input.UserName), rolesField: nameof(Input.Roles), ct: ct);
+        if (findings.Count > 0) return new Result<Output> { Findings = findings };
 
-        var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
-            tam, input.UserName, ct);
-
-        if (membership is null || !membership.Active)
-        {
-            if (await MembershipRules.ConsumeSeatAsync(tam, context.TenantId.Value, ct) is { } over)
-                return over.At(nameof(Input.UserName));
-        }
-
-        if (account is null)
-        {
-            account = new AccountEntity { Id = Guid.NewGuid(), Email = input.UserName };
-            tam.Db.Add(account);
-        }
-        account.DisplayName = input.DisplayName;
+        account!.DisplayName = input.DisplayName;
         if (input.Password is { Length: > 0 } password)
             account.PasswordHash = TamPasswords.Hash(password);
         account.Active = true;
-
-        if (membership is null)
-        {
-            membership = new TenantMembershipEntity
-            {
-                Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,   // explicit: seed/background inserts aren't stamped
-                AccountId = account.Id,
-            };
-            tam.Db.Add(membership);
-        }
-        membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
-        membership.Active = true;
 
         return new Output(account.Id);
     }
@@ -176,8 +191,8 @@ public static class InviteUser
 {
     public sealed record Input(
         [property: LabelKey("auth.email")] string Email,
-        [property: LabelKey("labels.display-name")] string DisplayName,
-        [property: LabelKey("labels.roles")] List<string> Roles);
+        string DisplayName,
+        List<string> Roles);
 
     public sealed record Output(Guid UserId, bool InviteSent);
 
@@ -190,42 +205,12 @@ public static class InviteUser
         if (!System.Text.RegularExpressions.Regex.IsMatch(input.Email, "^[a-z0-9][a-z0-9.@+-]*$"))
             return UserFindings.InvalidName.At(nameof(Input.Email));
 
-        var invalid = await MembershipRules.ValidateAssignmentsAsync(
-            tam, input.Roles, nameof(Input.Roles), ct);
-        if (invalid.Count > 0) return new Result<Output> { Findings = invalid };
+        var (account, findings) = await MembershipRules.EnsureActiveMembershipAsync(
+            tam, context, input.Email, input.DisplayName, input.Roles,
+            onField: nameof(Input.Email), rolesField: nameof(Input.Roles), ct: ct);
+        if (findings.Count > 0) return new Result<Output> { Findings = findings };
 
-        var (account, membership) = await UserLookup.FindAccountAndMembershipAsync(
-            tam, input.Email, ct);
-
-        if (membership is null || !membership.Active)
-        {
-            if (await MembershipRules.ConsumeSeatAsync(tam, context.TenantId.Value, ct) is { } over)
-                return over.At(nameof(Input.Email));
-        }
-
-        if (account is null)
-        {
-            account = new AccountEntity
-            {
-                Id = Guid.NewGuid(), Email = input.Email, DisplayName = input.DisplayName,
-            };
-            tam.Db.Add(account);
-        }
-
-        if (membership is null)
-        {
-            membership = new TenantMembershipEntity
-            {
-                Id = Guid.NewGuid(),
-                TenantId = context.TenantId.Value,
-                AccountId = account.Id,
-            };
-            tam.Db.Add(membership);
-        }
-        membership.RolesJson = System.Text.Json.JsonSerializer.Serialize(input.Roles);
-        membership.Active = true;
-
-        if (account.PasswordHash is { Length: > 0 })
+        if (account!.PasswordHash is { Length: > 0 })
         {
             // Existing credentialed account: membership added, nothing to accept.
             await email.SendAsync(account.Email,
@@ -266,7 +251,7 @@ public static class InviteUser
 [Authorize("users.manage")]
 public static class DeactivateUser
 {
-    public sealed record Input([property: LabelKey("labels.user-name")] string UserName);
+    public sealed record Input(string UserName);
 
     public sealed record Output(string UserName);
 
@@ -297,7 +282,6 @@ public static class UserDirectoryLookup
     public sealed record Result
     {
         public Guid Id { get; init; }
-        [LabelKey("labels.display-name")]
         public string DisplayName { get; init; } = "";
     }
 
@@ -326,13 +310,9 @@ public static class UserList
     public sealed record Result
     {
         public Guid Id { get; init; }
-        [LabelKey("labels.user-name")]
         public string UserName { get; init; } = "";
-        [LabelKey("labels.display-name")]
         public string DisplayName { get; init; } = "";
-        [LabelKey("labels.roles")]
         public string Roles { get; init; } = "";
-        [LabelKey("labels.active")]
         public bool Active { get; init; }
     }
 

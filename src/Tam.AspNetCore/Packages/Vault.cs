@@ -30,8 +30,8 @@ public static class VaultFindings
 public static class SetSetting
 {
     public sealed record Input(
-        [property: LabelKey("labels.key")] string Key,
-        [property: LabelKey("labels.value")] string Value);
+        string Key,
+        string Value);
 
     public sealed record Output(string Key);
 
@@ -65,9 +65,7 @@ public static class SettingList
 
     public sealed record Result
     {
-        [LabelKey("labels.key")]
         public string Key { get; init; } = "";
-        [LabelKey("labels.value")]
         public string Value { get; init; } = "";
     }
 
@@ -91,8 +89,8 @@ public static class SettingList
 public static class SetSecret
 {
     public sealed record Input(
-        [property: LabelKey("labels.key")] string Key,
-        [property: LabelKey("labels.value")] string Value);
+        string Key,
+        string Value);
 
     public sealed record Output(string Key);
 
@@ -113,7 +111,6 @@ public static class SecretList
 
     public sealed record Result
     {
-        [LabelKey("labels.key")]
         public string Key { get; init; } = "";
         [LabelKey("labels.secret-set")]
         public bool IsSet { get; init; }

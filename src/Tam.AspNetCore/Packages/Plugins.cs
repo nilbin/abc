@@ -108,7 +108,6 @@ public static class PluginList
     {
         [LabelKey("labels.plugin")]
         public string PluginId { get; init; } = "";
-        [LabelKey("labels.active")]
         public bool Active { get; init; }
     }
 

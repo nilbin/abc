@@ -85,7 +85,7 @@ public sealed partial class TamModelBuilder
                 if (leftovers.Count > 0)
                 {
                     var last = modes[^1];
-                    var more = new NavNode(NavNode.More, NavNodeKind.Section, $"nav.{NavNode.More}",
+                    var more = new NavNode(NavNode.More, NavNodeKind.Section, LabelKeys.Nav(NavNode.More),
                         null, null, null, null, null, leftovers);
                     modes[^1] = last with { Children = [.. last.Children, more] };
                 }
@@ -440,7 +440,7 @@ public sealed partial class TamModelBuilder
         {
             // Only convention-derived keys on WRAPPER types — an explicit [LabelKey] is a
             // deliberate share, and primitive members sharing "Name" is the convention working.
-            if (field.LabelKey != $"labels.{Naming.Kebab(field.MemberName)}") return;
+            if (field.LabelKey != LabelKeys.Field(field.MemberName)) return;
             var type = Nullable.GetUnderlyingType(field.EffectiveType) ?? field.EffectiveType;
             if (!ValueWrapper.IsWrapper(type)) return;
             (claims.TryGetValue(field.LabelKey, out var set)

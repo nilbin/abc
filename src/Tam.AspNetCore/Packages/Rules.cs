@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Tam.AspNetCore.SystemOps;
 using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
@@ -79,6 +78,7 @@ public static class RuleFindings
     public static readonly FindingFactory NoTargetRow = Finding.Error("rules.no-target-row");           // RUL004
     public static readonly FindingFactory InvalidAction = Finding.Error("rules.invalid-action");         // RUL005
     public static readonly FindingFactory InvalidCondition = Finding.Error("rules.invalid-condition");
+    public static readonly FindingFactory InvalidName = Finding.Error("rules.invalid-name");
 }
 
 /// <summary>
@@ -441,14 +441,14 @@ public static class DefineAutomationRule
 {
     public sealed record Input(
         [property: LabelKey("labels.rule")] string Name,
-        [property: LabelKey("labels.on-operation")] string? OnOperation,
-        [property: LabelKey("labels.condition")] string Condition,
+        string? OnOperation,
+        string Condition,
         // Optional at the wire (action rules carry no blocking text); RUL003 still demands the
         // default culture for FINDING rules — the form mirrors that with RequiredWhen.
-        [property: LabelKey("labels.messages")] Dictionary<string, string>? Messages = null,
-        [property: LabelKey("labels.target-field")] string? TargetField = null,
-        [property: LabelKey("labels.action")] string? Action = null,
-        [property: LabelKey("labels.on-event")] string? OnEvent = null);
+        Dictionary<string, string>? Messages = null,
+        string? TargetField = null,
+        string? Action = null,
+        string? OnEvent = null);
 
     public sealed record Output(Guid RuleId);
 
@@ -456,8 +456,8 @@ public static class DefineAutomationRule
         Input input, OperationContext context, ITamDb tam, TamModel model,
         IExtensionRegistry registry, CancellationToken ct)
     {
-        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Name, "^[a-z][a-z0-9-]*$"))
-            return ValidationFindings.InvalidValue.At(nameof(Input.Name));
+        if (!Naming.IsSlug(input.Name))
+            return RuleFindings.InvalidName.At(nameof(Input.Name));
 
         // Bound the stored/re-parsed payloads (review round 5): a condition/action is
         // deserialized on every triggering operation, so an unbounded blob is a self-DoS.
@@ -726,19 +726,12 @@ public static class RuleList
         public Guid Id { get; init; }
         [LabelKey("labels.rule")]
         public string Name { get; init; } = "";
-        [LabelKey("labels.on-operation")]
         public string OnOperation { get; init; } = "";
-        [LabelKey("labels.on-event")]
         public string? OnEvent { get; init; }
-        [LabelKey("labels.condition")]
         public string Condition { get; init; } = "";
-        [LabelKey("labels.messages")]
         public Dictionary<string, string> Messages { get; init; } = [];
-        [LabelKey("labels.target-field")]
         public string? TargetField { get; init; }
-        [LabelKey("labels.action")]
         public string? Action { get; init; }
-        [LabelKey("labels.retired")]
         public bool Retired { get; init; }
     }
 

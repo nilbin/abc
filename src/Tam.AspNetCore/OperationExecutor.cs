@@ -23,12 +23,9 @@ public sealed class OperationExecutor(
 
         // Inactive plugin → the operation does not exist for this tenant (docs/22): checked
         // before authorization so the answer is indistinguishable from an unknown id.
-        if (operation.Plugin is { } plugin)
-        {
-            var active = await ActivationCache.ForAsync(services, dbResolver(services), context.TenantId.Value, ct);
-            if (!active.Contains(plugin))
-                return Fail(context, PipelineFindings.UnknownOperation.With(("operation", operationId)));
-        }
+        if (!await ActivationCache.ContributionExistsAsync(
+                services, dbResolver(services), operation.Plugin, context.TenantId.Value, ct))
+            return Fail(context, PipelineFindings.UnknownOperation.With(("operation", operationId)));
 
         if (!context.Actor.Can(operation.Permission))
             return Fail(context, PipelineFindings.NotAuthorized.With(("permission", operation.Permission)));

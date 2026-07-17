@@ -35,11 +35,11 @@ public static class OrderRules
 public static class CreateOrder
 {
     public sealed record Input(
-        [property: LabelKey("labels.customer")] CustomerId CustomerId,
+        CustomerId CustomerId,
         OrderType OrderType,
         Address WorkAddress,
         OrderDescription Description,
-        [property: LabelKey("labels.project")] ProjectId? ProjectId = null,
+        ProjectId? ProjectId = null,
         DateOnly? RequestedDate = null,
         Money? EstimatedTotal = null);
 

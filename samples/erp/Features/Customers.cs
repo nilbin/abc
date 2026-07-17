@@ -40,7 +40,7 @@ public static class CreateCustomer
 public static class EditCustomerContact
 {
     public sealed record Input(
-        [property: LabelKey("labels.customer")] CustomerId CustomerId,
+        CustomerId CustomerId,
         Change<CustomerName>? Name = null,
         Change<Address?>? VisitAddress = null,
         [property: Sensitive("customers.sensitive")] Change<EmailAddress?>? Email = null,

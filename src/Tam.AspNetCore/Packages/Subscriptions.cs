@@ -28,10 +28,10 @@ public sealed class TamSubscriptionsPackage : ITamPlugin
 public static class SetPlan
 {
     public sealed record Input(
-        [property: LabelKey("labels.plan")] string Plan,
-        [property: LabelKey("labels.seats")] int Seats,
-        [property: LabelKey("labels.entitlements")] List<string> Entitlements,
-        [property: LabelKey("labels.status")] string Status = "active",
+        string Plan,
+        int Seats,
+        List<string> Entitlements,
+        string Status = "active",
         [property: LabelKey("labels.renews-at")] string? RenewsAtIso = null);
 
     public sealed record Output(string Plan, int Seats);
@@ -65,15 +65,10 @@ public static class CurrentSubscription
 
     public sealed record Result
     {
-        [LabelKey("labels.plan")]
         public string Plan { get; init; } = "";
-        [LabelKey("labels.seats")]
         public int Seats { get; init; }
-        [LabelKey("labels.seats-used")]
         public int SeatsUsed { get; init; }
-        [LabelKey("labels.status")]
         public string Status { get; init; } = "";
-        [LabelKey("labels.entitlements")]
         public string Entitlements { get; init; } = "";
         [LabelKey("labels.anchor-tenant")]
         public string AnchorTenantId { get; init; } = "";

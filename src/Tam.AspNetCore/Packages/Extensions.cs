@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Tam.EntityFrameworkCore;
 
-namespace Tam.AspNetCore.SystemOps;
+namespace Tam.AspNetCore;
 
 /// <summary>Tenant custom fields (docs/15): registry operations + the fields grid.</summary>
 [TamPackage("tam.extensions", "extensions", "web.extensions")]
@@ -67,8 +67,8 @@ public static class DefineExtensionField
         if (!SemanticTypes.ByKey.ContainsKey(input.Type))
             return ExtensionFindings.UnknownType.At(nameof(Input.Type));
 
-        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Key, "^[a-z][a-zA-Z0-9]*$"))
-            return ValidationFindings.InvalidValue.At(nameof(Input.Key));
+        if (!Naming.IsCamelKey(input.Key))
+            return ExtensionFindings.InvalidKey.At(nameof(Input.Key));
 
         var collision = await tam.Db.Set<ExtensionFieldEntity>().AnyAsync(
             x => x.Entity == input.Entity && x.Key == input.Key, ct);
@@ -149,4 +149,3 @@ public static class ExtensionFieldList
         caps.Sortable(nameof(Result.Key)).DefaultSort(nameof(Result.Key));
 }
 
-// ---------------------------------------------------------------- roles (decision D1)

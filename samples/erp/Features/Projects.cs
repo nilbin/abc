@@ -10,7 +10,7 @@ namespace Erp.Features;
 public static class CreateProject
 {
     public sealed record Input(
-        [property: LabelKey("labels.customer")] CustomerId CustomerId,
+        CustomerId CustomerId,
         ProjectNumber Number,
         string Name,
         Money? Budget = null);
@@ -41,7 +41,7 @@ public static class CreateProject
 public static class EditProjectDetails
 {
     public sealed record Input(
-        [property: LabelKey("labels.project")] ProjectId ProjectId,
+        ProjectId ProjectId,
         Change<string>? Name = null,
         Change<Money?>? Budget = null);
 
@@ -67,7 +67,7 @@ public static class EditProjectDetails
 [Authorize("projects.close")]
 public static class CloseProject
 {
-    public sealed record Input([property: LabelKey("labels.project")] ProjectId ProjectId);
+    public sealed record Input(ProjectId ProjectId);
 
     public sealed record Output(ProjectStatus Status);
 
@@ -91,7 +91,7 @@ public static class CloseProject
 [Authorize("projects.close")]
 public static class ReopenProject
 {
-    public sealed record Input([property: LabelKey("labels.project")] ProjectId ProjectId);
+    public sealed record Input(ProjectId ProjectId);
 
     public sealed record Output(ProjectStatus Status);
 

@@ -377,7 +377,7 @@ public static class ManifestBuilder
 
     public static ManifestField ToField(ExtensionFieldSpec spec) => new(
         spec.Key,
-        $"ext.{spec.Key}",           // resolved from the spec's own Labels, merged into catalogs per tenant
+        LabelKeys.Extension(spec.Key),           // resolved from the spec's own Labels, merged into catalogs per tenant
         spec.Semantic.Key,
         spec.Semantic.WireKind,
         spec.Semantic.Format,

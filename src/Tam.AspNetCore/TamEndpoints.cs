@@ -35,8 +35,7 @@ public static partial class TamAspNetCore
             var context = BuildContext(http, model);
             var (response, error) = await executor.ExecuteAsync(viewId, query, context, ct);
             return error is not null
-                ? Results.Json(new { findings = new[] { model.Locales.Resolve(error, context.Culture) } },
-                    TamJson.Options, statusCode: ErrorStatus(error))
+                ? FindingsResult(model, context, error)
                 : Results.Json(response, TamJson.Options);
         });
 
@@ -58,15 +57,13 @@ public static partial class TamAspNetCore
                 request = null;
             }
             if (request is null || request.Input.ValueKind is not JsonValueKind.Object)
-                return Results.Json(new { findings = new[] { model.Locales.Resolve(
-                        PipelineFindings.InvalidInput.With(
-                            ("expected", """{ "input": { ...form fields... }, "changed": ["field"], "revision": 1 }""")),
-                        context.Culture) } },
-                    TamJson.Options, statusCode: StatusCodes.Status400BadRequest);
+                return FindingsResult(model, context,
+                    PipelineFindings.InvalidInput.With(
+                        ("expected", """{ "input": { ...form fields... }, "changed": ["field"], "revision": 1 }""")),
+                    StatusCodes.Status400BadRequest);
             var (response, error) = await executor.ResolveAsync(formId, request, context, ct);
             return error is not null
-                ? Results.Json(new { findings = new[] { model.Locales.Resolve(error, context.Culture) } },
-                    TamJson.Options, statusCode: ErrorStatus(error))
+                ? FindingsResult(model, context, error)
                 : Results.Json(response, TamJson.Options);
         });
 
@@ -129,8 +126,8 @@ public static partial class TamAspNetCore
                 return Results.NotFound();
 
             var context = BuildContext(http, model);
-            var active = await ActivationCache.ForAsync(http.RequestServices, tam.Db, context.TenantId.Value, ct);
-            if (!active.Contains(integration.PluginId))
+            if (!await ActivationCache.ContributionExistsAsync(
+                    http.RequestServices, tam.Db, integration.PluginId, context.TenantId.Value, ct))
                 return Results.NotFound();   // inactive plugin → the integration does not exist
 
             JsonElement payload;
@@ -141,9 +138,7 @@ public static partial class TamAspNetCore
             catch (JsonException)
             {
                 // A partner posting malformed JSON is a client error, not a server fault.
-                return Results.Json(
-                    new { findings = new[] { new { code = "integrations.malformed-payload" } } },
-                    TamJson.Options, statusCode: StatusCodes.Status422UnprocessableEntity);
+                return FindingsResult(model, context, OutboundFindings.MalformedPayload.Create());
             }
             var results = await PluginIntegrationRunner.RunAsync(integration, payload, executor, context, tam.Db, ct);
             return Results.Json(new { results }, TamJson.Options);
@@ -214,17 +209,25 @@ public static partial class TamAspNetCore
     private static int StatusFor(OperationResponse response)
     {
         if (response.Conflicts is { Count: > 0 }) return StatusCodes.Status409Conflict;
-        if (!response.Findings.Any(f => f.Severity == FindingSeverity.Error)) return StatusCodes.Status200OK;
-        return response.Findings.Any(f => f.Code == PipelineFindings.NotAuthorized.Code)
-            ? StatusCodes.Status403Forbidden
-            : response.Findings.Any(f => f.Code == PipelineFindings.UnknownOperation.Code)
-                ? StatusCodes.Status404NotFound
-                : StatusCodes.Status422UnprocessableEntity;
+        // Authorization fails fast in the pipeline, so an error response carries one code family;
+        // the first error finding decides through the same mapping every endpoint uses.
+        var error = response.Findings.FirstOrDefault(f => f.Severity == FindingSeverity.Error);
+        return error is null ? StatusCodes.Status200OK : FindingStatus(error);
     }
 
-    private static int ErrorStatus(Finding error) =>
+    /// <summary>Findings answer through ONE door (docs/03): resolved via the locale catalogs,
+    /// shaped as the universal envelope, mapped to a status by the one rule below — never a
+    /// hand-built anonymous object at an endpoint.</summary>
+    private static IResult FindingsResult(
+        TamModel model, OperationContext context, Finding error, int? status = null) =>
+        Results.Json(new { findings = new[] { model.Locales.Resolve(error, context.Culture) } },
+            TamJson.Options, statusCode: status ?? FindingStatus(error));
+
+    private static int FindingStatus(Finding error) =>
         error.Code == PipelineFindings.NotAuthorized.Code ? StatusCodes.Status403Forbidden
-        : error.Code == PipelineFindings.UnknownView.Code ? StatusCodes.Status404NotFound
+        : error.Code == PipelineFindings.UnknownView.Code
+            || error.Code == PipelineFindings.UnknownOperation.Code
+            || error.Code == PipelineFindings.UnknownForm.Code ? StatusCodes.Status404NotFound
         : StatusCodes.Status422UnprocessableEntity;
 
     /// <summary>Content-derived revision: any overlay change (add, retire, relabel) or plugin
@@ -271,11 +274,11 @@ public static partial class TamAspNetCore
                     ?? spec.Labels.GetValueOrDefault(model.DefaultCulture)
                     ?? spec.Labels.Values.FirstOrDefault()
                     ?? spec.Key;
-                catalog[$"ext.{spec.Key}"] = label;
+                catalog[LabelKeys.Extension(spec.Key)] = label;
                 var description = spec.Descriptions?.GetValueOrDefault(culture)
                     ?? spec.Descriptions?.GetValueOrDefault(model.DefaultCulture);
                 if (description is not null)
-                    catalog[$"ext.{spec.Key}.description"] = description;
+                    catalog[LabelKeys.ExtensionDescription(spec.Key)] = description;
             }
         }
 

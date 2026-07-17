@@ -4,7 +4,7 @@ namespace Tam;
 public sealed record OutboundIntegrationDefinition(
     string Id, string PluginId, IntegrationTrigger Trigger, OutboundIntegrationHandler Handler)
 {
-    public string TitleKey => $"integrations.{Id}.title";
+    public string TitleKey => LabelKeys.IntegrationTitle(Id);
 }
 
 /// <summary>
@@ -148,9 +148,6 @@ public sealed class PluginBuilder
         return this;
     }
 
-    /// <summary>Declares a precondition on a host operation (by operation id — the wire
-    /// contract). <typeparamref name="TGate"/> is constructed per invocation with ctor injection.
-    /// Runs only for tenants with this plugin active; listed in the manifest.</summary>
     /// <summary>Composes a registration PART (review round 4): big plugins split Configure
     /// into cohesive units and list them here — explicitly, so Configure stays the index.</summary>
     public PluginBuilder AddPart<TPart>() where TPart : IPluginPart, new()

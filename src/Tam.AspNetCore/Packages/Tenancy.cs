@@ -68,7 +68,7 @@ public static class CreateTenant
 {
     public sealed record Input(
         string Id,
-        [property: LabelKey("labels.display-name")] string DisplayName);
+        string DisplayName);
 
     public sealed record Output(string Id, string Path);
 
@@ -79,7 +79,7 @@ public static class CreateTenant
         // The active id is checked explicitly: on a pre-hierarchy tenant (no registry row yet) the
         // registry probe would miss it and the self-heal below would add the same key twice.
         var activeId = context.TenantId.Value;
-        if (!System.Text.RegularExpressions.Regex.IsMatch(input.Id, "^[a-z][a-z0-9-]*$"))
+        if (!Naming.IsSlug(input.Id))
             return TenantFindings.InvalidId.At(nameof(Input.Id));
         if (input.Id == activeId
             || await tam.Db.Set<TenantEntity>().AnyAsync(t => t.Id == input.Id, ct))
@@ -239,7 +239,7 @@ public static class RenameTenant
 {
     public sealed record Input(
         [property: LabelKey("labels.tenant")] string TenantId,
-        [property: LabelKey("labels.display-name")] string DisplayName);
+        string DisplayName);
 
     public sealed record Output(string Id, string DisplayName);
 
@@ -271,11 +271,9 @@ public static class TenantList
     public sealed record Result
     {
         public string Id { get; init; } = "";
-        [LabelKey("labels.display-name")]
         public string DisplayName { get; init; } = "";
         [LabelKey("labels.parent")]
         public string? ParentId { get; init; }
-        [LabelKey("labels.path")]
         public string Path { get; init; } = "";
     }
 

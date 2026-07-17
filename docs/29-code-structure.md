@@ -185,3 +185,55 @@ Done:
       lands on the operation path, this decision is the first to revisit.
 
 Open: nothing — new debts get a checkbox here when they appear.
+
+## Conventions — the written rules (beauty arc 1)
+
+The beauty review's core observation was precedent-by-imitation: the same shaped problem
+solved slightly differently per file because the rule was never written down. These are the
+rules; deviations shipped before this section are grandfathered by D4 wire permanence and
+noted where they matter. Every rule that CAN live in code does — the doc names the authority
+class, and the class is the rule.
+
+**Wire ids** (permanent once shipped — D4):
+
+- Operations: `{surface}.{verb}` with a kebab facet when one verb has flavors —
+  `orders.edit-details`, `extensions.define-field`. The verb vocabulary: `define` = upsert by
+  natural key; `set` = singleton upsert; `create`/`edit-*` = entity lifecycle; intents are
+  named for the business act (`complete`, `retire`, `approve`).
+- List views: `{surface}.list` unless a package genuinely has several lists (then plural
+  nouns: `audit.entries`, `integrations.runs`).
+- Form ids: `web.` + the operation id. Grid ids: `web.{surface}`.
+- Grandfathered deviations (live ids, never renamed): `web.extensions.define`,
+  `extensions.fields`, `nav.overrides`, `stock.edit`.
+
+**Names tenants author** — one shape per kind, one authority (`Naming`, Tam.Core):
+
+- Slugs (rule names, role names, tenant ids): `Naming.IsSlug` — lowercase words joined by
+  hyphens. Each surface refuses with its OWN finding (`rules.invalid-name`,
+  `roles.invalid-name`, `tenants.invalid-id`) so the message can teach the shape.
+- Extension-field keys: `Naming.IsCamelKey` — used identically by `extensions.define-field`
+  and the package-install path (the RoleRules lesson: one rule set, two doors).
+
+**Label keys** — minted only through `LabelKeys` (Tam.Core): `LabelKeys.Field(member)`,
+`.OperationTitle(id)`, `.IntegrationTitle(id)`, `.Nav(id)`, `.Extension(key)`. A `[LabelKey]`
+attribute appears ONLY when it deviates from the convention default — an attribute that
+restates `labels.{kebab(member)}` is noise and gets deleted. Storage encodings never leak
+into label keys (`NextRunIso` labels as `labels.next-run`).
+
+**The tenant word**: framework catalogs say *organization* (`labels.tenant`, `nav.tenants`,
+the `tenants.*` messages). A host that sells another word ("company", "site", "клиника")
+overrides those keys in its own locale files — that is what the override layer is for, and
+samples/erp does exactly this to keep its "Bolag" branding.
+
+**Findings**: every stable code lives in a `*Findings` class on its surface; call sites use
+the implicit factory→finding conversion. Non-operation endpoints answer through
+`TamEndpoints.FindingsResult` — one envelope shape, one code→status mapping, no hand-built
+anonymous error objects at the edges.
+
+**Activation**: "does this contribution exist for this tenant?" is asked ONLY through
+`ActivationCache.ContributionExistsAsync` (packages always active, hosts always exist).
+No call site re-derives the union.
+
+**TenantId stamping**: ambient (the save interceptor) for anything running in the operation
+pipeline; explicit only for seed and background writes. An explicit stamp inside a pipeline
+operation is a bug-shaped comment magnet — don't.

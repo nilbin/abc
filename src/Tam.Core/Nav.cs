@@ -46,7 +46,7 @@ public sealed class NavTreeBuilder
     {
         var builder = new NavNodeBuilder();
         children?.Invoke(builder);
-        Modes.Add(new NavNode(id, NavNodeKind.Mode, $"nav.{id}", icon, order,
+        Modes.Add(new NavNode(id, NavNodeKind.Mode, LabelKeys.Nav(id), icon, order,
             null, null, null, builder.Nodes));
         return this;
     }
@@ -63,7 +63,7 @@ public sealed class NavNodeBuilder
     {
         var builder = new NavNodeBuilder();
         children?.Invoke(builder);
-        Nodes.Add(new NavNode(id, NavNodeKind.Section, $"nav.{id}", icon, order,
+        Nodes.Add(new NavNode(id, NavNodeKind.Section, LabelKeys.Nav(id), icon, order,
             null, null, null, builder.Nodes));
         return this;
     }
@@ -77,7 +77,7 @@ public sealed class NavNodeBuilder
     {
         var builder = new NavNodeBuilder();
         children?.Invoke(builder);
-        Nodes.Add(new NavNode(id, NavNodeKind.Page, $"nav.{id}", icon, order,
+        Nodes.Add(new NavNode(id, NavNodeKind.Page, LabelKeys.Nav(id), icon, order,
             new NavTarget(Grid: grid, Page: page), permission, null, builder.Nodes));
         return this;
     }
@@ -87,7 +87,7 @@ public sealed class NavNodeBuilder
     /// <paramref name="order"/> (default declaration order). Unknown ids are NAV003.</summary>
     public NavNodeBuilder Place(string contributedId, int? order = null)
     {
-        Nodes.Add(new NavNode(contributedId, NavNodeKind.Page, $"nav.{contributedId}",
+        Nodes.Add(new NavNode(contributedId, NavNodeKind.Page, LabelKeys.Nav(contributedId),
             null, order, PlacementMarker, null, null, []));
         return this;
     }
@@ -108,7 +108,7 @@ public sealed class NavContributionBuilder
         string? suggest = null)
     {
         Contributions.Add(new NavContribution(plugin, suggest,
-            new NavNode(id, NavNodeKind.Page, $"nav.{id}", icon, order,
+            new NavNode(id, NavNodeKind.Page, LabelKeys.Nav(id), icon, order,
                 new NavTarget(Grid: grid, Page: page), permission, plugin, [])));
         return this;
     }

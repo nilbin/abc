@@ -66,19 +66,6 @@ public sealed class ApprovalsPlugin : ITamPlugin
             .PublishesEvent("approvals.approved", "requestId");
     }
 
-    /// <summary>
-    /// Seam 1 + 2. Consults the tenant's rules for the operation at hand; a match parks the
-    /// envelope (kept across the rollback) and blocks with approvals.pending.
-    /// </summary>
-
-    /// <summary>Persists the parked envelope + its notification event in one commit.</summary>
-
-    /// <summary>Mails the rule's effective approver set through the framework seams.</summary>
-
-    /// <summary>Seam 3: replay the approved envelope as its ORIGINAL initiator and record the
-    /// outcome. Redelivery-safe twice over: only an APPROVED request replays, and the replay is
-    /// idempotent by envelope id.</summary>
-
     /// <summary>Host opt-in for the plugin's storage, like inspect's: one line in OnModelCreating.</summary>
     public static ModelBuilder AddApprovals(ModelBuilder modelBuilder)
     {

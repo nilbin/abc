@@ -327,7 +327,7 @@ public sealed partial class TamModelBuilder
                 throw new InvalidOperationException(
                     $"PLG004: packaged field '{r.Key}' has unknown type '{r.Type}'.");
             var labels = catalogs.Cultures
-                .Select(c => (Culture: c, Text: catalogs.Lookup($"ext.{r.Key}", c)))
+                .Select(c => (Culture: c, Text: catalogs.Lookup(LabelKeys.Extension(r.Key), c)))
                 .Where(x => x.Text is not null)
                 .ToDictionary(x => x.Culture, x => x.Text!);
             if (!labels.ContainsKey(defaultCulture))

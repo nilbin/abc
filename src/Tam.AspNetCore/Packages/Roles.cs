@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Tam.EntityFrameworkCore;
 
-namespace Tam.AspNetCore.SystemOps;
+namespace Tam.AspNetCore;
 
 /// <summary>Tenant-managed roles (D1): definition + list, validated against the catalogue.</summary>
 [TamPackage("tam.roles", "roles", "web.roles")]
@@ -54,7 +54,7 @@ public static class RoleRules
         IReadOnlyDictionary<string, string>? levels = null)
     {
         var findings = new List<Finding>();
-        if (!System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-z][a-z0-9-]*$"))
+        if (!Naming.IsSlug(name))
             findings.Add(RoleFindings.InvalidName.At(field));
         // Atoms only (docs/28 D-AG1/D-AG2): there are no scope suffixes — own-scoping is the
         // paired-atom pattern ("orders.read" own-scoped, "orders.read-all" widening), so every
@@ -94,7 +94,7 @@ public static class DefineRole
     public sealed record Input(
         string Name,
         List<string>? Permissions = null,
-        [property: LabelKey("labels.levels")] Dictionary<string, string>? Levels = null);
+        Dictionary<string, string>? Levels = null);
 
     public sealed record Output(Guid RoleId);
 
@@ -134,7 +134,6 @@ public static class RoleList
         public Guid Id { get; init; }
         public string Name { get; init; } = "";
         public string Permissions { get; init; } = "";
-        [LabelKey("labels.levels")]
         public string Levels { get; init; } = "";
     }
 
@@ -149,4 +148,3 @@ public static class RoleList
         caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
 }
 
-// ---------------------------------------------------------------- audit read model (decision D3)

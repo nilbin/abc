@@ -49,7 +49,7 @@ public sealed record FieldModel(
 
         var labelKey = Attr<LabelKeyAttribute>(attributeSources)?.Key
             ?? nonNullable.GetCustomAttribute<LabelKeyAttribute>()?.Key
-            ?? $"labels.{Naming.Kebab(name)}";
+            ?? LabelKeys.Field(name);
 
         // The TYPE carries the defaults (docs/34 M5): lookup resolves member → type, like the
         // label key — declare [Lookup] once on the wrapper, every usage gets the picker.
@@ -98,7 +98,7 @@ public sealed record OperationDefinition(
     Type? ExtensibleEntity,
     IReadOnlyList<FieldModel> InputFields)
 {
-    public string TitleKey => $"operations.{Id}.title";
+    public string TitleKey => LabelKeys.OperationTitle(Id);
 
     /// <summary>Owning plugin id, or null for host-compiled operations (docs/22).</summary>
     public string? Plugin { get; init; }

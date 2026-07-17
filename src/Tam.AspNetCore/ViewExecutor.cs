@@ -46,13 +46,10 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             return (null, PipelineFindings.UnknownView.With(("view", viewId)));
 
         // Inactive plugin → the view does not exist for this tenant (docs/22).
-        if (view.Plugin is { } plugin
-            && services.GetService(typeof(ITamDb)) is ITamDb tam)
-        {
-            var active = await ActivationCache.ForAsync(services, tam.Db, context.TenantId.Value, ct);
-            if (!active.Contains(plugin))
-                return (null, PipelineFindings.UnknownView.With(("view", viewId)));
-        }
+        if (services.GetService(typeof(ITamDb)) is ITamDb tam
+            && !await ActivationCache.ContributionExistsAsync(
+                services, tam.Db, view.Plugin, context.TenantId.Value, ct))
+            return (null, PipelineFindings.UnknownView.With(("view", viewId)));
 
         if (!context.Actor.Can(view.Permission))
             return (null, PipelineFindings.NotAuthorized.With(("permission", view.Permission)));

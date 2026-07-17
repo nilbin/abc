@@ -111,7 +111,4 @@ public sealed partial class TamModelBuilder
         outboundIntegrations.Add((id, trigger, handler, currentPlugin));
     }
 
-    /// <summary>Binds a form. WITHOUT <paramref name="configure"/>, every operation input
-    /// field appears in record declaration order — the record IS the form; configure only to
-    /// subset, reorder, or attach renderers/visibility (docs/32: convention over enumeration).</summary>
 }

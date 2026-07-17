@@ -33,7 +33,7 @@ public static class BookTime
         [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
         DateOnly Date,
         decimal Hours,
-        [property: LabelKey("labels.hourly-rate")] Money HourlyRate,
+        Money HourlyRate,
         TimeNote? Note = null,
         Money? Amount = null);
 
@@ -142,7 +142,6 @@ public static class TimeEntryList
         [LabelKey("labels.technician")]
         public string TechnicianName { get; init; } = "";
         public decimal Hours { get; init; }
-        [LabelKey("labels.hourly-rate")]
         public Money HourlyRate { get; init; }
         public Money Amount { get; init; }
         public TimeEntryStatus Status { get; init; }
@@ -192,7 +191,6 @@ public static class TimeEntryDetail
         [LabelKey("labels.technician")]
         public string TechnicianName { get; init; } = "";
         public decimal Hours { get; init; }
-        [LabelKey("labels.hourly-rate")]
         public Money HourlyRate { get; init; }
         public Money Amount { get; init; }
         public TimeNote? Note { get; init; }

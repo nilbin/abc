@@ -19,13 +19,10 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
             return (null, PipelineFindings.UnknownForm.With(("form", formId)));
 
         // Inactive plugin → the form does not exist for this tenant (docs/22).
-        if (form.Plugin is { } plugin
-            && services.GetService(typeof(ITamDb)) is ITamDb tam)
-        {
-            var active = await ActivationCache.ForAsync(services, tam.Db, context.TenantId.Value, ct);
-            if (!active.Contains(plugin))
-                return (null, PipelineFindings.UnknownForm.With(("form", formId)));
-        }
+        if (services.GetService(typeof(ITamDb)) is ITamDb tam
+            && !await ActivationCache.ContributionExistsAsync(
+                services, tam.Db, form.Plugin, context.TenantId.Value, ct))
+            return (null, PipelineFindings.UnknownForm.With(("form", formId)));
 
         var operation = model.Operations[form.OperationId];
         if (!context.Actor.Can(operation.Permission))

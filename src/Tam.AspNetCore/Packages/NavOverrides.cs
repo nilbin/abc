@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Tam.EntityFrameworkCore;
 
-namespace Tam.AspNetCore.SystemOps;
+namespace Tam.AspNetCore;
 
 /// <summary>
 /// The tenant nav override registry (docs/30 v2, D-N5): the extension-field pattern applied to

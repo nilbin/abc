@@ -16,7 +16,7 @@ public static class AddMaterialLine
 {
     public sealed record Input(
         [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
-        [property: LabelKey("labels.stock-item")] StockItemId StockItemId,
+        StockItemId StockItemId,
         decimal Quantity);
 
     public sealed record Output(MaterialLineId MaterialLineId, Money Amount);
@@ -60,7 +60,6 @@ public static class MaterialLineList
         public string StockItemName { get; init; } = "";
         public StockUnit Unit { get; init; }
         public decimal Quantity { get; init; }
-        [LabelKey("labels.unit-price")]
         public Money UnitPrice { get; init; }
         public Money Amount { get; init; }
     }
@@ -109,7 +108,6 @@ public static class MaterialLineDetail
         public string StockItemName { get; init; } = "";
         public StockUnit Unit { get; init; }
         public decimal Quantity { get; init; }
-        [LabelKey("labels.unit-price")]
         public Money UnitPrice { get; init; }
         public Money Amount { get; init; }
     }

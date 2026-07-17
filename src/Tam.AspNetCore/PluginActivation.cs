@@ -98,4 +98,15 @@ public sealed class ActivationCache(ITamDb tam, TamModel model)
             ? stored.Union(model.Packages.Keys).ToHashSet()
             : stored;
     }
+
+    /// <summary>THE docs/22 existence rule, in one place: a contribution from an inactive
+    /// plugin does not exist for the tenant — host contributions (null plugin) always exist,
+    /// framework packages are always active. Every endpoint and executor asks HERE.</summary>
+    public static async ValueTask<bool> ContributionExistsAsync(
+        IServiceProvider services, DbContext db, string? pluginId, string tenantId, CancellationToken ct)
+    {
+        if (pluginId is null) return true;
+        var active = await ForAsync(services, db, tenantId, ct);
+        return active.Contains(pluginId);
+    }
 }

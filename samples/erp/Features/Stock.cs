@@ -36,7 +36,7 @@ public static class CreateStockItem
 public static class EditStockItem
 {
     public sealed record Input(
-        [property: LabelKey("labels.stock-item")] StockItemId StockItemId,
+        StockItemId StockItemId,
         Change<string>? Name = null,
         Change<Money>? UnitPrice = null);
 
@@ -61,7 +61,7 @@ public static class EditStockItem
 [Authorize("stock.manage")]
 public static class DeactivateStockItem
 {
-    public sealed record Input([property: LabelKey("labels.stock-item")] StockItemId StockItemId);
+    public sealed record Input(StockItemId StockItemId);
 
     public sealed record Output(bool IsActive);
 

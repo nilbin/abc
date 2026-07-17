@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Tam.AspNetCore.SystemOps;
 using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
@@ -97,7 +96,6 @@ public static class InstallPackage
         if (document is null || string.IsNullOrWhiteSpace(document.Package))
             return PackageFindings.InvalidDocument.At(nameof(Input.Document));
 
-        var tenant = context.TenantId.Value;
         var installed = await tam.Db.Set<PackageInstallationEntity>().SingleOrDefaultAsync(
             x => x.Package == document.Package, ct);
         if (installed is not null && document.Version < installed.Version)
@@ -124,9 +122,9 @@ public static class InstallPackage
                 findings.Add(ExtensionFindings.UnknownType.At(path));
                 continue;
             }
-            if (!System.Text.RegularExpressions.Regex.IsMatch(field.Key, "^[a-z][a-zA-Z0-9]*$"))
+            if (!Naming.IsCamelKey(field.Key))
             {
-                findings.Add(ValidationFindings.InvalidValue.At(path));
+                findings.Add(ExtensionFindings.InvalidKey.At(path));
                 continue;
             }
             if (!field.Labels.ContainsKey(model.DefaultCulture))
@@ -158,10 +156,12 @@ public static class InstallPackage
                 findings.Add(PackageFindings.FieldConflict.With(("key", field.Key)).At(path));
                 continue;
             }
+            // TenantId is stamped AMBIENTLY for pipeline writes (the interceptor, like
+            // roles.define and extensions.define-field) — explicit stamps are for seed and
+            // background writes only. Stated once; the other creates below follow it.
             toAdd.Add(new ExtensionFieldEntity
             {
                 Id = Guid.NewGuid(),
-                TenantId = tenant,
                 Entity = field.Entity,
                 Key = field.Key,
                 Type = field.Type,
@@ -205,7 +205,7 @@ public static class InstallPackage
                 x => x.Name == role.Name, ct);
             if (entity is null)
             {
-                entity = new RoleEntity { Id = Guid.NewGuid(), TenantId = tenant, Name = role.Name };
+                entity = new RoleEntity { Id = Guid.NewGuid(), Name = role.Name };
                 tam.Db.Add(entity);
             }
             entity.PermissionsJson = JsonSerializer.Serialize(role.Permissions);
@@ -216,7 +216,6 @@ public static class InstallPackage
             installed = new PackageInstallationEntity
             {
                 Id = Guid.NewGuid(),
-                TenantId = tenant,
                 Package = document.Package,
             };
             tam.Db.Add(installed);
@@ -238,14 +237,13 @@ public static class InstallPackage
 [Authorize("packages.manage")]
 public static class UninstallPackage
 {
-    public sealed record Input([property: LabelKey("labels.package")] string Package);
+    public sealed record Input(string Package);
 
     public sealed record Output(string Package, int FieldsRetired);
 
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
-        var tenant = context.TenantId.Value;
         var installed = await tam.Db.Set<PackageInstallationEntity>().SingleOrDefaultAsync(
             x => x.Package == input.Package, ct);
         if (installed is null)
@@ -271,11 +269,8 @@ public static class PackageList
     public sealed record Result
     {
         public Guid Id { get; init; }
-        [LabelKey("labels.package")]
         public string Package { get; init; } = "";
-        [LabelKey("labels.version")]
         public int Version { get; init; }
-        [LabelKey("labels.installed-at")]
         public string InstalledAt { get; init; } = "";
     }
 

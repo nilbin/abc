@@ -451,6 +451,29 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Beauty arc 1 — the vocabulary & dedup sweep (docs/29 "Conventions")**: the review's
+  compounding-debt findings fixed at the root. New authorities, each replacing a per-file
+  idiom: `LabelKeys` (every label-key grammar minted in one class — 12 interpolation sites
+  replaced), `Naming.IsSlug`/`IsCamelKey` (GeneratedRegex; the 5 shared slug/key checks route
+  through them, and rules/extensions gained their OWN teaching findings `rules.invalid-name` /
+  `extensions.invalid-key` instead of a bare invalid-value), `ActivationCache
+  .ContributionExistsAsync` (the docs/22 existence rule asked in ONE place — 4 executor/endpoint
+  re-implementations plus the Outbox's hand-union deleted), and `TamEndpoints.FindingsResult`
+  (non-operation endpoints answer findings through one envelope + one code→status mapping —
+  views/resolve/integrations hand-built objects gone; UnknownForm now correctly 404s, and
+  integrations.malformed-payload became a real localized Finding). 69 redundant `[LabelKey]`
+  attributes deleted (equal to the convention default — proven labelKey-neutral by manifest
+  diff) plus the type-carried CustomerId/ProjectId/StockItemId repeats across 6 ERP files;
+  `labels.next-run-iso` relabeled without the storage suffix. The tenant WORD is now coherent:
+  framework catalogs say organization/organisation; samples/erp overrides to Company/Bolag —
+  proving the host-brand override layer with the manifest. users.define/invite share
+  `EnsureActiveMembershipAsync` (the one-helper-short extraction finished); InstallPackage's
+  in-pipeline explicit TenantId stamps removed (ambient rule stated once); the SystemOps
+  namespace vestige unified into Tam.AspNetCore; orphaned doc comments, split-file dividers
+  and the invoicing dead scaffolding swept. All rules written down in docs/29 "Conventions"
+  (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
+  Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
+  labelKey-diff zero, docs check green.
 - **ResetOn promoted + rules editable in place (rule-builder round 3)**: the trigger-picker
   coordination graduated from renderer code into a FRAMEWORK primitive — `ResetOn`, the
   DependsOn twin for VALUES (docs/05): `form.Field(x => x.Condition).ResetOn(x => x.OnOperation,

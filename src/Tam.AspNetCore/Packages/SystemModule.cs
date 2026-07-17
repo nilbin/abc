@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Tam.EntityFrameworkCore;
 
-namespace Tam.AspNetCore.SystemOps;
+namespace Tam.AspNetCore;
 
 public static class SystemModule
 {
@@ -27,4 +27,3 @@ public static class SystemModule
         .AddPackage<TamNavPackage>();
 }
 
-// ---------------------------------------------------------------- tenant custom fields

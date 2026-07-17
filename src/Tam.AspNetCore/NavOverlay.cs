@@ -117,7 +117,7 @@ public static class NavOverlay
         foreach (var over in overrides)
             foreach (var (culture, text) in over.Labels())
                 if (text.Length > 0 && merged.TryGetValue(culture, out var catalog))
-                    catalog[$"nav.{over.NodeId}"] = text;
+                    catalog[LabelKeys.Nav(over.NodeId)] = text;
         return merged.ToDictionary(
             kv => kv.Key, kv => (IReadOnlyDictionary<string, string>)kv.Value);
     }

@@ -33,7 +33,7 @@ public static class WorkOrderRules
 public static class CreateWorkOrder
 {
     public sealed record Input(
-        [property: LabelKey("labels.project")] ProjectId ProjectId,
+        ProjectId ProjectId,
         string Title,
         WorkDescription Description,
         Address Location,

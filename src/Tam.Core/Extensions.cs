@@ -135,4 +135,5 @@ public static class ExtensionFindings
     public static readonly FindingFactory MissingLabel = Finding.Error("extensions.missing-label");
     public static readonly FindingFactory ReadOnlyField = Finding.Error("extensions.read-only-field");
     public static readonly FindingFactory InvalidOption = Finding.Error("extensions.invalid-option");
+    public static readonly FindingFactory InvalidKey = Finding.Error("extensions.invalid-key");
 }
