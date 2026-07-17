@@ -451,6 +451,15 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **P5 rules engine status**: BUILT — Px-conditioned findings; row.* conditions over the
+  operation's target row; the PxFn relative-date node; the action catalog (set-field +
+  publish-event), hardened by review round 5. DESIGNED, not built — effect-triggered rules
+  (docs/22): a rule fired by a domain event, action executed on the outbox dispatch path.
+  Held deliberately: it writes on the multi-instance dispatcher hot path, and review round 5
+  showed these write paths hide real bugs, so it pairs the build with a review rather than
+  shipping unsupervised. Its loop-safety is specified (set-field only + no rules.* trigger →
+  no rule→event→rule cycles). Also remaining: the visual rule-builder UI (raw Px JSON today)
+  and P4 custom objects.
 - **Review round 5 (rules-engine write paths): two adversarial agents, two confirmed bugs +
   hardening**. The action catalog and row.* increments got a security + correctness audit;
   both agents independently flagged the same HIGH, and the correctness agent found a live

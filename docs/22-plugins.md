@@ -280,6 +280,33 @@ Ordering note: #2 needs only machinery that exists today (audit + pipeline + ove
 
 Each phase is independently shippable and independently valuable; nothing in P1–P3 waits on the JSONB query work that gates P4.
 
+### Effect-triggered rules (DESIGN — the last P5 rules slice)
+
+Today a rule's trigger is an OPERATION: it evaluates in the pipeline and its action rides the
+operation's own transaction. The remaining slice is a rule triggered by an EVENT — "when a
+work order completes, flag its project for review" — evaluated on the outbox dispatch path
+where plugin subscribers already run (docs/09-10). Shape:
+
+- **Trigger** is `OnEvent` (a declared DOMAIN event) instead of `OnOperation`; exactly one is
+  set. `rules.*` events are refused as triggers (RUL006).
+- **Condition** reads the event PAYLOAD (its declared fields) and, via `row.*`, the entity the
+  payload references by a `{entity}Id` field — the same row machinery, sourced from the
+  payload instead of an operation input.
+- **Action is set-field ONLY** (RUL007 forbids publish-event from an effect rule). This is the
+  load-bearing safety constraint: no-publish-event **plus** no-`rules.*`-trigger makes a
+  rule → event → rule cycle structurally impossible. The write goes through the same
+  `RejectSetFieldValue` guard (ReadOnly/state/semantic/options) and the same tenant-checked
+  row load as operation rules; findings make no sense post-commit, so an effect rule with no
+  action is rejected.
+
+**Why this is designed, not built (yet):** every operation-triggered increment gates a
+single request — isolated, rolls back cleanly, reviewed. An effect rule writes on the
+**outbox dispatcher**, a multi-instance, lease-based, at-least-once hot path that carries
+every tenant's event delivery, and review round 5 showed these tenant-data-driven write
+paths hide real bugs (a validation bypass and a silently-dead evaluator). Adding writes there
+warrants a review pass in the loop, not an unsupervised ship — so the mechanism is specified
+here (loop-safety included) and left for a milestone that pairs the build with its review.
+
 
 ## The plugin authoring reference (what the RTFM run proved must be written down)
 
