@@ -159,10 +159,11 @@ per-culture rule text keyed like the catalogs. Px nodes carry discriminator `t`:
 The CLOSED operator vocabulary (anything else is `rules.invalid-condition`, which names the
 offending `op`): binary `eq ne gt ge lt le and or`, unary `not isNull isNotNull`; leaves are
 `{"t":"field","f":...}` (input wire names, `ext.{key}`, `row.{member}`, `row.ext.{key}`) and
-`{"t":"const","v":...}`. A firing rule's finding code is **`rules.{name}`** — what tests and
-clients match on. KNOWN GAP (RTFM #3): there is no relative-date node — "more than 7 days
-out" can only be authored as a define-time constant that drifts; a `{"t":"fn","op":"today"}`
--class node is the queued Px increment. Seeding a rule for a demo tenant writes the same
+`{"t":"const","v":...}`, and the FUNCTION node `{"t":"fn","op":"today","days":N}` — today's
+UTC date (+offset) as the ISO string dates compare in, evaluated FRESH on every check on
+both evaluators (RTFM #3's define-time-constant drift, closed; the erp seed's
+urgent-schedule-window rule is the living example). A firing rule's finding code is
+**`rules.{name}`** — what tests and clients match on. Seeding a rule for a demo tenant writes the same
 `AutomationRuleEntity` row the operation writes (`ConditionJson`, `MessagesJson`, and for
 row conditions the define-resolved `RowEntityKey`/`RowIdField`) — the erp seed shows the
 shape.

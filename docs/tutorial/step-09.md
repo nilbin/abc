@@ -38,7 +38,9 @@ Conditions also read the operation's TARGET row (`row.budget`, `row.status`, `ro
 so "big open projects can't be closed" works on an intent that carries only an id; the target
 resolves from the `{entity}Id` input at define time (`RUL004` when there is no single target),
 loads read-only pre-transaction, and compares wire-identically (money as numbers, enums as
-their wire strings — docs/22). Two sharp edges worth knowing before you author one: the
+their wire strings — docs/22). Relative dates use the `fn` node — "no more than 7 days out"
+is `{"t":"fn","op":"today","days":7}`, evaluated fresh on every check, never a baked-in
+cutoff. Two sharp edges worth knowing before you author one: the
 condition's wire shape and operator set are exactly docs/22's (discriminator `t`; a firing
 rule's finding is `rules.{name}`), and EDIT001 is broader than the status examples suggest —
 the analyzer refuses ANY enum inside a `Change<T>`, so "let users change priority later" is

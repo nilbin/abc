@@ -451,6 +451,16 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **Px `fn` node BUILT — relative dates in rule conditions (docs/22)**: RTFM #3's sharpest
+  find, closed the same day it was queued. `{"t":"fn","op":"today","days":7}` evaluates
+  today's UTC date (+offset) as the ISO string dates already compare in — FRESH on every
+  check, on BOTH evaluators (PortableExpressions.cs + @tam/core px.ts stay mirrors), with a
+  test-only clock seam for determinism. The erp seed's urgent-schedule-window rule now uses
+  it — the policy no longer drifts a day after definition. rules.define admits `fn` into
+  the closed vocabulary (unknown fn ops are named in rules.invalid-condition like any
+  operator). Verified: 2 deterministic clock tests (159 total), rules wire suite +2 checks
+  proving the SEEDED fn rule blocks an urgent schedule 10 days out and passes 3 days out on
+  any run day, full matrix 234/234 on fresh SQLite AND Postgres.
 - **RTFM #3 (docs-only build over the reshaped docs): work-order priority + the urgent-
   scheduling policy** — a consumer agent shipped a real feature with zero framework edits:
   `WorkOrderPriority` enum (default carried by the domain, wire field optional so the change

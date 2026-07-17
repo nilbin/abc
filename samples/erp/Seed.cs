@@ -381,10 +381,10 @@ public static class Seed
         // The tenant's automation rule (docs/22), stored exactly as rules.define writes it:
         // "an URGENT work order cannot be scheduled more than 7 days out." The condition is
         // Px AST data over the schedule intent's input (scheduledDate) AND its target row
-        // (row.priority — enums compare as wire strings). Px carries no relative-date node,
-        // so the cutoff is a constant the author computes at definition time — seed time here;
-        // message text is per-culture rule DATA (the registry twin of the locale catalogs).
-        var urgentCutoff = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(7).ToString("yyyy-MM-dd");
+        // (row.priority — enums compare as wire strings); the cutoff is the RELATIVE-DATE
+        // node {"t":"fn","op":"today","days":7} — evaluated fresh on every check, so the
+        // policy never drifts (the define-time-constant wart RTFM #3 filed, closed).
+        // Message text is per-culture rule DATA (the registry twin of the locale catalogs).
         db.Add(new AutomationRuleEntity
         {
             Id = Guid.NewGuid(),
@@ -392,8 +392,7 @@ public static class Seed
             Name = "urgent-schedule-window",
             OnOperation = "work-orders.schedule",
             ConditionJson =
-                """{"t":"bin","op":"and","l":{"t":"bin","op":"eq","l":{"t":"field","f":"row.priority"},"r":{"t":"const","v":"urgent"}},"r":{"t":"bin","op":"gt","l":{"t":"field","f":"scheduledDate"},"r":{"t":"const","v":"""
-                + "\"" + urgentCutoff + "\"}}}",
+                """{"t":"bin","op":"and","l":{"t":"bin","op":"eq","l":{"t":"field","f":"row.priority"},"r":{"t":"const","v":"urgent"}},"r":{"t":"bin","op":"gt","l":{"t":"field","f":"scheduledDate"},"r":{"t":"fn","op":"today","days":7}}}""",
             TargetField = "scheduledDate",
             MessagesJson = """{"sv":"Akuta arbetsordrar måste planeras inom 7 dagar.","en":"Urgent work orders must be scheduled within 7 days."}""",
             RowEntityKey = "work-order",

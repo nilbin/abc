@@ -13,6 +13,7 @@ namespace Tam;
 [JsonDerivedType(typeof(PxField), "field")]
 [JsonDerivedType(typeof(PxBinary), "bin")]
 [JsonDerivedType(typeof(PxUnary), "un")]
+[JsonDerivedType(typeof(PxFn), "fn")]
 public abstract record Px
 {
     public abstract object? Evaluate(Func<string, object?> field);
@@ -32,6 +33,28 @@ public sealed record PxField(string F) : Px
     public override object? Evaluate(Func<string, object?> field) => field(F);
 
     public override IEnumerable<string> Fields() => [F];
+}
+
+/// <summary>
+/// The closed FUNCTION vocabulary (docs/22, RTFM #3's sharpest find): today's DATE with an
+/// optional day offset, as the ISO string the wire already compares dates in. This is what
+/// makes "no more than 7 days out" durably expressible — a define-time constant drifts;
+/// {"t":"fn","op":"today","days":7} evaluates fresh on every check, on both evaluators.
+/// The clock is overridable for deterministic tests (server-side only).
+/// </summary>
+public sealed record PxFn(string Op, int Days = 0) : Px
+{
+    /// <summary>Test seam: fixes "today". Production leaves it null (UTC date).</summary>
+    public static Func<DateOnly>? Today { get; set; }
+
+    public override object? Evaluate(Func<string, object?> field) => Op switch
+    {
+        "today" => (Today?.Invoke() ?? DateOnly.FromDateTime(DateTime.UtcNow))
+            .AddDays(Days).ToString("yyyy-MM-dd"),
+        _ => throw new NotSupportedException($"Portable fn '{Op}'."),
+    };
+
+    public override IEnumerable<string> Fields() => [];
 }
 
 public sealed record PxUnary(string Op, Px X) : Px

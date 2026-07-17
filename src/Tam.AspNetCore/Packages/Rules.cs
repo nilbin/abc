@@ -342,6 +342,7 @@ public static class DefineAutomationRule
     private static string? FirstUnsupported(Px px) => px switch
     {
         PxConst or PxField => null,
+        PxFn f => f.Op is "today" ? null : f.Op,
         PxUnary u => u.Op is "not" or "isNull" or "isNotNull" ? FirstUnsupported(u.X) : u.Op,
         PxBinary b => b.Op is "eq" or "ne" or "gt" or "ge" or "lt" or "le" or "and" or "or"
             ? FirstUnsupported(b.L) ?? FirstUnsupported(b.R)

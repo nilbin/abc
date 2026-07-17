@@ -4,7 +4,8 @@ export type Px =
   | { t: 'const'; v: unknown }
   | { t: 'field'; f: string }
   | { t: 'un'; op: 'not' | 'isNull' | 'isNotNull'; x: Px }
-  | { t: 'bin'; op: 'eq' | 'ne' | 'gt' | 'ge' | 'lt' | 'le' | 'and' | 'or'; l: Px; r: Px };
+  | { t: 'bin'; op: 'eq' | 'ne' | 'gt' | 'ge' | 'lt' | 'le' | 'and' | 'or'; l: Px; r: Px }
+  | { t: 'fn'; op: 'today'; days?: number };
 
 export function evalPx(px: Px, get: (field: string) => unknown): unknown {
   switch (px.t) {
@@ -12,6 +13,12 @@ export function evalPx(px: Px, get: (field: string) => unknown): unknown {
       return px.v;
     case 'field':
       return normalize(get(px.f));
+    case 'fn': {
+      // Mirror of PxFn: today's UTC date (+days) as the ISO string dates compare in.
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + (px.days ?? 0));
+      return d.toISOString().slice(0, 10);
+    }
     case 'un': {
       const v = evalPx(px.x, get);
       if (px.op === 'not') return v !== true;
