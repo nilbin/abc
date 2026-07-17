@@ -112,7 +112,10 @@ public static class ErpModel
             form.Field(x => x.OrderType);
             form.Field(x => x.ProjectId)
                 .VisibleWhen(x => x.OrderType == OrderType.Project)
-                .RequiredWhen(x => x.OrderType == OrderType.Project);
+                .RequiredWhen(x => x.OrderType == OrderType.Project)
+                // A project belongs to the picked customer — the previous customer's project
+                // must not survive a customer change (docs/05 ResetOn).
+                .ResetOn(x => x.CustomerId);
             form.Field(x => x.WorkAddress)
                 .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
             form.Field(x => x.Description);

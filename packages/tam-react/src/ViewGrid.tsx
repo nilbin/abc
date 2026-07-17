@@ -34,6 +34,8 @@ export function ViewGrid(props: ViewGridProps) {
   };
   const toolbarActions = gridDef.toolbarActions.filter(allowed);
   const rowActions = gridDef.rowActions.filter(allowed);
+  // Edit affordances (docs/32): open the operation's form PREFILLED from the row.
+  const rowForms = (gridDef.rowForms ?? []).filter(allowed);
   // Plugin-contributed actions (docs/31 D-X1): rendered after host actions, same permission
   // gate; the DECLARED bind replaces the name-convention input mapping below.
   const contributedActions = (gridDef.contributedActions ?? []).filter(a => allowed(a.operation));
@@ -54,7 +56,9 @@ export function ViewGrid(props: ViewGridProps) {
   const [sort, setSort] = useState<string | undefined>(view.defaultSort);
   const [desc, setDesc] = useState(view.defaultSortDescending);
   const [loading, setLoading] = useState(true);
-  const [modalAction, setModalAction] = useState<string | null>(null);
+  // The open form modal: an operation, plus initial values when opened as a row EDIT (RowForm).
+  const [modalAction, setModalAction] =
+    useState<{ operation: string; initial?: Record<string, unknown> } | null>(null);
   const [localRefresh, setLocalRefresh] = useState(0);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const pageSize = props.pageSize ?? 15;
@@ -177,6 +181,18 @@ export function ViewGrid(props: ViewGridProps) {
     refresh();
   };
 
+  // RowForm (docs/32): the row's result fields prefill same-named form fields — the contract
+  // an upsert operation's list view provides deliberately (e.g. rules.list ↔ rules.define).
+  const openRowForm = (operationId: string, row: Record<string, unknown>) => {
+    const form = formForOperation(operationId);
+    if (!form) return;
+    const initial: Record<string, unknown> = {};
+    for (const field of manifest.forms[form].fields) {
+      if (row[field.name] !== undefined) initial[field.name] = row[field.name];
+    }
+    setModalAction({ operation: operationId, initial });
+  };
+
   const runContributedAction = async (
     action: { operation: string; bind: Record<string, string> },
     row: Record<string, unknown>,
@@ -208,7 +224,7 @@ export function ViewGrid(props: ViewGridProps) {
         </Group>
         <Group>
           {toolbarActions.map(action => (
-            <Button key={action} size="sm" onClick={() => setModalAction(action)}>
+            <Button key={action} size="sm" onClick={() => setModalAction({ operation: action })}>
               {t(`operations.${action}.title`)}
             </Button>
           ))}
@@ -239,7 +255,7 @@ export function ViewGrid(props: ViewGridProps) {
                   </Table.Th>
                 );
               })}
-              {(rowActions.length > 0 || contributedActions.length > 0) && <Table.Th />}
+              {(rowActions.length > 0 || rowForms.length > 0 || contributedActions.length > 0) && <Table.Th />}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -255,9 +271,15 @@ export function ViewGrid(props: ViewGridProps) {
                 {columns.map(field => (
                   <Table.Td key={field.name}>{cell(row, field)}</Table.Td>
                 ))}
-                {(rowActions.length > 0 || contributedActions.length > 0) && (
+                {(rowActions.length > 0 || rowForms.length > 0 || contributedActions.length > 0) && (
                   <Table.Td onClick={e => e.stopPropagation()}>
                     <Group gap="xs" justify="flex-end">
+                      {rowForms.map(action => (
+                        <Button key={`form:${action}`} size="compact-xs" variant="light"
+                          onClick={() => openRowForm(action, row)}>
+                          {t(`operations.${action}.title`)}
+                        </Button>
+                      ))}
                       {rowActions.map(action => (
                         <Button key={action} size="compact-xs" variant="light"
                           onClick={() => void runRowAction(action, row)}>
@@ -287,14 +309,17 @@ export function ViewGrid(props: ViewGridProps) {
       <Modal
         opened={modalAction !== null}
         onClose={() => setModalAction(null)}
-        title={modalAction ? <Title order={4}>{t(`operations.${modalAction}.title`)}</Title> : null}
+        title={modalAction
+          ? <Title order={4}>{t(`operations.${modalAction.operation}.title`)}</Title>
+          : null}
         size="lg"
       >
         {modalAction && (() => {
-          const form = formForOperation(modalAction);
+          const form = formForOperation(modalAction.operation);
           return form
-            ? <OperationForm form={form} onSuccess={() => { setModalAction(null); refresh(); }} />
-            : <Text>{modalAction}</Text>;
+            ? <OperationForm form={form} initialValues={modalAction.initial}
+                onSuccess={() => { setModalAction(null); refresh(); }} />
+            : <Text>{modalAction.operation}</Text>;
         })()}
       </Modal>
     </Stack>

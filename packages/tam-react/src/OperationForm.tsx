@@ -101,10 +101,21 @@ export function OperationForm(props: OperationFormProps) {
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current.push(key);
-    setValues(prev => ({ ...prev, [key]: value }));
+    // One-hop ResetOn (docs/05): a field declaring resetOn on the edited key had a value
+    // authored against that sibling's OLD state — discard it in the same update. Mechanical
+    // resets never trigger further resets, so mutual pairs ("exactly one of") are cycle-safe.
+    const resets = fields
+      .filter(f => f.key !== key && f.field.resetOn?.includes(key))
+      .map(f => f.key);
+    lastChanged.current.push(...resets);
+    setValues(prev => {
+      const next = { ...prev, [key]: value };
+      for (const reset of resets) next[reset] = null;
+      return next;
+    });
     setTouched(prev => new Set(prev).add(key));
     setResponse(null);
-  }, []);
+  }, [fields]);
 
   useEffect(() => {
     const changed = lastChanged.current.filter(key => !key.startsWith('ext:'));

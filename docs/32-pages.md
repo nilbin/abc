@@ -79,6 +79,14 @@ a record surface (its form prefills from same-named detail fields) or as a toolb
 their `bind` map states input ← column explicitly (docs/31). A declared action-input
 mapping in the manifest remains the designed replacement for the same-name convention.
 
+**`RowForm("op")` is the fourth shape — the EDIT affordance**: it opens the operation's
+form PREFILLED from the row (same-named result fields → form fields) instead of executing.
+Pair it with an upsert operation whose list view deliberately carries the full definition
+in its result record — `rules.list` ↔ `rules.define` is the canonical pair: the grid shows
+three columns, the row DATA carries condition/messages/action, and the row form edits the
+rule in place. It is the record-surface prefill convention applied to grids — no new
+mapping concept.
+
 Form prefill is the row-action convention made declarative: each form field takes the
 same-named detail result field; the record's `key` field takes the clicked row's id. The
 manifest gains a `pages` section (plugin pages activation-filtered like every contribution;

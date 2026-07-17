@@ -6231,6 +6231,56 @@
           "readOnly": false
         },
         {
+          "name": "onEvent",
+          "labelKey": "labels.on-event",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "condition",
+          "labelKey": "labels.condition",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "messages",
+          "labelKey": "labels.messages",
+          "type": "object",
+          "wireKind": "object",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "targetField",
+          "labelKey": "labels.target-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "action",
+          "labelKey": "labels.action",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
           "name": "retired",
           "labelKey": "labels.retired",
           "type": "boolean",
@@ -7682,7 +7732,10 @@
           "changeSet": false,
           "extension": false,
           "renderer": "rule-trigger-operation",
-          "readOnly": false
+          "readOnly": false,
+          "resetOn": [
+            "onEvent"
+          ]
         },
         {
           "name": "onEvent",
@@ -7693,7 +7746,10 @@
           "changeSet": false,
           "extension": false,
           "renderer": "rule-trigger-event",
-          "readOnly": false
+          "readOnly": false,
+          "resetOn": [
+            "onOperation"
+          ]
         },
         {
           "name": "condition",
@@ -7730,7 +7786,11 @@
             }
           },
           "renderer": "rule-condition",
-          "readOnly": false
+          "readOnly": false,
+          "resetOn": [
+            "onOperation",
+            "onEvent"
+          ]
         },
         {
           "name": "messages",
@@ -7829,7 +7889,11 @@
               }
             }
           },
-          "readOnly": false
+          "readOnly": false,
+          "resetOn": [
+            "onOperation",
+            "onEvent"
+          ]
         },
         {
           "name": "action",
@@ -7866,7 +7930,11 @@
             }
           },
           "renderer": "rule-action",
-          "readOnly": false
+          "readOnly": false,
+          "resetOn": [
+            "onOperation",
+            "onEvent"
+          ]
         }
       ],
       "includeExtensions": false,
@@ -8333,7 +8401,10 @@
             }
           },
           "readOnly": false,
-          "lookup": "projects.lookup"
+          "lookup": "projects.lookup",
+          "resetOn": [
+            "customerId"
+          ]
         },
         {
           "name": "workAddress",
@@ -9063,6 +9134,7 @@
       ],
       "includeExtensions": false,
       "plugin": "tam.extensions",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.roles": {
@@ -9078,6 +9150,7 @@
       ],
       "includeExtensions": false,
       "plugin": "tam.roles",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.audit.list": {
@@ -9096,6 +9169,7 @@
       "toolbarActions": [],
       "includeExtensions": false,
       "plugin": "tam.audit",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.plugins": {
@@ -9111,6 +9185,7 @@
       "toolbarActions": [],
       "includeExtensions": false,
       "plugin": "tam.plugins",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.packages": {
@@ -9128,6 +9203,7 @@
       ],
       "includeExtensions": false,
       "plugin": "tam.tenantpackages",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.rules": {
@@ -9145,6 +9221,9 @@
       ],
       "includeExtensions": false,
       "plugin": "tam.rules",
+      "rowForms": [
+        "rules.define"
+      ],
       "contributedActions": []
     },
     "web.tenants": {
@@ -9162,6 +9241,7 @@
       ],
       "includeExtensions": false,
       "plugin": "tam.tenancy",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.users": {
@@ -9180,6 +9260,7 @@
       ],
       "includeExtensions": false,
       "plugin": "tam.users",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.nav": {
@@ -9199,6 +9280,7 @@
       ],
       "includeExtensions": false,
       "plugin": "tam.nav",
+      "rowForms": [],
       "contributedActions": []
     },
     "inspect.web.templates": {
@@ -9219,6 +9301,7 @@
       ],
       "includeExtensions": false,
       "plugin": "inspect",
+      "rowForms": [],
       "contributedActions": []
     },
     "inspect.web.template-items": {
@@ -9232,6 +9315,7 @@
       "toolbarActions": [],
       "includeExtensions": false,
       "plugin": "inspect",
+      "rowForms": [],
       "contributedActions": []
     },
     "inspect.web.checklists": {
@@ -9250,6 +9334,7 @@
       ],
       "includeExtensions": false,
       "plugin": "inspect",
+      "rowForms": [],
       "contributedActions": []
     },
     "inspect.web.items": {
@@ -9267,6 +9352,7 @@
       "toolbarActions": [],
       "includeExtensions": false,
       "plugin": "inspect",
+      "rowForms": [],
       "contributedActions": []
     },
     "approvals.web.requests": {
@@ -9284,6 +9370,7 @@
       "toolbarActions": [],
       "includeExtensions": false,
       "plugin": "approvals",
+      "rowForms": [],
       "contributedActions": []
     },
     "invoicing.web.invoices": {
@@ -9301,6 +9388,7 @@
       "toolbarActions": [],
       "includeExtensions": false,
       "plugin": "invoicing",
+      "rowForms": [],
       "contributedActions": []
     },
     "web.orders.list": {
@@ -9321,6 +9409,7 @@
         "orders.create"
       ],
       "includeExtensions": true,
+      "rowForms": [],
       "contributedActions": [
         {
           "operation": "invoicing.create-from-order",
@@ -9345,6 +9434,7 @@
         "customers.create"
       ],
       "includeExtensions": false,
+      "rowForms": [],
       "contributedActions": []
     },
     "web.projects.list": {
@@ -9365,6 +9455,7 @@
         "projects.create"
       ],
       "includeExtensions": false,
+      "rowForms": [],
       "contributedActions": []
     },
     "web.work-orders.list": {
@@ -9392,6 +9483,7 @@
         "work-orders.create"
       ],
       "includeExtensions": true,
+      "rowForms": [],
       "contributedActions": []
     },
     "web.time.list": {
@@ -9410,6 +9502,7 @@
       ],
       "toolbarActions": [],
       "includeExtensions": false,
+      "rowForms": [],
       "contributedActions": []
     },
     "web.materials.list": {
@@ -9426,6 +9519,7 @@
       "rowActions": [],
       "toolbarActions": [],
       "includeExtensions": false,
+      "rowForms": [],
       "contributedActions": []
     },
     "web.stock.list": {
@@ -9444,6 +9538,7 @@
         "stock.create"
       ],
       "includeExtensions": false,
+      "rowForms": [],
       "contributedActions": []
     }
   },

@@ -26,6 +26,13 @@ public sealed record FormFieldConfig(
     /// referenced by the enum's kebab wire name, verified at Build (ENUM001). Keeps the field an
     /// opaque wire string (no CLR coupling) while ending the typo-defines-a-dead-template wart.</summary>
     public string? OptionsFromEnum { get; init; }
+
+    /// <summary>The DependsOn twin for VALUES (docs/05): when any of these sibling fields is
+    /// edited, this field's value is discarded — it referenced the old sibling's world (a project
+    /// of the previous customer, a condition over the previous trigger's fields). One hop only:
+    /// a mechanical reset never triggers further resets, so mutual pairs are cycle-safe — which
+    /// is also how "exactly one of A/B" is declared: each resets on the other.</summary>
+    public IReadOnlyList<string>? ResetOn { get; init; }
 }
 
 public sealed record FormDefinition(
@@ -114,6 +121,20 @@ public sealed class FormFieldBuilder<TInput>(FormBuilder<TInput> form, int index
         form.Update(index, f => f with { OptionsFromEnum = enumWireName });
         return this;
     }
+
+    /// <summary>Discards this field's value whenever one of <paramref name="members"/> is edited
+    /// (docs/05) — the DependsOn twin for values: a value authored against a sibling's old state
+    /// must not survive that sibling changing. One hop, cycle-safe; a mutual pair declares
+    /// "exactly one of the two".</summary>
+    public FormFieldBuilder<TInput> ResetOn(params Expression<Func<TInput, object?>>[] members)
+    {
+        var names = members.Select(m => Naming.Camel(FormBuilder<TInput>.MemberName(m))).ToList();
+        form.Update(index, f => f with
+        {
+            ResetOn = f.ResetOn is { } existing ? [.. existing, .. names] : names,
+        });
+        return this;
+    }
 }
 
 public sealed record GridDefinition(
@@ -126,12 +147,18 @@ public sealed record GridDefinition(
 {
     /// <summary>Owning plugin id, or null for host-defined grids (docs/22).</summary>
     public string? Plugin { get; init; }
+
+    /// <summary>Row actions that OPEN the operation's form prefilled from the row (docs/32) —
+    /// the edit affordance — where RowActions execute immediately (complete, retire). The row's
+    /// result fields prefill same-named form fields, so an upsert operation edits in place.</summary>
+    public IReadOnlyList<string> RowForms { get; init; } = [];
 }
 
 public sealed class GridBuilder<TResult>
 {
     private readonly List<string> columns = [];
     private readonly List<string> rowActions = [];
+    private readonly List<string> rowForms = [];
     private readonly List<string> toolbarActions = [];
     private bool includeExtensions;
 
@@ -144,6 +171,14 @@ public sealed class GridBuilder<TResult>
     public GridBuilder<TResult> RowAction(string operationId)
     {
         rowActions.Add(operationId);
+        return this;
+    }
+
+    /// <summary>An EDIT row action: opens <paramref name="operationId"/>'s form prefilled from
+    /// the row (same-named fields), instead of executing immediately like RowAction.</summary>
+    public GridBuilder<TResult> RowForm(string operationId)
+    {
+        rowForms.Add(operationId);
         return this;
     }
 
@@ -160,5 +195,8 @@ public sealed class GridBuilder<TResult>
     }
 
     internal GridDefinition Build(string id, string viewId) =>
-        new(id, viewId, columns, rowActions, toolbarActions, includeExtensions);
+        new(id, viewId, columns, rowActions, toolbarActions, includeExtensions)
+        {
+            RowForms = rowForms,
+        };
 }

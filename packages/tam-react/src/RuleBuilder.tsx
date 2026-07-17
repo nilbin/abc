@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import {
   ClauseOp, ParsedCondition, Px, RuleActionModel, RuleClause, RuleRef, RuleSchemaRow,
   buildAction, buildCondition, conditionRefs, enumLabel, isUnary, operatorsFor,
-  parseAction, parseCondition, setFieldTargets,
+  parseAction, parseCondition, setFieldTargets, toWireEnum,
 } from '@tam/core';
 import type { FieldRendererProps } from './renderers';
 
@@ -70,18 +70,9 @@ const OP_LABEL: Record<ClauseOp, string> = {
 };
 
 // ---- trigger pickers ----------------------------------------------------------------------------
-
-/** Trigger change semantics shared by both pickers: exactly one trigger set (the other clears),
- *  and the dependent authoring resets — the condition/action reference the OLD trigger's fields,
- *  and a hidden field's value still submits, so stale refs must not survive the switch. */
-function changeTrigger(p: FieldRendererProps, next: string | null, otherTrigger: string): void {
-  if (next === ((p.value ?? null) as string | null)) return;
-  p.onChange(next);
-  if (next) p.setField?.(otherTrigger, null);
-  p.setField?.('condition', null);
-  p.setField?.('action', null);
-  p.setField?.('targetField', null);
-}
+// Pure presentation: searchable selects over the manifest's operation/event catalogs. All the
+// coordination (exactly one trigger; dependent condition/action reset) is DECLARED on the form
+// with ResetOn — the pickers know nothing about their siblings.
 
 export function RuleTriggerOperation(p: FieldRendererProps): React.ReactNode {
   const data = Object.keys(p.tam.manifest.operations).sort().map(id => ({
@@ -93,7 +84,7 @@ export function RuleTriggerOperation(p: FieldRendererProps): React.ReactNode {
       label={p.label} description={p.warning} error={p.error} searchable clearable
       data={data}
       value={p.value === null || p.value === undefined ? null : String(p.value)}
-      onChange={v => changeTrigger(p, v || null, 'onEvent')}
+      onChange={v => p.onChange(v || null)}
     />
   );
 }
@@ -106,7 +97,7 @@ export function RuleTriggerEvent(p: FieldRendererProps): React.ReactNode {
       label={p.label} description={p.warning} error={p.error} searchable clearable
       data={data}
       value={p.value === null || p.value === undefined ? null : String(p.value)}
-      onChange={v => changeTrigger(p, v || null, 'onOperation')}
+      onChange={v => p.onChange(v || null)}
     />
   );
 }
@@ -124,7 +115,12 @@ function ClauseValue({ p, reference, clause, onClause }: {
     return (
       <Select
         placeholder="value" searchable
-        data={reference.options.map(o => ({ value: o, label: enumLabel(p.tam.manifest, p.tam.culture, o) }))}
+        // Options arrive as declared names; the stored const must be the WIRE value (camel
+        // enum) — the same toWireEnum mapping the default renderer applies, or the server's
+        // ordinal comparison would never match.
+        data={reference.options.map(o => ({
+          value: toWireEnum(o), label: enumLabel(p.tam.manifest, p.tam.culture, o),
+        }))}
         value={clause.value === null || clause.value === undefined ? null : String(clause.value)}
         onChange={v => onClause({ ...clause, value: v, relativeDays: null })}
         style={{ flex: 1 }}
@@ -319,7 +315,10 @@ function ActionValue({ p, reference, value, onValue }: {
     return (
       <Select
         label={p.tam.t('labels.value')} searchable
-        data={reference.options.map(o => ({ value: o, label: enumLabel(p.tam.manifest, p.tam.culture, o) }))}
+        // Wire values, exactly like the condition's value control (and the default renderer).
+        data={reference.options.map(o => ({
+          value: toWireEnum(o), label: enumLabel(p.tam.manifest, p.tam.culture, o),
+        }))}
         value={value === null || value === undefined ? null : String(value)}
         onChange={v => onValue(v)}
       />

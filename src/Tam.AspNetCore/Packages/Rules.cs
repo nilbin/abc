@@ -29,27 +29,33 @@ public sealed class TamRulesPackage : ITamPlugin
             .Form<DefineAutomationRule.Input>("web.rules.define", "rules.define", form =>
             {
                 form.Field(x => x.Name);
-                // Trigger: an operation OR a domain event (exactly one — the pickers clear the
-                // other). Searchable selects over the manifest, not free-typed ids.
-                form.Field(x => x.OnOperation).Renderer("rule-trigger-operation");
-                form.Field(x => x.OnEvent).Renderer("rule-trigger-event");
+                // Trigger: an operation OR a domain event. "Exactly one" is the mutual ResetOn
+                // pair (docs/05); the pickers themselves are plain searchable selects.
+                form.Field(x => x.OnOperation).Renderer("rule-trigger-operation")
+                    .ResetOn(x => x.OnEvent);
+                form.Field(x => x.OnEvent).Renderer("rule-trigger-event")
+                    .ResetOn(x => x.OnOperation);
                 // The visual builders (docs/22): the condition/action editors resolve their
                 // referenceable fields, operators and value options from the chosen trigger via
                 // the rules.schema view — server-authoritative typing, no hand-authored Px JSON.
                 // Everything below the trigger is gated on it with the form's OWN dynamics —
-                // the same VisibleWhen/RequiredWhen Px every other form uses, and a server
-                // derivation for TargetField's options (docs/05, dogfooded).
+                // VisibleWhen/RequiredWhen Px, ResetOn (authoring against the OLD trigger's
+                // fields must not survive a trigger change), and a server derivation for
+                // TargetField's options (docs/05, dogfooded).
                 form.Field(x => x.Condition).Renderer("rule-condition")
-                    .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null);
+                    .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null)
+                    .ResetOn(x => x.OnOperation, x => x.OnEvent);
                 form.Field(x => x.Messages).Renderer("culture-text")
                     .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null)
                     // RUL003 as form state: a FINDING rule (no action) must carry a message.
                     .RequiredWhen(x => x.Action == null);
                 form.Field(x => x.TargetField)
                     // The finding's anchor field — meaningless for action rules.
-                    .VisibleWhen(x => (x.OnOperation != null || x.OnEvent != null) && x.Action == null);
+                    .VisibleWhen(x => (x.OnOperation != null || x.OnEvent != null) && x.Action == null)
+                    .ResetOn(x => x.OnOperation, x => x.OnEvent);
                 form.Field(x => x.Action).Renderer("rule-action")
-                    .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null);
+                    .VisibleWhen(x => x.OnOperation != null || x.OnEvent != null)
+                    .ResetOn(x => x.OnOperation, x => x.OnEvent);
             })
             .Grid<RuleList.Result>("web.rules", "rules.list", grid =>
             {
@@ -57,6 +63,9 @@ public sealed class TamRulesPackage : ITamPlugin
                 grid.Column(x => x.OnOperation);
                 grid.Column(x => x.Retired);
                 grid.ToolbarAction("rules.define");
+                // Edit: rules.define is an upsert by name — the RowForm opens it prefilled
+                // from the row (the Result carries the full definition for exactly this).
+                grid.RowForm("rules.define");
                 grid.RowAction("rules.retire");
             });
     }
@@ -709,6 +718,9 @@ public static class RuleList
 {
     public sealed record Query(string? Search = null);
 
+    /// <summary>Carries the FULL definition, not just the grid columns: rules.define is an
+    /// upsert by name, so the grid's RowForm edits a rule by prefilling the define form from
+    /// the row — the result fields are named exactly like the operation's input fields.</summary>
     public sealed record Result
     {
         public Guid Id { get; init; }
@@ -716,6 +728,16 @@ public static class RuleList
         public string Name { get; init; } = "";
         [LabelKey("labels.on-operation")]
         public string OnOperation { get; init; } = "";
+        [LabelKey("labels.on-event")]
+        public string? OnEvent { get; init; }
+        [LabelKey("labels.condition")]
+        public string Condition { get; init; } = "";
+        [LabelKey("labels.messages")]
+        public Dictionary<string, string> Messages { get; init; } = [];
+        [LabelKey("labels.target-field")]
+        public string? TargetField { get; init; }
+        [LabelKey("labels.action")]
+        public string? Action { get; init; }
         [LabelKey("labels.retired")]
         public bool Retired { get; init; }
     }
@@ -725,10 +747,20 @@ public static class RuleList
         var rules = tam.Db.Set<AutomationRuleEntity>().AsQueryable();
         if (!string.IsNullOrWhiteSpace(query.Search))
             rules = rules.Where(x => x.Name.Contains(query.Search!));
-        return rules.Select(x => new Result
+        // Materialized: the messages map deserializes per row, which SQL cannot project — and a
+        // tenant's rule table is small config data, like rules.schema's computed rows.
+        return rules.AsEnumerable().Select(x => new Result
         {
-            Id = x.Id, Name = x.Name, OnOperation = x.OnOperation, Retired = x.Retired,
-        });
+            Id = x.Id,
+            Name = x.Name,
+            OnOperation = x.OnOperation,
+            OnEvent = x.OnEvent,
+            Condition = x.ConditionJson,
+            Messages = JsonSerializer.Deserialize<Dictionary<string, string>>(x.MessagesJson) ?? [],
+            TargetField = x.TargetField,
+            Action = x.ActionJson,
+            Retired = x.Retired,
+        }).AsQueryable();
     }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>

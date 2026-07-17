@@ -40,6 +40,9 @@ export interface ManifestField {
   visibleWhen?: Px;
   requiredWhen?: Px;
   renderer?: string;
+  /** Discard this field's value when one of these sibling fields is edited (docs/05) — the
+   * DependsOn twin for values. One hop; a mutual pair means "exactly one of the two". */
+  resetOn?: string[];
 }
 
 export interface Manifest {
@@ -79,6 +82,9 @@ export interface Manifest {
     view: string;
     columns: string[];
     rowActions: string[];
+    /** Row actions that open the operation's form PREFILLED from the row (the edit
+     *  affordance) — rowActions execute immediately, these author. */
+    rowForms?: string[];
     toolbarActions: string[];
     includeExtensions: boolean;
     plugin?: string;

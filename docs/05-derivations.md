@@ -22,6 +22,14 @@ BUILT** (an M3 RTFM finding — this box is the source of truth until the doc is
   `[Lookup("view.id")]` renders a searchable picker over that view from the manifest alone
   (docs/02) — `AddOptions` remains for genuinely context-DEPENDENT option sets and wins
   over the lookup when both are present.
+- Built since (the rule-builder arc): `form.Field(x => x.ProjectId).ResetOn(x => x.CustomerId)`
+  — the `DependsOn` twin for VALUES. When a listed sibling is edited, this field's value is
+  DISCARDED: it was authored against that sibling's old world (the previous customer's
+  project; a rule condition over the previous trigger's fields). Manifest-carried
+  (`resetOn`), one hop only — a mechanical reset never triggers further resets, which makes
+  a mutual pair (`OnOperation.ResetOn(OnEvent)` + the reverse) the cycle-safe declaration of
+  "exactly one of the two". The form runtime batches a multi-field edit into ONE resolve
+  whose `changed` lists every touched field, so derivations see resets too.
 
 A derivation computes **interaction state** without changing durable business state.
 

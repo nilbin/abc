@@ -249,10 +249,16 @@ computed view fills exactly that gap:
   RUL003 will demand it (no action). TargetField's options come from a **server
   derivation** (`rules.define.target-fields`, recomputed on trigger change through the
   resolve endpoint), so the finding's anchor is picked from the trigger's own localized
-  fields, never typed. Changing the trigger resets the dependent authoring — stale field
-  references cannot ride along invisibly. And a comparison against the null CONSTANT (the
+  fields, never typed. "Exactly one trigger" and "authoring resets on trigger change" are
+  both the declarative `ResetOn` (docs/05) — the pickers themselves are plain searchable
+  selects with no sibling knowledge. And a comparison against the null CONSTANT (the
   unfinished-clause shape) is refused at define with a redirect to `isNull`/`isNotNull`,
   mirrored by an inline "value required" hint in the builder.
+- **Rules are editable in place**: `rules.define` is an upsert by name, and the grid's
+  `RowForm` (docs/32) opens it PREFILLED from the row — `rules.list`'s result record
+  deliberately carries the full definition (condition, messages, action, trigger) so the
+  stored Px parses straight back into the visual clauses, including the relative-date `fn`
+  node as its "today ± N" control.
 
 Verified: 3 backend view tests (typed row fields, empty-for-creates, unknown-trigger) and
 a 8-check wire suite on SQLite **and** Postgres (schema shape, enum options, the excluded

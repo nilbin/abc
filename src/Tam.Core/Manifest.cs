@@ -79,7 +79,8 @@ public sealed record ManifestField(
     string? Renderer = null,
     string? Sensitive = null,    // docs/27 D-A3: present only for actors holding this atom
     bool ReadOnly = false,       // docs/31 D-X2: plugin-owned state — grids yes, forms no
-    string? Lookup = null);      // docs/34 M5: render a searchable picker over this view
+    string? Lookup = null,       // docs/34 M5: render a searchable picker over this view
+    IReadOnlyList<string>? ResetOn = null);  // docs/05: discard value when a listed sibling is edited
 
 public sealed record ManifestOperation(
     string Permission,
@@ -131,6 +132,10 @@ public sealed record ManifestGrid(
     bool IncludeExtensions)
 {
     public string? Plugin { get; init; }
+
+    /// <summary>Row actions that open the operation's form PREFILLED from the row (the edit
+    /// affordance, docs/32) — RowActions execute immediately, these author.</summary>
+    public IReadOnlyList<string> RowForms { get; init; } = [];
 
     /// <summary>Plugin row actions on this grid (docs/31 D-X1) — activation-filtered like
     /// GatedBy; the host's own RowActions stay untouched. Bind maps operation input wire
@@ -230,6 +235,7 @@ public static class ManifestBuilder
                         Renderer = config.Renderer,
                         VisibleWhen = config.VisibleWhen,
                         RequiredWhen = config.RequiredWhen,
+                        ResetOn = config.ResetOn,
                         ReadOnly = field.ReadOnly || config.ReadOnly,
                         // docs/34 M6: a string field borrowing another module's enum vocabulary
                         // becomes a selection over the registry's values (ENUM001-verified).
@@ -256,6 +262,7 @@ public static class ManifestBuilder
                 kv.Value.ToolbarActions, kv.Value.IncludeExtensions)
             {
                 Plugin = kv.Value.Plugin,
+                RowForms = kv.Value.RowForms,
                 ContributedActions = model.GridActions.TryGetValue(kv.Key, out var contributed)
                     ? contributed.Where(a => Included(a.PluginId))
                         .Select(a => new ManifestGridAction(a.OperationId, a.PluginId,

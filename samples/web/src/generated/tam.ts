@@ -931,6 +931,11 @@ export interface RulesListRow {
   id: string;
   name: string;
   onOperation: string;
+  onEvent?: string;
+  condition: string;
+  messages: Record<string, unknown>;
+  targetField?: string;
+  action?: string;
   retired: boolean;
 }
 

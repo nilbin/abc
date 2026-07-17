@@ -451,6 +451,27 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **ResetOn promoted + rules editable in place (rule-builder round 3)**: the trigger-picker
+  coordination graduated from renderer code into a FRAMEWORK primitive — `ResetOn`, the
+  DependsOn twin for VALUES (docs/05): `form.Field(x => x.Condition).ResetOn(x => x.OnOperation,
+  x => x.OnEvent)` discards a value authored against a sibling's old world when that sibling
+  is edited. Manifest-carried (`resetOn`), one hop only (mechanical resets never cascade), so a
+  MUTUAL pair is the cycle-safe declaration of "exactly one of the two" — which is exactly how
+  the rules form now declares its trigger pair, and the pickers shrank to pure searchable
+  selects with zero sibling knowledge. Second consumer immediately: orders.create's projectId
+  ResetOn(customerId) — the previous customer's project no longer survives a customer change.
+  And rules gained the missing EDIT path: `RowForm` (docs/32), the grid's fourth action shape —
+  opens the operation's form PREFILLED from the row (same-named fields), paired with
+  rules.list's result record now carrying the FULL definition (in-memory projection; small
+  config table) since rules.define is an upsert by name. A screenshot-caught bug fixed along
+  the way: the builder's enum value selects stored PascalCase enum NAMES where the wire (and
+  the server's ordinal compare) uses camel values — now mapped through toWireEnum like the
+  default renderer, which also made prefilled enum values display ("Akut"). Verified: edit
+  contract test (list carries definition; re-define updates in place, no duplicate), suites
+  162+38, wire suite grown to 18 checks (manifest resetOn/rowForms, edit round-trip) green on
+  fresh SQLite AND Postgres, rulesgate 22/22 on both, additive baseline + regenerated types,
+  screenshots of the dynamic form and the prefilled edit modal (relative-date clause rendered
+  as "today ± 7").
 - **Rule-builder round 2 — the form dogfoods its own dynamics (docs/05) + review fixes**:
   `rules.define` now uses the framework's OWN form machinery instead of renderer-local gating:
   `VisibleWhen` Px hides Condition/Messages/TargetField/Action until a trigger is chosen (and
