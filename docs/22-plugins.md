@@ -141,13 +141,31 @@ Storage is one shared table (`custom_records`: TenantId, ObjectKey, Id, Version,
 
 The last Salesforce pillar, and the one where the "no tenant code" line matters most. A rule is: **trigger** (operation or effect) + **condition** (a Px AST tree — the same portable expression language forms already evaluate, authored through a builder UI, stored as structure, *never parsed from a string*) + **action from a closed catalog**: add finding (validation), set extension field, publish event, enqueue integration message.
 
+The REAL wire (RTFM #3 corrected this block — the earlier sketch shape is rejected):
+`rules.define` takes `{ name, onOperation, condition, messages, targetField? }` where
+`condition` is the Px tree as a JSON **string** (structured data in a string field — the
+engine deserializes and validates it; it is never expression-parsed) and `messages` is
+per-culture rule text keyed like the catalogs. Px nodes carry discriminator `t`:
+
 ```jsonc
-{ "rule": "coldChainNeedsDate", "on": "orders.create",
-  "when": { "bin": "and",
-    "l": { "bin": "eq", "l": { "field": "ext.coldChainClass" }, "r": { "const": "class-2" } },
-    "r": { "bin": "eq", "l": { "field": "requestedDate" }, "r": { "const": null } } },
-  "then": { "finding": "rules.cold-chain-needs-date", "target": "requestedDate" } }
+// "cold-chain orders need a requested date", as rules.define's condition string:
+{ "t": "bin", "op": "and",
+  "l": { "t": "bin", "op": "eq",
+         "l": { "t": "field", "f": "ext.coldChainClass" }, "r": { "t": "const", "v": "class-2" } },
+  "r": { "t": "bin", "op": "eq",
+         "l": { "t": "field", "f": "requestedDate" }, "r": { "t": "const", "v": null } } }
 ```
+
+The CLOSED operator vocabulary (anything else is `rules.invalid-condition`, which names the
+offending `op`): binary `eq ne gt ge lt le and or`, unary `not isNull isNotNull`; leaves are
+`{"t":"field","f":...}` (input wire names, `ext.{key}`, `row.{member}`, `row.ext.{key}`) and
+`{"t":"const","v":...}`. A firing rule's finding code is **`rules.{name}`** — what tests and
+clients match on. KNOWN GAP (RTFM #3): there is no relative-date node — "more than 7 days
+out" can only be authored as a define-time constant that drifts; a `{"t":"fn","op":"today"}`
+-class node is the queued Px increment. Seeding a rule for a demo tenant writes the same
+`AutomationRuleEntity` row the operation writes (`ConditionJson`, `MessagesJson`, and for
+row conditions the define-resolved `RowEntityKey`/`RowIdField`) — the erp seed shows the
+shape.
 
 Rules are registry data (RUL### diagnostics at definition: unknown field, type mismatch, unreachable condition), evaluated with a budget (no loops, no recursion, bounded tree depth), fully audited, and — the sharpest dogfood in the codebase — **executed as the `tam.rules` package's own PURE wildcard gate**: the executor has no rules special case; the framework's P5 feature runs through the very gate seam it sells, in the pre-transaction phase (a declared pure-over-input gate is the cheap fail; transactional gates keep running inside the transaction). And — because Px is portable — the *same* condition can drive client-side form behavior without a round trip. Message keys, as always: the finding's text lives in the tenant's label catalog, per culture.
 

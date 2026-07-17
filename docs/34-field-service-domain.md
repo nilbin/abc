@@ -303,3 +303,18 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   docs/31 the multi-panel note, and docs/32's row-action paragraph was corrected against
   the CODE (row actions EXECUTE with same-name/row-id fallback; they never opened forms —
   the M3-era text described a design, not the build).
+- (RTFM #3, docs-only build over the reshaped docs) Work-order priority + the urgent-
+  scheduling rule shipped consumer-only, 22/22 tests — and validated the M5/M6/row.* docs
+  under fresh eyes. Filed and FIXED same-day: docs/22 + step-09 showed a Px wire shape the
+  engine rejects (the real one carries discriminator `t`; docs corrected, operator
+  vocabulary now listed); malformed condition JSON 500'd instead of returning
+  rules.invalid-condition (rules.define now catches the polymorphism failure AND names the
+  unsupported operator in the finding — regression-tested); step-12's impact command was
+  copy-paste-wrong (paths resolve against the project dir); step-11 lacked the harness
+  return types. Filed and QUEUED: no relative-date node in Px — "more than 7 days out" is
+  only expressible as a define-time constant that drifts; a {"t":"fn"}-class node
+  ("today", offsets) is the next Px increment, noted in docs/22. Positives worth keeping:
+  EDIT001 refused priority-as-Change<T> with a message good enough that the agent called
+  the refusal "better than my design" — the intent-operation answer is now in step-09; the
+  capability sweep covered the new filterable for free; the seeded row rule worked over
+  real HTTP first try.

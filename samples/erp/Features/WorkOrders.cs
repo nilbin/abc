@@ -36,7 +36,9 @@ public static class CreateWorkOrder
         [property: LabelKey("labels.project")] ProjectId ProjectId,
         string Title,
         WorkDescription Description,
-        Address Location);
+        Address Location,
+        // Optional on the wire (D4-additive); the domain default is Normal.
+        WorkOrderPriority Priority = WorkOrderPriority.Normal);
 
     public sealed record Output(WorkOrderId WorkOrderId, WorkOrderNumber Number);
 
@@ -56,7 +58,8 @@ public static class CreateWorkOrder
             input.ProjectId,
             input.Title,
             input.Description,
-            input.Location);
+            input.Location,
+            input.Priority);
         db.WorkOrders.Add(workOrder);
         return new Output(workOrder.Id, workOrder.Number);
     }
@@ -119,6 +122,34 @@ public static class ScheduleWorkOrder
         var result = workOrder.Schedule(input.ScheduledDate, input.AssigneeActorId, name);
         if (result.IsError) return result.As<Output>();
         return new Output(workOrder.Status);
+    }
+}
+
+/// <summary>Priority is an enum, so EDIT001 keeps it OFF the generic change-set: re-prioritizing
+/// is an intent of its own, guarded by the same editability window as edit-details.</summary>
+[Operation("work-orders.set-priority")]
+[Authorize("work-orders.edit")]
+[Widens("work-orders.edit-all")]
+public static class SetWorkOrderPriority
+{
+    public sealed record Input(
+        [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
+        WorkOrderPriority Priority);
+
+    public sealed record Output(WorkOrderPriority Priority);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var workOrder = await db.WorkOrders.SingleOrDefaultAsync(x => x.Id == input.WorkOrderId, ct);
+        if (workOrder is null) return WorkOrderFindings.NotFound.Create();
+
+        var scope = context.CheckOwnershipUnless("work-orders.edit-all", workOrder.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
+
+        var result = workOrder.SetPriority(input.Priority);
+        if (result.IsError) return result.As<Output>();
+        return new Output(workOrder.Priority);
     }
 }
 
@@ -235,6 +266,7 @@ public static class WorkOrderList
         public string Title { get; init; } = "";
         public ProjectNumber ProjectNumber { get; init; }
         public WorkOrderStatus Status { get; init; }
+        public WorkOrderPriority Priority { get; init; }
         public DateOnly? ScheduledDate { get; init; }
         [LabelKey("labels.assignee")]
         public string? AssignedToName { get; init; }
@@ -260,7 +292,7 @@ public static class WorkOrderList
                 w => w.ProjectId, p => p.Id, (w, p) => new Result
             {
                 Id = w.Id, Number = w.Number, Title = w.Title, ProjectNumber = p.Number,
-                Status = w.Status, ScheduledDate = w.ScheduledDate,
+                Status = w.Status, Priority = w.Priority, ScheduledDate = w.ScheduledDate,
                 AssignedToName = w.AssignedToName, TenantId = w.TenantId,
                 Version = w.Version, Extensions = w.Extensions,
             });
@@ -268,7 +300,7 @@ public static class WorkOrderList
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Number), nameof(Result.ScheduledDate), nameof(Result.Title))
-        .Filterable(nameof(Result.Status), nameof(Result.ScheduledDate),
+        .Filterable(nameof(Result.Status), nameof(Result.Priority), nameof(Result.ScheduledDate),
             nameof(Result.ProjectNumber), nameof(Result.AssignedToName))
         .SubtreeRead(nameof(Result.TenantId))
         .DefaultSort(nameof(Result.Number), descending: true);
@@ -293,6 +325,7 @@ public static class WorkOrderDetail
         public WorkDescription Description { get; init; }
         public Address Location { get; init; }
         public WorkOrderStatus Status { get; init; }
+        public WorkOrderPriority Priority { get; init; }
         public DateOnly? ScheduledDate { get; init; }
         [LabelKey("labels.assignee")]
         public string? AssignedToName { get; init; }
@@ -308,7 +341,8 @@ public static class WorkOrderDetail
             {
                 Id = w.Id, Number = w.Number, Title = w.Title, ProjectNumber = p.Number,
                 Description = w.Description, Location = w.Location, Status = w.Status,
-                ScheduledDate = w.ScheduledDate, AssignedToName = w.AssignedToName,
+                Priority = w.Priority, ScheduledDate = w.ScheduledDate,
+                AssignedToName = w.AssignedToName,
                 Version = w.Version, Extensions = w.Extensions,
             });
 }

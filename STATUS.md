@@ -451,6 +451,24 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **RTFM #3 (docs-only build over the reshaped docs): work-order priority + the urgent-
+  scheduling policy** — a consumer agent shipped a real feature with zero framework edits:
+  `WorkOrderPriority` enum (default carried by the domain, wire field optional so the change
+  stays D4-additive), `work-orders.set-priority` as an INTENT (EDIT001 refused the
+  Change<T> shape — the analyzer's opinion beat the design), grid column + filterable, and
+  the tenant rule "urgent work orders can't be scheduled more than 7 days out" authored as
+  data — a MIXED condition (`row.priority` from the target row, `scheduledDate` from the
+  input), the exact combination row.* shipped for, proven over real HTTP. Its report drove
+  same-day fixes: the docs' Px condition example was WRONG (sketch shape without the `t`
+  discriminator — rejected by the engine; docs/22 + step-09 corrected, operator vocabulary
+  documented, finding-code convention `rules.{name}` stated, rule seeding shape shown);
+  rules.define 500'd on malformed condition JSON (now a rules.invalid-condition finding
+  that also NAMES an unsupported operator; 2 regression tests); step-12's command line had
+  a project-relative path bug; step-11 gained the harness return types. Queued: a relative-
+  date Px node (`{"t":"fn"}`, "today"+offset) — "7 days out" currently only works as a
+  define-time constant, the round's sharpest find. Verified: 157 + 24 tests, full wire
+  matrix on SQLite AND Postgres, additive baseline confirmed by the agent running the
+  impact tool as documented (its first outside user).
 - **P5 `row.*` BUILT — rule conditions over the operation's target row (docs/22)**: the
   intent-operation blind spot closed. rules.define resolves the target entity from the
   operation's single `{entity}Id` input and stores it on the rule (RUL004 names the wall

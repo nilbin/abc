@@ -113,9 +113,11 @@ first consumer had to hand-build this; now it is the API).
   ...atoms)` fixes the actor id for own-scope scenarios (the id rows record as owner).
 - `actor.ExecuteAsync(operationId, input, idempotencyKey?)` — full pipeline; `input` is any
   object whose JSON matches the Input record (`Change` fields:
-  `new { original = ..., value = ... }`).
+  `new { original = ..., value = ... }`). Returns `Tam.OperationResponse` (`Findings`,
+  `Output`, `Effects`) — the assertion helpers hang off it.
 - `actor.QueryAsync(viewId, query?)` — wire-shaped query params (`sort`, `page`, filters,
-  `ext.key`).
+  `ext.key`). Returns a `(ViewResponse? Response, Finding? Error)` tuple; in-process the
+  `Response.Rows` items are the view's TYPED Result records, not JSON.
 - `host.SeedAsync(tenant, db => ...)` — arrange state in an ambient tenant scope (global
   filter + stamping active); saves on return. `QueryDbAsync(tenant, db => ...)` is the
   read twin.

@@ -165,6 +165,7 @@ public static class ErpModel
             form.Field(x => x.Title);
             form.Field(x => x.Description);
             form.Field(x => x.Location);
+            form.Field(x => x.Priority);
             form.Extensions();
         })
 
@@ -175,6 +176,14 @@ public static class ErpModel
             form.Field(x => x.Description);
             form.Field(x => x.Location);
             form.Extensions();
+        })
+
+        // Priority is an enum, so it moves through its own intent (EDIT001), not the
+        // change-set — this form is the intent's surface, opened from the grid row.
+        .Form<SetWorkOrderPriority.Input>("web.work-orders.set-priority", "work-orders.set-priority", form =>
+        {
+            form.Field(x => x.WorkOrderId).Renderer("hidden");
+            form.Field(x => x.Priority);
         })
 
         .Form<ScheduleWorkOrder.Input>("web.work-orders.schedule", "work-orders.schedule", form =>
@@ -261,10 +270,12 @@ public static class ErpModel
             grid.Column(x => x.ProjectNumber);
             grid.Column(x => x.Title);
             grid.Column(x => x.Status);
+            grid.Column(x => x.Priority);
             grid.Column(x => x.ScheduledDate);
             grid.Column(x => x.AssignedToName);
             grid.Extensions();
             grid.RowAction("work-orders.schedule");
+            grid.RowAction("work-orders.set-priority");
             grid.RowAction("work-orders.start");
             grid.RowAction("work-orders.complete");
             grid.RowAction("work-orders.close");

@@ -64,6 +64,10 @@ public enum StockUnit { Piece, Hour, Meter, Kilogram, Litre }
 
 public enum WorkOrderStatus { Draft, Scheduled, InProgress, Done, Closed }
 
+// The dispatch priority (docs/02: the type carries the semantics; docs/21: members localize
+// as enums.{kebab(value)} model-wide — enums.low / enums.normal / enums.urgent).
+public enum WorkOrderPriority { Low, Normal, Urgent }
+
 public enum TimeEntryStatus { Draft, Approved }
 
 // ---- Finding factories: stable codes; text in locale catalogs ----
@@ -217,12 +221,14 @@ public sealed class WorkOrder : IExtensible, Tam.EntityFrameworkCore.IVersioned,
     // without a cross-provider join into the framework's account table (docs/34 friction log).
     public string? AssignedToName { get; private set; }
     public WorkOrderStatus Status { get; private set; }
+    public WorkOrderPriority Priority { get; private set; }
     public long Version { get; set; }
     public ExtensionData Extensions { get; set; } = new();
 
     public static WorkOrder Create(
         string tenantId, WorkOrderNumber number, ProjectId projectId, string title,
-        WorkDescription description, Address location) => new()
+        WorkDescription description, Address location,
+        WorkOrderPriority priority = WorkOrderPriority.Normal) => new()
     {
         Id = new WorkOrderId(Guid.NewGuid()),
         TenantId = tenantId,
@@ -232,6 +238,7 @@ public sealed class WorkOrder : IExtensible, Tam.EntityFrameworkCore.IVersioned,
         Description = description,
         Location = location,
         Status = WorkOrderStatus.Draft,
+        Priority = priority,
     };
 
     // The machine: Draft → Scheduled → InProgress → Done → Closed. Every arrow is an
@@ -267,6 +274,16 @@ public sealed class WorkOrder : IExtensible, Tam.EntityFrameworkCore.IVersioned,
     {
         if (Status != WorkOrderStatus.Done) return WorkOrderFindings.InvalidTransition;
         Status = WorkOrderStatus.Closed;
+        return Result.Success();
+    }
+
+    // Priority is consequential state (an automation rule reads it at schedule time), so it
+    // moves through this intent — EDIT001 bans it from the generic change-set. Same window
+    // as detail edits: set it while Draft/Scheduled, frozen once work starts.
+    public Result SetPriority(WorkOrderPriority priority)
+    {
+        if (!IsEditable) return WorkOrderFindings.NotEditable;
+        Priority = priority;
         return Result.Success();
     }
 

@@ -136,6 +136,7 @@ export interface WorkOrdersCreateInput {
   title: string;
   description: string;
   location: string;
+  priority?: "low" | "normal" | "urgent";
   extensions?: Record<string, Change<unknown>>;
 }
 
@@ -225,6 +226,15 @@ export interface WorkOrdersScheduleInput {
 
 export interface WorkOrdersScheduleOutput {
   status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+}
+
+export interface WorkOrdersSetPriorityInput {
+  workOrderId: string;
+  priority: "low" | "normal" | "urgent";
+}
+
+export interface WorkOrdersSetPriorityOutput {
+  priority: "low" | "normal" | "urgent";
 }
 
 export interface WorkOrdersStartInput {
@@ -825,6 +835,7 @@ export interface WorkOrdersDetailRow {
   description: string;
   location: string;
   status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+  priority: "low" | "normal" | "urgent";
   scheduledDate?: string;
   assignedToName?: string;
   version: number;
@@ -841,6 +852,7 @@ export interface WorkOrdersListRow {
   title: string;
   projectNumber: string;
   status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+  priority: "low" | "normal" | "urgent";
   scheduledDate?: string;
   assignedToName?: string;
   tenantId: string;
@@ -1229,6 +1241,11 @@ export class TypedTamClient {
   /** work-orders.schedule (requires work-orders.schedule) */
   workOrdersSchedule(input: WorkOrdersScheduleInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersScheduleOutput>> {
     return this.client.operation("work-orders.schedule", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersScheduleOutput>>;
+  }
+
+  /** work-orders.set-priority (requires work-orders.edit) */
+  workOrdersSetPriority(input: WorkOrdersSetPriorityInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersSetPriorityOutput>> {
+    return this.client.operation("work-orders.set-priority", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersSetPriorityOutput>>;
   }
 
   /** work-orders.start (requires work-orders.start) */

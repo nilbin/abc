@@ -5,11 +5,14 @@ time list, and enriches the order-created event. Before anything ships, one comm
 "what does this touch?" — no server, no database, safe anywhere the code compiles:
 
 ```bash
-dotnet run --project samples/erp -- impact samples/erp/manifest.baseline.json
+dotnet run --project samples/erp -- impact manifest.baseline.json
 ```
 
+(The path resolves against the PROJECT directory — `dotnet run` sets the working directory
+to `samples/erp`, so a repo-relative path here would miss. Same for the export mode.)
+
 ```
-impact vs samples/erp/manifest.baseline.json:
+impact vs manifest.baseline.json:
 CHANGED operation orders.create
     field orderType ADDED (required)
     ✓ HTTP endpoint + OpenAPI + MCP tool schema update from the model

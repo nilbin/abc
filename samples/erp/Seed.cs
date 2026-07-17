@@ -79,7 +79,12 @@ public static class Seed
             "Montera nya don", new("Montering av tilluftsdon plan 2"), new("Storgatan 1, Stockholm"));
         var woClosed = WorkOrder.Create(Tenant, new("WO-2026-0005"), pumpRefurb.Id,
             "Förbesiktning", new("Förbesiktning inför etapp 1"), acme.VisitAddress);
-        db.WorkOrders.AddRange(woDraft, woScheduled, woInProgress, woDone, woClosed);
+        // An URGENT draft (priority is set at creation, Normal elsewhere by default): a fresh
+        // boot shows the priority column and the urgent-schedule-window rule has a live target.
+        var woUrgent = WorkOrder.Create(Tenant, new("WO-2026-0006"), serviceDeal.Id,
+            "Pumphaveri hos kund", new("Huvudpumpen har havererat — kunden står utan kyla"),
+            acme.VisitAddress, WorkOrderPriority.Urgent);
+        db.WorkOrders.AddRange(woDraft, woScheduled, woInProgress, woDone, woClosed, woUrgent);
 
         // Tenant-managed roles (decision D1): named grant sets, stored as data.
         void Role(string name, params string[] permissions) => db.Add(new RoleEntity
@@ -372,6 +377,28 @@ public static class Seed
         orders[1].Extensions = orders[1].Extensions.WithValue("weightKg", 1250);
         orders[2].Extensions = orders[2].Extensions.WithValue("weightKg", 380);
         orders[4].Extensions = orders[4].Extensions.WithValue("weightKg", 95.5);
+
+        // The tenant's automation rule (docs/22), stored exactly as rules.define writes it:
+        // "an URGENT work order cannot be scheduled more than 7 days out." The condition is
+        // Px AST data over the schedule intent's input (scheduledDate) AND its target row
+        // (row.priority — enums compare as wire strings). Px carries no relative-date node,
+        // so the cutoff is a constant the author computes at definition time — seed time here;
+        // message text is per-culture rule DATA (the registry twin of the locale catalogs).
+        var urgentCutoff = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(7).ToString("yyyy-MM-dd");
+        db.Add(new AutomationRuleEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            Name = "urgent-schedule-window",
+            OnOperation = "work-orders.schedule",
+            ConditionJson =
+                """{"t":"bin","op":"and","l":{"t":"bin","op":"eq","l":{"t":"field","f":"row.priority"},"r":{"t":"const","v":"urgent"}},"r":{"t":"bin","op":"gt","l":{"t":"field","f":"scheduledDate"},"r":{"t":"const","v":"""
+                + "\"" + urgentCutoff + "\"}}}",
+            TargetField = "scheduledDate",
+            MessagesJson = """{"sv":"Akuta arbetsordrar måste planeras inom 7 dagar.","en":"Urgent work orders must be scheduled within 7 days."}""",
+            RowEntityKey = "work-order",
+            RowIdField = "workOrderId",
+        });
 
         db.SaveChanges();
     }

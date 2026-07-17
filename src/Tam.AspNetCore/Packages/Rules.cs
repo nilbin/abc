@@ -244,12 +244,18 @@ public static class DefineAutomationRule
         {
             condition = JsonSerializer.Deserialize<Px>(input.Condition, TamJson.Options);
         }
-        catch (JsonException)
+        // NotSupportedException is STJ's polymorphic-discriminator failure — the shape a
+        // hand-authored condition most often gets wrong (RTFM #3: this used to 500).
+        catch (Exception e) when (e is JsonException or NotSupportedException)
         {
             condition = null;
         }
-        if (condition is null || !OperatorsSupported(condition))
-            return RuleFindings.InvalidCondition.At(nameof(Input.Condition));
+        if (condition is null)
+            return RuleFindings.InvalidCondition
+                .With(("detail", """condition must be a Px node: {"t":"bin|un|field|const", ...}"""))
+                .At(nameof(Input.Condition));
+        if (FirstUnsupported(condition) is { } bad)
+            return RuleFindings.InvalidCondition.With(("op", bad)).At(nameof(Input.Condition));
 
         // RUL002: every field the condition references must exist on the operation's input —
         // compiled members by wire name, extension fields (tenant/plugin/package) as ext.{key}.
@@ -330,14 +336,17 @@ public static class DefineAutomationRule
         return new Output(rule.Id);
     }
 
-    /// <summary>The closed operator set — a stored rule must never throw at evaluation time.</summary>
-    private static bool OperatorsSupported(Px px) => px switch
+    /// <summary>The closed operator set — a stored rule must never throw at evaluation time.
+    /// Returns the FIRST unsupported operator so the finding can name it (RTFM #3: a bare
+    /// invalid-condition left tenant-tool authors probing blind).</summary>
+    private static string? FirstUnsupported(Px px) => px switch
     {
-        PxConst or PxField => true,
-        PxUnary u => u.Op is "not" or "isNull" or "isNotNull" && OperatorsSupported(u.X),
+        PxConst or PxField => null,
+        PxUnary u => u.Op is "not" or "isNull" or "isNotNull" ? FirstUnsupported(u.X) : u.Op,
         PxBinary b => b.Op is "eq" or "ne" or "gt" or "ge" or "lt" or "le" or "and" or "or"
-            && OperatorsSupported(b.L) && OperatorsSupported(b.R),
-        _ => false,
+            ? FirstUnsupported(b.L) ?? FirstUnsupported(b.R)
+            : b.Op,
+        _ => px.GetType().Name,
     };
 }
 
