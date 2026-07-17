@@ -79,6 +79,7 @@ nav:
       - 27-authorization-model.md
       - 28-assignment-and-grouping.md
       - 33-rls-backstop.md
+      - 35-reach.md
   - UI composition:
       - 30-navigation.md
       - 32-pages.md

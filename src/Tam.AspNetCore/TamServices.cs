@@ -31,6 +31,9 @@ public static partial class TamAspNetCore
         services.AddScoped<IHostViewReader, HostViewReader>();
         // People lookups for plugins (assign/notify): the sanctioned seam over identity tables.
         services.AddScoped<ITamDirectory, TamDirectory>();
+        // The reach seam (docs/35): domains resolve stored people-set references through it;
+        // plugin kinds are activation-gated inside.
+        services.AddScoped<ReachResolver>();
         // Sanctioned envelope replay (docs/28 approvals seam 3): scoped so it reads the caller's
         // PluginContext stamp — only a plugin handler may release, and the plugin id lands in the
         // idempotency key. The replay itself still executes in a fresh pinned scope of its own —

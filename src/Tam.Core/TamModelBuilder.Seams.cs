@@ -49,6 +49,25 @@ public sealed partial class TamModelBuilder
         return this;
     }
 
+    /// <summary>Registers a reach kind (docs/35): the provider class answering containment and
+    /// search for people-set references of this kind. Host/framework kinds are bare
+    /// (<c>user</c>, <c>role</c>, <c>tenant</c>); a plugin's kinds sit under its id prefix and
+    /// are activation-gated at resolution (D-R3). Grammar, uniqueness and the prefix rule are
+    /// REACH001, at declaration.</summary>
+    public TamModelBuilder ReachProvider<TProvider>(string kind)
+        where TProvider : class, IReachProvider
+    {
+        if (!ReachRef.IsKind(kind))
+            throw new InvalidOperationException(
+                $"REACH001: reach kind '{kind}' must be one or more dot-separated slugs.");
+        if (currentPlugin is not null && !kind.StartsWith(currentPlugin + ".", StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                $"REACH001: plugin '{currentPlugin}' must declare reach kinds under its prefix ('{currentPlugin}.…'), got '{kind}'.");
+        if (!reaches.TryAdd(kind, new ReachDefinition(kind, currentPlugin, typeof(TProvider))))
+            throw new InvalidOperationException($"REACH001: reach kind '{kind}' is declared twice.");
+        return this;
+    }
+
     /// <summary>Declares a domain event contract (docs/31 D-X5): the type and payload fields
     /// EventPublished carries. Host events are free-named; plugin events sit under the plugin
     /// prefix (PLG001). OnEffect / event triggers must target a declared event (PLG009).</summary>

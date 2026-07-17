@@ -104,3 +104,31 @@ public static class ApprovalGroups
             .Select(m => m.ActorId).ToHashSet();
     }
 }
+
+/// <summary>
+/// The plugin's reach provider (docs/35): `approvals.group:{id}` — containment is the group's
+/// EFFECTIVE approver set (direct members plus every descendant subgroup's, the same
+/// resolution the gate uses), so host domains referencing a group inherit the plugin's
+/// nesting semantics without learning them.
+/// </summary>
+public sealed class GroupReach(Tam.EntityFrameworkCore.ITamDb tam) : Tam.IReachProvider
+{
+    public async Task<bool> ContainsAsync(
+        Tam.ReachRef reach, Tam.OperationContext context, CancellationToken ct)
+    {
+        if (!Guid.TryParse(reach.Id, out var groupId)) return false;
+        var approvers = await ApprovalGroups.EffectiveApproversAsync(tam.Db, groupId, ct);
+        return approvers.Contains(context.Actor.Id);
+    }
+
+    public async Task<IReadOnlyList<Tam.ReachOption>> SearchAsync(
+        string? search, Tam.OperationContext context, CancellationToken ct)
+    {
+        var groups = tam.Db.Set<ApprovalGroup>().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(search))
+            groups = groups.Where(g => g.Name.Contains(search!));
+        var rows = await groups.OrderBy(g => g.Name).Take(50).ToListAsync(ct);
+        return rows.Select(g => new Tam.ReachOption(
+            new Tam.ReachRef("approvals.group", g.Id.ToString()), g.Name)).ToList();
+    }
+}

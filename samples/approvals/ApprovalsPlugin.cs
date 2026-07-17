@@ -30,6 +30,11 @@ public sealed class ApprovalsPlugin : ITamPlugin
             .PublishesEvent("approvals.requested", "requestId")
             .PublishesEvent("approvals.approved", "requestId");
 
+        // The plugin's people-sets become referencable by HOST domains (docs/35): a folder
+        // ACL can name "approvals.group:{id}" — containment is the group's effective approver
+        // set (nested), and the host never learns group semantics. Activation-gated.
+        plugin.ReachProvider<GroupReach>("approvals.group");
+
         plugin.AddPart<AdminSurface>();    // groups + rules configuration
         plugin.AddPart<ReviewSurface>();   // the approver's request queue
     }

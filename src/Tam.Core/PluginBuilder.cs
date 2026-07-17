@@ -221,6 +221,17 @@ public sealed class PluginBuilder
         return this;
     }
 
+    /// <summary>Registers a reach kind (docs/35) under this plugin's prefix — the plugin's
+    /// people-sets (groups, teams) become REFERENCABLE by host domains (a folder ACL naming
+    /// <c>approvals.group:…</c>) without the host learning group semantics. Kinds from an
+    /// inactive plugin resolve to "not within" — activation gates resolution, never storage.</summary>
+    public PluginBuilder ReachProvider<TProvider>(string kind)
+        where TProvider : class, IReachProvider
+    {
+        Model.ReachProvider<TProvider>(kind);
+        return this;
+    }
+
     /// <summary>Subscribes to committed event effects (the outbox). The handler is constructed
     /// per delivery with ctor injection, post-commit, in a scope pinned to the record's
     /// tenant; runs only for tenants with this plugin active.</summary>

@@ -89,6 +89,11 @@ public sealed class TamModel
     /// <summary>Plugin effect subscribers by event type (docs/22 P2).</summary>
     public IReadOnlyList<SubscriberDefinition> Subscribers { get; init; } = [];
 
+    /// <summary>Registered reach kinds (docs/35): kind → provider type + declaring plugin.
+    /// Plugin kinds are activation-gated at resolution (D-R3).</summary>
+    public IReadOnlyDictionary<string, ReachDefinition> Reaches { get; init; } =
+        new Dictionary<string, ReachDefinition>();
+
     /// <summary>Plugin-shipped inbound integrations by id (docs/10 + docs/22).</summary>
     public IReadOnlyDictionary<string, PluginIntegrationDefinition> Integrations { get; init; } =
         new Dictionary<string, PluginIntegrationDefinition>();

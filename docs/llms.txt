@@ -48,6 +48,7 @@ https://raw.githubusercontent.com/nilbin/abc/main/docs/ (append the file name be
 - [Authorization model](https://nilbin.github.io/abc/27-authorization-model/): permission atoms, levels, scopes (27-authorization-model.md)
 - [Assignment & grouping](https://nilbin.github.io/abc/28-assignment-and-grouping/): paired atoms, approver groups, park/replay seams (28-assignment-and-grouping.md)
 - [RLS backstop](https://nilbin.github.io/abc/33-rls-backstop/): PostgreSQL row-level security mirroring the EF filter (33-rls-backstop.md)
+- [Reach](https://nilbin.github.io/abc/35-reach/): the people-set reference seam for object-side grants — ReachRef, EntityRef, providers (35-reach.md)
 
 ## UI composition
 

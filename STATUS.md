@@ -474,6 +474,28 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 5, part 1 — the REACH seam (docs/35)**: the vocabulary for naming a people-set
+  ON A ROW — the object-side question the capability axis deliberately does not answer, and
+  the prerequisite for the documents domain's folder ACLs. Designed against docs/27/28 and
+  kept inside their settlement: reach is a DOMAIN-side membership test, never a new principal
+  type (no change to actor resolution, the flat grant set, the manifest, or TAM00x). Shipped:
+  `ReachRef` (canonical `kind[:id]` string — storable in one ACL column), `EntityRef`
+  (`entityKey:guid` — the typed cross-entity reference documents will attach by),
+  `IReachProvider` (ctor-DI class answering containment + picker search, the gate idiom),
+  model registration with REACH001 (kind grammar, uniqueness, plugin-prefix rule — mirroring
+  PLG001), `ReachResolver` (parse → model lookup → ACTIVATION GATE for plugin kinds →
+  activator → delegate; fail closed at every step, so an ACL naming an inactive plugin's
+  group is inert data that revives on re-activation), the three framework kinds over facts
+  the framework owns — `user`, `role` (node-local; the cascaded-role question is deferred as
+  the docs/27 cross-level name-resolution question), `tenant` — and the PLUGIN-side proof:
+  the approvals plugin registers `approvals.group`, whose containment IS its existing
+  effective-approver resolution (nested groups), so host domains can reference approver
+  groups without learning group semantics. The manifest carries nothing yet (D-R5): reach
+  surfaces to the client as a view over SearchAsync when the documents ACL editor lands.
+  Verified: suites 188+38 (ref grammars, REACH001 cases, model carriage), wire 18+22 on
+  fresh SQLite AND fresh Postgres, manifest byte-identical to baseline (seam-only commit,
+  no UI surface — provider containment over live membership rows gets wire coverage with the
+  first consumer, the documents domain).
 - **Beauty arc 4b — ERP idiom uniformity around the order detail**: the sample now practices
   its own conventions end to end. (1) `OrderErrors` → `OrderFindings` — the last `*Errors`
   finding class renamed to the idiom every other aggregate already used. (2) The order status
