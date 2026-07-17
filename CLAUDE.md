@@ -49,8 +49,16 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   the package's admin surface didn't?" → root.
 - Entities live in src/Tam.EntityFrameworkCore (never next to operations); suffix *Entity,
   ITenantScoped, JSON columns as *Json, timestamps as *Iso strings via IsoTime.
-- Plugins/samples follow samples/approvals: Domain.cs (entities), Features.cs (operations/
-  views/findings), <Name>Plugin.cs (plugin class + gates + handlers + bindings), locales/.
+- Plugins/samples split BY AGGREGATE once they have more than one: Domain/<Aggregate>.cs
+  (entity + its findings + value types) and Features/<Aggregate>.cs (its operations/views),
+  mirroring the ERP host's Features/ + ErpModel.<Domain>.cs fragments; <Name>Plugin.cs keeps
+  only the plugin class, its Configure table of contents, gates/handlers, and EF mapping. A
+  single-aggregate plugin may stay Domain.cs + Features.cs. No file mixes two aggregates'
+  classes, and ~400 lines is the split tripwire everywhere (same as packages).
+- Sample DOMAINS model tactical DDD where invariants exist — factory methods, private
+  setters, Result-returning guarded transitions, semantic value types (the Order/WorkOrder
+  shape) — and stay plain data ONLY for genuinely dumb rows (join/lookup tables). An entity
+  whose state machine lives in its operations is the smell to fix, not the pattern to copy.
 - Cross-package calls: only to a package's public policy helper (e.g. RoleRules — the single
   validation path for roles.define AND tenant-package install), never to its operations.
 - Findings: `static class <Area>Findings { public static readonly FindingFactory X =
