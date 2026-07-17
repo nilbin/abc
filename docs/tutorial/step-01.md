@@ -93,7 +93,7 @@ Every word a human will read lives in the locale files, per culture, reviewed li
 > - Findings resolve by their **code** (`orders.already-completed` above).
 > - `ext.{key}` — tenant field labels, merged into the catalogs per tenant from the registry (Step 9); a plugin's packaged field ships its label as `ext.{pluginId}.{key}` in the plugin's own catalogs.
 >
-> The catalogs are analyzer inputs (`AdditionalFiles`, Step 0), so a key the model references but the default culture lacks is build error `L10N001` — in the IDE, before the app boots. Plugins embed `locales/*.json` as `EmbeddedResource` and register them with `plugin.LocaleDefaults()`; application locale files override plugin defaults.
+> The catalogs are analyzer inputs (`AdditionalFiles`, Step 0), so a key the model references but the default culture lacks is build error `L10N001` — in the IDE, before the app boots. Plugins embed `locales/*.json` as `EmbeddedResource` — `AddPlugin`/`AddPackage` load them automatically as defaults; application locale files override them.
 
 EF Core mapping is ordinary EF Core, in the DbContext from Step 0 — no per-feature configuration classes:
 

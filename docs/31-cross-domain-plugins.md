@@ -120,6 +120,12 @@ plugin.RequiresView("orders.detail", "id", "number", "status");
   shapes back through the query provider. Grid-time "order number on the invoice list" stays
   denormalize-at-event-time (the payload carries it); service reads cover validation and
   backfill/repair.
+- **Typed wire reads** (`WireValues`): the values a plugin pulls out of gate inputs, effect
+  payloads and view rows read through one accessor family — `gate.Guid("orderId")`,
+  `effect.String("number")`, `response.FirstRow()?.Decimal("estimatedTotal")` — with one rule:
+  missing/null/mismatched reads as `null`, never throws. The `TryGetProperty` ceremony that
+  used to pad every handler is gone; the names passed are the same wire names RequiresView /
+  RequiresEvent declared.
 
 ## D-X4 — Detail slots (BUILT)
 
@@ -144,7 +150,7 @@ not rushed here. D4: slot ids are permanent host wire names from day one.
 ## D-X5 — Event contracts (BUILT)
 
 `OnEffect("order-completed")` targets are unchecked and payload shapes are folklore
-(`TryGetProperty` defensive reads everywhere). Phase 2: the host (or the generator, derived
+(defensive reads everywhere). Phase 2: the host (or the generator, derived
 from `EventPublished` usages) declares published events + payload fields; PLG009 validates
 subscriber/trigger targets at Build(); the manifest gains `publishes` and the impact report a
 `SubscribedBy` symmetric with `GatedBy`. `plugin.RequiresEvent("order-completed", "orderId",

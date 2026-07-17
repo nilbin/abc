@@ -10,6 +10,10 @@ namespace Tam.AspNetCore;
 /// ORIGINAL initiator, in a fresh scope pinned to the envelope's tenant.
 ///
 /// The attribution and safety properties, by construction:
+/// - replay is PLUGIN-SCOPED like the writer and reader seams (docs/31): only a plugin handler
+///   (the <see cref="PluginContext"/> stamp) may release an envelope, and the releasing plugin's
+///   id lands in the idempotency key — provenance is structural, never an argument a caller
+///   could omit or forge;
 /// - the actor is re-resolved AS OF NOW (a revoked grant or deactivated account fails the replay
 ///   — approval releases a block, it never escalates the initiator);
 /// - <see cref="InvocationSource.Workflow"/> marks the run as sanctioned — the parking gate lets
@@ -17,13 +21,15 @@ namespace Tam.AspNetCore;
 /// - the envelope id rides <see cref="OperationContext.CorrelationId"/> into the audit entry, so
 ///   the operation's audit (actor = initiator) links to the envelope whose own trail records who
 ///   released it — dual attribution without a second actor field;
-/// - the envelope id is also the idempotency key, scoped to the initiator, so a re-delivered
-///   approval effect replays the stored outcome instead of executing twice.
+/// - the idempotency key is <c>replay:{plugin}:{envelope}</c>, scoped to the initiator, so a
+///   re-delivered approval effect replays the stored outcome instead of executing twice — and
+///   the audit's stored key names the plugin that released it.
 /// </summary>
 public sealed class EnvelopeReplay(
     TamModel model,
     IServiceProvider services,
-    Func<IServiceProvider, DbContext> dbResolver)
+    Func<IServiceProvider, DbContext> dbResolver,
+    PluginContext plugin)
 {
     /// <summary>The idempotency-key prefix marking a replayed envelope.</summary>
     public const string KeyPrefix = "replay:";
@@ -42,7 +48,11 @@ public sealed class EnvelopeReplay(
         string Culture);
 
     public Task<OperationResponse> ReplayAsync(Envelope envelope, CancellationToken ct)
-        => PinnedScope.RunAsync(services, envelope.TenantId, async (sp, c) =>
+    {
+        var pluginId = plugin.PluginId
+            ?? throw new InvalidOperationException(
+                "PLG012: envelope replay is only available to plugin handlers — the release is attributed to the releasing plugin.");
+        return PinnedScope.RunAsync(services, envelope.TenantId, async (sp, c) =>
         {
             // Fail closed on anything that does not resolve to a live account — including an
             // actor id that was never an account id at all.
@@ -63,11 +73,12 @@ public sealed class EnvelopeReplay(
                 TenantId = new TenantId(envelope.TenantId),
                 Source = InvocationSource.Workflow,
                 Culture = envelope.Culture,
-                IdempotencyKey = KeyPrefix + envelope.EnvelopeId,
+                IdempotencyKey = $"{KeyPrefix}{pluginId}:{envelope.EnvelopeId}",
                 CorrelationId = envelope.EnvelopeId,
                 Services = sp,
             };
             return await sp.GetRequiredService<OperationExecutor>()
                 .ExecuteAsync(envelope.OperationId, envelope.Body, context, c);
         }, ct);
+    }
 }

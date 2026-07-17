@@ -80,6 +80,18 @@ public sealed record GateContext(
     /// <summary>The deferred work, drained by the pipeline when the gate blocks. Empty otherwise.</summary>
     public IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>> ParkedWork =>
         parked ?? (IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>>)[];
+
+    // Typed input reads (WireValues semantics: missing/null/mismatch → null, never throws) —
+    // a gate deciding over a wire contract reads it in wire terms.
+    public System.Guid? Guid(string name) => Input.Guid(name);
+
+    public string? String(string name) => Input.String(name);
+
+    public decimal? Decimal(string name) => Input.Decimal(name);
+
+    public int? Int(string name) => Input.Int(name);
+
+    public bool? Bool(string name) => Input.Bool(name);
 }
 
 /// <summary>A declared gate (docs/22 P2): the handler TYPE (resolved per invocation via
@@ -99,7 +111,21 @@ public sealed record EffectEvent(
     string TenantId,
     string OperationId,
     string EventType,
-    System.Text.Json.JsonElement Payload);
+    System.Text.Json.JsonElement Payload)
+{
+    // Typed payload reads (WireValues semantics: missing/null/mismatch → null, never throws).
+    // The names a handler passes here are the fields its plugin declared with RequiresEvent —
+    // the reads stay in the PLG009 contract's vocabulary.
+    public System.Guid? Guid(string name) => Payload.Guid(name);
+
+    public string? String(string name) => Payload.String(name);
+
+    public decimal? Decimal(string name) => Payload.Decimal(name);
+
+    public int? Int(string name) => Payload.Int(name);
+
+    public bool? Bool(string name) => Payload.Bool(name);
+}
 
 /// <summary>A declared effect subscription (docs/22 P2): the handler TYPE, delivered from the
 /// outbox after the operation's transaction, never by patching host handlers.</summary>

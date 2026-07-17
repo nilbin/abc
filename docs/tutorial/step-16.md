@@ -64,10 +64,13 @@ proven end to end through the real pipeline in the test suite:
    ORIGINAL initiator, whose grants are re-resolved *as of now* (a revoked role or deactivated
    account fails the replay closed; approval releases a block, it never escalates). The run is
    marked `InvocationSource.Workflow` — the parking gate lets it pass while every other gate
-   still runs — and the envelope id rides `CorrelationId` into the audit entry and doubles as
-   the initiator-scoped idempotency key, so a redelivered approval replays the stored outcome
-   instead of executing twice. Dual attribution falls out: the operation's audit names the
-   initiator and correlates to the envelope, whose own trail names the releaser.
+   still runs — and the envelope id rides `CorrelationId` into the audit entry while
+   `replay:{plugin}:{envelope}` is the initiator-scoped idempotency key, so a redelivered
+   approval replays the stored outcome instead of executing twice. Replay is PLUGIN-SCOPED
+   like the writer and reader seams: only a plugin handler may release an envelope, and the
+   releasing plugin's id lands in the stored key — provenance is structural, never an
+   argument. Dual attribution falls out: the operation's audit names the initiator and
+   correlates to the envelope, whose own trail names the releaser.
 
 With the seams in place, "an opinionated nested-group approval system for existing domains,
 without the domains knowing" stopped being a slogan: `samples/approvals` is that package, and

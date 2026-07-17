@@ -11,7 +11,6 @@ public sealed class TamVaultPackage : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.LocaleDefaults();
         plugin
             .AddOperationType(typeof(SetSetting))
             .AddOperationType(typeof(SetSecret))

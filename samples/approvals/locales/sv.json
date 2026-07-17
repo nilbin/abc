@@ -1,6 +1,8 @@
 {
   "approvals.email.requested-body": "En begäran ({operation}) väntar på ditt godkännande.",
   "approvals.email.requested-subject": "Godkännande krävs",
+  "approvals.headings.groups": "Godkännandegrupper",
+  "approvals.headings.rules": "Godkännanderegler",
   "approvals.labels.created": "Skapad",
   "approvals.labels.email": "E-post",
   "approvals.labels.group": "Grupp",
@@ -28,6 +30,9 @@
   "labels.group-id": "Grupp",
   "labels.id": "Id",
   "labels.request-id": "Begäran",
+  "labels.retired": "Avvecklad",
+  "nav.approvals.admin": "Godkännandeflöden",
+  "nav.approvals.requests": "Godkännandebegäran",
   "operations.approvals.approve.title": "Godkänn",
   "operations.approvals.groups.assign.title": "Lägg till godkännare",
   "operations.approvals.groups.define.title": "Ny godkännandegrupp",

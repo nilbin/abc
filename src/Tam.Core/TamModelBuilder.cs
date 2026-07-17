@@ -102,7 +102,9 @@ public sealed partial class TamModelBuilder
         currentPlugin = attribute.Id;
         try
         {
-            new TPlugin().Configure(new PluginBuilder(attribute.Id, typeof(TPlugin).Assembly, this));
+            var builder = new PluginBuilder(attribute.Id, typeof(TPlugin).Assembly, this);
+            builder.EmbeddedLocaleDefaults();   // locales/*.json ship as defaults, no ceremony
+            new TPlugin().Configure(builder);
         }
         finally
         {
@@ -137,7 +139,9 @@ public sealed partial class TamModelBuilder
         currentPlugin = attribute.Id;
         try
         {
-            new TPackage().Configure(new PluginBuilder(attribute.Id, typeof(TPackage).Assembly, this));
+            var builder = new PluginBuilder(attribute.Id, typeof(TPackage).Assembly, this);
+            builder.EmbeddedLocaleDefaults();   // locales/*.json ship as defaults, no ceremony
+            new TPackage().Configure(builder);
         }
         finally
         {

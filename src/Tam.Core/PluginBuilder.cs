@@ -32,9 +32,11 @@ public sealed class PluginBuilder
     /// <summary>
     /// Loads embedded locale defaults by convention: every manifest resource in the plugin
     /// assembly matching <c>*.locales.{culture}.json</c> (ship a <c>locales/</c> folder as
-    /// EmbeddedResource). Application locale files override them, like all defaults.
+    /// EmbeddedResource). Application locale files override them, like all defaults. Called
+    /// automatically by AddPlugin/AddPackage — shipping catalogs is the convention, not a
+    /// Configure line.
     /// </summary>
-    public PluginBuilder LocaleDefaults()
+    internal PluginBuilder EmbeddedLocaleDefaults()
     {
         // Memoized per assembly: the eleven framework packages share one assembly and would
         // otherwise re-read + re-deserialize the same embedded catalogs eleven times at startup.

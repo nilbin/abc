@@ -86,6 +86,14 @@ public sealed class TamSourceGenerator : IIncrementalGenerator
                 sb.AppendLine($"        builder.AddSubscriberType(typeof({subscriber}));");
             sb.AppendLine("        return builder;");
             sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    /// <summary>The plugin-scope twin: the same discoveries through the plugin's builder,");
+            sb.AppendLine("    /// so a plugin's Configure needs only <c>plugin.AddDiscovered()</c>.</summary>");
+            sb.AppendLine("    public static global::Tam.PluginBuilder AddDiscovered(this global::Tam.PluginBuilder plugin)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        AddDiscovered(plugin.Model);");
+            sb.AppendLine("        return plugin;");
+            sb.AppendLine("    }");
             sb.AppendLine("}");
 
             spc.AddSource("TamDiscovered.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));

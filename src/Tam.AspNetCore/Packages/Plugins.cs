@@ -10,7 +10,6 @@ public sealed class TamPluginsPackage : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("plugins", grid: "web.plugins", suggest: "administration", order: 40));
         plugin

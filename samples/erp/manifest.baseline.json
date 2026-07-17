@@ -266,6 +266,8 @@
       "plugins.fortnox.title": "Fortnox",
       "approvals.email.requested-body": "A request ({operation}) is awaiting your approval.",
       "approvals.email.requested-subject": "Approval required",
+      "approvals.headings.groups": "Approver groups",
+      "approvals.headings.rules": "Approval rules",
       "approvals.labels.created": "Created",
       "approvals.labels.email": "Email",
       "approvals.labels.group": "Group",
@@ -292,6 +294,8 @@
       "labels.actor-id": "Actor",
       "labels.group-id": "Group",
       "labels.request-id": "Request",
+      "nav.approvals.admin": "Approval flows",
+      "nav.approvals.requests": "Approval requests",
       "operations.approvals.approve.title": "Approve",
       "operations.approvals.groups.assign.title": "Add approver",
       "operations.approvals.groups.define.title": "New approver group",
@@ -712,6 +716,8 @@
       "plugins.fortnox.title": "Fortnox",
       "approvals.email.requested-body": "En beg\u00E4ran ({operation}) v\u00E4ntar p\u00E5 ditt godk\u00E4nnande.",
       "approvals.email.requested-subject": "Godk\u00E4nnande kr\u00E4vs",
+      "approvals.headings.groups": "Godk\u00E4nnandegrupper",
+      "approvals.headings.rules": "Godk\u00E4nnanderegler",
       "approvals.labels.created": "Skapad",
       "approvals.labels.email": "E-post",
       "approvals.labels.group": "Grupp",
@@ -738,6 +744,8 @@
       "labels.actor-id": "Akt\u00F6r",
       "labels.group-id": "Grupp",
       "labels.request-id": "Beg\u00E4ran",
+      "nav.approvals.admin": "Godk\u00E4nnandefl\u00F6den",
+      "nav.approvals.requests": "Godk\u00E4nnandebeg\u00E4ran",
       "operations.approvals.approve.title": "Godk\u00E4nn",
       "operations.approvals.groups.assign.title": "L\u00E4gg till godk\u00E4nnare",
       "operations.approvals.groups.define.title": "Ny godk\u00E4nnandegrupp",
@@ -7361,6 +7369,16 @@
           "readOnly": false
         },
         {
+          "name": "groupId",
+          "labelKey": "labels.group-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
           "name": "name",
           "labelKey": "approvals.labels.name",
           "type": "text",
@@ -7474,6 +7492,81 @@
       ],
       "defaultSort": "createdAtIso",
       "defaultSortDescending": true,
+      "plugin": "approvals"
+    },
+    "approvals.rules.list": {
+      "permission": "approvals.manage",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "operationId",
+          "labelKey": "approvals.labels.operation",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "group",
+          "labelKey": "approvals.labels.group",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "thresholdField",
+          "labelKey": "approvals.labels.threshold-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "threshold",
+          "labelKey": "approvals.labels.threshold",
+          "type": "number",
+          "wireKind": "number",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "retired",
+          "labelKey": "labels.retired",
+          "type": "boolean",
+          "wireKind": "boolean",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "operationId"
+      ],
+      "filterable": [
+        "retired"
+      ],
+      "defaultSort": "operationId",
+      "defaultSortDescending": false,
       "plugin": "approvals"
     },
     "invoicing.invoices.detail": {
@@ -8330,6 +8423,7 @@
           "required": true,
           "changeSet": false,
           "extension": false,
+          "renderer": "hidden",
           "readOnly": false
         },
         {
@@ -9468,6 +9562,51 @@
       "includeExtensions": false,
       "plugin": "inspect"
     },
+    "approvals.web.groups": {
+      "view": "approvals.groups.list",
+      "columns": [
+        "name",
+        "parentGroupId"
+      ],
+      "actions": [
+        {
+          "operation": "approvals.groups.assign",
+          "placement": "row",
+          "mode": "form"
+        },
+        {
+          "operation": "approvals.groups.define",
+          "placement": "toolbar",
+          "mode": "form"
+        }
+      ],
+      "includeExtensions": false,
+      "plugin": "approvals"
+    },
+    "approvals.web.rules": {
+      "view": "approvals.rules.list",
+      "columns": [
+        "operationId",
+        "group",
+        "thresholdField",
+        "threshold",
+        "retired"
+      ],
+      "actions": [
+        {
+          "operation": "approvals.rules.retire",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "approvals.rules.define",
+          "placement": "toolbar",
+          "mode": "form"
+        }
+      ],
+      "includeExtensions": false,
+      "plugin": "approvals"
+    },
     "approvals.web.requests": {
       "view": "approvals.requests.list",
       "columns": [
@@ -10022,6 +10161,28 @@
                 "children": []
               },
               {
+                "id": "approvals.admin",
+                "kind": "page",
+                "labelKey": "nav.approvals.admin",
+                "order": 70,
+                "target": {
+                  "page": "approvals.admin"
+                },
+                "plugin": "approvals",
+                "children": []
+              },
+              {
+                "id": "approvals.requests",
+                "kind": "page",
+                "labelKey": "nav.approvals.requests",
+                "order": 75,
+                "target": {
+                  "page": "approvals.requests"
+                },
+                "plugin": "approvals",
+                "children": []
+              },
+              {
                 "id": "tenants",
                 "kind": "page",
                 "labelKey": "nav.tenants",
@@ -10041,23 +10202,6 @@
                   "grid": "web.nav"
                 },
                 "plugin": "tam.nav",
-                "children": []
-              }
-            ]
-          },
-          {
-            "id": "more",
-            "kind": "section",
-            "labelKey": "nav.more",
-            "children": [
-              {
-                "id": "approvals",
-                "kind": "page",
-                "labelKey": "plugins.approvals.title",
-                "target": {
-                  "plugin": "approvals"
-                },
-                "plugin": "approvals",
                 "children": []
               }
             ]
@@ -10090,6 +10234,28 @@
         {
           "kind": "grid",
           "id": "inspect.web.items"
+        }
+      ]
+    },
+    "approvals.admin": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "approvals.web.groups",
+          "headingKey": "approvals.headings.groups"
+        },
+        {
+          "kind": "grid",
+          "id": "approvals.web.rules",
+          "headingKey": "approvals.headings.rules"
+        }
+      ]
+    },
+    "approvals.requests": {
+      "sections": [
+        {
+          "kind": "grid",
+          "id": "approvals.web.requests"
         }
       ]
     },

@@ -474,6 +474,31 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 2b — plugin ergonomics**: the authoring surface a vendor actually touches,
+  deburred. (1) TYPED WIRE READS: new core `WireValues` — one accessor family over gate
+  inputs, effect payloads and host view rows (`gate.Guid("orderId")`,
+  `effect.String("number")`, `response.FirstRow()?.Decimal("estimatedTotal")`,
+  `response.WireRows()`), one rule (missing/null/mismatch → null, never throws) — and the
+  `TryGetProperty`/`SerializeToElement` ceremony deleted from all four sample plugins
+  (fortnox's private Str helper, invoicing's three hand-rolled extract blocks, inspect's
+  guard stanzas, approvals' GetProperty throws-on-missing). The names a handler passes are
+  the same wire names RequiresView/RequiresEvent declared. (2) CEREMONY REMOVAL: the source
+  generator now also emits `AddDiscovered(this PluginBuilder)` so plugins write
+  `plugin.AddDiscovered()` (no more plugin.Model.* flip), and AddPlugin/AddPackage load
+  embedded `locales/*.json` automatically — the 16 `plugin.LocaleDefaults()` lines across
+  packages and samples deleted; shipping catalogs is the convention, not a Configure line.
+  (3) APPROVALS DIALECT PORT: the oldest plugin rewritten in the current dialect —
+  Configure is a table of contents over IPluginPart parts (AdminSurface/ReviewSurface),
+  plugin.Form/Grid, and the surfaces are finally REACHABLE: declared pages
+  (approvals.admin: groups grid + new rules grid off a new approvals.rules.list view;
+  approvals.requests: the queue) with nav suggestions — plus the groups grid uses RowForm
+  with the list deliberately carrying `groupId` so assign opens prefilled (the docs/32
+  contract, second consumer). (4) REPLAY SCOPING: EnvelopeReplay is now plugin-scoped like
+  the writer/reader seams — scoped service reading the PluginContext stamp, PLG012 without
+  it, and the idempotency key became `replay:{plugin}:{envelope}` so release provenance is
+  structural (in the stored key the audit shows), never an argument. Verified: suites
+  163+38 (new PLG012 test), wire 18+22 green on fresh SQLite AND Postgres, additive
+  baseline + regenerated types (42 views), docs 22/28/31 + tutorial steps 1/13/16 synced.
 - **Beauty arc 2a — structural unifications**: four parallel mechanisms collapsed into single
   descriptors, and one canon finished. (1) GRID ACTIONS: RowActions/RowForms/ToolbarActions and
   contributed actions were four lists carrying one idea — now ONE `GridActionSpec(Operation,

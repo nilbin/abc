@@ -40,10 +40,9 @@ public static class CreateFromOrder
             new Dictionary<string, string?> { ["orderId"] = input.OrderId.ToString() }, context, ct);
         if (orders.Rows.Count == 0)
             return InvoicingFindings.OrderNotFound.At(nameof(Input.OrderId));
-        var row = System.Text.Json.JsonSerializer.SerializeToElement(orders.Rows[0], TamJson.Options);
-        var number = row.TryGetProperty("number", out var n) ? n.GetString() ?? "" : "";
-        var amount = row.TryGetProperty("estimatedTotal", out var a) && a.ValueKind
-            is System.Text.Json.JsonValueKind.Number ? a.GetDecimal() : 0m;
+        var row = WireValues.Row(orders.Rows[0]);
+        var number = row.String("number") ?? "";
+        var amount = row.Decimal("estimatedTotal") ?? 0m;
 
         var invoice = Invoice.Create(context.TenantId.Value, input.OrderId, number, amount);
         tam.Db.Add(invoice);
@@ -189,9 +188,7 @@ internal sealed class DraftPendingGate(ITamDb tam) : IOperationGate
 {
     public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
     {
-        if (!gate.Input.TryGetProperty("orderId", out var idProp)
-            || !Guid.TryParse(idProp.GetString(), out var orderId))
-            return Result.Success();
+        if (gate.Guid("orderId") is not { } orderId) return Result.Success();
         var pending = await tam.Db.Set<Invoice>()
             .AnyAsync(x => x.OrderId == orderId && x.Status == "draft", ct);
         return pending ? InvoicingFindings.DraftPending.Create() : Result.Success();
@@ -210,25 +207,14 @@ internal sealed class DraftOnCompletion(
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (!effect.Payload.TryGetProperty("orderId", out var idProp)
-            || !Guid.TryParse(idProp.GetString(), out var orderId))
-            return;
+        if (effect.Guid("orderId") is not { } orderId) return;
         if (await tam.Db.Set<Invoice>().AnyAsync(x => x.OrderId == orderId, ct))
             return;   // redelivery or already invoiced by hand — idempotent
 
-        var number = effect.Payload.TryGetProperty("number", out var n)
-            ? n.GetString() ?? "" : "";
-        var amount = 0m;
+        var number = effect.String("number") ?? "";
         var detail = await host.RowsAsync("orders.detail",
             new Dictionary<string, string?> { ["orderId"] = orderId.ToString() }, ct);
-        if (detail.Rows.Count > 0)
-        {
-            var row = System.Text.Json.JsonSerializer.SerializeToElement(
-                detail.Rows[0], TamJson.Options);
-            if (row.TryGetProperty("estimatedTotal", out var a)
-                && a.ValueKind == System.Text.Json.JsonValueKind.Number)
-                amount = a.GetDecimal();
-        }
+        var amount = detail.FirstRow()?.Decimal("estimatedTotal") ?? 0m;
 
         tam.Db.Add(Invoice.Create(effect.TenantId, orderId, number, amount));
         await tam.Db.SaveChangesAsync(ct);
@@ -248,14 +234,11 @@ internal sealed class DraftOnWorkOrderCompletion(
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (!effect.Payload.TryGetProperty("workOrderId", out var idProp)
-            || !Guid.TryParse(idProp.GetString(), out var workOrderId))
-            return;
+        if (effect.Guid("workOrderId") is not { } workOrderId) return;
         if (await tam.Db.Set<Invoice>().AnyAsync(x => x.WorkOrderId == workOrderId, ct))
             return;   // at-least-once delivery — idempotent
 
-        var number = effect.Payload.TryGetProperty("number", out var n)
-            ? n.GetString() ?? "" : "";
+        var number = effect.String("number") ?? "";
         if (number.Length == 0) return;
 
         var amount =
@@ -272,14 +255,6 @@ internal sealed class DraftOnWorkOrderCompletion(
         string viewId, IReadOnlyDictionary<string, string?> query, CancellationToken ct)
     {
         var result = await host.RowsAsync(viewId, query, ct);
-        var sum = 0m;
-        foreach (var row in result.Rows)
-        {
-            var element = System.Text.Json.JsonSerializer.SerializeToElement(row, TamJson.Options);
-            if (element.TryGetProperty("amount", out var a)
-                && a.ValueKind == System.Text.Json.JsonValueKind.Number)
-                sum += a.GetDecimal();
-        }
-        return sum;
+        return result.WireRows().Sum(row => row.Decimal("amount") ?? 0m);
     }
 }

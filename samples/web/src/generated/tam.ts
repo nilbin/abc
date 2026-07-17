@@ -1120,6 +1120,7 @@ export interface InspectTemplatesListQuery {
 
 export interface ApprovalsGroupsListRow {
   id: string;
+  groupId: string;
   name: string;
   parentGroupId?: string;
 }
@@ -1139,6 +1140,19 @@ export interface ApprovalsRequestsListRow {
 
 export interface ApprovalsRequestsListQuery {
   status?: string;
+}
+
+export interface ApprovalsRulesListRow {
+  id: string;
+  operationId: string;
+  group: string;
+  thresholdField?: string;
+  threshold?: number;
+  retired: boolean;
+}
+
+export interface ApprovalsRulesListQuery {
+
 }
 
 export interface InvoicingInvoicesDetailRow {
@@ -1676,6 +1690,11 @@ export class TypedTamClient {
   /** view approvals.requests.list (requires approvals.review) */
   approvalsRequestsList(query?: ApprovalsRequestsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }> {
     return this.client.view("approvals.requests.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRequestsListRow[] }>;
+  }
+
+  /** view approvals.rules.list (requires approvals.manage) */
+  approvalsRulesList(query?: ApprovalsRulesListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRulesListRow[] }> {
+    return this.client.view("approvals.rules.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ApprovalsRulesListRow[] }>;
   }
 
   /** view invoicing.invoices.detail (requires invoicing.read) */

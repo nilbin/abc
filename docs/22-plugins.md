@@ -42,7 +42,6 @@ public sealed class InspectionPlugin : ITamPlugin
     {
         plugin.RequiresView("orders.detail", "id", "status"); // declared dependency, checked at build (docs/31 D-X3;
                                                           // the earlier RequiresHostEntity<Order> sketch was CLR-shaped and never built)
-        plugin.LocaleDefaults();   // embedded locales/{culture}.json by convention, app-overridable
     }
 }
 ```
@@ -379,13 +378,14 @@ what they had to discover through compiler errors. Normative from now on:
   (the framework's `*Iso` convention — SQLite cannot order `DateTimeOffset`); `IsoTime.Now()`
   produces them. Optimistic concurrency (`Version`) is opt-in via `IVersioned`.
 - **Bindings and events**: a plugin declares its own forms/grids with
-  `plugin.Model.Form<T>(...)` / `.Grid<T>(...)` (convention defaults apply, docs/32 D-P6) and
-  its events with `plugin.Model.PublishesEvent("id.event", ...fields)`; an operation publishes
+  `plugin.Form<T>(...)` / `.Grid<T>(...)` (convention defaults apply, docs/32 D-P6) and
+  its events with `plugin.PublishesEvent("id.event", ...fields)`; an operation publishes
   with `result.Effect(new EventPublished("id.event", payload))`. Binding/nav/view/operation ids
   all sit under the plugin prefix — for web bindings that means **plugin first, surface second**
   (`invoicing.web.invoices`), the mirror of the host's `web.orders.list` (PLG001 enforces it).
-- **Locales**: ship `locales/{sv,en}.json` as `EmbeddedResource` and call
-  `plugin.LocaleDefaults()`. Required keys beyond your fields: `plugins.{id}.title`, and
+- **Locales**: ship `locales/{sv,en}.json` as `EmbeddedResource` — AddPlugin/AddPackage
+  loads them automatically as defaults (application locale files override).
+  Required keys beyond your fields: `plugins.{id}.title`, and
   `ext.{id}.{key}` for every packaged extension field. Every label key — inputs, OUTPUTS,
   results, nav — is L10N-gated in the default culture at Build().
 - **Cross-module options**: a plugin field that stores another module's vocabulary stays a

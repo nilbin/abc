@@ -1,6 +1,8 @@
 {
   "approvals.email.requested-body": "A request ({operation}) is awaiting your approval.",
   "approvals.email.requested-subject": "Approval required",
+  "approvals.headings.groups": "Approver groups",
+  "approvals.headings.rules": "Approval rules",
   "approvals.labels.created": "Created",
   "approvals.labels.email": "Email",
   "approvals.labels.group": "Group",
@@ -28,6 +30,9 @@
   "labels.group-id": "Group",
   "labels.id": "Id",
   "labels.request-id": "Request",
+  "labels.retired": "Retired",
+  "nav.approvals.admin": "Approval flows",
+  "nav.approvals.requests": "Approval requests",
   "operations.approvals.approve.title": "Approve",
   "operations.approvals.groups.assign.title": "Add approver",
   "operations.approvals.groups.define.title": "New approver group",

@@ -273,6 +273,9 @@ public static class GroupList
     public sealed record Result
     {
         public Guid Id { get; init; }
+        // The assign form's field name, carried deliberately: the grid's RowForm prefills
+        // same-named fields, so a row opens the form with its group already bound (docs/32).
+        public Guid GroupId { get; init; }
         [LabelKey("approvals.labels.name")]
         public string Name { get; init; } = "";
         [LabelKey("approvals.labels.parent-group")]
@@ -282,10 +285,48 @@ public static class GroupList
     public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
         tam.Db.Set<ApprovalGroup>().Select(g => new Result
         {
-            Id = g.Id, Name = g.Name, ParentGroupId = g.ParentGroupId,
+            Id = g.Id, GroupId = g.Id, Name = g.Name, ParentGroupId = g.ParentGroupId,
         });
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Name))
         .DefaultSort(nameof(Result.Name));
+}
+
+[View("approvals.rules.list")]
+[Authorize("approvals.manage")]
+public static class RuleList
+{
+    public sealed record Query();
+
+    public sealed record Result
+    {
+        public Guid Id { get; init; }
+        [LabelKey("approvals.labels.operation")]
+        public string OperationId { get; init; } = "";
+        [LabelKey("approvals.labels.group")]
+        public string Group { get; init; } = "";
+        [LabelKey("approvals.labels.threshold-field")]
+        public string? ThresholdField { get; init; }
+        [LabelKey("approvals.labels.threshold")]
+        public decimal? Threshold { get; init; }
+        public bool Retired { get; init; }
+    }
+
+    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
+        tam.Db.Set<ApprovalRule>().Select(r => new Result
+        {
+            Id = r.Id,
+            OperationId = r.OperationId,
+            Group = tam.Db.Set<ApprovalGroup>()
+                .Where(g => g.Id == r.GroupId).Select(g => g.Name).FirstOrDefault() ?? "",
+            ThresholdField = r.ThresholdField,
+            Threshold = r.Threshold,
+            Retired = r.Retired,
+        });
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+        .Sortable(nameof(Result.OperationId))
+        .Filterable(nameof(Result.Retired))
+        .DefaultSort(nameof(Result.OperationId));
 }

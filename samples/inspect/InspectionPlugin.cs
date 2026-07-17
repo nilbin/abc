@@ -19,8 +19,7 @@ public sealed class InspectionPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.Model.AddDiscovered();   // operations, views, [Gate]/[OnEffect] behaviors
-        plugin.LocaleDefaults();        // embedded locales/*.json; application files override
+        plugin.AddDiscovered();   // operations, views, [Gate]/[OnEffect] behaviors
         plugin.AddPart<OrdersContract>();     // everything host-facing
         plugin.AddPart<TemplateAdminSurface>();   // the tenant admin's template UI
         plugin.AddPart<ChecklistSurface>();       // the checklist UI (page + order panel)
@@ -186,9 +185,7 @@ internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
 {
     public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
     {
-        if (!gate.Input.TryGetProperty("orderId", out var idElement)
-            || !idElement.TryGetGuid(out var orderId))
-            return Result.Success();
+        if (gate.Guid("orderId") is not { } orderId) return Result.Success();
 
         var blocking = await tam.Db.Set<Checklist>()
             .Where(x => x.OrderId == orderId && x.Mandatory && !x.Passed)
@@ -214,15 +211,10 @@ internal sealed class InstantiateTemplates(ITamDb tam) : IEffectHandler
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (!effect.Payload.TryGetProperty("orderId", out var idElement)
-            || !idElement.TryGetGuid(out var orderId))
-            return;
-        var orderType = effect.Payload.TryGetProperty("orderType", out var typeElement)
-            && typeElement.ValueKind == JsonValueKind.String
-            ? typeElement.GetString() ?? "" : "";
+        if (effect.Guid("orderId") is not { } orderId) return;
+        var orderType = effect.String("orderType") ?? "";
         if (orderType.Length == 0) return;
-        var number = effect.Payload.TryGetProperty("number", out var numberElement)
-            ? numberElement.GetString() ?? "" : "";
+        var number = effect.String("number") ?? "";
 
         var normalized = orderType.Trim().ToLowerInvariant();
         var templates = await tam.Db.Set<ChecklistTemplate>()
@@ -262,11 +254,8 @@ internal sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (!effect.Payload.TryGetProperty("number", out var numberElement)
-            || numberElement.GetString() is not { Length: > 0 } number)
-            return;
-        var orderId = effect.Payload.TryGetProperty("orderId", out var idElement)
-            && idElement.TryGetGuid(out var id) ? id : (Guid?)null;
+        if (effect.String("number") is not { Length: > 0 } number) return;
+        var orderId = effect.Guid("orderId");
 
         // Outbox delivery is at-least-once — the handler must be idempotent. The delivery
         // scope is pinned to the record's tenant, so the ambient filter applies here too.

@@ -21,49 +21,17 @@ public sealed class ApprovalsPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.Model.AddDiscovered();
-        plugin.LocaleDefaults();   // embedded locales/*.json by convention
-
-        plugin.Model.Form<DefineGroup.Input>(
-            "approvals.web.groups.define", "approvals.groups.define", form =>
-        {
-            form.Field(x => x.Name);
-            form.Field(x => x.ParentGroupId);
-        });
-
-        plugin.Model.Form<AssignMember.Input>(
-            "approvals.web.groups.assign", "approvals.groups.assign", form =>
-        {
-            form.Field(x => x.GroupId);
-            form.Field(x => x.Email);
-        });
-
-        plugin.Model.Form<DefineRule.Input>(
-            "approvals.web.rules.define", "approvals.rules.define", form =>
-        {
-            form.Field(x => x.OperationId);
-            form.Field(x => x.GroupId);
-            form.Field(x => x.ThresholdField);
-            form.Field(x => x.Threshold).Renderer("money");
-        });
-
-        plugin.Model.Grid<RequestList.Result>(
-            "approvals.web.requests", "approvals.requests.list", grid =>
-        {
-            grid.Column(x => x.OperationId);
-            grid.Column(x => x.Initiator);
-            grid.Column(x => x.Status);
-            grid.Column(x => x.CreatedAtIso);
-            grid.RowAction("approvals.approve");
-            grid.RowAction("approvals.reject");
-        });
+        plugin.AddDiscovered();   // operations, views, [GateAll]/[OnEffect] behaviors
 
         // Seam 1: ONE wildcard gate — which operations it blocks is ApprovalRule data. The
-        // gate and both subscribers register from their own attributes ([GateAll]/[OnEffect]
-        // below, via AddDiscovered); only the event CONTRACTS are declared here.
+        // gate and both subscribers register from their own attributes (below, via
+        // AddDiscovered); only the event CONTRACTS are declared here.
         plugin
             .PublishesEvent("approvals.requested", "requestId")
             .PublishesEvent("approvals.approved", "requestId");
+
+        plugin.AddPart<AdminSurface>();    // groups + rules configuration
+        plugin.AddPart<ReviewSurface>();   // the approver's request queue
     }
 
     /// <summary>Host opt-in for the plugin's storage, like inspect's: one line in OnModelCreating.</summary>
@@ -101,6 +69,82 @@ public sealed class ApprovalsPlugin : ITamPlugin
     }
 }
 
+/// <summary>The tenant admin's configuration surface: approver groups (define, assign
+/// members) and approval rules (define, retire) — one declared page, suggested into the
+/// host's administration area. Assign opens PREFILLED from the group row (the docs/32
+/// RowForm contract: the list view deliberately carries the form's field names).</summary>
+internal sealed class AdminSurface : IPluginPart
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.Form<DefineGroup.Input>(
+            "approvals.web.groups.define", "approvals.groups.define");
+
+        plugin.Form<AssignMember.Input>(
+            "approvals.web.groups.assign", "approvals.groups.assign", form =>
+        {
+            form.Field(x => x.GroupId).Renderer("hidden");
+            form.Field(x => x.Email);
+        });
+
+        plugin.Form<DefineRule.Input>(
+            "approvals.web.rules.define", "approvals.rules.define", form =>
+        {
+            form.Field(x => x.OperationId);
+            form.Field(x => x.GroupId);
+            form.Field(x => x.ThresholdField);
+            form.Field(x => x.Threshold).Renderer("money");
+        });
+
+        plugin.Grid<GroupList.Result>(
+            "approvals.web.groups", "approvals.groups.list", grid =>
+        {
+            grid.Column(x => x.Name);
+            grid.Column(x => x.ParentGroupId);
+            grid.RowForm("approvals.groups.assign");
+            grid.ToolbarAction("approvals.groups.define");
+        });
+
+        plugin.Grid<RuleList.Result>(
+            "approvals.web.rules", "approvals.rules.list", grid =>
+        {
+            grid.RowAction("approvals.rules.retire");
+            grid.ToolbarAction("approvals.rules.define");
+        });
+
+        plugin.Page("approvals.admin", page => page
+            .Grid("approvals.web.groups", heading: "approvals.headings.groups")
+            .Grid("approvals.web.rules", heading: "approvals.headings.rules"));
+
+        plugin.Nav(nav => nav.Page("approvals.admin",
+            page: "approvals.admin", suggest: "administration", order: 70));
+    }
+}
+
+/// <summary>The approver's queue: pending requests with approve/reject row actions.</summary>
+internal sealed class ReviewSurface : IPluginPart
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.Grid<RequestList.Result>(
+            "approvals.web.requests", "approvals.requests.list", grid =>
+        {
+            grid.Column(x => x.OperationId);
+            grid.Column(x => x.Initiator);
+            grid.Column(x => x.Status);
+            grid.Column(x => x.CreatedAtIso);
+            grid.RowAction("approvals.approve");
+            grid.RowAction("approvals.reject");
+        });
+
+        plugin.Page("approvals.requests", page => page
+            .Grid("approvals.web.requests"));
+
+        plugin.Nav(nav => nav.Page("approvals.requests",
+            page: "approvals.requests", suggest: "administration", order: 75));
+    }
+}
+
 [GateAll]
 internal sealed class ApprovalsGate(ITamDb tam) : IOperationGate
 {
@@ -116,7 +160,7 @@ internal sealed class ApprovalsGate(ITamDb tam) : IOperationGate
         var rules = await tam.Db.Set<ApprovalRule>()
             .Where(r => r.OperationId == gate.OperationId && !r.Retired)
             .ToListAsync(ct);
-        var rule = rules.FirstOrDefault(r => Applies(r, gate.Input));
+        var rule = rules.FirstOrDefault(r => Applies(r, gate));
         if (rule is null) return Result.Success();
 
         // Seam 2: keep the envelope, lose the attempt. ParkEnvelope is constructed in the
@@ -139,12 +183,9 @@ internal sealed class ApprovalsGate(ITamDb tam) : IOperationGate
 
     /// <summary>No threshold → the rule always applies; with one, the named wire field must
     /// be a number at or above the limit (a missing or non-numeric field does not trigger).</summary>
-    private static bool Applies(ApprovalRule rule, JsonElement input) =>
+    private static bool Applies(ApprovalRule rule, GateContext gate) =>
         rule.ThresholdField is not { Length: > 0 } field || rule.Threshold is not { } limit
-            || (input.ValueKind == JsonValueKind.Object
-                && input.TryGetProperty(field, out var value)
-                && value.ValueKind == JsonValueKind.Number
-                && value.GetDecimal() >= limit);
+            || gate.Decimal(field) >= limit;
 }
 
 [OnEffect("approvals.requested")]
@@ -153,7 +194,7 @@ internal sealed class NotifyApprovers(
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        var requestId = effect.Payload.GetProperty("requestId").GetGuid();
+        if (effect.Guid("requestId") is not { } requestId) return;
         var request = await tam.Db.Set<ApprovalRequest>()
             .SingleOrDefaultAsync(r => r.Id == requestId, ct);
         var rule = request is null ? null : await tam.Db.Set<ApprovalRule>()
@@ -174,7 +215,7 @@ internal sealed class ReleaseApproved(ITamDb tam, EnvelopeReplay replay) : IEffe
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        var requestId = effect.Payload.GetProperty("requestId").GetGuid();
+        if (effect.Guid("requestId") is not { } requestId) return;
         var request = await tam.Db.Set<ApprovalRequest>()
             .SingleOrDefaultAsync(r => r.Id == requestId, ct);
         if (request is null || request.Status != ApprovalRequest.Approved) return;

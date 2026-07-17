@@ -31,10 +31,13 @@ public static partial class TamAspNetCore
         services.AddScoped<IHostViewReader, HostViewReader>();
         // People lookups for plugins (assign/notify): the sanctioned seam over identity tables.
         services.AddScoped<ITamDirectory, TamDirectory>();
-        // Sanctioned envelope replay (docs/28 approvals seam 3): singleton because it always
-        // executes in a fresh pinned scope of its own — never the caller's (whose transaction
-        // may be the very one the parked envelope must be independent of).
-        services.AddSingleton(sp => new EnvelopeReplay(model, sp, s => s.GetRequiredService<TDbContext>()));
+        // Sanctioned envelope replay (docs/28 approvals seam 3): scoped so it reads the caller's
+        // PluginContext stamp — only a plugin handler may release, and the plugin id lands in the
+        // idempotency key. The replay itself still executes in a fresh pinned scope of its own —
+        // never the caller's (whose transaction may be the very one the parked envelope must be
+        // independent of).
+        services.AddScoped(sp => new EnvelopeReplay(
+            model, sp, s => s.GetRequiredService<TDbContext>(), sp.GetRequiredService<PluginContext>()));
         // Ambient tenant for the EF global query filter (docs: tenant isolation is enforced once at
         // the model, not re-filtered at every call site). Set per request by UseTamTenantScope.
         services.AddScoped<TenantScope>();

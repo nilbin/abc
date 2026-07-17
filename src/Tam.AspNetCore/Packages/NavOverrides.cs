@@ -15,7 +15,6 @@ public sealed class TamNavPackage : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.LocaleDefaults();
         plugin.Nav(nav => nav.Page("nav", grid: "web.nav", suggest: "administration", order: 90));
         plugin
             .AddOperationType(typeof(NavOverride))

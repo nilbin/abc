@@ -10,7 +10,6 @@ public sealed class TamIntegrationsPackage : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.LocaleDefaults();
         plugin
             .AddOperationType(typeof(ScheduleIntegration))
             .AddOperationType(typeof(RunIntegration))

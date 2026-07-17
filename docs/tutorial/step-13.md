@@ -15,7 +15,7 @@ public sealed class InspectionPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.Model.AddDiscovered();                   // the plugin's own compile-time discovery
+        plugin.AddDiscovered();                         // the plugin's own compile-time discovery
 
         // A packaged field on the HOST's entity — same channel as tenant custom fields,
         // compiled origin, collision-proof key "inspect.requiresInspection", label from the
@@ -40,8 +40,7 @@ internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
 {
     public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
     {
-        if (!gate.Input.TryGetProperty("orderId", out var idElement)
-            || !idElement.TryGetGuid(out var orderId))
+        if (gate.Guid("orderId") is not { } orderId)
             return Result.Success();   // malformed input is validation's problem, not the gate's
         var blocked = await tam.Db.Set<Checklist>().AnyAsync(
             x => x.OrderId == orderId && !x.Passed, ct);

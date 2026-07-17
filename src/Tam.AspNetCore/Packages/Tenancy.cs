@@ -11,7 +11,6 @@ public sealed class TamTenancyPackage : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.LocaleDefaults();
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement.
         plugin.Nav(nav => nav.Page("tenants", grid: "web.tenants", suggest: "administration", order: 80));
         plugin

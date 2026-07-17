@@ -16,8 +16,6 @@ public sealed class FortnoxPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.LocaleDefaults();   // embedded locales/{culture}.json, by convention
-
         // D-X3: the read footprint is a BUILD-TIME fact — the mapper resolves customers through
         // the host lookup view, and the install screen can show exactly that.
         plugin.RequiresView("customers.lookup", "id");
@@ -27,7 +25,7 @@ public sealed class FortnoxPlugin : ITamPlugin
         // wire input, re-run on every retry so a late-created customer recovers the row.
         plugin.Integration(
             "orders.import", "orders.create",
-            key: row => Str(row, "documentNumber"),
+            key: row => row.String("documentNumber") ?? "",
             map: MapOrderAsync);
 
         // OUTBOUND on event (docs/25): when an order completes, push it to Fortnox's accounting
@@ -49,7 +47,7 @@ public sealed class FortnoxPlugin : ITamPlugin
         if (baseUrl is null || apiKey is null)
             return OutboundResult.Failure("not-configured");   // no base URL / API key set
 
-        var number = run.EventPayload?.TryGetProperty("number", out var n) == true ? n.GetString() : null;
+        var number = run.EventPayload?.String("number");
         run.Http.DefaultRequestHeaders.TryAddWithoutValidation("Access-Token", apiKey);
         var response = await run.Http.PostAsync(
             $"{baseUrl.TrimEnd('/')}/vouchers",
@@ -78,19 +76,10 @@ public sealed class FortnoxPlugin : ITamPlugin
         return OutboundResult.Success($"polled {count} orders");
     }
 
-    /// <summary>A missing or non-string field reads as empty — a partner's incomplete row must map
-    /// to a validation finding downstream, never throw a 500 out of the integration endpoint.</summary>
-    private static string Str(JsonElement row, string name) =>
-        row.ValueKind == JsonValueKind.Object
-            && row.TryGetProperty(name, out var v)
-            && v.ValueKind == JsonValueKind.String
-                ? v.GetString() ?? ""
-                : "";
-
     private static async Task<IReadOnlyDictionary<string, object?>> MapOrderAsync(
         JsonElement row, IServiceProvider services, OperationContext context, CancellationToken ct)
     {
-        var customerName = Str(row, "customerName");
+        var customerName = row.String("customerName") ?? "";
 
         // Resolve the external customer name to our id through the BLESSED read seam (docs/31
         // D-X3): actor mode, so the plugin sees only what the request's actor may see — and the
@@ -100,11 +89,7 @@ public sealed class FortnoxPlugin : ITamPlugin
             "customers.lookup",
             new Dictionary<string, string?> { ["search"] = customerName, ["pageSize"] = "1" },
             context, ct);
-        object? customerId = null;
-        if (lookup.Rows.FirstOrDefault() is { } match
-            && JsonSerializer.SerializeToElement(match, TamJson.Options)
-                .TryGetProperty("id", out var idElement))
-            customerId = idElement.GetString();
+        var customerId = lookup.FirstRow()?.String("id");
 
         // A row with no resolvable customer maps to a null id and fails orders.create's
         // business rule; the inbox retries it, so creating the customer later recovers it.
@@ -112,8 +97,8 @@ public sealed class FortnoxPlugin : ITamPlugin
         {
             ["customerId"] = customerId,
             ["orderType"] = "service",
-            ["workAddress"] = Str(row, "deliveryAddress"),
-            ["description"] = Str(row, "description"),
+            ["workAddress"] = row.String("deliveryAddress") ?? "",
+            ["description"] = row.String("description") ?? "",
         };
     }
 }

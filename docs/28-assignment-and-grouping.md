@@ -105,8 +105,10 @@ the parked-work class is CONSTRUCTED in a fresh tenant-pinned scope, so its inje
 cannot be the rolled-back ones; discarded if the gate allows), and
 **sanctioned envelope replay** (`EnvelopeReplay` — full-pipeline re-execution as the original
 initiator with grants re-resolved as of now, `InvocationSource.Workflow` as the sanction, the
-envelope id as both audit correlation and initiator-scoped idempotency key — dual attribution
-without a second actor field). The walkthrough is tutorial Step 16
+envelope id as the audit correlation and `replay:{plugin}:{envelope}` as the initiator-scoped
+idempotency key — dual attribution without a second actor field, and release PROVENANCE
+without an argument: replay is plugin-scoped like the writer/reader seams, so only a plugin
+handler may release and its id lands in the stored key structurally). The walkthrough is tutorial Step 16
 ([20-tutorial.md](20-tutorial.md)).
 
 ## Decisions

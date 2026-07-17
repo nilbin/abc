@@ -50,8 +50,11 @@ public class ApprovalSeamTests : IDisposable
             .AddScoped<ITamDb>(sp => new TamDb(sp.GetRequiredService<ErpDbContext>()))
             .AddScoped<ActivationCache>()
             .AddScoped<ITamActivator, TamActivator>()
+            .AddScoped<PluginContext>()
             .AddScoped(sp => new OperationExecutor(_model, sp, s => s.GetRequiredService<ErpDbContext>()))
-            .AddSingleton(sp => new EnvelopeReplay(_model, sp, s => s.GetRequiredService<ErpDbContext>()))
+            .AddScoped(sp => new EnvelopeReplay(
+                _model, sp, s => s.GetRequiredService<ErpDbContext>(),
+                sp.GetRequiredService<PluginContext>()))
             .BuildServiceProvider();
 
         using var db = new ErpDbContext(options, new TenantScope());
@@ -236,10 +239,9 @@ public class ApprovalSeamTests : IDisposable
         var envelope = SingleEnvelope();
 
         using var body = JsonDocument.Parse(envelope.BodyJson);
-        var replay = _services.GetRequiredService<EnvelopeReplay>();
-        var response = await replay.ReplayAsync(new EnvelopeReplay.Envelope(
+        var response = await ReplayAsync(new EnvelopeReplay.Envelope(
             envelope.OperationId, body.RootElement, envelope.ActorId,
-            Tenant, "env-1", envelope.Culture), CancellationToken.None);
+            Tenant, "env-1", envelope.Culture));
 
         // The gate saw Workflow and let it pass; the operation ran with the initiator's grants
         // as re-resolved from the seeded membership (clerk → host.customers.create).
@@ -253,13 +255,14 @@ public class ApprovalSeamTests : IDisposable
         Assert.Equal(Initiator.ToString(), audit.ActorId);
         Assert.Equal(nameof(InvocationSource.Workflow), audit.Source);
         Assert.Equal("env-1", audit.CorrelationId);
-        Assert.Equal(EnvelopeReplay.KeyPrefix + "env-1", audit.IdempotencyKey);
+        // Provenance is structural: the releasing plugin's id is in the stored key.
+        Assert.Equal(EnvelopeReplay.KeyPrefix + "appr:env-1", audit.IdempotencyKey);
 
         // Redelivered approval effect → the stored outcome, not a second execution.
         using var again = JsonDocument.Parse(envelope.BodyJson);
-        var second = await replay.ReplayAsync(new EnvelopeReplay.Envelope(
+        var second = await ReplayAsync(new EnvelopeReplay.Envelope(
             envelope.OperationId, again.RootElement, envelope.ActorId,
-            Tenant, "env-1", envelope.Culture), CancellationToken.None);
+            Tenant, "env-1", envelope.Culture));
         Assert.Contains(second.Findings, f => f.Code == "pipeline.idempotent-replay");
         Assert.Equal(1, Query(db => db.Customers.Count()));
     }
@@ -277,13 +280,35 @@ public class ApprovalSeamTests : IDisposable
         });
 
         using var body = JsonDocument.Parse(envelope.BodyJson);
-        var response = await _services.GetRequiredService<EnvelopeReplay>().ReplayAsync(
-            new EnvelopeReplay.Envelope(
-                envelope.OperationId, body.RootElement, Initiator.ToString(),
-                Tenant, "env-2", envelope.Culture), CancellationToken.None);
+        var response = await ReplayAsync(new EnvelopeReplay.Envelope(
+            envelope.OperationId, body.RootElement, Initiator.ToString(),
+            Tenant, "env-2", envelope.Culture));
 
         Assert.Contains(response.Findings, f => f.Code == "pipeline.replay-actor-unavailable");
         Assert.Equal(0, Query(db => db.Customers.Count()));
+    }
+
+    [Fact]
+    public async Task Replay_is_structurally_plugin_scoped()
+    {
+        // No PluginContext stamp (a non-plugin caller) → PLG012, before anything executes.
+        using var scope = _services.CreateScope();
+        var replay = scope.ServiceProvider.GetRequiredService<EnvelopeReplay>();
+        using var body = JsonDocument.Parse("{}");
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            replay.ReplayAsync(new EnvelopeReplay.Envelope(
+                "host.customers.create", body.RootElement, Initiator.ToString(),
+                Tenant, "env-3", "en"), CancellationToken.None));
+        Assert.StartsWith("PLG012", error.Message);
+    }
+
+    /// <summary>Replay as a plugin handler would call it: from a scope carrying the plugin stamp.</summary>
+    private async Task<OperationResponse> ReplayAsync(EnvelopeReplay.Envelope envelope)
+    {
+        using var scope = _services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<PluginContext>().PluginId = "appr";
+        return await scope.ServiceProvider.GetRequiredService<EnvelopeReplay>()
+            .ReplayAsync(envelope, CancellationToken.None);
     }
 
     [Fact]

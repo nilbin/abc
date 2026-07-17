@@ -11,7 +11,6 @@ public sealed class TamSubscriptionsPackage : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.LocaleDefaults();
         plugin
             .AddOperationType(typeof(SetPlan))
             .AddViewType(typeof(CurrentSubscription));

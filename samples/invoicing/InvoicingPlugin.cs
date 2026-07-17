@@ -15,8 +15,7 @@ public sealed class InvoicingPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        plugin.Model.AddDiscovered();   // operations, views, [Gate]/[OnEffect] behaviors
-        plugin.LocaleDefaults();
+        plugin.AddDiscovered();   // operations, views, [Gate]/[OnEffect] behaviors
         plugin.AddPart<OrdersContract>();   // everything host-facing
         plugin.AddPart<InvoiceSurface>();   // the plugin's own UI
     }
