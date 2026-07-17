@@ -33,7 +33,12 @@ Custom fields have a sibling: **automation rules** — the tenant's declarative 
 the same trust line. An admin defines "cold-chain orders need a requested date" as data: a Px
 condition over the input (compiled and extension fields alike) and a blocking finding, validated
 at definition time (`RUL001` unknown operation, `RUL002` unknown field, `RUL003` missing
-default-culture message), evaluated without loops, code, or HTTP — and fully audited. The
+default-culture message), evaluated without loops, code, or HTTP — and fully audited.
+Conditions also read the operation's TARGET row (`row.budget`, `row.status`, `row.ext.key`) —
+so "big open projects can't be closed" works on an intent that carries only an id; the target
+resolves from the `{entity}Id` input at define time (`RUL004` when there is no single target),
+loads read-only pre-transaction, and compares wire-identically (money as numbers, enums as
+their wire strings — docs/22). The
 executor has no rules special case: rules run as the `tam.rules` package's own wildcard gate,
 through the very seam Step 16's approvals plugin uses; and because Px is portable, the same
 condition drives client-side form behavior without a round trip. What rules never get is
