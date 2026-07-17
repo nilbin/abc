@@ -1,4 +1,3 @@
-using Erp.Features;
 using Tam;
 using Tam.AspNetCore;
 using Tam.Generated;
@@ -9,8 +8,12 @@ namespace Erp;
 /// The compiled model is a VALUE (docs/01): built once here, then hosted by Program.cs and
 /// tested by Erp.Tests through the SAME instance shape — what the test host verifies is what
 /// the web host serves (tutorial Step 11).
+///
+/// Each domain declares its own model fragment (ErpModel.Orders.cs, ErpModel.Customers.cs, …
+/// mirroring Features/): a page, its forms, its grid. This file keeps what spans domains —
+/// plugins, event contracts, and the nav tree the HOST owns.
 /// </summary>
-public static class ErpModel
+public static partial class ErpModel
 {
     public static TamModel Build() => new TamModelBuilder()
         .DefaultCulture("sv")
@@ -22,78 +25,27 @@ public static class ErpModel
         .AddPlugin<Approvals.ApprovalsPlugin>()  // Step 16: approval flows over the three seams (docs/28 D-AG4)
         .AddPlugin<Invoicing.InvoicingPlugin>()  // Step 17: extends the Orders domain (docs/31)
 
-        // The web nav tree (docs/30): the HOST owns layout — modes at the top, the administration
-        // section collects every package/plugin page that SUGGESTS it; anything uncollected lands
-        // under "more" in the last mode automatically (nothing can be authored into invisibility).
         // Event contracts (docs/31 D-X5): what subscribers/triggers may bind to, with payload shape.
         .PublishesEvent("order-created", "orderId", "number", "orderType")
         .PublishesEvent("order-completed", "orderId", "number")
+        .PublishesEvent("order-cancelled", "orderId", "number")
         .PublishesEvent("work-order-completed", "workOrderId", "number")
 
         // The order detail is a CONTRIBUTION POINT (docs/31 D-X4): placing it on the record
-        // below DECLARES it (docs/34 M5 — placement is declaration; the record's key is its
+        // DECLARES it (docs/34 M5 — placement is declaration; the record's key is its
         // context). model.Slot() would only be needed for external slots or a custom key.
 
-        // The orders page is a DECLARED COMPOSITION (docs/32): grid + tabbed record surface.
-        .Page("orders", page => page
-            .Grid("web.orders.list")
-            .Record(record => record
-                .Detail("orders.detail", key: "orderId")
-                .Title("number")
-                // Record TABS (docs/32 arc 4): the edit form gets its tab, and PanelTabs
-                // expands the detail slot into one tab per contributing PLUGIN — the host
-                // never names, counts, or labels the plugins (docs/31 D-X4).
-                .Tab("details", "erp.tabs.details", s => s.Form("web.orders.edit"))
-                .PanelTabs("web.orders.detail")))
+        .AddOrders()
+        .AddCustomers()
+        .AddProjects()
+        .AddStock()
+        .AddWorkOrders()
+        .AddTime()
+        .AddMaterials()
 
-        // The second declared page — the shape generalizes: grid + record (no slots here; the
-        // customers surface is not a contribution point until a plugin needs it).
-        .Page("customers", page => page
-            .Grid("web.customers.list")
-            .Record(record => record
-                .Detail("customers.detail", key: "customerId")
-                .Title("name")
-                .Form("web.customers.edit")))
-
-        // The field-service slice (docs/34 M1): two more declared pages, zero React.
-        .Page("projects", page => page
-            .Grid("web.projects.list")
-            .Record(record => record
-                .Detail("projects.detail", key: "projectId")
-                .Title("number")
-                .Form("web.projects.edit")))
-
-        .Page("stock", page => page
-            .Grid("web.stock.list")
-            .Record(record => record
-                .Detail("stock.detail", key: "stockItemId")
-                .Title("name")
-                .Form("web.stock.edit")))
-
-        // The record-tabs exemplar (docs/32 arc 4): a work order's Details form, then its child
-        // Time and Materials listings — bound grids filtering time.list / materials.list off the
-        // record's own number, mechanically, with no dedicated child view.
-        .Page("work-orders", page => page
-            .Grid("web.work-orders.list")
-            .Record(record => record
-                .Detail("work-orders.detail", key: "workOrderId")
-                .Title("number")
-                .Tab("details", "erp.tabs.details", s => s.Form("web.work-orders.edit"))
-                .Tab("time", "erp.tabs.time", s => s
-                    .Grid("web.time.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))
-                .Tab("materials", "erp.tabs.materials", s => s
-                    .Grid("web.materials.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))))
-
-        // Time keeps a page for the technician's field mode (bookings are history; the only
-        // state change is time.approve, riding the grid as a row action). Time and materials
-        // read from the OFFICE's angle inside the work-order record's tabs — no standalone
-        // work-mode pages; the material grid exists only as the record tab.
-        .Page("time", page => page
-            .Grid("web.time.list")
-            .Record(record => record
-                .Detail("time.detail", key: "timeEntryId")
-                .Title("workOrderNumber")))
-
+        // The web nav tree (docs/30): the HOST owns layout — modes at the top, the administration
+        // section collects every package/plugin page that SUGGESTS it; anything uncollected lands
+        // under "more" in the last mode automatically (nothing can be authored into invisibility).
         .Nav("web", nav => nav
             .Mode("work", m => m
                 .Page("orders", page: "orders", order: 10)   // declared page: permission derives
@@ -108,206 +60,6 @@ public static class ErpModel
                 .Page("my-time", page: "time", order: 20))
             .Mode("admin", m => m
                 .Section("administration")))
-
-        .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>
-        {
-            form.Field(x => x.CustomerId);   // [Lookup] on CustomerId renders the picker
-            form.Field(x => x.OrderType);
-            form.Field(x => x.ProjectId)
-                .VisibleWhen(x => x.OrderType == OrderType.Project)
-                .RequiredWhen(x => x.OrderType == OrderType.Project)
-                // A project belongs to the picked customer — the previous customer's project
-                // must not survive a customer change (docs/05 ResetOn).
-                .ResetOn(x => x.CustomerId);
-            form.Field(x => x.WorkAddress)
-                .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
-            form.Field(x => x.Description);
-            form.Field(x => x.RequestedDate);
-            form.Field(x => x.EstimatedTotal);
-            form.Extensions();
-        })
-
-        .Form<EditOrderDetails.Input>("web.orders.edit", "orders.edit-details", form =>
-        {
-            form.Field(x => x.OrderId).Renderer("hidden");
-            form.Field(x => x.Description);
-            form.Field(x => x.RequestedDate);
-            form.Field(x => x.WorkAddress);
-            form.Field(x => x.EstimatedTotal);
-            form.Extensions();
-        })
-
-        // No configure: the record IS the form — every input field, declaration order (docs/32).
-        .Form<CreateCustomer.Input>("web.customers.create", "customers.create")
-
-        // Enumerated only to hide the record key (the modal already IS the customer).
-        .Form<EditCustomerContact.Input>("web.customers.edit", "customers.edit-contact", form =>
-        {
-            form.Field(x => x.CustomerId).Renderer("hidden");
-            form.Field(x => x.Name);
-            form.Field(x => x.VisitAddress);
-            form.Field(x => x.Email);
-            form.Field(x => x.Phone);
-        })
-
-        .Form<CreateProject.Input>("web.projects.create", "projects.create", form =>
-        {
-            form.Field(x => x.CustomerId);   // [Lookup] on CustomerId renders the picker
-            form.Field(x => x.Number);
-            form.Field(x => x.Name);
-            form.Field(x => x.Budget);
-        })
-
-        .Form<EditProjectDetails.Input>("web.projects.edit", "projects.edit-details", form =>
-        {
-            form.Field(x => x.ProjectId).Renderer("hidden");
-            form.Field(x => x.Name);
-            form.Field(x => x.Budget);
-        })
-
-        .Form<CreateWorkOrder.Input>("web.work-orders.create", "work-orders.create", form =>
-        {
-            form.Field(x => x.ProjectId);
-            form.Field(x => x.Title);
-            form.Field(x => x.Description);
-            form.Field(x => x.Location);
-            form.Field(x => x.Priority);
-            form.Extensions();
-        })
-
-        .Form<EditWorkOrderDetails.Input>("web.work-orders.edit", "work-orders.edit-details", form =>
-        {
-            form.Field(x => x.WorkOrderId).Renderer("hidden");
-            form.Field(x => x.Title);
-            form.Field(x => x.Description);
-            form.Field(x => x.Location);
-            form.Extensions();
-        })
-
-        // Priority is an enum, so it moves through its own intent (EDIT001), not the
-        // change-set — this form is the intent's surface, opened from the grid row.
-        .Form<SetWorkOrderPriority.Input>("web.work-orders.set-priority", "work-orders.set-priority", form =>
-        {
-            form.Field(x => x.WorkOrderId).Renderer("hidden");
-            form.Field(x => x.Priority);
-        })
-
-        .Form<ScheduleWorkOrder.Input>("web.work-orders.schedule", "work-orders.schedule", form =>
-        {
-            form.Field(x => x.WorkOrderId).Renderer("hidden");
-            form.Field(x => x.ScheduledDate);
-            form.Field(x => x.AssigneeActorId);   // options arrive via the assignees derivation
-        })
-
-        // Booking rides the work-orders grid as a row action, so the work order arrives prefilled
-        // (hidden here); rate and amount are filled live by the time.book derivations —
-        // RecomputeIfUntouched keeps them tracking until the user overrides the rate.
-        .Form<BookTime.Input>("web.time.book", "time.book", form =>
-        {
-            form.Field(x => x.WorkOrderId).Renderer("hidden");
-            form.Field(x => x.Date);
-            form.Field(x => x.Hours);
-            form.Field(x => x.HourlyRate)
-                .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
-            form.Field(x => x.Amount).ReadOnly()   // computed display seat (docs/34 M5)
-                .OnSourceChange(DependentValuePolicy.RecomputeIfUntouched);
-            form.Field(x => x.Note);
-        })
-
-        .Form<AddMaterialLine.Input>("web.materials.add", "materials.add", form =>
-        {
-            form.Field(x => x.WorkOrderId).Renderer("hidden");
-            form.Field(x => x.StockItemId);   // options arrive via the stock-items derivation
-            form.Field(x => x.Quantity);
-        })
-
-        // No configure: the record IS the form (docs/32 D-P6).
-        .Form<CreateStockItem.Input>("web.stock.create", "stock.create")
-
-        .Form<EditStockItem.Input>("web.stock.edit", "stock.edit", form =>
-        {
-            form.Field(x => x.StockItemId).Renderer("hidden");
-            form.Field(x => x.Name);
-            form.Field(x => x.UnitPrice);
-        })
-
-        .Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
-        {
-            grid.Column(x => x.Number);
-            grid.Column(x => x.TenantId);   // the company column — rendered only when acting above a leaf
-            grid.Column(x => x.CustomerName);
-            grid.Column(x => x.Type);
-            grid.Column(x => x.Status);
-            grid.Column(x => x.RequestedDate);
-            grid.Column(x => x.EstimatedTotal);
-            grid.Extensions();
-            grid.RowAction("orders.complete");
-            grid.ToolbarAction("orders.create");
-        })
-
-        .Grid<CustomerList.Result>("web.customers.list", "customers.list", grid =>
-        {
-            grid.Column(x => x.Name);
-            grid.Column(x => x.Email);
-            grid.Column(x => x.Phone);
-            grid.Column(x => x.VisitAddress);
-            grid.Column(x => x.IsActive);
-            grid.ToolbarAction("customers.create");
-        })
-
-        .Grid<ProjectList.Result>("web.projects.list", "projects.list", grid =>
-        {
-            grid.Column(x => x.Number);
-            grid.Column(x => x.TenantId);   // the company column — rendered only above a leaf
-            grid.Column(x => x.Name);
-            grid.Column(x => x.CustomerName);
-            grid.Column(x => x.Status);
-            grid.Column(x => x.Budget);
-            grid.RowAction("projects.close");
-            grid.RowAction("projects.reopen");
-            grid.ToolbarAction("projects.create");
-        })
-
-        .Grid<WorkOrderList.Result>("web.work-orders.list", "work-orders.list", grid =>
-        {
-            grid.Column(x => x.Number);
-            grid.Column(x => x.TenantId);   // the company column — rendered only above a leaf
-            grid.Column(x => x.ProjectNumber);
-            grid.Column(x => x.Title);
-            grid.Column(x => x.Status);
-            grid.Column(x => x.Priority);
-            grid.Column(x => x.ScheduledDate);
-            grid.Column(x => x.AssignedToName);
-            grid.Extensions();
-            grid.RowAction("work-orders.schedule");
-            grid.RowAction("work-orders.set-priority");
-            grid.RowAction("work-orders.start");
-            grid.RowAction("work-orders.complete");
-            grid.RowAction("work-orders.close");
-            // Time and materials are booked FROM the work order — the row prefills WorkOrderId.
-            grid.RowAction("time.book");
-            grid.RowAction("materials.add");
-            grid.ToolbarAction("work-orders.create");
-        })
-
-        // Columns by convention (D-P6) — configure only declares the actions.
-        .Grid<TimeEntryList.Result>("web.time.list", "time.list", grid =>
-        {
-            grid.RowAction("time.approve");
-        })
-
-        .Grid<MaterialLineList.Result>("web.materials.list", "materials.list")
-
-        .Grid<StockList.Result>("web.stock.list", "stock.list", grid =>
-        {
-            grid.Column(x => x.Sku);
-            grid.Column(x => x.Name);
-            grid.Column(x => x.Unit);
-            grid.Column(x => x.UnitPrice);
-            grid.Column(x => x.IsActive);
-            grid.RowAction("stock.deactivate");
-            grid.ToolbarAction("stock.create");
-        })
 
         .Build();
 }

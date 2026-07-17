@@ -72,10 +72,12 @@ public enum TimeEntryStatus { Draft, Approved }
 
 // ---- Finding factories: stable codes; text in locale catalogs ----
 
-public static class OrderErrors
+public static class OrderFindings
 {
     public static readonly FindingFactory AlreadyCompleted = Finding.Error("orders.already-completed");
     public static readonly FindingFactory CannotCompleteCancelled = Finding.Error("orders.cannot-complete-cancelled");
+    public static readonly FindingFactory AlreadyCancelled = Finding.Error("orders.already-cancelled");
+    public static readonly FindingFactory CannotCancelCompleted = Finding.Error("orders.cannot-cancel-completed");
     public static readonly FindingFactory InvalidCustomer = Finding.Error("orders.invalid-customer");
     public static readonly FindingFactory ProjectRequired = Finding.Error("orders.project-required");
     public static readonly FindingFactory ProjectNotForCustomer = Finding.Error("orders.project-not-for-customer");
@@ -87,6 +89,7 @@ public static class CustomerFindings
 {
     public static readonly FindingFactory NotFound = Finding.Error("customers.not-found");
     public static readonly FindingFactory Inactive = Finding.Error("customers.inactive");
+    public static readonly FindingFactory AlreadyInactive = Finding.Error("customers.already-inactive");
     public static readonly FindingFactory CreditBlocked = Finding.Warning("customers.credit-blocked");
 }
 
@@ -159,7 +162,13 @@ public sealed class Customer : Tam.EntityFrameworkCore.ITenantScoped
         CreditBlocked = creditBlocked,
     };
 
-    public void Deactivate() => IsActive = false;
+    // Deactivation is a retirement, not a deletion — orders keep referencing the customer.
+    public Result Deactivate()
+    {
+        if (!IsActive) return CustomerFindings.AlreadyInactive;
+        IsActive = false;
+        return Result.Success();
+    }
 }
 
 public sealed class Project : Tam.EntityFrameworkCore.ITenantScoped
@@ -441,9 +450,17 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
 
     public Result Complete()
     {
-        if (Status == OrderStatus.Completed) return OrderErrors.AlreadyCompleted;
-        if (Status == OrderStatus.Cancelled) return OrderErrors.CannotCompleteCancelled;
+        if (Status == OrderStatus.Completed) return OrderFindings.AlreadyCompleted;
+        if (Status == OrderStatus.Cancelled) return OrderFindings.CannotCompleteCancelled;
         Status = OrderStatus.Completed;
+        return Result.Success();
+    }
+
+    public Result Cancel()
+    {
+        if (Status == OrderStatus.Cancelled) return OrderFindings.AlreadyCancelled;
+        if (Status == OrderStatus.Completed) return OrderFindings.CannotCancelCompleted;
+        Status = OrderStatus.Cancelled;
         return Result.Success();
     }
 }

@@ -100,6 +100,7 @@ public static class Seed
         Role("dispatcher",
             "orders.read", "orders.read-all", "orders.create",
             "orders.edit", "orders.edit-all", "orders.complete", "orders.complete-all",
+            "orders.cancel", "orders.cancel-all",
             "customers.read", "customers.create", "customers.edit",
             "projects.read", "projects.create", "projects.edit", "projects.close",
             "stock.read", "stock.manage",
@@ -264,6 +265,16 @@ public static class Seed
             Id = Guid.NewGuid(),
             TenantId = Tenant,
             PluginId = "inspect",
+        });
+
+        // Invoicing too: with TWO plugins contributing panels to web.orders.detail, the order
+        // record's PanelTabs marker expands into one tab per plugin (docs/32 arc 4) — the
+        // multi-plugin story is visible on a fresh boot, not just in tests.
+        db.Add(new PluginActivationEntity
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Tenant,
+            PluginId = "invoicing",
         });
 
         // The tenant's subscription (docs/24): a "standard" plan, 10 seats, entitled plugins.

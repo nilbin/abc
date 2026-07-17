@@ -16,16 +16,16 @@ public static class OrderRules
             .Where(x => x.Id == customerId)
             .Select(x => new { x.IsActive })
             .SingleOrDefaultAsync(ct);
-        return customer is { IsActive: true } ? Result.Success() : OrderErrors.InvalidCustomer;
+        return customer is { IsActive: true } ? Result.Success() : OrderFindings.InvalidCustomer;
     }
 
     public static async Task<Result> ProjectBelongsToCustomer(
         ProjectId? projectId, CustomerId customerId, ErpDbContext db, CancellationToken ct)
     {
-        if (projectId is null) return OrderErrors.ProjectRequired;
+        if (projectId is null) return OrderFindings.ProjectRequired;
         var ok = await db.Projects.AnyAsync(
             x => x.Id == projectId && x.CustomerId == customerId && x.Status == ProjectStatus.Open, ct);
-        return ok ? Result.Success() : OrderErrors.ProjectNotForCustomer;
+        return ok ? Result.Success() : OrderFindings.ProjectNotForCustomer;
     }
 }
 
@@ -151,14 +151,14 @@ public static class EditOrderDetails
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
         var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
-        if (order is null) return OrderErrors.NotFound;
+        if (order is null) return OrderFindings.NotFound;
 
         // The write-side twin of the list's scope: base-atom holders edit only their own orders.
         // (The old :own model never checked here — the fail-open the paired-atom pattern closes.)
         var scope = context.CheckOwnershipUnless("orders.edit-all", order.AssignedToActorId);
         if (scope.IsError) return scope.As<Output>();
 
-        if (order.Status != OrderStatus.Open) return OrderErrors.NotEditable;
+        if (order.Status != OrderStatus.Open) return OrderFindings.NotEditable;
 
         var merge = TamMerge.Apply(order, input);
         if (merge.HasConflicts) return merge.ToConflictResult<Output>();
@@ -180,7 +180,7 @@ public static class CompleteOrder
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
         var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
-        if (order is null) return OrderErrors.NotFound;
+        if (order is null) return OrderFindings.NotFound;
 
         var scope = context.CheckOwnershipUnless("orders.complete-all", order.AssignedToActorId);
         if (scope.IsError) return scope.As<Output>();
@@ -190,6 +190,36 @@ public static class CompleteOrder
 
         return new Result<Output> { Output = new Output(order.Version + 1) }
             .Effect(new EventPublished("order-completed",
+                new { orderId = order.Id.Value, number = order.Number.Value }));
+    }
+}
+
+/// <summary>The status machine's other exit: Open → Cancelled. The entity guards both arrows
+/// (a completed order never cancels, a cancelled one never completes) — the operation only
+/// adds scope and the committed-fact event, exactly like orders.complete.</summary>
+[Operation("orders.cancel")]
+[Authorize("orders.cancel")]
+[Widens("orders.cancel-all")]
+public static class CancelOrder
+{
+    public sealed record Input(OrderId OrderId);
+
+    public sealed record Output(long Version);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderFindings.NotFound;
+
+        var scope = context.CheckOwnershipUnless("orders.cancel-all", order.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
+
+        var result = order.Cancel();
+        if (result.IsError) return result.As<Output>();
+
+        return new Result<Output> { Output = new Output(order.Version + 1) }
+            .Effect(new EventPublished("order-cancelled",
                 new { orderId = order.Id.Value, number = order.Number.Value }));
     }
 }

@@ -64,6 +64,30 @@ public static class EditCustomerContact
     }
 }
 
+/// <summary>Deactivation is an INTENT (EDIT001) and a retirement, not a deletion — orders keep
+/// referencing the customer (the stock.deactivate idiom). Same strict ambient scope as the
+/// edit: a shared registry entry retires only at the node that owns it.</summary>
+[Operation("customers.deactivate")]
+[Authorize("customers.edit")]
+public static class DeactivateCustomer
+{
+    public sealed record Input(CustomerId CustomerId);
+
+    public sealed record Output(bool IsActive);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var customer = await db.Customers.SingleOrDefaultAsync(x => x.Id == input.CustomerId, ct);
+        if (customer is null) return CustomerFindings.NotFound;
+
+        var result = customer.Deactivate();
+        if (result.IsError) return result.As<Output>();
+
+        return new Output(customer.IsActive);
+    }
+}
+
 [View("customers.list")]
 [Authorize("customers.read")]
 public static class CustomerList

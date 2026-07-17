@@ -331,6 +331,7 @@
       "operations.invoicing.mark-paid.title": "Mark paid",
       "plugins.invoicing.title": "Invoicing",
       "app.title": "Norrservice ERP",
+      "customers.already-inactive": "The customer is already inactive.",
       "customers.credit-blocked": "The customer is credit blocked.",
       "customers.duplicate-name": "A customer with that name already exists.",
       "customers.inactive": "The selected customer is inactive.",
@@ -414,8 +415,10 @@
       "nav.work": "Work",
       "nav.work-orders": "Work orders",
       "operations.customers.create.title": "New customer",
+      "operations.customers.deactivate.title": "Deactivate",
       "operations.customers.edit-contact.title": "Edit customer",
       "operations.materials.add.title": "Add material",
+      "operations.orders.cancel.title": "Cancel order",
       "operations.orders.complete.title": "Complete order",
       "operations.orders.create.title": "New order",
       "operations.orders.edit-details.title": "Edit order details",
@@ -436,7 +439,9 @@
       "operations.work-orders.schedule.title": "Schedule",
       "operations.work-orders.set-priority.title": "Set priority",
       "operations.work-orders.start.title": "Start work",
+      "orders.already-cancelled": "The order is already cancelled.",
       "orders.already-completed": "The order is already completed.",
+      "orders.cannot-cancel-completed": "A completed order cannot be cancelled.",
       "orders.cannot-complete-cancelled": "A cancelled order cannot be completed.",
       "orders.invalid-customer": "The selected customer cannot receive orders.",
       "orders.not-editable": "The order can no longer be edited.",
@@ -790,6 +795,7 @@
       "operations.invoicing.mark-paid.title": "Markera betald",
       "plugins.invoicing.title": "Fakturering",
       "app.title": "Norrservice ERP",
+      "customers.already-inactive": "Kunden \u00E4r redan inaktiverad.",
       "customers.credit-blocked": "Kunden \u00E4r kreditsp\u00E4rrad.",
       "customers.duplicate-name": "Det finns redan en kund med det namnet.",
       "customers.inactive": "Den valda kunden \u00E4r inaktiv.",
@@ -873,8 +879,10 @@
       "nav.work": "Arbete",
       "nav.work-orders": "Arbetsordrar",
       "operations.customers.create.title": "Ny kund",
+      "operations.customers.deactivate.title": "Inaktivera",
       "operations.customers.edit-contact.title": "Redigera kund",
       "operations.materials.add.title": "Registrera material",
+      "operations.orders.cancel.title": "Makulera order",
       "operations.orders.complete.title": "Slutf\u00F6r order",
       "operations.orders.create.title": "Ny order",
       "operations.orders.edit-details.title": "\u00C4ndra orderdetaljer",
@@ -895,7 +903,9 @@
       "operations.work-orders.schedule.title": "Planera",
       "operations.work-orders.set-priority.title": "\u00C4ndra prioritet",
       "operations.work-orders.start.title": "Starta arbete",
+      "orders.already-cancelled": "Ordern \u00E4r redan makulerad.",
       "orders.already-completed": "Ordern \u00E4r redan slutf\u00F6rd.",
+      "orders.cannot-cancel-completed": "En slutf\u00F6rd order kan inte makuleras.",
       "orders.cannot-complete-cancelled": "En makulerad order kan inte slutf\u00F6ras.",
       "orders.invalid-customer": "Den valda kunden kan inte ta emot ordrar.",
       "orders.not-editable": "Ordern kan inte l\u00E4ngre \u00E4ndras.",
@@ -1149,6 +1159,35 @@
           "type": "money",
           "wireKind": "number",
           "format": "money",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "orders.cancel": {
+      "permission": "orders.cancel",
+      "titleKey": "operations.orders.cancel.title",
+      "fields": [
+        {
+          "name": "orderId",
+          "labelKey": "labels.order-id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "version",
+          "labelKey": "labels.version",
+          "type": "integer",
+          "wireKind": "integer",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -1678,6 +1717,36 @@
           "labelKey": "labels.work-order-number",
           "type": "text",
           "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "gatedBy": []
+    },
+    "customers.deactivate": {
+      "permission": "customers.edit",
+      "titleKey": "operations.customers.deactivate.title",
+      "fields": [
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false,
+          "lookup": "customers.lookup"
+        }
+      ],
+      "outputFields": [
+        {
+          "name": "isActive",
+          "labelKey": "labels.is-active",
+          "type": "boolean",
+          "wireKind": "boolean",
           "required": true,
           "changeSet": false,
           "extension": false,
@@ -8888,6 +8957,101 @@
       "includeExtensions": false,
       "serverDependencies": []
     },
+    "web.stock.create": {
+      "operation": "stock.create",
+      "fields": [
+        {
+          "name": "sku",
+          "labelKey": "labels.sku",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unit",
+          "labelKey": "labels.unit",
+          "type": "selection",
+          "wireKind": "string",
+          "required": true,
+          "options": [
+            "Piece",
+            "Hour",
+            "Meter",
+            "Kilogram",
+            "Litre"
+          ],
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "money",
+          "wireKind": "number",
+          "format": "money",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
+    "web.stock.edit": {
+      "operation": "stock.edit",
+      "fields": [
+        {
+          "name": "stockItemId",
+          "labelKey": "labels.stock-item",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "hidden",
+          "readOnly": false,
+          "lookup": "stock.lookup"
+        },
+        {
+          "name": "name",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "unitPrice",
+          "labelKey": "labels.unit-price",
+          "type": "money",
+          "wireKind": "number",
+          "format": "money",
+          "required": false,
+          "changeSet": true,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "includeExtensions": false,
+      "serverDependencies": []
+    },
     "web.work-orders.create": {
       "operation": "work-orders.create",
       "fields": [
@@ -9183,101 +9347,6 @@
           "wireKind": "number",
           "required": true,
           "changeSet": false,
-          "extension": false,
-          "readOnly": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.stock.create": {
-      "operation": "stock.create",
-      "fields": [
-        {
-          "name": "sku",
-          "labelKey": "labels.sku",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "readOnly": false
-        },
-        {
-          "name": "name",
-          "labelKey": "labels.name",
-          "type": "text",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "readOnly": false
-        },
-        {
-          "name": "unit",
-          "labelKey": "labels.unit",
-          "type": "selection",
-          "wireKind": "string",
-          "required": true,
-          "options": [
-            "Piece",
-            "Hour",
-            "Meter",
-            "Kilogram",
-            "Litre"
-          ],
-          "changeSet": false,
-          "extension": false,
-          "readOnly": false
-        },
-        {
-          "name": "unitPrice",
-          "labelKey": "labels.unit-price",
-          "type": "money",
-          "wireKind": "number",
-          "format": "money",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "readOnly": false
-        }
-      ],
-      "includeExtensions": false,
-      "serverDependencies": []
-    },
-    "web.stock.edit": {
-      "operation": "stock.edit",
-      "fields": [
-        {
-          "name": "stockItemId",
-          "labelKey": "labels.stock-item",
-          "type": "reference",
-          "wireKind": "string",
-          "required": true,
-          "changeSet": false,
-          "extension": false,
-          "renderer": "hidden",
-          "readOnly": false,
-          "lookup": "stock.lookup"
-        },
-        {
-          "name": "name",
-          "labelKey": "labels.name",
-          "type": "text",
-          "wireKind": "string",
-          "required": false,
-          "changeSet": true,
-          "extension": false,
-          "readOnly": false
-        },
-        {
-          "name": "unitPrice",
-          "labelKey": "labels.unit-price",
-          "type": "money",
-          "wireKind": "number",
-          "format": "money",
-          "required": false,
-          "changeSet": true,
           "extension": false,
           "readOnly": false
         }
@@ -9689,6 +9758,11 @@
           "mode": "execute"
         },
         {
+          "operation": "orders.cancel",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
           "operation": "orders.create",
           "placement": "toolbar",
           "mode": "form"
@@ -9715,6 +9789,11 @@
         "isActive"
       ],
       "actions": [
+        {
+          "operation": "customers.deactivate",
+          "placement": "row",
+          "mode": "execute"
+        },
         {
           "operation": "customers.create",
           "placement": "toolbar",
@@ -9746,6 +9825,29 @@
         },
         {
           "operation": "projects.create",
+          "placement": "toolbar",
+          "mode": "form"
+        }
+      ],
+      "includeExtensions": false
+    },
+    "web.stock.list": {
+      "view": "stock.list",
+      "columns": [
+        "sku",
+        "name",
+        "unit",
+        "unitPrice",
+        "isActive"
+      ],
+      "actions": [
+        {
+          "operation": "stock.deactivate",
+          "placement": "row",
+          "mode": "execute"
+        },
+        {
+          "operation": "stock.create",
           "placement": "toolbar",
           "mode": "form"
         }
@@ -9841,29 +9943,6 @@
       ],
       "actions": [],
       "includeExtensions": false
-    },
-    "web.stock.list": {
-      "view": "stock.list",
-      "columns": [
-        "sku",
-        "name",
-        "unit",
-        "unitPrice",
-        "isActive"
-      ],
-      "actions": [
-        {
-          "operation": "stock.deactivate",
-          "placement": "row",
-          "mode": "execute"
-        },
-        {
-          "operation": "stock.create",
-          "placement": "toolbar",
-          "mode": "form"
-        }
-      ],
-      "includeExtensions": false
     }
   },
   "extensions": {},
@@ -9886,6 +9965,8 @@
     "materials.add",
     "materials.read",
     "nav.manage",
+    "orders.cancel",
+    "orders.cancel-all",
     "orders.complete",
     "orders.complete-all",
     "orders.create",
@@ -10534,6 +10615,13 @@
         "inspect",
         "invoicing"
       ]
+    },
+    "order-cancelled": {
+      "fields": [
+        "orderId",
+        "number"
+      ],
+      "subscribedBy": []
     },
     "work-order-completed": {
       "fields": [

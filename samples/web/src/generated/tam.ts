@@ -50,6 +50,14 @@ export interface TimeBookOutput {
   amount: number;
 }
 
+export interface OrdersCancelInput {
+  orderId: string;
+}
+
+export interface OrdersCancelOutput {
+  version: number;
+}
+
 export interface ProjectsCloseInput {
   projectId: string;
 }
@@ -143,6 +151,14 @@ export interface WorkOrdersCreateInput {
 export interface WorkOrdersCreateOutput {
   workOrderId: string;
   number: string;
+}
+
+export interface CustomersDeactivateInput {
+  customerId: string;
+}
+
+export interface CustomersDeactivateOutput {
+  isActive: boolean;
 }
 
 export interface StockDeactivateInput {
@@ -1202,6 +1218,11 @@ export class TypedTamClient {
     return this.client.operation("time.book", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TimeBookOutput>>;
   }
 
+  /** orders.cancel (requires orders.cancel) */
+  ordersCancel(input: OrdersCancelInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersCancelOutput>> {
+    return this.client.operation("orders.cancel", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersCancelOutput>>;
+  }
+
   /** projects.close (requires projects.close) */
   projectsClose(input: ProjectsCloseInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsCloseOutput>> {
     return this.client.operation("projects.close", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsCloseOutput>>;
@@ -1245,6 +1266,11 @@ export class TypedTamClient {
   /** work-orders.create (requires work-orders.create) */
   workOrdersCreate(input: WorkOrdersCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersCreateOutput>> {
     return this.client.operation("work-orders.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersCreateOutput>>;
+  }
+
+  /** customers.deactivate (requires customers.edit) */
+  customersDeactivate(input: CustomersDeactivateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<CustomersDeactivateOutput>> {
+    return this.client.operation("customers.deactivate", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<CustomersDeactivateOutput>>;
   }
 
   /** stock.deactivate (requires stock.manage) */

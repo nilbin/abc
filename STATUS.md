@@ -474,6 +474,30 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 4b — ERP idiom uniformity around the order detail**: the sample now practices
+  its own conventions end to end. (1) `OrderErrors` → `OrderFindings` — the last `*Errors`
+  finding class renamed to the idiom every other aggregate already used. (2) The order status
+  machine got its OTHER exit: `orders.cancel` (entity-guarded both directions — a completed
+  order never cancels, a cancelled one never completes, each with its own teaching finding),
+  paired-atom scoped (`orders.cancel`/`-all`, dispatcher granted), publishing a declared
+  `order-cancelled` event, riding the orders grid as a row action. `customers.deactivate`
+  joined it (the stock.deactivate idiom: an INTENT and a retirement, not a deletion; strict
+  owning-node scope; `customers.already-inactive` guard). (3) THE MODEL SPLIT BY DOMAIN:
+  ErpModel became a partial class of per-domain fragments — `.AddOrders()`, `.AddCustomers()`,
+  … `.AddMaterials()`, one file per domain mirroring Features/ — each declaring its page,
+  forms and grid; the root keeps what spans domains (plugins, event contracts, nav). Proven
+  purely mechanical: the exported manifest before and after the split compares deep-EQUAL.
+  (4) THE MULTI-PLUGIN PanelTabs STORY IS NOW VISIBLE: seed activates invoicing for the demo
+  tenant alongside inspect, so the order record page opens with Detaljer + TWO plugin tabs —
+  Besiktning (inspect) and Fakturering (invoicing's invoice grid bound to the open order) —
+  neither named by the host. Deferred with intent: `time.unbook`/`materials.remove` (waiting
+  until a real correction story sizes them) and Stock deepening (QuantityOnHand/movements —
+  a stock ledger is its own arc, not a grid column). Verified: suites 167+38, wire 18+22 on
+  fresh SQLite AND fresh Postgres plus an 11-check arc suite (cancel machine both directions,
+  deactivate guard, two-plugin slot expansion, manifest additive: exactly orders.cancel +
+  customers.deactivate added), Playwright — order record page shows all three tabs, the
+  Fakturering tab renders the plugin grid in record context, Makulera rides the grid rows,
+  zero page errors.
 - **Record display semantic + nav dedup (user-directed)**: two product calls. (1) THE RECORD
   DISPLAY SEMANTIC: a record now declares how substantial it is — `modal` (a quick edit over
   the grid) or `page` (a workspace: a routed full surface replacing the grid, back affordance,
