@@ -178,6 +178,40 @@ Boundaries that keep Px an expression language and not a query language:
 Why this ordering: the action catalog widens what rules can DO; `row.*` widens what they
 can SEE — and the arc showed the seeing gap binds first.
 
+## Where a feature goes: package vs plugin, one vs many
+
+The tiers above encode this implicitly; these are the judgment calls, made repeatable
+(distilled from the field-service arc — the checklist feature is the worked example).
+
+**Package vs plugin is a trust question, not a size question.** It is a framework package
+when any of: it needs framework internals or framework-level trust (identity tables, the
+gate evaluator itself); the platform's own story breaks without it (users, roles); or it is
+domain-agnostic — every host wants it regardless of business. It is a plugin when the
+opposite holds on all three: domain-opinionated, optional per tenant, composed entirely
+through the public contract (wire keys, events, views — never the host's assembly). The
+operational tell: **if it needs per-tenant activation and a price, it is a plugin; if
+"activating it per tenant" makes no sense, it is a package.**
+
+**One plugin vs many is a contract question**, tested in order:
+
+1. **One reason to activate.** A plugin answers a single tenant decision ("do we do
+   inspections?"). If a tenant plausibly wants A without B, they are two plugins — inspect
+   and invoicing were never one "orders extras" plugin.
+2. **How would the halves touch?** Sharing entities/tables → one plugin. Touching only
+   through events and declared views (the way invoicing consumes time/materials) → they can
+   stay separate. Shared tables are a marriage; shared contracts are an acquaintance.
+3. **The entitlement line is a real line** (docs/24): if the pricing page lists them
+   separately, the code does too — activation gating is per plugin.
+4. **Uninstall must be definable.** "Retire this plugin" must leave an audit-coherent
+   state; if uninstalling half a feature is meaningless, it is one plugin.
+
+**The rule that keeps granularity honest: plugins depend on the HOST's contract, never on
+each other.** The moment two plugins genuinely need each other, merge them or promote the
+shared concept down into the host (work-order-completed became a host event both invoicing
+and inspect consume). Plugin-to-plugin contracts are a deliberately unbuilt seam — that is
+where marketplace ecosystems grow their dependency hell, and this line is cheaper to hold
+than to win back.
+
 ## The marketplace: three tiers, one trust model
 
 "Pick and choose from a marketplace" needs no tenant code upload — it decomposes onto the channels above:
