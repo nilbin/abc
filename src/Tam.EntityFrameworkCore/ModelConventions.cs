@@ -156,6 +156,41 @@ public static class TamModelConventions
             b.HasIndex(x => new { x.TenantId, x.OnOperation });
         });
 
+        modelBuilder.Entity<FolderEntity>(b =>
+        {
+            b.ToTable("document_folders");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Path).HasMaxLength(1000);
+            b.Property(x => x.Name).HasMaxLength(200);
+            b.HasIndex(x => new { x.TenantId, x.Path }).IsUnique();
+        });
+        modelBuilder.Entity<DocumentEntity>(b =>
+        {
+            b.ToTable("documents");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.FileName).HasMaxLength(500);
+            b.Property(x => x.ContentType).HasMaxLength(200);
+            b.Property(x => x.ContentHash).HasMaxLength(64);
+            b.Property(x => x.AttachedTo).HasMaxLength(200);
+            b.HasIndex(x => new { x.TenantId, x.FolderId });
+            // The record-tab read (docs/35 EntityRef): all documents attached to one record.
+            b.HasIndex(x => new { x.TenantId, x.AttachedTo });
+        });
+        modelBuilder.Entity<DocumentAclEntity>(b =>
+        {
+            b.ToTable("document_acls");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Reach).HasMaxLength(300);
+            b.HasIndex(x => new { x.TenantId, x.FolderId, x.Reach }).IsUnique();
+        });
+        modelBuilder.Entity<DocumentBlobEntity>(b =>
+        {
+            b.ToTable("document_blobs");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Hash).HasMaxLength(64);
+            b.HasIndex(x => new { x.TenantId, x.Hash }).IsUnique();
+        });
+
         foreach (var entity in modelBuilder.Model.GetEntityTypes().ToList())
         {
             if (typeof(IExtensible).IsAssignableFrom(entity.ClrType))

@@ -146,6 +146,15 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         }).ToArray();
 
         var queryable = view.Execute.Invoke(null, args)!;
+        // ASYNC views: Execute may return Task<IQueryable<Result>> when shaping the query
+        // needs async pre-work — the documents views resolve reach ACLs (docs/35) into a
+        // visible-folder set before filtering. Result typing is unchanged (the nested Result
+        // record), so everything downstream — capabilities, masking, paging — is identical.
+        if (queryable is Task pending)
+        {
+            await pending;
+            queryable = pending.GetType().GetProperty(nameof(Task<int>.Result))!.GetValue(pending)!;
+        }
 
         var sort = query.GetValueOrDefault("sort") ?? view.Capabilities.DefaultSort;
         var descending = query.GetValueOrDefault("dir") is "desc"

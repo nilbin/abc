@@ -34,6 +34,9 @@ public static partial class TamAspNetCore
         // The reach seam (docs/35): domains resolve stored people-set references through it;
         // plugin kinds are activation-gated inside.
         services.AddScoped<ReachResolver>();
+        // Document content storage (docs/35): TryAdd so a deployment's blob store wins when
+        // registered first; the default keeps content in the database, tenant-scoped.
+        services.TryAddScoped<IDocumentStore, DbDocumentStore>();
         // Sanctioned envelope replay (docs/28 approvals seam 3): scoped so it reads the caller's
         // PluginContext stamp — only a plugin handler may release, and the plugin id lands in the
         // idempotency key. The replay itself still executes in a fresh pinned scope of its own —

@@ -176,7 +176,10 @@ export function ViewGrid(props: ViewGridProps) {
     if (!form) return;
     const initial: Record<string, unknown> = {};
     for (const field of manifest.forms[form].fields) {
+      // Same-named row field first, then the row-action id fallback for id-shaped fields
+      // (folderId → row.folderId ?? row.id) — one prefill convention for both action modes.
       if (row[field.name] !== undefined) initial[field.name] = row[field.name];
+      else if (field.name.endsWith('Id') && row.id !== undefined) initial[field.name] = row.id;
     }
     setModalAction({ operation: operationId, initial });
   };

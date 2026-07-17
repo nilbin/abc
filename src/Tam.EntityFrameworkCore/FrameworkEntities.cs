@@ -383,3 +383,61 @@ public sealed class ExtensionFieldEntity : ITenantScoped
             : System.Text.Json.JsonSerializer.Deserialize<List<string>>(OptionsJson),
         State);
 }
+
+// ---- Documents (docs/35 arc 5): folders, files, reach ACLs, content-addressed blobs ----
+
+/// <summary>A folder in the tenant's document tree. The materialized <see cref="Path"/>
+/// ("/avtal/2026") is the identity and the hierarchy — the tenants-table idiom applied to
+/// folders. Retire-don't-drop, like every registry surface.</summary>
+public sealed class FolderEntity : ITenantScoped
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Path { get; set; } = "";
+    public string Name { get; set; } = "";
+    public bool Retired { get; set; }
+}
+
+/// <summary>A stored document: file metadata plus WHERE it lives (folder) and what record it
+/// is attached to — <see cref="AttachedTo"/> is a canonical EntityRef string
+/// ("order:8f3c…", docs/35), null for folder-only documents. Content lives in the
+/// content-addressed blob table under <see cref="ContentHash"/>.</summary>
+public sealed class DocumentEntity : ITenantScoped
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public Guid FolderId { get; set; }
+    public string FileName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public long Size { get; set; }
+    public string ContentHash { get; set; } = "";
+    public string? AttachedTo { get; set; }
+    public string UploadedByActorId { get; set; } = "";
+    // Display-name snapshot at upload time — the AssignedToName denormalization idiom.
+    public string UploadedByName { get; set; } = "";
+    public string UploadedAtIso { get; set; } = "";
+    public bool Retired { get; set; }
+}
+
+/// <summary>One reach grant on a folder (docs/35): the stored canonical ReachRef string
+/// ("role:dispatcher", "user:…", "approvals.group:…"). A folder with no rows inherits the
+/// nearest ancestor's; no rows anywhere up the path means open to every documents.read
+/// holder. Evaluated through ReachResolver on read AND write — one predicate (docs/28).</summary>
+public sealed class DocumentAclEntity : ITenantScoped
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public Guid FolderId { get; set; }
+    public string Reach { get; set; } = "";
+}
+
+/// <summary>Content-addressed blob storage, the IDocumentStore default: keyed by SHA-256, so
+/// identical content stores once per tenant. Tenant-scoped (not global) so the RLS backstop
+/// and the ambient filter cover file CONTENT exactly like file metadata.</summary>
+public sealed class DocumentBlobEntity : ITenantScoped
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string Hash { get; set; } = "";
+    public byte[] Content { get; set; } = [];
+}

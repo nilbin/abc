@@ -505,6 +505,54 @@ export interface NavRetireOutput {
   nodeId: string;
 }
 
+export interface DocumentsFoldersDefineInput {
+  path: string;
+}
+
+export interface DocumentsFoldersDefineOutput {
+  folderId: string;
+  path: string;
+}
+
+export interface DocumentsFoldersShareInput {
+  folderId: string;
+  reach: string;
+}
+
+export interface DocumentsFoldersShareOutput {
+  folderId: string;
+}
+
+export interface DocumentsFoldersUnshareInput {
+  folderId: string;
+  reach: string;
+}
+
+export interface DocumentsFoldersUnshareOutput {
+  folderId: string;
+}
+
+export interface DocumentsUploadInput {
+  folderId: string;
+  fileName: string;
+  contentBase64: string;
+  contentType?: string;
+  attachedTo?: string;
+}
+
+export interface DocumentsUploadOutput {
+  documentId: string;
+  size: number;
+}
+
+export interface DocumentsRetireInput {
+  documentId: string;
+}
+
+export interface DocumentsRetireOutput {
+  documentId: string;
+}
+
 export interface InspectTemplatesAddItemInput {
   templateId: string;
   text: string;
@@ -1084,6 +1132,34 @@ export interface NavOverridesQuery {
 
 }
 
+export interface DocumentsFoldersListRow {
+  id: string;
+  path: string;
+  name: string;
+  shared: boolean;
+}
+
+export interface DocumentsFoldersListQuery {
+  search?: string;
+}
+
+export interface DocumentsListRow {
+  id: string;
+  fileName: string;
+  folderPath: string;
+  contentType: string;
+  size: number;
+  attachedTo?: string;
+  uploadedByName: string;
+  uploadedAtIso: string;
+}
+
+export interface DocumentsListQuery {
+  folderId?: string;
+  attachedTo?: string;
+  search?: string;
+}
+
 export interface InspectItemsListRow {
   id: string;
   checklistTitle: string;
@@ -1443,6 +1519,31 @@ export class TypedTamClient {
     return this.client.operation("nav.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<NavRetireOutput>>;
   }
 
+  /** documents.folders.define (requires documents.manage) */
+  documentsFoldersDefine(input: DocumentsFoldersDefineInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<DocumentsFoldersDefineOutput>> {
+    return this.client.operation("documents.folders.define", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<DocumentsFoldersDefineOutput>>;
+  }
+
+  /** documents.folders.share (requires documents.manage) */
+  documentsFoldersShare(input: DocumentsFoldersShareInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<DocumentsFoldersShareOutput>> {
+    return this.client.operation("documents.folders.share", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<DocumentsFoldersShareOutput>>;
+  }
+
+  /** documents.folders.unshare (requires documents.manage) */
+  documentsFoldersUnshare(input: DocumentsFoldersUnshareInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<DocumentsFoldersUnshareOutput>> {
+    return this.client.operation("documents.folders.unshare", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<DocumentsFoldersUnshareOutput>>;
+  }
+
+  /** documents.upload (requires documents.add) */
+  documentsUpload(input: DocumentsUploadInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<DocumentsUploadOutput>> {
+    return this.client.operation("documents.upload", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<DocumentsUploadOutput>>;
+  }
+
+  /** documents.retire (requires documents.manage) */
+  documentsRetire(input: DocumentsRetireInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<DocumentsRetireOutput>> {
+    return this.client.operation("documents.retire", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<DocumentsRetireOutput>>;
+  }
+
   /** inspect.templates.add-item (requires inspect.templates.manage) */
   inspectTemplatesAddItem(input: InspectTemplatesAddItemInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<InspectTemplatesAddItemOutput>> {
     return this.client.operation("inspect.templates.add-item", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<InspectTemplatesAddItemOutput>>;
@@ -1686,6 +1787,16 @@ export class TypedTamClient {
   /** view nav.overrides (requires nav.manage) */
   navOverrides(query?: NavOverridesQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: NavOverridesRow[] }> {
     return this.client.view("nav.overrides", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: NavOverridesRow[] }>;
+  }
+
+  /** view documents.folders.list (requires documents.read) */
+  documentsFoldersList(query?: DocumentsFoldersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsFoldersListRow[] }> {
+    return this.client.view("documents.folders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsFoldersListRow[] }>;
+  }
+
+  /** view documents.list (requires documents.read) */
+  documentsList(query?: DocumentsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsListRow[] }> {
+    return this.client.view("documents.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsListRow[] }>;
   }
 
   /** view inspect.items.list (requires inspect.checklists.read) */

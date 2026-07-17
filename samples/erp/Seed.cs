@@ -112,6 +112,8 @@ public static class Seed
             // Time is own-scoped by default; the office reads the whole board and approves.
             "time.read", "time.read-all", "time.book", "time.approve",
             "materials.read", "materials.add",
+            // Documents (docs/35): the office reads and files; the tree stays the admin's.
+            "documents.read", "documents.add",
             // Inspect v2 (docs/34 M6): the office curates templates and works checklists.
             "inspect.templates.read", "inspect.templates.manage",
             "inspect.checklists.read", "inspect.checklists.manage");
@@ -134,6 +136,7 @@ public static class Seed
             // the work order (no own scope — see materials.add).
             "time.read", "time.book",
             "materials.read", "materials.add",
+            "documents.read",
             // Technicians check checklist lines off on site; templates stay the office's.
             "inspect.checklists.read", "inspect.checklists.manage");
 
@@ -257,6 +260,39 @@ public static class Seed
         Instantiate(safety, orders[3], doneLines: 0);
         Instantiate(handover, orders[3], doneLines: 0);
         Instantiate(handover, orders[4], doneLines: 1);
+
+        // Documents (docs/35): a small tree proving the reach ACL end to end — /avtal is
+        // dispatcher-only (a role reach; the admin wildcard manages regardless), /instruktioner
+        // is unrestricted, and one instruction is ATTACHED to an order by EntityRef so the
+        // record's documents surface has data on a fresh boot.
+        var avtal = new FolderEntity { Id = Guid.NewGuid(), TenantId = Tenant, Path = "/avtal", Name = "avtal" };
+        var instruktioner = new FolderEntity
+        {
+            Id = Guid.NewGuid(), TenantId = Tenant, Path = "/instruktioner", Name = "instruktioner",
+        };
+        db.AddRange(avtal, instruktioner);
+        db.Add(new DocumentAclEntity
+        {
+            Id = Guid.NewGuid(), TenantId = Tenant, FolderId = avtal.Id, Reach = "role:dispatcher",
+        });
+        void Doc(FolderEntity folder, string name, string text, string? attachedTo = null)
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+            var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes));
+            db.Add(new DocumentBlobEntity { Id = Guid.NewGuid(), TenantId = Tenant, Hash = hash, Content = bytes });
+            db.Add(new DocumentEntity
+            {
+                Id = Guid.NewGuid(), TenantId = Tenant, FolderId = folder.Id,
+                FileName = name, ContentType = "text/plain", Size = bytes.Length, ContentHash = hash,
+                AttachedTo = attachedTo,
+                UploadedByActorId = accountIds["alva"].ToString(), UploadedByName = "Alva Andersson",
+                UploadedAtIso = "2026-01-08T09:00:00.0000000Z",
+            });
+        }
+        Doc(avtal, "ramavtal-acme.txt", "Ramavtal med Acme Fastigheter AB, giltigt 2026.");
+        Doc(instruktioner, "pumpservice-instruktion.txt",
+            "Instruktion: årlig service av kylaggregat, steg 1-7.",
+            attachedTo: $"order:{orders[3].Id.Value:D}");
 
         // The demo tenant has already clicked Activate for inspect (plugins.activate writes
         // this row at runtime; seeding it keeps the checklist demo one boot away).

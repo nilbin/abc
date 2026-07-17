@@ -3,7 +3,11 @@
 Status: **v1 BUILT** (the seam: `ReachRef`/`EntityRef` types, `IReachProvider`, model
 registration with REACH001, `ReachResolver` with activation gating, the three framework
 providers, and the approvals plugin's `approvals.group` provider as the plugin-side proof).
-First consumer: the documents domain's folder ACLs (this arc). Decisions D-R1..D-R5.
+First consumer: **BUILT** — the `tam.documents` package's folder ACLs (stored ReachRef rows,
+effective-ACL inheritance down the folder path-tree with own-rows OVERRIDE — a child can be
+locked tighter than its parent — evaluated through the resolver on read and write via one
+predicate, `DocumentAccess.VisibleFolderIdsAsync`). Documents attach to records by EntityRef
+(`AttachedTo`, queryable per record). Decisions D-R1..D-R5.
 
 ## The question the capability axis cannot answer
 

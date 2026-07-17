@@ -165,6 +165,29 @@ public static partial class TamAspNetCore
             }, TamJson.Options);
         });
 
+        // Document CONTENT download (docs/35): metadata rides the views; bytes ride this one
+        // streaming endpoint. Authorization mirrors the views exactly — the capability atom,
+        // then the SAME visibility predicate the listings filter by; an out-of-reach or
+        // retired document 404s (no existence leak).
+        app.MapGet("/api/documents/{id:guid}/content", async (
+            Guid id, HttpContext http, ITamDb tam, ReachResolver reach, IDocumentStore store,
+            CancellationToken ct) =>
+        {
+            var context = BuildContext(http, model);
+            if (!context.Actor.Can("documents.read"))
+                return FindingsResult(model, context,
+                    PipelineFindings.NotAuthorized.With(("permission", "documents.read")));
+            var document = await tam.Db.Set<DocumentEntity>()
+                .SingleOrDefaultAsync(d => d.Id == id && !d.Retired, ct);
+            if (document is null) return Results.NotFound();
+            var visible = await DocumentAccess.VisibleFolderIdsAsync(tam, reach, context, ct);
+            if (!visible.Contains(document.FolderId)) return Results.NotFound();
+            var content = await store.OpenAsync(document.ContentHash, ct);
+            return content is null
+                ? Results.NotFound()
+                : Results.Stream(content, document.ContentType, document.FileName);
+        });
+
         app.MapGet("/openapi.json", (HttpContext http) => OpenApiEndpoint.Handle(http, model));
 
         return app;

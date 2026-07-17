@@ -474,6 +474,34 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 5, part 2 — tam.documents core (the reach seam's first consumer)**: the
+  THIRTEENTH framework package — the tenant's document tree, model-driven end to end. Folders
+  are a materialized path-tree (the tenants-table idiom; `documents.folders.define` is
+  mkdir -p as an intent, un-retiring on redefine); documents carry file metadata + an
+  optional `AttachedTo` EntityRef ("order:8f3c…" — the record-tab query, indexed); content
+  is CONTENT-ADDRESSED (SHA-256) behind the `IDocumentStore` seam with a DB-blob default
+  (tenant-scoped, so the ambient filter and RLS cover bytes exactly like metadata; TryAdd —
+  a deployment swaps in S3 without touching metadata or ACLs). FOLDER ACLs ARE THE REACH
+  SEAM IN ANGER: `documents.folders.share/unshare` store canonical ReachRef strings (an
+  unknown kind is a teaching finding; an INACTIVE plugin's kind stores as inert data that
+  reaches nobody and revives on activation — D-R3 proven on the wire); visibility is ONE
+  predicate (`DocumentAccess.VisibleFolderIdsAsync`, docs/28 discipline) — effective ACL =
+  own rows, else nearest ancestor's (OVERRIDE, so a child locks tighter than its parent),
+  else open; `documents.manage` administers the tree; views filter reads through it, upload
+  re-checks it, and the download endpoint 404s out-of-reach content (no existence leak).
+  Upload rides the STANDARD operation pipeline (base64-bounded 5 MB — streaming is a
+  deliberate deferral); download streams from one endpoint. To make the ACL-filtered views
+  possible the VIEW EXECUTOR grew async views (`Task<IQueryable<Result>>` Execute — awaited
+  at the one invoke point; Result typing unchanged), and RowForm prefill gained the
+  row-action id fallback (`folderId → row.folderId ?? row.id` — one prefill convention for
+  both action modes). Seeded: /avtal (dispatcher-only via role reach), /instruktioner
+  (open), one instruction ATTACHED to an order. Verified: suites 188+38, manifest additive
+  (exactly 5 ops + 2 views + 4 forms + 2 grids), regen types, wire 18+22 plus a NEW 20-check
+  documents suite (role-reach hiding, doc-follows-folder, attachedTo query, mkdir -p,
+  upload/download round-trip, ACL inheritance + override + unshare-restores, unknown-kind
+  finding, inert inactive-plugin ref, retire) on fresh SQLite AND fresh Postgres. Deferred
+  with intent: streaming/multipart upload, magic folders via event bindings, per-kind
+  PackageDocument contracts, and the FE tree browser + record documents tab (part 3).
 - **Beauty arc 5, part 1 — the REACH seam (docs/35)**: the vocabulary for naming a people-set
   ON A ROW — the object-side question the capability axis deliberately does not answer, and
   the prerequisite for the documents domain's folder ACLs. Designed against docs/27/28 and
