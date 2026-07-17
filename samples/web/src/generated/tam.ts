@@ -324,6 +324,7 @@ export interface RulesDefineInput {
   condition: string;
   messages: Record<string, unknown>;
   targetField?: string;
+  action?: string;
 }
 
 export interface RulesDefineOutput {

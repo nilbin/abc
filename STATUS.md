@@ -451,6 +451,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   target flipped from { grid } to { page }; permission still derives. Verified: nav wire suite
   asserts the declared shape (10 checks now); a wire probe edits phone via Change<T> and
   re-reads the detail; full matrix green; manifest additive; registerPage count still ZERO.
+- **P5 action catalog BUILT — rules that DO, not just veto (docs/22)**: a rule's action is
+  validated data from a closed set. `set-field` writes a REGISTERED extension field on the
+  operation's target row — executed by a second, TRANSACTIONAL rules gate so the write rides
+  the operation's own SaveChanges (one commit, one audit entry; compiled state stays behind
+  intents, EDIT001 extended to tenants); `publish-event` lands an outbox row with the
+  derived type `rules.{name}` in the same commit (never a chosen id — RUL005 refuses
+  contract collisions) and dispatches like any event, which also makes "enqueue an
+  integration message" pure composition with docs/25's event triggers. Actions never block;
+  finding rules stay the pure pre-transaction gate. RUL005 (`rules.invalid-action`) names
+  what is wrong at define time (unknown type, unregistered set-field target). PLG002
+  refined to key on handler type — one plugin may now deliberately run a pure AND a
+  transactional wildcard gate. Verified: 4 action tests through the harness incl. the
+  same-commit extension write and the outbox row (28 sample tests total), rules wire suite
+  grown to 18 checks (set-field visible on the wire row in the same request, registry
+  validation), full matrix 238/238 on fresh SQLite AND Postgres, baseline additive
+  (rules.define gained the optional `action` field).
 - **Px `fn` node BUILT — relative dates in rule conditions (docs/22)**: RTFM #3's sharpest
   find, closed the same day it was queued. `{"t":"fn","op":"today","days":7}` evaluates
   today's UTC date (+offset) as the ISO string dates already compare in — FRESH on every

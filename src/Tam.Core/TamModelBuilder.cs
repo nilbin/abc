@@ -358,11 +358,15 @@ public sealed partial class TamModelBuilder
             if (!outbound.Id.StartsWith(outbound.Plugin + ".", StringComparison.Ordinal))
                 throw new InvalidOperationException(
                     $"PLG001: outbound integration '{outbound.Id}' is not under '{outbound.Plugin}.'.");
-        var duplicateGate = gates.GroupBy(g => (g.OperationId, g.PluginId))
+        // PLG002 guards ACCIDENTAL double registration — the same handler twice. Distinct
+        // handlers on one target are deliberate composition (tam.rules runs a pure finding
+        // gate AND a transactional action gate over '*' — docs/22 action catalog).
+        var duplicateGate = gates.GroupBy(g => (g.OperationId, g.PluginId, g.HandlerType))
             .FirstOrDefault(g => g.Count() > 1);
         if (duplicateGate is not null)
             throw new InvalidOperationException(
-                $"PLG002: plugin '{duplicateGate.Key.PluginId}' gates '{duplicateGate.Key.OperationId}' more than once.");
+                $"PLG002: plugin '{duplicateGate.Key.PluginId}' gates '{duplicateGate.Key.OperationId}' "
+                + $"with '{duplicateGate.Key.HandlerType.Name}' more than once.");
 
         var mergedNav = MergeNav(gridDefs);
 

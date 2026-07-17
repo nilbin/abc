@@ -17,6 +17,9 @@ public sealed class TamRulesPackage : ITamPlugin
         // The evaluator IS a gate: pure-over-input, pre-transaction, target set = rule rows.
         // The executor has no rules special case — the P5 feature dogfoods the gate seam.
         plugin.GateAll<RulesGate>(pure: true);
+        // Action rules WRITE (set-field, publish-event), so they run in the transactional
+        // phase — same seam, second registration; findings stay the cheap pure fail.
+        plugin.GateAll<RuleActionsGate>();
         plugin
             .AddOperationType(typeof(DefineAutomationRule))
             .AddOperationType(typeof(RetireRule))
@@ -28,6 +31,7 @@ public sealed class TamRulesPackage : ITamPlugin
                 form.Field(x => x.Condition).Renderer("multiline");
                 form.Field(x => x.Messages).Renderer("culture-text");
                 form.Field(x => x.TargetField);
+                form.Field(x => x.Action).Renderer("multiline");
             })
             .Grid<RuleList.Result>("web.rules", "rules.list", grid =>
             {
@@ -46,6 +50,7 @@ public static class RuleFindings
     public static readonly FindingFactory UnknownField = Finding.Error("rules.unknown-field");         // RUL002
     public static readonly FindingFactory MissingMessage = Finding.Error("rules.missing-message");     // RUL003
     public static readonly FindingFactory NoTargetRow = Finding.Error("rules.no-target-row");           // RUL004
+    public static readonly FindingFactory InvalidAction = Finding.Error("rules.invalid-action");         // RUL005
     public static readonly FindingFactory InvalidCondition = Finding.Error("rules.invalid-condition");
 }
 
@@ -63,6 +68,20 @@ internal sealed class RulesGate(ITamDb tam, TamModel model) : IOperationGate
         var findings = await RuleEvaluator.EvaluateAsync(
             tam.Db, gate.OperationId, gate.Input, gate.Context, model.DefaultCulture, ct);
         return findings.Count == 0 ? Result.Success() : new Result { Findings = findings };
+    }
+}
+
+/// <summary>docs/22 action catalog: the transactional twin of <see cref="RulesGate"/> —
+/// evaluates ACTION rules and performs their writes inside the operation's transaction
+/// (set-field rides the tracked row into the operation's own SaveChanges; publish-event is
+/// an outbox row in the same commit). Never blocks; only unevaluable rules warn.</summary>
+internal sealed class RuleActionsGate(ITamDb tam) : IOperationGate
+{
+    public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
+    {
+        var findings = await RuleEvaluator.ExecuteActionsAsync(
+            tam.Db, gate.OperationId, gate.Input, gate.Context, ct);
+        return new Result { Findings = findings };
     }
 }
 
@@ -84,7 +103,7 @@ public static class RuleEvaluator
         string defaultCulture, CancellationToken ct)
     {
         var rules = await db.Set<AutomationRuleEntity>()
-            .Where(x => x.OnOperation == operationId && !x.Retired)
+            .Where(x => x.OnOperation == operationId && !x.Retired && x.ActionJson == null)
             .ToListAsync(ct);
         if (rules.Count == 0) return [];
 
@@ -181,6 +200,80 @@ public static class RuleEvaluator
         };
     }
 
+    internal sealed record RuleAction(string Type, string? Field = null, JsonElement? Value = null);
+
+    /// <summary>The action-rule pass (docs/22 action catalog), run in the TRANSACTIONAL gate
+    /// phase: a firing set-field mutates the target row's extensions on the tracked context
+    /// (committed by the operation's own SaveChanges, audited on the operation's entry);
+    /// a firing publish-event adds an outbox row with the derived type "rules.{name}" and
+    /// the operation's wire input as payload — same commit, dispatched like any event.</summary>
+    internal static async Task<List<Finding>> ExecuteActionsAsync(
+        DbContext db, string operationId, JsonElement body, OperationContext context,
+        CancellationToken ct)
+    {
+        var rules = await db.Set<AutomationRuleEntity>()
+            .Where(x => x.OnOperation == operationId && !x.Retired && x.ActionJson != null)
+            .ToListAsync(ct);
+        if (rules.Count == 0) return [];
+
+        var findings = new List<Finding>();
+        foreach (var rule in rules)
+        {
+            try
+            {
+                var condition = JsonSerializer.Deserialize<Px>(rule.ConditionJson, TamJson.Options)!;
+                object? row = null;
+                JsonElement? rowJson = null;
+                if (rule is { RowEntityKey: { } entityKey, RowIdField: { } idField })
+                {
+                    (row, rowJson) = await RowAsync(db, entityKey, FieldValue(body, idField), context, ct);
+                    if (rowJson is null) continue;   // gone → the pipeline's not-found follows
+                }
+                var fired = PxBinary.Truthy(condition.Evaluate(name =>
+                    name.StartsWith("row.", StringComparison.Ordinal)
+                        ? rowJson is { } r ? FieldValue(r, name["row.".Length..]) : null
+                        : FieldValue(body, name)));
+                if (!fired) continue;
+
+                var action = JsonSerializer.Deserialize<RuleAction>(rule.ActionJson!, TamJson.Options)!;
+                switch (action.Type)
+                {
+                    case "set-field" when row is IExtensible extensible && action.Field is { } field:
+                        extensible.Extensions = extensible.Extensions.WithValue(
+                            field["ext.".Length..], ConstValue(action.Value));
+                        break;
+                    case "publish-event":
+                        db.Add(new OutboxRecord
+                        {
+                            Id = Guid.NewGuid(),
+                            TenantId = context.TenantId.Value,
+                            OperationId = operationId,
+                            EventType = $"rules.{rule.Name}",
+                            PayloadJson = body.GetRawText(),
+                            CreatedAtIso = IsoTime.Now(),
+                        });
+                        break;
+                }
+            }
+            catch (Exception e) when (e is JsonException or NotSupportedException
+                or ArgumentException or FormatException or InvalidOperationException)
+            {
+                findings.Add(Finding.Warning("rules.evaluation-failed")
+                    .With(("rule", rule.Name)));
+            }
+        }
+        return findings;
+    }
+
+    private static object? ConstValue(JsonElement? value) => value is not { } v ? null : v.ValueKind switch
+    {
+        JsonValueKind.String => v.GetString(),
+        JsonValueKind.Number => v.TryGetDecimal(out var n) ? n : null,
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        _ => null,
+    };
+
     /// <summary>The row.* namespace, made WIRE-IDENTICAL: the target row is loaded by primary
     /// key (entity resolved by wire key — no CLR coupling in the stored rule), tenant-checked
     /// explicitly (FindAsync bypasses the global filter, same lesson as the packaged writer),
@@ -188,19 +281,23 @@ public static class RuleEvaluator
     /// on the wire. Null when the row (or a parsable id) is absent.</summary>
     private static async Task<JsonElement?> RowJsonAsync(
         DbContext db, string entityKey, object? idValue, OperationContext context, CancellationToken ct)
+        => (await RowAsync(db, entityKey, idValue, context, ct)).Json;
+
+    private static async Task<(object? Row, JsonElement? Json)> RowAsync(
+        DbContext db, string entityKey, object? idValue, OperationContext context, CancellationToken ct)
     {
-        if (idValue is not string idText || !Guid.TryParse(idText, out var id)) return null;
+        if (idValue is not string idText || !Guid.TryParse(idText, out var id)) return (null, null);
         var entityType = db.Model.GetEntityTypes()
             .FirstOrDefault(t => TamModel.EntityKey(t.ClrType) == entityKey);
-        if (entityType is null) return null;
+        if (entityType is null) return (null, null);
 
         var keyType = entityType.FindPrimaryKey()!.Properties.Single().ClrType;
         var keyValue = keyType == typeof(Guid) ? id : ValueWrapper.Wrap(keyType, id);
         var row = await db.FindAsync(entityType.ClrType, [keyValue], ct);
-        if (row is null) return null;
-        if (row is ITenantScoped scoped && scoped.TenantId != context.TenantId.Value) return null;
+        if (row is null) return (null, null);
+        if (row is ITenantScoped scoped && scoped.TenantId != context.TenantId.Value) return (null, null);
 
-        return JsonSerializer.SerializeToElement(row, entityType.ClrType, TamJson.Options);
+        return (row, JsonSerializer.SerializeToElement(row, entityType.ClrType, TamJson.Options));
     }
 }
 
@@ -213,7 +310,8 @@ public static class DefineAutomationRule
         [property: LabelKey("labels.on-operation")] string OnOperation,
         [property: LabelKey("labels.condition")] string Condition,
         [property: LabelKey("labels.messages")] Dictionary<string, string> Messages,
-        [property: LabelKey("labels.target-field")] string? TargetField = null);
+        [property: LabelKey("labels.target-field")] string? TargetField = null,
+        [property: LabelKey("labels.action")] string? Action = null);
 
     public sealed record Output(Guid RuleId);
 
@@ -265,13 +363,34 @@ public static class DefineAutomationRule
             var specs = await registry.For(context.TenantId, TamModel.EntityKey(entity), ct);
             foreach (var spec in specs) known.Add($"ext.{spec.Key}");
         }
+        // docs/22 action catalog: the closed action set, validated as data. Null = the
+        // blocking finding; set-field targets the operation's row, publish-event derives its
+        // event type from the rule name (never a chosen id — no collision with contracts).
+        RuleEvaluator.RuleAction? action = null;
+        if (input.Action is { Length: > 0 })
+        {
+            try
+            {
+                action = JsonSerializer.Deserialize<RuleEvaluator.RuleAction>(input.Action, TamJson.Options);
+            }
+            catch (Exception e) when (e is JsonException or NotSupportedException) { }
+            if (action is null || action.Type is not ("set-field" or "publish-event"))
+                return RuleFindings.InvalidAction
+                    .With(("detail", "action.type must be set-field or publish-event"))
+                    .At(nameof(Input.Action));
+            if (action.Type == "publish-event" && model.Events.ContainsKey($"rules.{input.Name}"))
+                return RuleFindings.InvalidAction
+                    .With(("detail", $"event 'rules.{input.Name}' collides with a compiled contract"))
+                    .At(nameof(Input.Action));
+        }
+
         // docs/22 row.* increment: conditions may read the operation's TARGET row — one row,
         // resolved from the single input field named {entity}Id, verified here so evaluation
         // can never reference a field the entity does not have.
         string? rowEntityKey = null, rowIdField = null;
         var rowFields = condition.Fields().Where(f => f.StartsWith("row.", StringComparison.Ordinal))
             .Distinct().ToList();
-        if (rowFields.Count > 0)
+        if (rowFields.Count > 0 || action?.Type == "set-field")
         {
             var inputNames = operation.InputFields.Select(f => f.WireName)
                 .ToHashSet(StringComparer.Ordinal);
@@ -297,6 +416,19 @@ public static class DefineAutomationRule
             foreach (var spec in rowSpecs) rowKnown.Add($"ext.{spec.Key}");
             foreach (var f in rowFields.Where(f => rowKnown.Contains(f["row.".Length..])))
                 known.Add(f);
+
+            // RUL005 for set-field: only the target entity's REGISTERED extension fields are
+            // writable — compiled state stays behind intents (EDIT001, extended to tenants).
+            if (action?.Type == "set-field")
+            {
+                var key = action.Field is { } fieldRef && fieldRef.StartsWith("ext.", StringComparison.Ordinal)
+                    ? fieldRef["ext.".Length..] : null;
+                if (key is null || rowSpecs.All(spec => spec.Key != key))
+                    return RuleFindings.InvalidAction
+                        .With(("detail", $"set-field targets 'ext.{{key}}' on '{rowEntityKey}'; known: "
+                            + string.Join(", ", rowSpecs.Select(spec => $"ext.{spec.Key}"))))
+                        .At(nameof(Input.Action));
+            }
         }
         var unknown = condition.Fields().Distinct().Where(f => !known.Contains(f)).ToList();
         if (unknown.Count > 0)
@@ -310,8 +442,9 @@ public static class DefineAutomationRule
         if (input.TargetField is { Length: > 0 } target && !known.Contains(target))
             return RuleFindings.UnknownField.With(("field", target)).At(nameof(Input.TargetField));
 
-        // RUL003: the rule's message is product surface — default culture is mandatory.
-        if (!input.Messages.ContainsKey(model.DefaultCulture))
+        // RUL003: a FINDING rule's message is product surface — default culture is mandatory.
+        // Action rules produce no blocking text; their messages are optional.
+        if (action is null && !input.Messages.ContainsKey(model.DefaultCulture))
             return RuleFindings.MissingMessage.At(nameof(Input.Messages));
 
         var rule = await tam.Db.Set<AutomationRuleEntity>().SingleOrDefaultAsync(
@@ -329,6 +462,7 @@ public static class DefineAutomationRule
         rule.ConditionJson = input.Condition;
         rule.RowEntityKey = rowEntityKey;
         rule.RowIdField = rowIdField;
+        rule.ActionJson = action is null ? null : input.Action;
         rule.TargetField = input.TargetField;
         rule.MessagesJson = JsonSerializer.Serialize(input.Messages);
         rule.Retired = false;

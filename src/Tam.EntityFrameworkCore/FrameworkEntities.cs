@@ -261,6 +261,11 @@ public sealed class AutomationRuleEntity : ITenantScoped
     // row.* — the target entity's wire key and the operation input field carrying its id.
     public string? RowEntityKey { get; set; }
     public string? RowIdField { get; set; }
+
+    // docs/22 action catalog: null = the blocking finding (v1's one action). Otherwise the
+    // validated action spec ({"type":"set-field",...} | {"type":"publish-event"}) — action
+    // rules run in the TRANSACTIONAL gate phase (they write; findings stay pure).
+    public string? ActionJson { get; set; }
 }
 
 /// <summary>Non-secret per-tenant integration config (docs/25): base URLs, account ids, flags.

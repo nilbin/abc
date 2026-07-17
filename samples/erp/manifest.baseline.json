@@ -46,6 +46,7 @@
       "integrations.malformed-payload": "The integration payload is not valid JSON.",
       "integrations.not-schedulable": "The integration {integration} cannot be scheduled.",
       "integrations.unknown": "Unknown integration: {integration}.",
+      "labels.action": "Action",
       "labels.active": "Active",
       "labels.actor": "Performed by",
       "labels.anchor-tenant": "Billed at",
@@ -180,6 +181,7 @@
       "roles.unknown-permission": "Unknown permission: {permission}.",
       "roles.unknown-resource": "Unknown resource: {resource}.",
       "rules.evaluation-failed": "The rule {rule} could not be evaluated and was skipped.",
+      "rules.invalid-action": "Invalid action: {detail}",
       "rules.invalid-condition": "Invalid condition.",
       "rules.missing-message": "A message for the default culture is missing.",
       "rules.no-target-row": "The operation has no single target row \u2014 row. conditions need exactly one {entity}Id input",
@@ -471,6 +473,7 @@
       "integrations.malformed-payload": "Integrationens data \u00E4r inte giltig JSON.",
       "integrations.not-schedulable": "Integrationen {integration} kan inte schemal\u00E4ggas.",
       "integrations.unknown": "Ok\u00E4nd integration: {integration}.",
+      "labels.action": "\u00C5tg\u00E4rd",
       "labels.active": "Aktivt",
       "labels.actor": "Utf\u00F6rd av",
       "labels.anchor-tenant": "Faktureras p\u00E5",
@@ -605,6 +608,7 @@
       "roles.unknown-permission": "Ok\u00E4nd beh\u00F6righet: {permission}.",
       "roles.unknown-resource": "Ok\u00E4nd resurs: {resource}.",
       "rules.evaluation-failed": "Regeln {rule} kunde inte utv\u00E4rderas och hoppades \u00F6ver.",
+      "rules.invalid-action": "Ogiltig \u00E5tg\u00E4rd: {detail}",
       "rules.invalid-condition": "Ogiltigt villkor.",
       "rules.missing-message": "Meddelande saknas f\u00F6r standardspr\u00E5ket.",
       "rules.no-target-row": "Operationen saknar en entydig m\u00E5lrad \u2014 row.-villkor kr\u00E4ver exakt ett {entity}Id-f\u00E4lt",
@@ -2565,6 +2569,16 @@
         {
           "name": "targetField",
           "labelKey": "labels.target-field",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "action",
+          "labelKey": "labels.action",
           "type": "text",
           "wireKind": "string",
           "required": false,
@@ -7576,6 +7590,17 @@
           "required": false,
           "changeSet": false,
           "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "action",
+          "labelKey": "labels.action",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "multiline",
           "readOnly": false
         }
       ],
