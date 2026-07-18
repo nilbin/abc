@@ -221,6 +221,8 @@
   "pipeline.unknown-operation": "Okänd operation: {operation}.",
   "pipeline.unknown-view": "Okänd vy: {view}.",
   "plugins.unknown": "Okänt tillägg: {plugin}.",
+  "plugins.dependency-inactive": "Aktivera {dependency} först — {plugin} beror på det.",
+  "plugins.dependent-active": "Inaktivera {dependent} först — det beror på {plugin}.",
   "roles.invalid-name": "Ogiltigt rollnamn (små bokstäver, siffror och bindestreck).",
   "roles.placeholder-resource": "ordrar",
   "roles.reserved-permission": "Behörigheten {permission} kan inte tilldelas via en roll.",

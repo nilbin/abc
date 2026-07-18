@@ -29,6 +29,15 @@ public sealed class TamPluginsPackage : ITamPlugin
 public static class PluginFindings
 {
     public static readonly FindingFactory Unknown = Finding.Error("plugins.unknown");
+
+    /// <summary>docs/37 D-V4, level-1 activation guard: a plugin is activatable only where the
+    /// plugins it DependsOn are already active.</summary>
+    public static readonly FindingFactory DependencyInactive = Finding.Error("plugins.dependency-inactive");
+
+    /// <summary>The symmetric guard that keeps the invariant true continuously: a plugin cannot
+    /// be deactivated while an active plugin still depends on it (cascade/suspend is the deferred
+    /// heavy machinery — this just refuses the incoherent state).</summary>
+    public static readonly FindingFactory DependentActive = Finding.Error("plugins.dependent-active");
 }
 
 /// <summary>
@@ -58,6 +67,20 @@ public static class ActivatePlugin
         if (!covering.Subscription.Entitles(input.PluginId))
             return SubscriptionFindings.NotEntitled.With(("plugin", input.PluginId)).At(nameof(Input.PluginId));
 
+        // Dependency guard (docs/37 D-V4, L1): a plugin activates only where its declared
+        // parents are already active. PLG011 guarantees every edge targets a registered plugin,
+        // so only plugin activation rows need consulting (packages are always-on).
+        var dependsOn = model.Plugins[input.PluginId].DependsOn;
+        if (dependsOn.Count > 0)
+        {
+            var active = (await tam.Db.Set<PluginActivationEntity>()
+                .Select(x => x.PluginId).ToListAsync(ct)).ToHashSet();
+            var missing = dependsOn.FirstOrDefault(d => !active.Contains(d));
+            if (missing is not null)
+                return PluginFindings.DependencyInactive
+                    .With(("plugin", input.PluginId), ("dependency", missing)).At(nameof(Input.PluginId));
+        }
+
         var existing = await tam.Db.Set<PluginActivationEntity>().SingleOrDefaultAsync(
             x => x.PluginId == input.PluginId, ct);
         if (existing is null)
@@ -85,6 +108,21 @@ public static class DeactivatePlugin
     {
         if (!model.Plugins.ContainsKey(input.PluginId))
             return PluginFindings.Unknown.With(("plugin", input.PluginId)).At(nameof(Input.PluginId));
+
+        // Dependent guard (docs/37 D-V4): keep the L1 invariant true continuously — refuse to
+        // pull a plugin out from under an active dependent. Cascade/suspend is deferred; this
+        // just refuses the incoherent state, so the admin deactivates top-down.
+        var dependents = model.Plugins.Values
+            .Where(p => p.DependsOn.Contains(input.PluginId)).Select(p => p.Id).ToList();
+        if (dependents.Count > 0)
+        {
+            var active = (await tam.Db.Set<PluginActivationEntity>()
+                .Select(x => x.PluginId).ToListAsync(ct)).ToHashSet();
+            var blocker = dependents.FirstOrDefault(active.Contains);
+            if (blocker is not null)
+                return PluginFindings.DependentActive
+                    .With(("plugin", input.PluginId), ("dependent", blocker)).At(nameof(Input.PluginId));
+        }
 
         var existing = await tam.Db.Set<PluginActivationEntity>().SingleOrDefaultAsync(
             x => x.PluginId == input.PluginId, ct);

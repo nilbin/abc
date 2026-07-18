@@ -221,6 +221,8 @@
   "pipeline.unknown-operation": "Unknown operation: {operation}.",
   "pipeline.unknown-view": "Unknown view: {view}.",
   "plugins.unknown": "Unknown plugin: {plugin}.",
+  "plugins.dependency-inactive": "Activate {dependency} first — {plugin} depends on it.",
+  "plugins.dependent-active": "Deactivate {dependent} first — it depends on {plugin}.",
   "roles.invalid-name": "Invalid role name (lowercase letters, digits and hyphens).",
   "roles.placeholder-resource": "orders",
   "roles.reserved-permission": "The permission {permission} cannot be granted through a role.",
