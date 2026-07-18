@@ -46,16 +46,32 @@ that already has a password — a member of another tenant, platform-global iden
 membership and mails a notification. Transport is the `ITamEmail` seam; the default logs the
 message (the dev inbox).
 
-**Token hardening (BUILT — settled: no BFF).** The SPA is a public client holding its own tokens
-(sessionStorage, tab-scoped); the hardening lives server-side: refresh tokens are one-time-use and
-ROTATE on every refresh; a redeemed token replayed after the 30s leeway (the leeway absorbs the
-client's own racing retries) is rejected AND its whole family — the shared authorization and every
-token descended from it — is revoked (`RefreshReuseGuard`; replayed authorization codes get the
-same treatment), so a stolen refresh token ends the session for thief and victim alike instead of
-quietly serving the thief. Sign-out revokes the refresh token at `/connect/revocation`
-(fire-and-forget from the client). API validation checks token AND authorization entries per call,
-so revocation takes effect immediately, not at access-token expiry. A `TokenJanitor` prunes
-expired/revoked entries past the longest lifetime.
+**Token hardening (BUILT — settled: no BFF in the sample).** The SPA is a public client holding its
+own tokens (sessionStorage, tab-scoped); the hardening lives server-side: refresh tokens are
+one-time-use and ROTATE on every refresh; a redeemed token replayed after the 30s leeway (the
+leeway absorbs the client's own racing retries) is rejected AND its whole family — the shared
+authorization and every token descended from it — is revoked (`RefreshReuseGuard`; replayed
+authorization codes get the same treatment), so a stolen refresh token ends the session for thief
+and victim alike instead of quietly serving the thief. Sign-out revokes the refresh token at
+`/connect/revocation` (fire-and-forget from the client). API validation checks token AND
+authorization entries per call, so revocation takes effect immediately, not at access-token expiry.
+A `TokenJanitor` prunes expired/revoked entries past the longest lifetime.
+
+**What sessionStorage costs, stated plainly (Sol review, Finding 8).** A token in `sessionStorage`
+is reachable by any JavaScript running in the tab, so an XSS bug is a token-exfiltration bug: an
+injected script can read the access token and use it, or steal the refresh token, until it expires.
+This is a deliberate tradeoff for the sample, not a claim that it is safe against XSS. What the
+server-side hardening above buys is **blast-radius containment, not prevention** — reuse detection
+kills the family the moment the stolen refresh token is redeemed a second time (the attacker's use
+and the victim's next refresh collide), so a leaked refresh token cannot quietly outlive the
+session; it does nothing to stop the *first* use of a freshly exfiltrated access token. The honest
+first-line defenses are therefore the ones that keep hostile script out of the tab at all: a strict
+Content-Security-Policy, no untrusted third-party scripts in the SPA origin, and the usual
+output-encoding discipline — the framework renders no user HTML. A deployment that needs tokens out
+of JavaScript's reach entirely should front the SPA with a **BFF** that holds the tokens in an
+`httpOnly`, `SameSite` cookie and proxies the API; the token server and the per-call authorization
+check are already BFF-shaped, so this is a hosting choice a consumer can add without a protocol
+change. The sample does not ship one because it would obscure the pipeline it exists to teach.
 
 ### Three scoping modes, declared per view/operation
 
