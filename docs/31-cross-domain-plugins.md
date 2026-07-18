@@ -210,3 +210,21 @@ at a module boundary.
 
 Cross-boundary IQueryable composition; plugin-shipped front-end code; writes to compiled host
 fields or foreign plugin keys; a cross-operation transaction seam; plugin-to-plugin calls.
+
+## Generated typed facades (the declarations pay twice)
+
+A plugin's `RequiresEvent`/`RequiresView` declarations now also GENERATE typed facades
+(Tam.Compiler, same source generator as AddDiscovered): `RequiresEvent("order-completed",
+"orderId:guid", "number")` emits an internal `OrderCompletedEvent(Guid? OrderId, string?
+Number)` record with `From(EffectEvent)`, and `RequiresView("time.list", "id:guid",
+"amount:decimal", …)` emits `TimeListRow` with `From(JsonElement)` — handler bodies get
+compile-time names while the WIRE CONTRACT stays the contract:
+
+- The optional `:kind` suffix (`guid|decimal|int|bool`, default string) types the facade
+  property; PLG008/PLG009 and the service-mode whitelist see the BARE name — the suffix is
+  consumed only by the generator. (Contract-side kinds on PublishesEvent are a deliberate
+  deferral: requirements type what they read; the contract still owns names.)
+- The dependency direction holds: facades are generated FROM the plugin's own declaration
+  in its OWN assembly (internal, `Tam.Generated`) — never a reference to host CLR types.
+- The fluent call is read directly by a syntax provider (literal arguments); no attribute
+  ceremony. Non-literal arguments simply generate nothing.

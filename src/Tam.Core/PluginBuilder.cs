@@ -124,9 +124,14 @@ public sealed class PluginBuilder
     /// </summary>
     public PluginBuilder RequiresView(string viewId, params string[] fields)
     {
-        Model.RequireView(viewId, fields.Select(Naming.Camel).ToArray());
+        Model.RequireView(viewId, fields.Select(BareName).ToArray());
         return this;
     }
+
+    // A declared field may carry a ":kind" suffix ("estimatedTotal:decimal") — consumed ONLY
+    // by the source generator's typed facades (docs/31); the wire contract, PLG008/PLG009 and
+    // the service-mode whitelist see the bare name.
+    private static string BareName(string field) => Naming.Camel(field.Split(':')[0]);
 
     /// <summary>
     /// Contributes a panel into a HOST-declared slot (docs/31 D-X4): this plugin's own grid,
@@ -147,7 +152,7 @@ public sealed class PluginBuilder
     /// subscribers read stops being folklore.</summary>
     public PluginBuilder RequiresEvent(string eventType, params string[] fields)
     {
-        Model.RequireEvent(eventType, fields.Select(Naming.Camel).ToArray());
+        Model.RequireEvent(eventType, fields.Select(BareName).ToArray());
         return this;
     }
 

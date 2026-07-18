@@ -474,6 +474,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Generated typed contract facades (user-approved)**: the TS-client pattern applied to
+  plugin authoring — a plugin's own `RequiresEvent`/`RequiresView` declarations now generate
+  internal typed facades (Tam.Compiler syntax provider over the fluent calls' literal args):
+  `OrderCompletedEvent.From(effect).Number` replaces `effect.String("number")`, and
+  `TimeListRow.From(row).Amount` replaces `row.Decimal("amount")` — compile-time names, same
+  PLG008/PLG009-checked wire contract, zero host-CLR references (facades are generated from
+  the plugin's OWN declaration into its OWN assembly). An optional `:kind` suffix on
+  declared fields (`"estimatedTotal:decimal"`, default string) types the property; the
+  builder strips it before the wire/whitelist sees the name — no name sniffing, kinds are
+  DECLARED. Inspect and invoicing handler reads migrated as the proof (approvals declares
+  no foreign contracts — nothing to migrate). Deferred with intent: contract-side kinds on
+  PublishesEvent (requirements type what they read; the contract still owns names).
+  Verified: suites 191+38, manifest byte-identical (compile-time sugar only), structure +
+  docs checks, wire 18+22+22 on fresh SQLite AND fresh Postgres — the magic-folder +
+  checklist-instantiation chains now run THROUGH the facades on the wire.
 - **Sample structure + DDD pass (user-directed)**: the convention drift fixed at the root —
   in three commits, each proven behavior-identical. (1) MECHANICAL SPLIT: inspect (395-line
   Features.cs) and approvals restructured to Domain/<Aggregate>.cs + Features/<Aggregate>.cs

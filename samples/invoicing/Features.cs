@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.AspNetCore;
 using Tam.EntityFrameworkCore;
+using Tam.Generated;
 
 namespace Invoicing;
 
@@ -40,9 +41,10 @@ public static class CreateFromOrder
             new Dictionary<string, string?> { ["orderId"] = input.OrderId.ToString() }, context, ct);
         if (orders.Rows.Count == 0)
             return InvoicingFindings.OrderNotFound.At(nameof(Input.OrderId));
-        var row = WireValues.Row(orders.Rows[0]);
-        var number = row.String("number") ?? "";
-        var amount = row.Decimal("estimatedTotal") ?? 0m;
+        // The generated facade (docs/31): compile-time names over the SAME declared read.
+        var order = OrdersDetailRow.From(WireValues.Row(orders.Rows[0]));
+        var number = order.Number ?? "";
+        var amount = order.EstimatedTotal ?? 0m;
 
         var invoice = Invoice.Create(context.TenantId.Value, input.OrderId, number, amount);
         tam.Db.Add(invoice);
@@ -207,14 +209,14 @@ internal sealed class DraftOnCompletion(
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (effect.Guid("orderId") is not { } orderId) return;
+        if (OrderCompletedEvent.From(effect) is not { OrderId: { } orderId } payload) return;
         if (await tam.Db.Set<Invoice>().AnyAsync(x => x.OrderId == orderId, ct))
             return;   // redelivery or already invoiced by hand — idempotent
 
-        var number = effect.String("number") ?? "";
+        var number = payload.Number ?? "";
         var detail = await host.RowsAsync("orders.detail",
             new Dictionary<string, string?> { ["orderId"] = orderId.ToString() }, ct);
-        var amount = detail.FirstRow()?.Decimal("estimatedTotal") ?? 0m;
+        var amount = (detail.FirstRow() is { } row ? OrdersDetailRow.From(row) : null)?.EstimatedTotal ?? 0m;
 
         tam.Db.Add(Invoice.Create(effect.TenantId, orderId, number, amount));
         await tam.Db.SaveChangesAsync(ct);
@@ -234,11 +236,11 @@ internal sealed class DraftOnWorkOrderCompletion(
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (effect.Guid("workOrderId") is not { } workOrderId) return;
+        if (WorkOrderCompletedEvent.From(effect) is not { WorkOrderId: { } workOrderId } payload) return;
         if (await tam.Db.Set<Invoice>().AnyAsync(x => x.WorkOrderId == workOrderId, ct))
             return;   // at-least-once delivery — idempotent
 
-        var number = effect.String("number") ?? "";
+        var number = payload.Number ?? "";
         if (number.Length == 0) return;
 
         var amount =
@@ -254,7 +256,9 @@ internal sealed class DraftOnWorkOrderCompletion(
     private async Task<decimal> SumAsync(
         string viewId, IReadOnlyDictionary<string, string?> query, CancellationToken ct)
     {
+        // Both declared reads share the amount column; either facade names it — TimeListRow
+        // here, exercising the generated accessor over the wire row.
         var result = await host.RowsAsync(viewId, query, ct);
-        return result.WireRows().Sum(row => row.Decimal("amount") ?? 0m);
+        return result.WireRows().Sum(row => TimeListRow.From(row).Amount ?? 0m);
     }
 }

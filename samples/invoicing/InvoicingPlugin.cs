@@ -45,13 +45,13 @@ internal sealed class OrdersContract : IPluginPart
     {
         // Compatibility as a build-time fact — the views/fields this plugin reads (PLG008);
         // service-mode reads (the draft subscriber) are limited to exactly this list.
-        plugin.RequiresView("orders.detail", "id", "number", "estimatedTotal");
+        plugin.RequiresView("orders.detail", "id:guid", "number", "estimatedTotal:decimal");
 
         // The field-service path (docs/34 M4): a completed work order is invoiced from its
         // APPROVED time + materials — service-mode reads over the M3 views, filtered by the
         // number the event payload carries.
-        plugin.RequiresView("time.list", "id", "workOrderNumber", "amount", "status");
-        plugin.RequiresView("materials.list", "id", "workOrderNumber", "amount");
+        plugin.RequiresView("time.list", "id:guid", "workOrderNumber", "amount:decimal", "status");
+        plugin.RequiresView("materials.list", "id:guid", "workOrderNumber", "amount:decimal");
 
         // The order wears its invoice status (docs/22 P2). Read-only: only this plugin's
         // IPackagedFieldWriter sets it — the state machine stays the plugin's.
@@ -71,8 +71,8 @@ internal sealed class OrdersContract : IPluginPart
         // Event contracts (docs/31 D-X5): payload shapes are declared, never folklore. The
         // DraftOnCompletion subscriber and DraftPendingGate register from their own
         // attributes in Features.cs.
-        plugin.RequiresEvent("order-completed", "orderId", "number");
-        plugin.RequiresEvent("work-order-completed", "workOrderId", "number");
+        plugin.RequiresEvent("order-completed", "orderId:guid", "number");
+        plugin.RequiresEvent("work-order-completed", "workOrderId:guid", "number");
         plugin
             .PublishesEvent("invoicing.invoice-created", "invoiceId", "orderId")
             .PublishesEvent("invoicing.invoice-finalized", "invoiceId", "orderId")

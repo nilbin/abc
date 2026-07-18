@@ -81,8 +81,8 @@ internal sealed class OrdersContract : IPluginPart
 
         // Event contracts (PLG009): payload shapes are declared, never folklore.
         // order-created is the v2 seam — matching templates instantiate onto the new order.
-        plugin.RequiresEvent("order-created", "orderId", "number", "orderType");
-        plugin.RequiresEvent("order-completed", "orderId", "number");
+        plugin.RequiresEvent("order-created", "orderId:guid", "number", "orderType");
+        plugin.RequiresEvent("order-completed", "orderId:guid", "number");
         plugin.PublishesEvent("inspect.checklist-passed", "checklistId");
 
         // The order detail wears its checklists (docs/31 D-X4): two panels bound to the
@@ -211,10 +211,10 @@ internal sealed class InstantiateTemplates(ITamDb tam) : IEffectHandler
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (effect.Guid("orderId") is not { } orderId) return;
-        var orderType = effect.String("orderType") ?? "";
+        if (OrderCreatedEvent.From(effect) is not { OrderId: { } orderId } payload) return;
+        var orderType = payload.OrderType ?? "";
         if (orderType.Length == 0) return;
-        var number = effect.String("number") ?? "";
+        var number = payload.Number ?? "";
 
         var normalized = orderType.Trim().ToLowerInvariant();
         var templates = await tam.Db.Set<ChecklistTemplate>()
@@ -254,8 +254,9 @@ internal sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
     {
-        if (effect.String("number") is not { Length: > 0 } number) return;
-        var orderId = effect.Guid("orderId");
+        if (OrderCompletedEvent.From(effect) is not { Number.Length: > 0 } completed) return;
+        var number = completed.Number;
+        var orderId = completed.OrderId;
 
         // Outbox delivery is at-least-once — the handler must be idempotent. The delivery
         // scope is pinned to the record's tenant, so the ambient filter applies here too.
