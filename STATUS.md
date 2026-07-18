@@ -474,6 +474,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Variability design (docs/37, DESIGNED not built)**: the answer to "how do order surfaces,
+  forms and flows differ by country, trade and company size" — written down before any code,
+  closing the framework-finish arc. One compiled model; variation routes through three
+  existing channels (activation+entitlements, overlays, tenant data). New pieces designed:
+  tenant profile facts (`country`/`trades`/`size`, closed vocabulary, `tenants.set-profile`,
+  nearest-ancestor inheritance), a `tam.forms` form overlay registry mirroring nav v2
+  verbatim (closed mutation set — hide/order/labels/tighten-require/group/validators —
+  FRM001–005, dormancy, tenant tier + fact-keyed pack presets), compiled named validator
+  sets (tighten-only, manifest-carried), and the conventions trade=plugin / size=plan /
+  country=locale+presets+validator-sets. The structured-address superset is the designated
+  proving consumer (also the opening move of the parked order-location arc). Decisions
+  D-V1–V8; five independently shippable slices proposed to the user before any build.
 - **Framework batch 3: RequiresView kind-compat (the docs/31 deferral, closed)**:
   `RequiresView` now speaks the same `"name[:kind]"` grammar as `PublishesEvent`
   (`ContractKinds`, one parser for both sides), and the typed path pays nothing for it —

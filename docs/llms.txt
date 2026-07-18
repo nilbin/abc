@@ -41,6 +41,7 @@ https://raw.githubusercontent.com/nilbin/abc/main/docs/ (append the file name be
 - [Integrations](https://nilbin.github.io/abc/10-integrations/): inbound mapping over the inbox (10-integrations.md)
 - [External integrations](https://nilbin.github.io/abc/25-external-integrations/): outbound triggers, vault, retries, dead-letter (25-external-integrations.md)
 - [MCP & agents](https://nilbin.github.io/abc/11-mcp-and-agents/): the model as agent tools (11-mcp-and-agents.md)
+- [Variability](https://nilbin.github.io/abc/37-variability/): country/trade/size variation — profile facts, form overlay registry, validator sets, pack conventions (designed) (37-variability.md)
 
 ## Tenancy & security
 

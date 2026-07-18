@@ -74,6 +74,7 @@ nav:
       - 10-integrations.md
       - 25-external-integrations.md
       - 11-mcp-and-agents.md
+      - 37-variability.md
   - Tenancy & security:
       - 26-tenancy-hierarchy-and-identity.md
       - 27-authorization-model.md
