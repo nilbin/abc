@@ -33,8 +33,7 @@ dotnet tam manifest [path]                # one-off manifest export
 dotnet tam contract [path] [--plugin id]  # one-off host / plugin-slice export
 ```
 
-Inside this repo the same tool is invoked through the project (`scripts/regen.sh` is a one-line
-shim over it):
+Inside this repo the same tool is invoked through the project:
 
 ```sh
 dotnet run --project src/Tam.Cli -- regen

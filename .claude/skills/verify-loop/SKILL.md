@@ -34,14 +34,15 @@ operations/gates; model-verification tests for new build rules).
 ## 3. The generated artifacts (only when the wire surface or locale catalogs changed)
 
 ONE command regenerates every committed artifact — manifest baseline, host contract, all
-per-plugin contract slices (auto-discovered), and the TS client:
+per-plugin contract slices (auto-discovered), and the TS client (docs/38):
 
 ```sh
-scripts/regen.sh        # then: git add -A, and check additivity below
+dotnet run --project src/Tam.Cli -- regen   # then: git add -A, and check additivity below
 python3 scripts/check_manifest.py <(git show HEAD:samples/erp/manifest.baseline.json) samples/erp/manifest.baseline.json
 ```
 
-The individual exporters (if you need one in isolation):
+`dotnet run --project src/Tam.Cli -- verify` is the freshness check CI runs (re-export + byte
+compare). The individual exporters (if you need one in isolation):
 
 ```sh
 dotnet run --project samples/erp -- manifest  $PWD/samples/erp/manifest.baseline.json
@@ -50,14 +51,14 @@ dotnet run --project samples/erp -- contract  $PWD/samples/invoicing/invoicing.c
 node scripts/generate-types.mjs samples/erp/manifest.baseline.json samples/web/src/generated/tam.ts
 ```
 
-- Paths to the exporters must be ABSOLUTE — relative paths resolve under the project dir
-  (`scripts/regen.sh` handles this for you).
+- Paths to the raw exporters must be ABSOLUTE — relative paths resolve under the project dir
+  (`dotnet tam` / `src/Tam.Cli -- regen` handles this for you).
 - The baseline check is additive-only (D4): removals/type-changes/permission-changes fail.
   Wire names are permanent; retire, don't drop.
 - CI gates that must match the committed files byte-for-byte: manifest baseline (additive),
   `samples/web/src/generated/tam.ts`, `samples/erp/host-contract.json`, every
-  `samples/*/*.contract.json` plugin slice (docs/37 D-V4 — CI re-exports and byte-compares each;
-  `scripts/regen.sh` refreshes them all), plus
+  `samples/*/*.contract.json` plugin slice (docs/37 D-V4 — `dotnet tam verify` re-exports and
+  byte-compares each), plus
   `scripts/check_docs.py` and `scripts/check_structure.py` (the ~420-line file cap and
   wire-prefix conventions — run BOTH locally; a file that grew past the cap fails CI even
   when everything else is green).

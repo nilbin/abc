@@ -482,9 +482,9 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   dir and byte-compares (the CI freshness gate); `manifest`/`contract` are one-off pass-throughs.
   Zero hardcoded paths — layout comes from a `tam.json` found by walking up from cwd, and plugin
   slices auto-discover from the committed `*.contract.json` files (so a new dependency parent
-  needs no edit anywhere). The three separate CI freshness steps collapsed to one `tam verify`;
-  `scripts/regen.sh` is now a one-line shim over the tool; the additive D4 check stays separate
-  (freshness vs additivity are different concerns). The exports still can't be a source
+  needs no edit anywhere). The three separate CI freshness steps collapsed to one `tam verify`
+  (`dotnet run --project src/Tam.Cli -- regen|verify` in-repo); the additive D4 check stays
+  separate (freshness vs additivity are different concerns). The exports still can't be a source
   generator — they serialize the composed runtime model — and the slices stay committed build
   inputs (a plugin references them as AdditionalFiles); the tool just removes the friction and
   the tackiness. Verified: `regen` produces a byte-identical tree, `verify` passes clean and
