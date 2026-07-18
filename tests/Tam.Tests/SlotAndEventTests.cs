@@ -65,6 +65,7 @@ public class SlotAndEventTests
                 bind => bind.Query("thingId", fromContext: "thingId"));
             plugin.RequiresEvent("thing-archived", "thingId");
             plugin.OnEffect<Handler>("thing-archived");
+            plugin.PublishesEvent("notes.note-added", "noteId:guid");
         }
     }
 
@@ -156,6 +157,15 @@ public class SlotAndEventTests
         Assert.Contains("unknown contract kind", Assert.Throws<InvalidOperationException>(() =>
             Host().AddPlugin<TypoKindPlugin>().Build()).Message);
 
+        // the docs/22 dependency line, mechanical: a plugin consuming ANOTHER PLUGIN's
+        // contract fails the build on every seam — event requires, view requires, subscribes
+        Assert.StartsWith("PLG010", Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<NotesPlugin>().AddPlugin<EventPoacherPlugin>().Build()).Message);
+        Assert.StartsWith("PLG010", Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<NotesPlugin>().AddPlugin<ViewPoacherPlugin>().Build()).Message);
+        Assert.StartsWith("PLG010", Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<NotesPlugin>().AddPlugin<SubscriberPoacherPlugin>().Build()).Message);
+
         // plugins cannot declare slots — layout is the host's
         Assert.StartsWith("PLG005", Assert.Throws<InvalidOperationException>(() =>
             Host().AddPlugin<SlotGrabbingPlugin>().Build()).Message);
@@ -180,6 +190,27 @@ public class SlotAndEventTests
     {
         public void Configure(PluginBuilder plugin) =>
             plugin.RequiresEvent("thing-archived", "thingId:gui");
+    }
+
+    [TamPlugin("poacher")]
+    private sealed class EventPoacherPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) =>
+            plugin.RequiresEvent("notes.note-added", "noteId");
+    }
+
+    [TamPlugin("peeker")]
+    private sealed class ViewPoacherPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) =>
+            plugin.RequiresView("notes.for-thing", "text");
+    }
+
+    [TamPlugin("eavesdropper")]
+    private sealed class SubscriberPoacherPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) =>
+            plugin.OnEffect<Handler>("notes.note-added");
     }
 
     [TamPlugin("architect")]

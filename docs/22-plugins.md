@@ -297,7 +297,38 @@ each other.** The moment two plugins genuinely need each other, merge them or pr
 shared concept down into the host (work-order-completed became a host event both invoicing
 and inspect consume). Plugin-to-plugin contracts are a deliberately unbuilt seam — that is
 where marketplace ecosystems grow their dependency hell, and this line is cheaper to hold
-than to win back.
+than to win back. **ENFORCED: PLG010** — a plugin's `RequiresView`/`RequiresEvent`/
+`OnEffect` target must be owned by the host, by a framework package (always-on, host-like
+trust), or by the plugin itself; anything else fails the build. Until PLG010 the rule was
+doctrine only — the checks verified existence and fields, not ownership.
+
+### Plugin-on-plugin: the tier that isn't (yet)
+
+If a real extension ecosystem arrives ("a photos plugin extending inspect's checklists"),
+the beautiful property is that almost NOTHING new is needed on the contract side — the
+host was only ever the FIRST provider. Every plugin's contribution is already a manifest
+slice with declared events, views and kinds; the contract-artifact mechanism (docs/31)
+generalizes verbatim: an extender compiles against inspect's exported contract exactly the
+way any plugin compiles against the host's, and composition Build() still verifies against
+the real co-installed set (D4 additivity tames the version diamond: contracts only grow).
+
+What IS genuinely new — and why the line stays until it is designed deliberately — is
+**existence semantics**, not contracts:
+
+- a declared dependency edge (`DependsOn("inspect")`, derivable from requirement targets'
+  owners) with activation ORDER: the extender is activatable only where the base is
+  active, and deactivating the base cascades or suspends the extender — today's
+  activation model has no conditional existence between plugins;
+- the entitlement coupling (docs/24): the pricing page cannot sell the extender without
+  the base, and uninstall coherence must hold across the edge;
+- UI extension points: PLG005 would relax to "a plugin may declare slots on its OWN pages
+  and records" (never the host's — layout stays the host's), so extenders contribute
+  panels through the existing PLG007 machinery;
+- extensible plugin entities: a plugin's entity implementing `IExtensible` joins the same
+  extension-field seam tenants already use.
+
+When the need is real, lifting PLG010 for a DECLARED dependency edge is the design
+commit — the gate is the placeholder for that decision, not a refusal of it.
 
 ## The marketplace: three tiers, one trust model
 

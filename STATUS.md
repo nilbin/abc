@@ -474,6 +474,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **PLG010 — the dependency line becomes mechanical (user probe: "what if a plugin
+  extends a plugin?")**: the probe exposed that docs/22's rule (plugins depend on the
+  HOST's contract, never on each other) was DOCTRINE, not a gate — PLG008/PLG009 verified
+  existence and fields but not OWNERSHIP, so a plugin could quietly require another
+  plugin's view or event and build green. Now: a plugin-tier RequiresView / RequiresEvent /
+  OnEffect target must be owned by the host, by a framework package (always-on, host-like
+  trust), or by the plugin itself — anything else is build error PLG010, with the
+  sanctioned escape spelled out in the message (promote the shared concept into the host,
+  or merge). Packages are exempt as consumers; the "*" wildcard is untouched. Three
+  poacher tests (event-require, view-require, subscribe) prove each seam. docs/22 gains
+  "Plugin-on-plugin: the tier that isn't (yet)": the contract-artifact mechanism
+  generalizes verbatim to plugin providers (the host was only ever the FIRST provider) —
+  what is genuinely new and deliberately undesigned is EXISTENCE semantics (DependsOn
+  edges, activation cascade, entitlement coupling, self-owned slots); PLG010 is the
+  placeholder for that design commit, not a refusal of it. Verified: suites 191+38,
+  manifest byte-identical, wire 16+18+22+22 on fresh SQLite AND fresh Postgres.
 - **Contract artifact, slice 1 — the publisher owns the shape (user-directed: "can the
   plugin just reference the manifest?")**: the answer is yes, and this slice builds the
   substrate. PublishesEvent now takes the same "name[:kind]" grammar as the requirements

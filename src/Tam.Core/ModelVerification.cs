@@ -136,11 +136,30 @@ public sealed partial class TamModelBuilder
             if (!model.Views.TryGetValue(requirement.ViewId, out var view))
                 throw new InvalidOperationException(
                     $"PLG008: plugin '{requirement.PluginId}' requires unknown view '{requirement.ViewId}'.");
+            VerifyContractOwnership(model, requirement.PluginId, view.Plugin,
+                $"view '{requirement.ViewId}'");
             foreach (var field in requirement.Fields)
                 if (field != "id" && !view.ResultFields.Any(fld => fld.WireName == field))
                     throw new InvalidOperationException(
                         $"PLG008: plugin '{requirement.PluginId}' requires field '{field}' which view '{requirement.ViewId}' does not expose.");
         }
+    }
+
+    /// <summary>PLG010: the docs/22 dependency rule, made mechanical — a PLUGIN may consume
+    /// contracts owned by the HOST, by a framework PACKAGE (always-on, host-like trust), or
+    /// by ITSELF; never another plugin's. Packages themselves are exempt as consumers. The
+    /// sanctioned escape when two plugins genuinely need each other: merge them, or promote
+    /// the shared concept into the host (the work-order-completed story).</summary>
+    private static void VerifyContractOwnership(
+        TamModel model, string consumerId, string? ownerId, string contract)
+    {
+        if (model.Packages.ContainsKey(consumerId)) return;
+        if (ownerId is null || ownerId == consumerId || model.Packages.ContainsKey(ownerId))
+            return;
+        throw new InvalidOperationException(
+            $"PLG010: plugin '{consumerId}' depends on {contract} owned by plugin '{ownerId}' — "
+            + "plugins depend on the HOST's contract, never on each other (docs/22). Promote the "
+            + "shared concept into the host, or merge the plugins.");
     }
 
     /// <summary>PLG007: panels land in a declared slot, use the plugin's OWN grid, and bind
@@ -192,9 +211,14 @@ public sealed partial class TamModelBuilder
         // "*" mirrors GateDefinition.Wildcard: a subscriber that runs on EVERY committed
         // event and decides from model data (the magic-folder bindings) whether to act.
         foreach (var subscriber in model.Subscribers)
-            if (subscriber.EventType != "*" && !model.Events.ContainsKey(subscriber.EventType))
+        {
+            if (subscriber.EventType == "*") continue;
+            if (!model.Events.TryGetValue(subscriber.EventType, out var target))
                 throw new InvalidOperationException(
                     $"PLG009: plugin '{subscriber.PluginId}' subscribes to undeclared event '{subscriber.EventType}' — declare it with PublishesEvent.");
+            VerifyContractOwnership(model, subscriber.PluginId, target.Plugin,
+                $"event '{subscriber.EventType}'");
+        }
 
         // DOC001 (docs/35 magic folders): a binding must target a declared event, and every
         // "{placeholder}" must name a field of that event's payload contract.
@@ -216,10 +240,11 @@ public sealed partial class TamModelBuilder
 
         foreach (var requirement in eventRequirements)
         {
-            if (!model.Events.TryGetValue(requirement.EventType, out var declared)
-                )
+            if (!model.Events.TryGetValue(requirement.EventType, out var declared))
                 throw new InvalidOperationException(
                     $"PLG009: plugin '{requirement.PluginId}' requires undeclared event '{requirement.EventType}'.");
+            VerifyContractOwnership(model, requirement.PluginId, declared.Plugin,
+                $"event '{requirement.EventType}'");
             foreach (var field in requirement.Fields)
             {
                 if (!declared.Fields.Contains(field))
