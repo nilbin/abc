@@ -11,18 +11,24 @@ everything per-tenant activated and entitlement-priced.
 2. **Its own vertical.** `invoicing.create-from-order` / `finalize` / `mark-paid`, an invoice
    list whose Query takes `Guid? OrderId` (the mechanical filter), embedded sv/en locales, a
    nav contribution. Nothing new — Step 13 machinery.
-3. **Compatibility, stated at build time.** `plugin.RequiresView("orders.detail", "id",
-   "number", "estimatedTotal")` — PLG008 fails the BUILD if the host doesn't expose exactly
-   that, and the create operation reads the order through the ACTOR-mode `IHostViewReader`:
-   permission-checked like the wire, so a user who may not see an order cannot invoice it.
+3. **Compatibility, stated at build time.** `plugin.RequiresView("orders.detail", "id:guid",
+   "number", "estimatedTotal:decimal")` — PLG008 fails the BUILD if the host doesn't expose
+   exactly that, and the create operation reads the order through the ACTOR-mode
+   `IHostViewReader`: permission-checked like the wire, so a user who may not see an order
+   cannot invoice it. The `:guid`/`:decimal` suffixes are DECLARED kinds, and they pay twice:
+   the source generator turns every such declaration into a typed facade in `Tam.Generated`
+   (`OrdersDetailRow.From(row)` — real names and CLR types over the same checked wire
+   contract, no host CLR type referenced; [31-cross-domain-plugins.md](../31-cross-domain-plugins.md)).
 4. **The draft writes itself — against a contract, not folklore.** An
    `OnEffect("order-completed")` subscriber drafts the invoice post-commit — idempotent under
    redelivery, number from the payload, amount backfilled through a SERVICE-MODE declared read
    (no actor exists in the outbox; the readable surface is exactly the RequiresView list,
    never a superuser). The payload shape is a build-time fact (D-X5): the host declares
    `.PublishesEvent("order-completed", "orderId", "number")` in its model, the plugin declares
-   `plugin.RequiresEvent("order-completed", "orderId", "number")`, and PLG009 fails the BUILD
-   on a subscription to an unknown event or a required field the publisher doesn't carry. The
+   `plugin.RequiresEvent("order-completed", "orderId:guid", "number")`, and PLG009 fails the
+   BUILD on a subscription to an unknown event or a required field the publisher doesn't carry
+   (kinds are the plugin's reading declaration — the generated `OrderCompletedEvent.From(effect)`
+   facade gives the subscriber typed access to the same payload). The
    manifest gains an `events` section — `"order-completed": { "fields": ["orderId","number"],
    "subscribedBy": ["inspect","invoicing"] }` — so `SubscribedBy` shows in the impact report,
    symmetric with `GatedBy`.

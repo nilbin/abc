@@ -11,14 +11,15 @@ samples/erp/
   Erp.csproj             the build contract                    (Step 0)
   Db.cs                  the DbContext                         (Step 0)
   Program.cs             the composition root: model + host    (Steps 0, 4, 5, 18)
-  Domain.cs              entities, value types, findings       (Step 1)
+  Domain/Orders.cs       entities, findings                    (Step 1)
+  Domain/ValueTypes.cs   shared semantic value types           (Step 1)
   Features/Orders.cs     operations, derivations, views        (Steps 2–7)
   Features/Customers.cs  the same pattern, smaller
   locales/               sv.json  en.json                      (Step 1)
 samples/fortnox/         the Fortnox integration, as a plugin  (Step 10)
 ```
 
-Note what is absent: no per-feature `Bindings.cs`. Bindings — forms, grids, nav, pages — are declared in the composition root, one screen apart from each other and from the pipeline that serves them (docs/29).
+Note what is absent: no per-feature `Bindings.cs`. Bindings — forms, grids, nav, pages — are declared in the composition root, one screen apart from each other and from the pipeline that serves them (docs/29). The split is BY AGGREGATE — `Domain/<Aggregate>.cs` beside `Features/<Aggregate>.cs` — and stays that way as the app grows (the full sample has eight domain files); the layout is a stated convention (CLAUDE.md "Where code goes") and CI enforces it mechanically (`scripts/check_structure.py`).
 
 ---
 

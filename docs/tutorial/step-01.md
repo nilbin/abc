@@ -3,7 +3,7 @@
 Plain C#. Semantic value types carry intrinsic meaning once; everything downstream reuses it. Note what is *absent*: no display text anywhere — labels and messages resolve by key from the locale files ([21-localization.md](../21-localization.md)). *(Designed, not built: the `L10N000` analyzer rule that makes a hardcoded display string a build error. What the build enforces today is the reverse direction — `L10N001`, below.)*
 
 ```csharp
-// samples/erp/Domain.cs
+// samples/erp/Domain/Orders.cs — cross-aggregate value types (Address, …) live in Domain/ValueTypes.cs
 
 public readonly record struct OrderId(Guid Value);
 public readonly record struct OrderNumber(string Value);
@@ -31,7 +31,7 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
     public Address WorkAddress { get; private set; }
     public OrderDescription Description { get; private set; }
     public DateOnly? RequestedDate { get; private set; }
-    public decimal? EstimatedTotal { get; private set; }
+    public Money? EstimatedTotal { get; private set; }
     public OrderStatus Status { get; private set; }
     public string? AssignedToActorId { get; private set; }
     public long Version { get; set; }                       // IVersioned: stamped by the pipeline
@@ -44,8 +44,8 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
 
     public Result Complete()
     {
-        if (Status == OrderStatus.Completed) return OrderErrors.AlreadyCompleted;
-        if (Status == OrderStatus.Cancelled) return OrderErrors.CannotCompleteCancelled;
+        if (Status == OrderStatus.Completed) return OrderFindings.AlreadyCompleted;
+        if (Status == OrderStatus.Cancelled) return OrderFindings.CannotCompleteCancelled;
         Status = OrderStatus.Completed;
         return Result.Success();
     }
@@ -57,7 +57,7 @@ Three interface contracts, no base class: `ITenantScoped` (a plain `string Tenan
 Domain errors are **finding factories** — a stable code, no prose; the code doubles as the message key:
 
 ```csharp
-public static class OrderErrors
+public static class OrderFindings
 {
     public static readonly FindingFactory AlreadyCompleted = Finding.Error("orders.already-completed");
     public static readonly FindingFactory CannotCompleteCancelled = Finding.Error("orders.cannot-complete-cancelled");

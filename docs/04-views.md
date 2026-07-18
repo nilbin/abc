@@ -43,6 +43,14 @@ public static partial class CustomerSummary
 }
 ```
 
+**Async when the query needs a prior await.** `Execute` may also return
+`Task<IQueryable<Result>>` — the executor awaits it and then composes paging, sorting, and
+filtering over the resulting queryable exactly as in the synchronous form. Use it when the
+view must resolve something *before* it can shape the query (the `tam.documents` views await
+the caller's visible-folder set first — [36-documents.md](36-documents.md)); the final
+projection stays a translatable `IQueryable`, so capabilities and mechanical filters are
+unaffected.
+
 ## Grids are bindings, not backend concepts
 
 A grid is not a separate backend concept. It is a **binding over a collection view** ([06-bindings.md](06-bindings.md)).

@@ -7,7 +7,8 @@ First consumer: **BUILT** — the `tam.documents` package's folder ACLs (stored 
 effective-ACL inheritance down the folder path-tree with own-rows OVERRIDE — a child can be
 locked tighter than its parent — evaluated through the resolver on read and write via one
 predicate, `DocumentAccess.VisibleFolderIdsAsync`). Documents attach to records by EntityRef
-(`AttachedTo`, queryable per record). Decisions D-R1..D-R5.
+(`AttachedTo`, queryable per record). The consumer has its own doc:
+[36-documents.md](36-documents.md). Decisions D-R1..D-R5.
 
 ## The question the capability axis cannot answer
 

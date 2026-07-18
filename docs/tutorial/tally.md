@@ -4,7 +4,7 @@
 
 | File | Approx. lines | Decisions it owns |
 | --- | --- | --- |
-| `Domain.cs` (the orders slice) | ~80 | invariants, value types, status transitions |
+| `Domain/Orders.cs` + shared `ValueTypes.cs` (the orders slice) | ~80 | invariants, value types, status transitions |
 | `Features/Orders.cs` | ~290 | operations, shared rules, derivations, views — every business decision |
 | `Program.cs` (composition root: model half) | ~110 | forms, grids, nav, pages, slots, event contracts |
 | `Db.cs` | ~60 | EF mapping, plugin storage opt-ins, the tenant boundary |

@@ -49,6 +49,7 @@ https://raw.githubusercontent.com/nilbin/abc/main/docs/ (append the file name be
 - [Assignment & grouping](https://nilbin.github.io/abc/28-assignment-and-grouping/): paired atoms, approver groups, park/replay seams (28-assignment-and-grouping.md)
 - [RLS backstop](https://nilbin.github.io/abc/33-rls-backstop/): PostgreSQL row-level security mirroring the EF filter (33-rls-backstop.md)
 - [Reach](https://nilbin.github.io/abc/35-reach/): the people-set reference seam for object-side grants — ReachRef, EntityRef, providers (35-reach.md)
+- [Documents](https://nilbin.github.io/abc/36-documents/): the tam.documents package — folder path-tree, reach-backed ACLs, content-addressed files, magic folders, DOC001 (36-documents.md)
 
 ## UI composition
 

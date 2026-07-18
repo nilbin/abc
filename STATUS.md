@@ -15,9 +15,9 @@ src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effec
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
                              OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, plugin
-                             system, and the framework admin surface as TWELVE always-active
-                             [TamPackage] modules (users/roles/audit/tenancy/rules/nav/... with
-                             their forms, grids and embedded sv/en locales)
+                             system, and the framework admin surface as THIRTEEN always-active
+                             [TamPackage] modules (users/roles/audit/tenancy/rules/nav/documents/
+                             ... with their forms, grids and embedded sv/en locales)
 src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane + the RLS backstop
                              (TamRls: policies over every tenant-scoped table, scope-synced
                              session settings — docs/33)
@@ -37,7 +37,7 @@ samples/approvals            Step 16: nested approver groups + tenant-configured
 samples/invoicing            Step 17: extends the Orders domain — grid action contribution,
                              packaged-field writer, declared host-view reads (docs/31)
 samples/web                     Norrservice ERP web app (Vite + React + Mantine)
-tests/Tam.Tests              149 tests: merge, extension applier, Change<T> JSON, portable AST,
+tests/Tam.Tests              191 tests: merge, extension applier, Change<T> JSON, portable AST,
                              localization, auth/entitlements, plugin build validation, schedule
                              specs, reserved permissions, SSRF egress policy, approvals seams
                              (wildcard gates, park-across-rollback, envelope replay), nav merge
@@ -474,6 +474,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Docs/tutorial sync (user-prompted)**: the recent arcs written down where readers look.
+  NEW docs/36-documents.md — the tam.documents design in full (path-tree folders,
+  override-not-union reach ACLs behind the one visibility predicate, content-addressed blobs
+  behind IDocumentStore, 404-not-403 downloads, magic folders + DOC001, the record documents
+  tab and the browser page; decisions D-DOC1..6) — wired into the site nav and llms.txt;
+  docs/04 gained the async `Task<IQueryable<Result>>` Execute form; docs/22's package-tier
+  count corrected to thirteen with tam.documents named; docs/35 links its first consumer.
+  Tutorial drift fixed against the running sample: the per-aggregate split reflected in the
+  index file tree, step 1 and the tally (with the CI-enforced convention stated); step 1's
+  OrderErrors→OrderFindings rename and `Money?` type; step 17's contract declarations now
+  carry `:kind` suffixes and point at the generated facades. Stale header counts here
+  (twelve→thirteen packages, 149→191 tests) refreshed. Verified: check_docs +
+  check_structure green; docs-only — no wire surface touched.
 - **Generated typed contract facades (user-approved)**: the TS-client pattern applied to
   plugin authoring — a plugin's own `RequiresEvent`/`RequiresView` declarations now generate
   internal typed facades (Tam.Compiler syntax provider over the fluent calls' literal args):
