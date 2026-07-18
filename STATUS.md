@@ -474,6 +474,16 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Share dialog: the picker holds the selection (user-directed: "shouldn't the picker
+  have the selection")**: the folder share dialog collapsed from list-plus-form (two
+  "Delas med" labels, a submit button) into ONE MultiSelect — the pills ARE the folder's
+  own grants (described labels from documents.folders.shares), picking adds (share
+  intent), removing a pill revokes (unshare intent), each immediate; current grants are
+  unioned into the option data so pills always render labeled, options come
+  server-searched and kind-grouped from reach.search exactly like the form renderer.
+  FE-only (DocumentsBrowser). Live-verified: add-through-picker persisted and re-opened
+  as two pills (technician + Tekla Nilsson); documents suite 26/26 on fresh SQLite;
+  server untouched since the fully-matrixed 095242b.
 - **Framework finish, batch 1 (user-directed: "finish the framework stuff before more
   domain")**: three deferred items closed. D-R6 REACH DESCRIBE — `IReachProvider` gains
   `DescribeAsync` as a DEFAULT interface method (null = no label; existing providers keep

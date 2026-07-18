@@ -81,10 +81,11 @@ document folder.
   `blob()` (bearer + retry like every other call), define/upload as ordinary operation forms.
   The file input is a standard renderer (`file`): base64 payload plus `fileName`/`contentType`
   side fields — no bespoke upload endpoint.
-- **Sharing lives in the browser too**: the share dialog lists the selected folder's OWN
-  grants (`documents.folders.shares`, admin-only like the intents) with one-click revoke, and
-  adds new ones through the share form's reach picker. Inherited/open access shows as the
-  empty-state hint — the effective-ACL question stays server-side (D-DOC2).
+- **Sharing lives in the browser too**: the share dialog is ONE multi-select whose pills ARE
+  the selected folder's own grants (`documents.folders.shares`, admin-only like the intents,
+  described labels via docs/35 D-R6) — picking adds a grant, removing a pill revokes it, each
+  an immediate share/unshare intent. Inherited/open access shows as the empty-state hint —
+  the effective-ACL question stays server-side (D-DOC2).
 - **And that is ALL the nav there is.** The package deliberately suggests no pages
   (`plugin.Nav(nav => nav.None())` — declaring nav, even empty, graduates it past the
   mechanical More-page, docs/30 D-N1): documents surface on the records they attach to and in

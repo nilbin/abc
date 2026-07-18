@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useEffect } from 'react';
 import {
-  ActionIcon, Alert, Badge, Button, Group, Modal, NavLink, Paper, Stack, Table, Text, Title,
+  ActionIcon, Alert, Button, Group, Modal, MultiSelect, NavLink, Paper, Stack, Table, Text, Title,
 } from '@mantine/core';
 import { OperationForm, useTam, useView } from '@tam/react';
 
@@ -126,55 +127,76 @@ export function DocumentsBrowser() {
 }
 
 /**
- * The share dialog's body: the folder's OWN grants (documents.folders.shares) with one-click
- * revoke, and the share form's reach picker to add more. Inherited/open access shows as the
- * empty-state hint — the effective-ACL question stays server-side (docs/35).
+ * The share dialog's body — ONE control: a multi-select whose pills ARE the folder's own
+ * grants (described labels from documents.folders.shares). Picking adds a grant, removing a
+ * pill revokes it — each an immediate intent (share/unshare), no separate list or submit.
+ * Inherited/open access shows as the empty-state hint; the effective-ACL question stays
+ * server-side (docs/35).
  */
 function FolderShares({ folderId }: { folderId: string }) {
   const { t, client, invalidate } = useTam();
   const shares = useView('documents.folders.shares', { folderId });
-  const rows = (shares.data?.rows ?? []) as { id: string; reach: string; label?: string | null }[];
+  const current = (shares.data?.rows ?? []) as { id: string; reach: string; label?: string | null }[];
+  const value = current.map(g => g.reach);
 
-  const describe = (reach: string) => {
-    const cut = reach.indexOf(':');
-    const kind = cut < 0 ? reach : reach.slice(0, cut);
-    const id = cut < 0 ? null : reach.slice(cut + 1);
-    const kindLabel = t(`reach.kinds.${kind}`);
-    return { kind: kindLabel === `reach.kinds.${kind}` ? kind : kindLabel, id };
+  // Server-searched options, grouped by kind — the same shape as the reach form renderer.
+  const [search, setSearch] = useState('');
+  const [debounced, setDebounced] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(search), search ? 200 : 0);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const options = useView('reach.search', { search: debounced || undefined, pageSize: 50 });
+  const rows = (options.data?.rows ?? []) as { id: string; label: string; kind: string }[];
+  const [busy, setBusy] = useState(false);
+
+  const heading = (kind: string) => {
+    const localized = t(`reach.kinds.${kind}`);
+    return localized === `reach.kinds.${kind}` ? kind : localized;
   };
+  const groups = new Map<string, { value: string; label: string }[]>();
+  const add = (kind: string, ref: string, label: string) => {
+    const h = heading(kind);
+    if (!groups.has(h)) groups.set(h, []);
+    groups.get(h)!.push({ value: ref, label });
+  };
+  for (const row of rows) add(row.kind, row.id, row.label);
+  // Current grants must exist in `data` for their pills to render labeled — union any the
+  // search page did not happen to include (their described label, else the canonical ref).
+  const known = new Set(rows.map(r => r.id));
+  for (const grant of current) {
+    if (known.has(grant.reach)) continue;
+    add(grant.reach.split(':')[0], grant.reach, grant.label ?? grant.reach);
+  }
+  const data = [...groups.entries()].map(([group, items]) => ({ group, items }));
 
-  const revoke = async (reach: string) => {
-    const result = await client.operation('documents.folders.unshare',
-      { folderId, reach }, { idempotencyKey: crypto.randomUUID() });
-    invalidate(result.effects);
+  // The selection delta IS the intent stream: added ref → share, removed ref → unshare.
+  const apply = async (next: string[]) => {
+    setBusy(true);
+    try {
+      for (const ref of next.filter(r => !value.includes(r)))
+        invalidate((await client.operation('documents.folders.share',
+          { folderId, reach: ref }, { idempotencyKey: crypto.randomUUID() })).effects);
+      for (const ref of value.filter(r => !next.includes(r)))
+        invalidate((await client.operation('documents.folders.unshare',
+          { folderId, reach: ref }, { idempotencyKey: crypto.randomUUID() })).effects);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <Stack gap="sm">
-      <Text size="sm" fw={500}>{t('labels.shared-with')}</Text>
-      {rows.length === 0
-        ? <Text size="sm" c="dimmed">{t('documents.no-own-shares')}</Text>
-        : rows.map(row => {
-            const { kind, id } = describe(row.reach);
-            return (
-              <Group key={row.id} justify="space-between" gap="xs">
-                <Group gap="xs">
-                  <Badge variant="light">{kind}</Badge>
-                  {/* Server-described label (docs/35 D-R6) first; the raw ref id is the
-                      fail-soft fallback. */}
-                  {(row.label ?? id) && <Text size="sm">{row.label ?? id}</Text>}
-                </Group>
-                <ActionIcon variant="subtle" color="red"
-                  aria-label={t('operations.documents.folders.unshare.title')}
-                  onClick={() => void revoke(row.reach)}>
-                  ✕
-                </ActionIcon>
-              </Group>
-            );
-          })}
-      <OperationForm form="web.documents.folders.share"
-        initialValues={{ folderId }}
-        onSuccess={r => invalidate(r.effects)} />
-    </Stack>
+    <MultiSelect
+      label={t('labels.shared-with')}
+      description={value.length === 0 ? t('documents.no-own-shares') : undefined}
+      data={data}
+      value={value}
+      onChange={v => void apply(v)}
+      searchable
+      onSearchChange={setSearch}
+      filter={({ options: o }) => o /* the server already filtered */}
+      nothingFoundMessage={t('common.no-matches')}
+      disabled={busy}
+    />
   );
 }
