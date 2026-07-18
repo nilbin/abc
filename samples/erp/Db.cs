@@ -75,6 +75,10 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
             b.Property(x => x.Description).HasMaxLength(1000);
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
         });
+        // The durable order-number sequence (Finding 5): one row per tenant, keyed by TenantId so
+        // a concurrent first-create loses the PK race and retries instead of duplicating a number.
+        // Addressed by explicit TenantId in OrderNumbering — no global tenant filter needed.
+        modelBuilder.Entity<OrderNumberSequence>().HasKey(x => x.TenantId);
 
         // Plugin storage opts in here: the plugin's tables live in the host database and
         // migrate with it (docs/22). One line per installed plugin.

@@ -87,6 +87,10 @@ public static class Seed
             OrderPriority.Urgent);
         db.Orders.AddRange(ordOpen, ordScheduled, ordInProgress, ordDone, ordFinished, ordUrgent);
 
+        // The durable order-number counter (Finding 5) starts at the last seeded number, so the
+        // first order created at runtime continues the sequence at 2026-01423.
+        db.Add(new OrderNumberSequence { TenantId = Tenant, Next = 1422 });
+
         // Tenant-managed roles (decision D1): named grant sets, stored as data.
         void Role(string name, params string[] permissions) => db.Add(new RoleEntity
         {

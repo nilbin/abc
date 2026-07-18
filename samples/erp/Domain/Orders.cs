@@ -158,6 +158,21 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
 }
 
 
+// ---- Durable per-tenant order numbering (Sol review, Finding 5) ----
+//
+// The old COUNT(*)+base was racy (two concurrent creates read the same count → the same
+// number, caught only by the unique index as a spurious failure) and recycled numbers after a
+// delete. This row IS the sequence. It never mutates through the CLR — the number advances only
+// via an atomic SQL UPDATE (OrderNumbering.NextAsync) that holds the row's write-lock to the
+// operation's commit, so concurrent creates serialize on it. Immutable properties keep it clear
+// of TAM008 without a pragma: identity is fixed, and the count is a fact the database owns.
+public sealed class OrderNumberSequence
+{
+    public required string TenantId { get; init; }
+    public int Next { get; init; }
+}
+
+
 // ---- The aggregate's published language (docs/31 "events are records"): the record IS the
 // contract — fields and kinds derive from its members, discovery registers it, and the
 // publish site is compile-checked (TAM009 refuses anonymous payloads). ----

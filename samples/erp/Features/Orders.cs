@@ -48,6 +48,36 @@ public static class OrderRules
     }
 }
 
+public static class OrderNumbering
+{
+    // The first order for a tenant that has no counter row yet. Matches the demo's historical
+    // base so seeded numbers (…-01412) and freshly-created ones share one sequence.
+    private const int FirstNumber = 1412;
+
+    /// <summary>Atomically claims the next order number for the tenant, INSIDE the operation's
+    /// transaction (Sol review, Finding 5). The UPDATE takes the counter row's write-lock — held
+    /// to commit — so a concurrent create BLOCKS on it rather than reading a stale value; the
+    /// number is unique, monotonic, and never recycled by a delete.</summary>
+    public static async Task<int> NextAsync(ErpDbContext db, string tenant, CancellationToken ct)
+    {
+        var bumped = await db.Set<OrderNumberSequence>()
+            .Where(x => x.TenantId == tenant)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Next, x => x.Next + 1), ct);
+        if (bumped == 0)
+        {
+            // No counter for this tenant yet (created after seed). Claim the first number; a
+            // concurrent first-create loses the PK race, surfaces as a version conflict, and
+            // retries into the UPDATE path above — so no duplicate is ever committed.
+            db.Set<OrderNumberSequence>().Add(new OrderNumberSequence { TenantId = tenant, Next = FirstNumber });
+            return FirstNumber;
+        }
+        return await db.Set<OrderNumberSequence>()
+            .Where(x => x.TenantId == tenant)
+            .Select(x => x.Next)
+            .SingleAsync(ct);
+    }
+}
+
 [Operation("orders.create")]
 [Authorize("orders.create")]
 [AcceptsExtensions(typeof(Order))]
@@ -81,7 +111,7 @@ public static class CreateOrder
         }
 
         var year = DateOnly.FromDateTime(DateTime.UtcNow).Year;
-        var sequence = await db.Orders.CountAsync(ct) + 1412;
+        var sequence = await OrderNumbering.NextAsync(db, context.TenantId.Value, ct);
         var order = Order.Create(
             context.TenantId.Value,
             new OrderNumber($"{year}-{sequence:D5}"),
