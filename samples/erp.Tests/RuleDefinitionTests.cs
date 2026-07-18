@@ -86,12 +86,28 @@ public sealed class RuleDefinitionTests : IAsyncLifetime
             action = """{"type":"publish-event"}""",
         })).ShouldSucceed();
 
-        // ...but a FINDING rule without any message is RUL003, exactly as before.
+        // ...but a FINDING rule (no action) demands a message. Two layers now guard this,
+        // and the test exercises both (Sol review, Finding 2 — conditional requiredness is
+        // authoritative at submit, not merely a form/resolve affordance):
+        //
+        //   1. The form's RequiredWhen(Action == null) is enforced framework-side for EVERY
+        //      caller. An entirely-omitted map trips that generic gate before the handler runs.
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "silent-finding",
             onOperation = "orders.complete",
             condition = """{"t":"const","v":true}""",
+        })).ShouldFailWith("validation.required", onField: "messages");
+
+        //   2. RUL003 is stricter than mere presence: it wants the DEFAULT culture ("sv"). A
+        //      non-empty map missing the default clears the generic gate, so the domain gate
+        //      still fires with its precise finding.
+        (await admin.ExecuteAsync("rules.define", new
+        {
+            name = "wrong-culture-finding",
+            onOperation = "orders.complete",
+            condition = """{"t":"const","v":true}""",
+            messages = new Dictionary<string, string> { ["en"] = "x" },
         })).ShouldFailWith("rules.missing-message", onField: "messages");
     }
 }
