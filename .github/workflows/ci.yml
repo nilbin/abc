@@ -51,6 +51,11 @@ jobs:
           dotnet run --project samples/erp --no-build -- contract /tmp/host-contract.current.json
           python3 -c "import json,sys; sys.exit(0 if json.load(open('samples/erp/host-contract.json')) == json.load(open('/tmp/host-contract.current.json')) else sys.exit('host-contract.json is stale — re-export with: dotnet run --project samples/erp -- contract samples/erp/host-contract.json'))"
 
+      - name: Plugin contract slices are current (docs/37 D-V4)
+        run: |
+          dotnet run --project samples/erp --no-build -- contract /tmp/invoicing.contract.current.json --plugin invoicing
+          python3 -c "import json,sys; sys.exit(0 if json.load(open('samples/invoicing/invoicing.contract.json')) == json.load(open('/tmp/invoicing.contract.current.json')) else sys.exit('invoicing.contract.json is stale — re-export with: dotnet run --project samples/erp -- contract samples/invoicing/invoicing.contract.json --plugin invoicing'))"
+
       - name: Generated TS client is current
         run: |
           node scripts/generate-types.mjs samples/erp/manifest.baseline.json samples/web/src/generated/tam.ts

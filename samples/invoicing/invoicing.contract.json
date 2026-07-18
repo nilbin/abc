@@ -1,0 +1,76 @@
+{
+  "events": {
+    "invoicing.invoice-created": {
+      "fields": [
+        "invoiceId",
+        "orderId"
+      ],
+      "kinds": {
+        "invoiceId": "guid",
+        "orderId": "guid"
+      }
+    },
+    "invoicing.invoice-finalized": {
+      "fields": [
+        "invoiceId",
+        "orderId"
+      ],
+      "kinds": {
+        "invoiceId": "guid",
+        "orderId": "guid"
+      }
+    },
+    "invoicing.invoice-paid": {
+      "fields": [
+        "invoiceId",
+        "orderId"
+      ],
+      "kinds": {
+        "invoiceId": "guid",
+        "orderId": "guid"
+      }
+    }
+  },
+  "views": {
+    "invoicing.invoices.detail": {
+      "permission": "invoicing.read",
+      "fields": [
+        "id",
+        "orderNumber",
+        "status",
+        "amount",
+        "created"
+      ],
+      "kinds": {
+        "id": "guid",
+        "amount": "decimal"
+      }
+    },
+    "invoicing.invoices.list": {
+      "permission": "invoicing.read",
+      "fields": [
+        "id",
+        "orderNumber",
+        "status",
+        "amount",
+        "created"
+      ],
+      "kinds": {
+        "id": "guid",
+        "amount": "decimal"
+      }
+    }
+  },
+  "slots": {},
+  "grids": {
+    "invoicing.web.invoices": {
+      "view": "invoicing.invoices.list"
+    }
+  },
+  "extensibleEntities": [],
+  "operations": [
+    "invoicing.create-from-order",
+    "invoicing.finalize",
+    "invoicing.mark-paid"
+  ]
+}

@@ -14,11 +14,21 @@ namespace Tam;
 /// </summary>
 public static class HostContractExport
 {
-    public static string Write(TamModel model)
+    /// <summary>Exports the consumable surface. With <paramref name="forOwner"/> null this is the
+    /// HOST contract — host-owned and framework-package surface a plugin may consume (PLG010).
+    /// With a plugin id it is that plugin's own SLICE (docs/37 D-V4, the second contract
+    /// provider): only surface owned by that plugin, so a dependent referencing the slice gets
+    /// exactly its parent's contract, and the slice stays stable against unrelated host changes.
+    /// Slots and extensible entities are host concepts (PLG005) — absent from a plugin slice.</summary>
+    public static string Write(TamModel model, string? forOwner = null)
     {
-        // Only what a plugin MAY consume (PLG010): host-owned and framework-package
-        // contracts — never another plugin's.
-        bool Consumable(string? owner) => owner is null || model.Packages.ContainsKey(owner);
+        bool Consumable(string? owner) => forOwner is null
+            ? owner is null || model.Packages.ContainsKey(owner)
+            : owner == forOwner;
+
+        var slotSource = forOwner is null
+            ? model.Slots
+            : (IReadOnlyDictionary<string, SlotDefinition>)new Dictionary<string, SlotDefinition>();
 
         var contract = new
         {
@@ -40,7 +50,7 @@ public static class HostContractExport
                             .Where(x => x.Kind is not null)
                             .ToDictionary(x => x.WireName, x => x.Kind!),
                     }),
-            slots = model.Slots.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(
+            slots = slotSource.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(
                 kv => kv.Key,
                 kv => new { keys = kv.Value.ContextKeys }),
             grids = model.Grids
@@ -48,7 +58,9 @@ public static class HostContractExport
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(
                     kv => kv.Key,
                     kv => new { view = kv.Value.ViewId }),
-            extensibleEntities = model.ExtensibleEntityKeys.Order(StringComparer.Ordinal).ToList(),
+            extensibleEntities = (forOwner is null
+                    ? model.ExtensibleEntityKeys : Enumerable.Empty<string>())
+                .Order(StringComparer.Ordinal).ToList(),
             operations = model.Operations
                 .Where(kv => Consumable(kv.Value.Plugin))
                 .Select(kv => kv.Key).Order(StringComparer.Ordinal).ToList(),

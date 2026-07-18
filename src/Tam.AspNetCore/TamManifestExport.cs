@@ -28,12 +28,20 @@ public static class TamManifestExport
 
         // The host's extension-surface artifact (docs/31 slice 3): what a plugin author
         // browses to see what is extendable, and references as an AdditionalFile for the
-        // generated typed contracts.
+        // generated typed contracts. With `--plugin <id>` it writes that PLUGIN's slice
+        // instead (docs/37 D-V4) — the contract a dependent plugin references.
         if (args is ["contract", ..])
         {
-            var contractPath = args.Length > 1 ? args[1] : "host-contract.json";
-            File.WriteAllText(contractPath, HostContractExport.Write(model));
-            Console.WriteLine($"host contract written to {contractPath}");
+            string? forOwner = null;
+            var pluginIdx = Array.IndexOf(args, "--plugin");
+            if (pluginIdx >= 0 && pluginIdx + 1 < args.Length)
+                forOwner = args[pluginIdx + 1];
+            var contractPath = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal)
+                ? args[1]
+                : forOwner is null ? "host-contract.json" : $"{forOwner}.contract.json";
+            File.WriteAllText(contractPath, HostContractExport.Write(model, forOwner));
+            Console.WriteLine(
+                $"{(forOwner is null ? "host contract" : $"'{forOwner}' contract slice")} written to {contractPath}");
             return true;
         }
 
