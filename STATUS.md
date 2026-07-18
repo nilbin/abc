@@ -1833,57 +1833,155 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
 
 Screenshots of all of it: [docs/screenshots/](docs/screenshots/).
 
-## Gaps vs. the design docs (deliberate, in rough priority order)
+## Capability matrix
 
-1. **Compiler package**: analyzer (TAM001-003, L10N001, EDIT001 as build errors) + incremental
-   source generator emitting compile-time discovery (`AddDiscovered()`, visible under
-   samples/erp/generated/ — no runtime assembly scanning). Field metadata is still reflected at
-   startup; L10N000, DB001, EDIT002 and impact reports remain.
-2. **View result records are init-property, not positional** — EF cannot compose sort over
-   positional-record ctor projections; the compiler phase should rewrite sort into the projection
-   source so the tutorial's positional style works.
-3. **Context views in forms** (`form.Context/Show`) not implemented; contextual display data flows
-   via derivations/suggestions instead.
-4. **Value update policies**: only `RecomputeIfUntouched`; `DefaultOnce/Derived/RequireConfirmation`
-   and `SuggestFrom` bindings are absent. Conditional requiredness is enforced at resolve +
-   client, not re-checked at submit.
-5. **Authorization**: identity is still the X-Demo-Role header stand-in (no real authn), and
-   only the Own scope exists — Team would need an org dimension.
-6. **Tenancy**: envelope + stamping + per-tenant registry/overlay work, but a fixed "demo" tenant,
-   no EF global filters, no RLS (D2).
-7. **Idempotency**: replay + payload-hash rejection work; a retention policy doesn't exist yet.
-8. **Integrations**: mapping binding (INT001 validation), idempotent runner, and a persisted
-   inbox with retry + dead-letter (3 attempts) exist — failed-sync recovery verified: a row that
-   failed on a missing customer processed automatically after the customer was created, with no
-   re-send. Outbox implemented: explicit event effects persist in the operation transaction and a
-   background dispatcher delivers them (SSE transport in the demo; IOutboxTransport for a real
-   bus). Reconciliation remains. Also not started: offline/mobile.
-9. **MCP**: minimal JSON-RPC over HTTP (no resources, no streaming). Tool schemas are now
-   per-tenant and include extension fields with admin-authored descriptions.
-10. **PostgreSQL supported and CI-smoked**: connection-string switch (Host=… → Npgsql), real
-    `jsonb` extensions column, full wire regression verified on PG 16. SQLite remains the
-    zero-setup dev default. Extension filtering is now TYPED JSON extraction (see the verified
-    list): exact equality + contains + ordinal ranges for strings/dates, numeric equality +
-    ranges for numbers, on both providers. Extension SORTING now works the same
-    way (`sort=ext.weightKg` — numeric via JsonNumber, ordinal via JsonValue; grid headers on
-    extension columns are clickable; null placement follows the provider). Boolean extension filters now work too
-    (provider-aware: json_extract's 1/0 on SQLite, ->> text on PostgreSQL), and SQLite JSONPaths
-    quote the key so plugin-packaged dotted keys ("inspect.requiresInspection") resolve. The
-    remaining performance item is expression-index promotion.
-11. Grid row-action input mapping is a name-match heuristic; batched per-row action availability
-    (review-notes risk #4) not implemented.
-12. **Plugin system: P1–P3 and P5-v1 built and verified**; remaining design-only
-    ([docs/22-plugins.md](docs/22-plugins.md), decision D8, tutorial step 13): P4 custom
-    objects (waits on typed JSON predicates + index promotion + RLS), rule actions beyond the
-    blocking finding (set-field, publish-event), effect-triggered rules, a rule-builder UI,
-    and rules inside tenant packages. PLG###/RUL### are runtime errors/findings today, not
-    Roslyn analyzer diagnostics; subscriber delivery is at-most-once (no retry/inbox for
-    plugin subscribers yet); field-level audit shows the extensions column as one change, not
-    per extension key; package uninstall leaves package-defined roles in place (they may be
-    granted to real users); client-side portable evaluation of tenant rules (offline parity)
-    needs the rule conditions merged into the manifest, which is not done yet. Packages and
-    rules now have admin UI pages (grids + forms; the rule condition is authored as raw Px
-    JSON in a textarea — a visual rule builder remains future work).
+The one-night chronological "gaps" list is retired: most of it is now built, and the original
+entries had drifted out of sync with the sections above. This matrix is the current honest state,
+populated from those sections and the latest review round. States:
+
+- **Built** — code exists, compiles, wired into the composed model.
+- **Verified (unit)** — covered by Tam.Tests or the Tam.Testing harness.
+- **Verified (SQLite)** / **Verified (Postgres)** — exercised over the wire on that engine (Postgres rows were run on both engines).
+- **Wire-tested** — exercised over real HTTP or driven in the browser (engine-agnostic / FE-only).
+- **Sample-only** — lives in a sample host, not framework core.
+- **Designed** — written down in the docs, not built.
+- **Known gap** — acknowledged shortfall or deliberate tradeoff (see the subsection below).
+- **Retired** — built then removed or superseded.
+
+### Core pipeline
+
+| Capability | State | Verification | Notes |
+|---|---|---|---|
+| Execution pipeline (authz gate → structural validation from nullability/semantic types → transaction → same-tx field-level audit with inferred effects → idempotent replay → culture) | Verified (Postgres) | wire matrix, both engines | the spine every operation rides |
+| Conflict-safe partial edits — `Change<T>` three-way merge, structured conflict (original/current/submitted) | Verified (Postgres) | tutorial wire behavior | keep-current / use-mine in UI |
+| Idempotency — replay by key + payload-hash mismatch rejection, actor-scoped | Verified (Postgres) | wire | same key + different payload rejected |
+| Views/grids — join + declared-capability sort + paging | Verified (Postgres) | wire matrix | semantic wrappers as wire primitives |
+| Reactive create form — portable `VisibleWhen`/`RequiredWhen` + batched server resolve | Wire-tested | wire + client | evaluated client-side from the manifest AST; `RequiredWhen` is also re-checked authoritatively at submit (review round) so a form-bypassing caller can't omit a conditionally-required field |
+| Mechanical filtering — `Filterable`, typed extension JSON predicates + sorting | Verified (Postgres) | wire, both engines | eq/range/contains by wire kind; `ext.{key}` via owned DbFunctions |
+| Async reference lookup — `LookupSelect` / `[Lookup]` | Wire-tested | wire | server-side debounced search view |
+| Roslyn analyzer — TAM001-009, L10N001, EDIT001 + PLG/RUL/NAV/PAGE/SLOT/DOC/LOOKUP/ENUM/REACH families | Verified (unit) | in-tree (several fired on real code) | build errors, not runtime; some plugin/runtime codes are still runtime-only (see gaps) |
+| Source generator — compile-time discovery (`AddDiscovered`), typed facades, HostContract symbols | Built | manifest byte-identical proofs | no runtime assembly scanning |
+| Manifest + OpenAPI 3.1 + MCP endpoints from the model, ETag/304 | Verified (Postgres) | wire | |
+| Localization — L10N001 startup gate, sv/en catalogs, live switch | Verified (Postgres) | gate fired in dev | zero display text in code |
+| Typed TS client generator + baseline-drift CI gate | Built | CI | |
+| D4 additive baseline + `dotnet tam` regen/verify CLI | Built | CI | |
+| Change-impact report — `TamImpact` | Verified (unit) | 4 tests + real erp report | |
+| Framework-composed pages — `model.Page` / `ModelPage`, record tabs, display semantic | Verified (Postgres) | wire + Playwright | sample's registerPage count is zero |
+| Navigation — manifest-driven nav v1 + tenant override registry (nav v2) | Verified (Postgres) | wire + Playwright | discoverability, never authorization |
+| Tam.Testing harness + CapabilitySweep | Built | CI (erp.Tests) | in-process pipeline harness |
+
+### Tenancy & security
+
+| Capability | State | Verification | Notes |
+|---|---|---|---|
+| Tenant isolation — EF global query filter over every `ITenantScoped` + `SaveChanges` stamp interceptor | Verified (Postgres) | wire, both engines; two-context cache test | **corrects old gap 6**: no fixed "demo" tenant, no hand-written Where clauses |
+| RLS backstop (Postgres) — `TamRls` ENABLE+FORCE + one FOR ALL policy per tenant table | Verified (Postgres) | psql probe as demoted role | **corrects old gap 6**: no-setting → 0 rows; 26 tables covered |
+| Hierarchy capability cascade — per-role `cascade`, ancestor-chain walk | Verified (Postgres) | wire | grants fan out, data stays per-node |
+| Hierarchy read scopes — `InSubtree` / `WithInherited`; act-as writes via `X-Tam-Tenant` | Verified (Postgres) | wire | global filter stays strict; a view widens explicitly |
+| Capability model — access levels + explicit atoms; field masking (`[Sensitive]`) | Verified (Postgres) | wire | read masking removes the column; write masking rejects it |
+| Paired-atom record scopes — `[Widens]`, `ScopedUnless`/`CheckOwnershipUnless`, TAM006 | Verified (Postgres) | wire (13/13, both engines) | replaces the retired `:own` suffix |
+| Tenant lifecycle — create/move/rename/list | Verified (Postgres) | wire (11/11) | |
+| Reserved permissions — `*` cannot self-entitle `subscriptions.manage*` | Verified (unit) | wire | |
+| Reach seam — `ReachRef`, providers, `reach.search` picker | Verified (Postgres) | wire | naming a people-set on a row |
+| Roles / users / policies / companies admin pages | Wire-tested | Playwright (headless) | |
+| Subscriptions & seats — anchor model, seat leases | Verified (Postgres) | wire (106 tests) | |
+| Secrets vault + SSRF egress guard | Wire-tested | wire | write-only secrets; public-IP-only egress |
+
+### Auth
+
+| Capability | State | Verification | Notes |
+|---|---|---|---|
+| Embedded OpenIddict — Auth Code + PKCE + refresh (humans), client credentials (machines), no password grant | Verified (Postgres) | curl + browser e2e | **corrects old gap 5**: real authn is built — the X-Demo-Role header was only the first authorization layer |
+| Platform-global accounts — `tam:tenant` claim → request scope; membership-bound grants | Verified (Postgres) | wire | cross-tenant guard (no membership → no grants) |
+| SPA auth client — `TamAuth`/`useTamAuth`, silent refresh, 401-retry | Wire-tested | browser | tokens in sessionStorage (tradeoff, see gaps) |
+| Token hardening — refresh rotation, reuse-family revoke, revocation endpoint | Verified (unit) | wire (10 checks) | |
+| Invite flow — `users.invite`, `ITamEmail`, one-shot link | Verified (unit) | wire (12 checks) | |
+| `IActorProvider` seam for external IdP | Built | — | the auth swap point |
+
+### Integrations & messaging
+
+| Capability | State | Verification | Notes |
+|---|---|---|---|
+| Inbound integrations — mapping bind (INT001), idempotent runner, inbox + retry + dead-letter | Wire-tested | wire | failed-sync auto-recovery verified |
+| Outbox dispatcher — event effects in-tx, claim-lease, poison dead-letter | Verified (Postgres) | wire | durable consumers only (dupe inline send removed) |
+| Live refresh (SSE) — `IEffectBackplane` in-process + Postgres `LISTEN/NOTIFY` backplane | Verified (Postgres) | wire, cross-node | grid on instance B refreshes from a commit on A |
+| Outbound integrations — event/schedule/manual triggers, retry+backoff+dead-letter, requeue | Wire-tested | wire | |
+| Retention janitor — trims dispatched outbox / processed inbox+tasks / old runs / expired idempotency >30d | Built | wire (round 3) | **corrects old gap 7**: retention exists (audit + dead-letters kept) |
+| Fortnox two-way connector | Sample-only | wire | inbound import + outbound push + scheduled poll |
+
+### Plugins
+
+| Capability | State | Verification | Notes |
+|---|---|---|---|
+| Packaging (P1) — `[TamPlugin]`, activate/deactivate as tenant data, manifest/MCP/OpenAPI filtering | Verified (Postgres) | wire | inactive → 404 pre-authorization |
+| Depth (P2) — packaged fields, gates (ctor-DI classes), effect subscribers | Verified (Postgres) | wire | |
+| Tenant packages (P3) — install / dryRun / uninstall | Verified (Postgres) | wire | all-or-nothing in the pipeline tx |
+| Automation rules (P5) — `rules.define`, Px conditions over input + `row.*`, relative-date `fn` | Verified (Postgres) | wire | **corrects old gap 12** |
+| Rule action catalog — set-field + publish-event | Verified (Postgres) | wire | **corrects old gap 12**; hardened by review round 5 |
+| Effect-triggered rules (`onEvent`) | Verified (Postgres) | wire | **corrects old gap 12** |
+| Rule-builder UI — visual trigger/condition/action editor | Wire-tested | screenshots + wire | **corrects old gap 12**: no longer raw Px in a textarea |
+| Cross-domain plugins (docs/31) — `GridAction`, `IPackagedFieldWriter`, `RequiresView`, slots, panels, event contracts | Verified (Postgres) | wire | |
+| Framework packages tier — `[TamPackage]`, 15 always-active modules | Verified (Postgres) | wire | admin surface is packages, not host code |
+| Plugin-on-plugin — `DependsOn` L1 (activation) + L2 (contract, PLG010/011) | Verified (SQLite) | wire | fortnox `DependsOn` invoicing as the proof |
+| Host contract artifact + generated symbols | Built | CI freshness gate | discoverability is the artifact |
+| readOnly packaged fields | Verified (Postgres) | wire | plugin-owned state; wire extension writes rejected |
+| P4 custom objects | Designed | docs/22 | waits on typed JSON predicates + index promotion + RLS |
+| `Provides`-one-of / `Conflicts` relationship tiers; variability (docs/37) | Designed | docs | rev-3: variability = plugins at capability granularity |
+
+### MCP
+
+| Capability | State | Verification | Notes |
+|---|---|---|---|
+| MCP endpoint — initialize / tools/list / tools/call; 15 tools from the model; per-tenant + extension fields; `*_resolve` preflight; permission-filtered discovery; spec JSON-RPC errors + `isError` for every tool kind | Wire-tested | wire | agents hit the identical pipeline; discovery filtering + error semantics hardened this review round; remaining gap is transport (no resources/streaming) |
+
+### Frontend
+
+| Capability | State | Verification | Notes |
+|---|---|---|---|
+| tam-react runtime — context, renderer registry, OperationForm/ViewGrid/ModelPage/NavProvider, Mantine pack | Wire-tested | build + Playwright | |
+| Data layer — TanStack Query `useView`, targeted effect-keyed invalidation | Wire-tested | build + Playwright | |
+| Grid features — collapsing row-action menu, column chooser, filter toggle, wide-grid horizontal scroll | Wire-tested | screenshots | |
+| Display-renderer registry — read-only twin of input renderers | Wire-tested | Playwright | |
+| URL-backed nav + deep links — `?mode/page/record/tab/tenant` | Wire-tested | Playwright (6/6) | bookmarkable; back/forward drive it |
+| Documents FE — tree browser, share picker, file-staging renderer | Wire-tested | Playwright | |
+| Developer portal page | Wire-tested | Playwright | the contract as a running page |
+
+### Retired
+
+| Capability | State | Notes |
+|---|---|---|
+| Access policies / `:own` suffix (docs/27 Axis 2 v1) | Retired | built + wire-verified, then removed for the paired-atom ownership pattern (docs/28) — the encoding an analyzer can verify |
+| Order / WorkOrder split | Retired | merged into one `Order`; the `work-orders.*` wire surface is gone (intentional D4 break) |
+| FE invalidation bus (arc 3a) | Retired | one-commit stepping stone, superseded by TanStack Query (arc 3b) |
+
+### Known gaps & deliberate tradeoffs
+
+- **Transactional gate concurrency is READ COMMITTED**, not a frozen / repeatable read — concurrent
+  writers can race a gate's precondition. A declared-lease seam for gates needing a true freeze is
+  the designed follow-up (the pipeline comment now states this plainly, per the review round).
+- **MCP** is minimal JSON-RPC over HTTP: no resources, no streaming. (Discovery is now
+  permission-filtered and the JSON-RPC error / `isError` semantics were corrected this review round —
+  see the MCP row above; the remaining gap is transport surface, not correctness.)
+- **SPA tokens live in sessionStorage** — the documented no-BFF tradeoff (tab-scoped; the server
+  enforces rotation/revocation). BFF mode is not offered; docs/26 now spells out the XSS blast-radius
+  this trades against.
+- **Per-slice contract additivity check is pending** — host + per-plugin contract *freshness* is
+  gated, but additive-only checking across plugin contract slices is not.
+- **Value update policies**: only `RecomputeIfUntouched`; `DefaultOnce`/`Derived`/
+  `RequireConfirmation` and `SuggestFrom` bindings are absent.
+- **Context views in forms** (`form.Context/Show`) are not implemented; contextual data flows via
+  derivations/suggestions.
+- **View result records must be init-property** — TAM007 makes positional-ctor projections (which EF
+  cannot compose sort over) a build error, resolving the old ambiguity by convention, not a rewrite.
+- **Plugin subscriber delivery is at-most-once** — no retry/inbox for plugin subscribers yet.
+- **Field-level audit** shows the extensions column as one change, not per extension key.
+- **Package uninstall** leaves package-defined roles in place (they may already be granted to users).
+- **Offline parity for tenant rules** needs the rule conditions merged into the manifest (client-side
+  portable evaluation) — not done. Integration **reconciliation** and **offline/mobile** are not started.
+- **Custom objects (P4)** and the **`Provides`/`Conflicts`** relationship tiers are designed, not built.
+- Some plugin/runtime diagnostic codes (`PLG###`/`RUL###`) are runtime errors/findings, not yet
+  Roslyn analyzer diagnostics; field metadata is still reflected at startup (manifest now memoized by
+  ETag), and a few designed diagnostics (L10N000, DB001, EDIT002) remain unbuilt.
 
 ## The one-night verdict
 
