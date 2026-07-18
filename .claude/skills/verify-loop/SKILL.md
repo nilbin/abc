@@ -45,7 +45,9 @@ python3 scripts/check_manifest.py <(git show HEAD:samples/erp/manifest.baseline.
   Wire names are permanent; retire, don't drop.
 - CI gates that must match the committed files byte-for-byte: manifest baseline (additive),
   `samples/web/src/generated/tam.ts`, `samples/erp/host-contract.json`, plus
-  `scripts/check_docs.py` and the sample-structure check.
+  `scripts/check_docs.py` and `scripts/check_structure.py` (the ~420-line file cap and
+  wire-prefix conventions — run BOTH locally; a file that grew past the cap fails CI even
+  when everything else is green).
 - FE changes: `cd samples/web && npx tsc --noEmit && npx vite build` (build output is the
   served wwwroot — commit it).
 
