@@ -65,8 +65,12 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         "TAM008", "Anemic domain entity",
         "Domain entity '{0}' exposes '{1}' with a mutable public setter — state under Domain/ moves through intent methods (private set + factory; the Order/Checklist shape, CLAUDE.md \"Where code goes\"). A genuinely plain row (join/lookup/config) declares itself: wrap the class in #pragma warning disable/restore TAM008 with a reason comment.");
 
+    public static readonly DiagnosticDescriptor Tam009 = Rule(
+        "TAM009", "Anonymous event payload",
+        "EventPublished carries an ANONYMOUS object — nothing checks it against the declared contract (the folklore hole, docs/31). Declare the payload as a [DomainEvent(\"{0}\")] record and publish new EventPublished(new TheRecord(...)); the record derives the contract AND compile-checks this site. The (event, payload) string form stays for genuinely dynamic publishers (tenant automation rules).");
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006, Tam007, Tam008];
+        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006, Tam007, Tam008, Tam009];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -94,6 +98,12 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
             // anemic shape both DDD passes had to fix by hand. Plain rows opt out visibly
             // with a #pragma + reason; infrastructure tables live outside Domain/ untouched.
             start.RegisterSymbolAction(AnalyzeDomainEntityShape, SymbolKind.NamedType);
+
+            // TAM009 (docs/31 "events are records"): an anonymous-object payload — via the
+            // EventPublished effect OR the direct Db.Publish — is the unchecked third edge
+            // of the event contract: the publish site.
+            start.RegisterOperationAction(AnalyzeEventPayload, OperationKind.ObjectCreation);
+            start.RegisterOperationAction(AnalyzePublishInvocation, OperationKind.Invocation);
 
             // TAM004: a manual x.TenantId == … predicate is redundant now that isolation is a
             // global query filter, and a forgotten one used to be the leak. Flag every copy so the
@@ -348,6 +358,46 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
                 return true;
         }
         return false;
+    }
+
+    private static void AnalyzeEventPayload(OperationAnalysisContext context)
+    {
+        if (context.Operation is not IObjectCreationOperation creation
+            || creation.Type?.ToDisplayString() != "Tam.EventPublished")
+            return;
+        var payload = creation.Arguments.FirstOrDefault(a => a.Parameter?.Name == "payload")?.Value
+            ?? creation.Arguments.LastOrDefault()?.Value;
+        // The payload argument converts implicitly to object — the anonymous type hides
+        // under the conversion.
+        while (payload is IConversionOperation conversion) payload = conversion.Operand;
+        if (payload?.Type is { IsAnonymousType: true })
+        {
+            var eventName = creation.Arguments.FirstOrDefault(a =>
+                a.Parameter?.Type.SpecialType == SpecialType.System_String)?.Value
+                ?.ConstantValue.Value as string ?? "the-event";
+            context.ReportDiagnostic(Diagnostic.Create(
+                Tam009, creation.Syntax.GetLocation(), eventName));
+        }
+    }
+
+    private static void AnalyzePublishInvocation(OperationAnalysisContext context)
+    {
+        if (context.Operation is not IInvocationOperation invocation
+            || invocation.TargetMethod.Name != "Publish"
+            || invocation.TargetMethod.ContainingType.ToDisplayString()
+                != "Tam.EntityFrameworkCore.TamEvents")
+            return;
+        var payload = invocation.Arguments
+            .FirstOrDefault(a => a.Parameter?.Name == "payload")?.Value;
+        while (payload is IConversionOperation conversion) payload = conversion.Operand;
+        if (payload?.Type is { IsAnonymousType: true })
+        {
+            var eventName = invocation.Arguments.FirstOrDefault(a =>
+                a.Parameter?.Name == "eventType")?.Value
+                ?.ConstantValue.Value as string ?? "the-event";
+            context.ReportDiagnostic(Diagnostic.Create(
+                Tam009, invocation.Syntax.GetLocation(), eventName));
+        }
     }
 
     private static void AnalyzeDomainEntityShape(SymbolAnalysisContext context)

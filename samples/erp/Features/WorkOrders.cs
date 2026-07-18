@@ -226,8 +226,8 @@ public static class CompleteWorkOrder
         // The M4 seam: invoicing will draft from completed work (docs/34) — same contract
         // shape as order-completed (docs/31 D-X5).
         return new Result<Output> { Output = new Output(workOrder.Status) }
-            .Effect(new EventPublished("work-order-completed",
-                new { workOrderId = workOrder.Id.Value, number = workOrder.Number.Value }));
+            .Effect(new EventPublished(new WorkOrderCompleted(
+                workOrder.Id.Value, workOrder.Number.Value)));
     }
 }
 

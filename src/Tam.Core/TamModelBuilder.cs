@@ -215,6 +215,41 @@ public sealed partial class TamModelBuilder
         return this;
     }
 
+    /// <summary>Registers a [DomainEvent] payload record: the contract — fields AND kinds —
+    /// derives from the record's members (docs/31 "events are records"), so the record is the
+    /// one hand-written declaration and PublishesEvent string lists retire.</summary>
+    public TamModelBuilder AddEventType(Type type)
+    {
+        var attribute = type.GetCustomAttributes(typeof(DomainEventAttribute), false)
+            .Cast<DomainEventAttribute>().FirstOrDefault()
+            ?? throw new InvalidOperationException(
+                $"'{type.Name}' is not [DomainEvent]-attributed.");
+        var fields = new List<string>();
+        var kinds = new Dictionary<string, string>();
+        foreach (var property in type.GetProperties(
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            var name = Naming.Camel(property.Name);
+            fields.Add(name);
+            if (DerivedKind(property.PropertyType) is { } kind) kinds[name] = kind;
+        }
+        events[attribute.Id] = new EventDeclaration(attribute.Id, fields, currentPlugin, kinds);
+        return this;
+    }
+
+    /// <summary>CLR → contract kind (string is the default and stays undeclared, matching the
+    /// hand-written grammar so record-derived and string-declared contracts are identical on
+    /// the manifest). Money publishes as its decimal wire shape.</summary>
+    private static string? DerivedKind(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        if (type == typeof(Guid)) return "guid";
+        if (type == typeof(decimal) || type == typeof(Money)) return "decimal";
+        if (type == typeof(int) || type == typeof(long)) return "int";
+        if (type == typeof(bool)) return "bool";
+        return null;
+    }
+
     public TamModelBuilder AddDerivationHost(Type type)
     {
         derivationTypes.Add(type);

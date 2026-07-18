@@ -18,6 +18,19 @@ public sealed class AuthorizeAttribute(string permission) : Attribute
     public string Permission { get; } = permission;
 }
 
+/// <summary>
+/// Marks a record as a DECLARED domain-event payload (docs/31): the event contract — fields
+/// AND kinds — derives from the record's members, the publish site becomes compile-checked
+/// (<c>new EventPublished(new OrderCompleted(...))</c>), and compile-time discovery registers
+/// it, so the record is the ONE hand-written declaration. Host events are free-named; a
+/// plugin's event id sits under its prefix (PLG001).
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class DomainEventAttribute(string id) : Attribute
+{
+    public string Id { get; } = id;
+}
+
 /// <summary>Marks an operation as carrying tenant extension changes for the given extensible entity.</summary>
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class AcceptsExtensionsAttribute(Type entity) : Attribute

@@ -91,3 +91,17 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
         return Result.Success();
     }
 }
+
+
+// ---- The aggregate's published language (docs/31 "events are records"): the record IS the
+// contract — fields and kinds derive from its members, discovery registers it, and the
+// publish site is compile-checked (TAM009 refuses anonymous payloads). ----
+
+[DomainEvent("order-created")]
+public sealed record OrderCreated(Guid OrderId, string Number, OrderType OrderType);
+
+[DomainEvent("order-completed")]
+public sealed record OrderCompleted(Guid OrderId, string Number);
+
+[DomainEvent("order-cancelled")]
+public sealed record OrderCancelled(Guid OrderId, string Number);

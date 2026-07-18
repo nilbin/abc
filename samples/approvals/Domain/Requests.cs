@@ -75,3 +75,12 @@ public sealed class ApprovalRequest : ITenantScoped
         Outcome = outcome;
     }
 }
+
+
+// The aggregate's published language (docs/31 "events are records").
+
+[DomainEvent("approvals.requested")]
+public sealed record ApprovalRequested(Guid RequestId);
+
+[DomainEvent("approvals.approved")]
+public sealed record ApprovalApproved(Guid RequestId);

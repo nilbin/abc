@@ -8,7 +8,21 @@ public sealed record EntityCreated(string Entity, string Id) : OperationEffect("
 public sealed record EntityModified(string Entity, string Id, IReadOnlyList<string> Fields)
     : OperationEffect("entity-modified");
 
-public sealed record EventPublished(string Event, object Payload) : OperationEffect("event-published");
+public sealed record EventPublished(string Event, object Payload) : OperationEffect("event-published")
+{
+    /// <summary>The typed publish (docs/31 "events are records"): the id comes from the
+    /// payload record's [DomainEvent] attribute, so a publish site cannot name one event and
+    /// ship another's shape. TAM009 steers anonymous-object payloads here; the explicit
+    /// (event, payload) form stays for genuinely dynamic publishers (tenant automation rules).</summary>
+    public EventPublished(object payload) : this(DomainEventId(payload), payload) { }
+
+    private static string DomainEventId(object payload) =>
+        (payload.GetType().GetCustomAttributes(typeof(DomainEventAttribute), false)
+            .Cast<DomainEventAttribute>().FirstOrDefault()
+         ?? throw new InvalidOperationException(
+             $"'{payload.GetType().Name}' is not a [DomainEvent] record — declare it, or use "
+             + "the explicit (event, payload) form for genuinely dynamic publishing.")).Id;
+}
 
 public class Result
 {

@@ -48,7 +48,7 @@ public static class Approve
         // exists if and only if this operation committed, and a redelivered effect is harmless
         // because the replay is idempotent by envelope id (docs/28 seam 3).
         return new Result<Output> { Output = new Output(request.Id, request.Status) }
-            .Effect(new EventPublished("approvals.approved", new { requestId = request.Id }));
+            .Effect(new EventPublished(new ApprovalApproved(request.Id)));
     }
 }
 

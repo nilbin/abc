@@ -26,9 +26,8 @@ public sealed class ApprovalsPlugin : ITamPlugin
         // Seam 1: ONE wildcard gate — which operations it blocks is ApprovalRule data. The
         // gate and both subscribers register from their own attributes (below, via
         // AddDiscovered); only the event CONTRACTS are declared here.
-        plugin
-            .PublishesEvent("approvals.requested", "requestId:guid")
-            .PublishesEvent("approvals.approved", "requestId:guid");
+        // Published events: the [DomainEvent] records in Domain/Requests.cs are the
+        // declarations (docs/31 "events are records").
 
         // The plugin's people-sets become referencable by HOST domains (docs/35): a folder
         // ACL can name "approvals.group:{id}" — containment is the group's effective approver
@@ -246,7 +245,7 @@ internal sealed class ParkEnvelope(ITamDb tam) : IParkedWork<ApprovalRequest>
         tam.Db.Add(envelope);
         // The notification event rides the outbox from the SAME commit as the envelope:
         // the approver is mailed if and only if there is a request to act on.
-        tam.Db.Publish("approvals.requested", new { requestId = envelope.Id }, envelope.OperationId);
+        tam.Db.Publish(new ApprovalRequested(envelope.Id), envelope.OperationId);
         await tam.Db.SaveChangesAsync(ct);
     }
 }

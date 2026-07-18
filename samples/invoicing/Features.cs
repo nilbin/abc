@@ -54,8 +54,7 @@ public static class CreateFromOrder
         await fields.SetAsync("order", input.OrderId, "invoiceStatus", "draft", ct);
 
         return new Result<Output> { Output = new Output(invoice.Id) }
-            .Effect(new EventPublished("invoicing.invoice-created",
-                new { invoiceId = invoice.Id, orderId = input.OrderId }));
+            .Effect(new EventPublished(new InvoiceCreated(invoice.Id, input.OrderId)));
     }
 }
 
@@ -82,8 +81,7 @@ public static class FinalizeInvoice
         await fields.SetAsync("order", invoice.OrderId, "invoiceStatus", "invoiced", ct);
 
         return new Result<Output> { Output = new Output(invoice.Id) }
-            .Effect(new EventPublished("invoicing.invoice-finalized",
-                new { invoiceId = invoice.Id, orderId = invoice.OrderId }));
+            .Effect(new EventPublished(new InvoiceFinalized(invoice.Id, invoice.OrderId)));
     }
 }
 
@@ -109,8 +107,7 @@ public static class MarkPaid
         await fields.SetAsync("order", invoice.OrderId, "invoiceStatus", "paid", ct);
 
         return new Result<Output> { Output = new Output(invoice.Id) }
-            .Effect(new EventPublished("invoicing.invoice-paid",
-                new { invoiceId = invoice.Id, orderId = invoice.OrderId }));
+            .Effect(new EventPublished(new InvoicePaid(invoice.Id, invoice.OrderId)));
     }
 }
 

@@ -78,12 +78,8 @@ public static class CreateOrder
         // checklist templates from orderType. The wire value ("service"/"project"), never the
         // CLR enum, is the contract.
         return new Result<Output> { Output = new Output(order.Id, order.Number) }
-            .Effect(new EventPublished("order-created", new
-            {
-                orderId = order.Id.Value,
-                number = order.Number.Value,
-                orderType = order.Type,
-            }));
+            .Effect(new EventPublished(new OrderCreated(
+                order.Id.Value, order.Number.Value, order.Type)));
     }
 }
 
@@ -189,8 +185,7 @@ public static class CompleteOrder
         if (result.IsError) return result.As<Output>();
 
         return new Result<Output> { Output = new Output(order.Version + 1) }
-            .Effect(new EventPublished("order-completed",
-                new { orderId = order.Id.Value, number = order.Number.Value }));
+            .Effect(new EventPublished(new OrderCompleted(order.Id.Value, order.Number.Value)));
     }
 }
 
@@ -219,8 +214,7 @@ public static class CancelOrder
         if (result.IsError) return result.As<Output>();
 
         return new Result<Output> { Output = new Output(order.Version + 1) }
-            .Effect(new EventPublished("order-cancelled",
-                new { orderId = order.Id.Value, number = order.Number.Value }));
+            .Effect(new EventPublished(new OrderCancelled(order.Id.Value, order.Number.Value)));
     }
 }
 

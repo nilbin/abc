@@ -23,4 +23,12 @@ public static class TamEvents
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(payload, TamJson.Options),
             CreatedAtIso = IsoTime.Now(),
         });
+
+    /// <summary>The typed twin (docs/31 "events are records"): the event id comes from the
+    /// payload record's [DomainEvent] attribute — the direct-outbox publisher gets the same
+    /// compile-checked shape as the EventPublished effect. TAM009 steers anonymous payloads
+    /// here too.</summary>
+    public static void Publish(
+        this DbContext db, object payload, string operationId = "", string? tenantId = null)
+        => db.Publish(new EventPublished(payload).Event, payload, operationId, tenantId);
 }

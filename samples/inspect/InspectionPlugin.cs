@@ -86,7 +86,7 @@ internal sealed class OrdersContract : IPluginPart
         // order-created is the v2 seam — matching templates instantiate onto the new order.
         plugin.RequiresEvent("order-created", "orderId:guid", "number", "orderType");
         plugin.RequiresEvent("order-completed", "orderId:guid", "number");
-        plugin.PublishesEvent("inspect.checklist-passed", "checklistId:guid");
+        // Published events: the [DomainEvent] record in Domain/ is the declaration.
 
         // The order detail wears its checklists (docs/31 D-X4): two panels bound to the
         // slot's record context — the checklist headers, then the line items with the

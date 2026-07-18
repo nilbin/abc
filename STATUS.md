@@ -474,6 +474,26 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Events are records — contract arc slice 2 (user-directed: "let's do 113 now")**: the
+  last stringly contract in Tam is gone. Every published event is now a [DomainEvent("id")]
+  payload record beside its aggregate (OrderCreated/OrderCompleted/OrderCancelled,
+  WorkOrderCompleted, ChecklistPassed, InvoiceCreated/Finalized/Paid,
+  ApprovalRequested/Approved) — the contract's fields AND kinds DERIVE from the record's
+  members (AddEventType; CLR→kind map keeps string undeclared so record-derived and
+  string-declared contracts are identical on the manifest), compile-time discovery
+  registers them (the AddDiscovered idiom), and the nine hand-written PublishesEvent
+  string declarations retired from the samples (the string form stays for dynamic
+  publishers — tenant automation rules). Publish sites are COMPILE-CHECKED:
+  new EventPublished(new OrderCompleted(...)) reads the id from the attribute, and the
+  direct-outbox path got the same typed twin (Db.Publish(record) — the approvals park
+  seam uses it). TAM009 closes the folklore hole: an ANONYMOUS event payload — effect or
+  direct publish — is a build error; its first run flagged all ten anonymous sites, all
+  migrated. The three edges of the event contract are now all verified: declaration
+  (derived), publish site (compiler), consumption (PLG009 with kinds). Verified: suites
+  191+38, manifest DEEP-EQUAL to baseline (the derived contracts are exactly what the
+  strings declared), wire 16+18+22+22 on fresh SQLite AND fresh Postgres — the
+  order-created → checklist-instantiation and magic-folder chains run through the typed
+  records end to end.
 - **PLG010 — the dependency line becomes mechanical (user probe: "what if a plugin
   extends a plugin?")**: the probe exposed that docs/22's rule (plugins depend on the
   HOST's contract, never on each other) was DOCTRINE, not a gate — PLG008/PLG009 verified

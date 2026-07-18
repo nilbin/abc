@@ -258,7 +258,7 @@ model.PublishesEvent("order-completed", "orderId:guid", "number");
   build fails ("published as 'guid' but required as 'decimal'"). A typo'd kind is an
   error at declaration, never a silent string.
 
-**Slice 2 — events are records (next).** The honest audit ("is this as beautiful as it
+**Slice 2 — events are records (BUILT).** The honest audit ("is this as beautiful as it
 gets?") found the real remaining anomaly: everywhere else in Tam the contract IS a C#
 record and the wire derives from it — operations declare Input records, views declare
 Result records — but events are declared as STRING LISTS and PUBLISHED as anonymous
@@ -281,7 +281,7 @@ public sealed record OrderCompleted(Guid OrderId, string Number);
   hole: publishing a payload that is not a declared event record is a build error.
 - The manifest events section becomes fully DERIVED — an artifact nobody hand-maintains.
 
-**Slice 3 — generate the plugin's contracts FROM the host artifact.** A plugin
+**Slice 3 — generate the plugin's contracts FROM the host artifact (next).** A plugin
 project references the host's exported manifest (an `AdditionalFiles` item, versioned in
 the plugin repo like a lockfile); the source generator emits the typed facades from the
 artifact's `events`/view sections instead of from the plugin's re-declaration, and the

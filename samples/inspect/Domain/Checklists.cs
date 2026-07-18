@@ -92,6 +92,11 @@ public sealed class Checklist : ITenantScoped
     }
 }
 
+// The aggregate's published language (docs/31 "events are records").
+[DomainEvent("inspect.checklist-passed")]
+public sealed record ChecklistPassed(Guid ChecklistId);
+
+
 /// <summary>One line on an instantiated checklist. OrderId is denormalized from the owning
 /// checklist so the order-detail panel and the completion gate read items by the wire key
 /// they hold (the order id) in one indexed query — no joins across the seam. State moves

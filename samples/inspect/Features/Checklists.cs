@@ -54,7 +54,7 @@ public static class PassChecklist
         var passed = checklist.Pass();
         if (passed.IsError) return passed.As<Output>();
         return new Result<Output> { Output = new Output(checklist.Id) }
-            .Effect(new EventPublished("inspect.checklist-passed", new { checklistId = checklist.Id }));
+            .Effect(new EventPublished(new ChecklistPassed(checklist.Id)));
     }
 }
 
@@ -82,7 +82,7 @@ public static class CheckItem
         if (!check.Output) return new Output(checklist.Id, ChecklistPassed: false);
 
         return new Result<Output> { Output = new Output(checklist.Id, ChecklistPassed: true) }
-            .Effect(new EventPublished("inspect.checklist-passed", new { checklistId = checklist.Id }));
+            .Effect(new EventPublished(new ChecklistPassed(checklist.Id)));
     }
 }
 

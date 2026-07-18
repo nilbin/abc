@@ -126,3 +126,8 @@ public sealed class WorkOrder : IExtensible, Tam.EntityFrameworkCore.IVersioned,
         return Result.Success();
     }
 }
+
+
+// The aggregate's published language (docs/31 "events are records").
+[DomainEvent("work-order-completed")]
+public sealed record WorkOrderCompleted(Guid WorkOrderId, string Number);

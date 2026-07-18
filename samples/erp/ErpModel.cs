@@ -25,11 +25,8 @@ public static partial class ErpModel
         .AddPlugin<Approvals.ApprovalsPlugin>()  // Step 16: approval flows over the three seams (docs/28 D-AG4)
         .AddPlugin<Invoicing.InvoicingPlugin>()  // Step 17: extends the Orders domain (docs/31)
 
-        // Event contracts (docs/31 D-X5): what subscribers/triggers may bind to, with payload shape.
-        .PublishesEvent("order-created", "orderId:guid", "number", "orderType")
-        .PublishesEvent("order-completed", "orderId:guid", "number")
-        .PublishesEvent("order-cancelled", "orderId:guid", "number")
-        .PublishesEvent("work-order-completed", "workOrderId:guid", "number")
+        // Event contracts (docs/31 "events are records"): the [DomainEvent] payload records in
+        // Domain/ ARE the declarations — AddDiscovered registered them; nothing to repeat here.
 
         // Magic folder (docs/35): every created order gets its document folder — the tree
         // layout is the HOST's declaration; no handler learns about documents.

@@ -44,3 +44,17 @@ public sealed class Invoice : ITenantScoped
         CreatedAtIso = IsoTime.Now(),
     };
 }
+
+
+// ---- The aggregate's published language (docs/31 "events are records"): the record IS the
+// contract — fields and kinds derive from its members, discovery registers it, and the
+// publish site is compile-checked (TAM009 refuses anonymous payloads). ----
+
+[DomainEvent("invoicing.invoice-created")]
+public sealed record InvoiceCreated(Guid InvoiceId, Guid OrderId);
+
+[DomainEvent("invoicing.invoice-finalized")]
+public sealed record InvoiceFinalized(Guid InvoiceId, Guid OrderId);
+
+[DomainEvent("invoicing.invoice-paid")]
+public sealed record InvoicePaid(Guid InvoiceId, Guid OrderId);

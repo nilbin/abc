@@ -73,10 +73,7 @@ internal sealed class OrdersContract : IPluginPart
         // attributes in Features.cs.
         plugin.RequiresEvent("order-completed", "orderId:guid", "number");
         plugin.RequiresEvent("work-order-completed", "workOrderId:guid", "number");
-        plugin
-            .PublishesEvent("invoicing.invoice-created", "invoiceId:guid", "orderId:guid")
-            .PublishesEvent("invoicing.invoice-finalized", "invoiceId:guid", "orderId:guid")
-            .PublishesEvent("invoicing.invoice-paid", "invoiceId:guid", "orderId:guid");
+        // Published events: the [DomainEvent] records in Domain.cs are the declarations.
     }
 }
 
