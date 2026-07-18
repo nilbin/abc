@@ -1,6 +1,11 @@
 # 34 — The field-service domain: stress-testing Tam as a consumer
 
-Status: **plan** (milestones marked as they land). This arc exists to answer one question:
+Status: **plan** (milestones marked as they land), **superseded in one respect**: the
+Order/WorkOrder split this arc introduced was MERGED into a single Order entity by owner
+decision ("splitting doesn't make sense") — one lifecycle Open → Scheduled → InProgress →
+Completed | Cancelled, time/materials/priority/assignment on the order itself, and the
+`work-orders.*` wire surface retired (an intentional D4 re-baseline). Where this document
+says "work order", read "the execution side of the order". This arc exists to answer one question:
 does building real domain depth feel like using the framework or fighting it? Everything
 here is written as a CONSUMER of Tam — host code in samples/erp, plugins in samples/ —
 and every place the framework resists gets a line in the friction log at the bottom,

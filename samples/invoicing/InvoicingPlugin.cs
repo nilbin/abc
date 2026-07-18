@@ -47,11 +47,11 @@ internal sealed class OrdersContract : IPluginPart
         // service-mode reads (the draft subscriber) are limited to exactly this list.
         plugin.RequiresView<OrdersDetailRow>(r => r.Id, r => r.Number, r => r.EstimatedTotal);
 
-        // The field-service path (docs/34 M4): a completed work order is invoiced from its
-        // APPROVED time + materials — service-mode reads over the M3 views, filtered by the
-        // number the event payload carries.
-        plugin.RequiresView<TimeListRow>(r => r.Id, r => r.WorkOrderNumber, r => r.Amount, r => r.Status);
-        plugin.RequiresView<MaterialsListRow>(r => r.Id, r => r.WorkOrderNumber, r => r.Amount);
+        // The field-service path (docs/34 M4, merged model): a completed order is invoiced
+        // from its APPROVED time + materials when any were booked — service-mode reads over
+        // the M3 views, filtered by the number the event payload carries.
+        plugin.RequiresView<TimeListRow>(r => r.Id, r => r.OrderNumber, r => r.Amount, r => r.Status);
+        plugin.RequiresView<MaterialsListRow>(r => r.Id, r => r.OrderNumber, r => r.Amount);
 
         // The order wears its invoice status (docs/22 P2). Read-only: only this plugin's
         // IPackagedFieldWriter sets it — the state machine stays the plugin's.
@@ -72,7 +72,6 @@ internal sealed class OrdersContract : IPluginPart
         // DraftOnCompletion subscriber and DraftPendingGate register from their own
         // attributes in Features.cs.
         plugin.RequiresEvent<OrderCompletedEvent>();
-        plugin.RequiresEvent<WorkOrderCompletedEvent>();
         // Published events: the [DomainEvent] records in Domain.cs are the declarations.
     }
 }

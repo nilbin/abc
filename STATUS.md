@@ -474,6 +474,30 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Order/WorkOrder MERGED into one entity (user decision: "it should be modeled under a
+  single entity — splitting doesn't make sense")**: the commercial commitment and its
+  execution are now the same Order. The aggregate absorbed Priority, ScheduledDate,
+  AssignedToActorId/Name (snapshot) and the execution machine — one lifecycle Open →
+  Scheduled → InProgress → Completed | Cancelled (Done/Closed collapsed; completion legal
+  from any live state so a pure sales order needs no scheduling; makulera from every
+  non-terminal). New intents orders.schedule (date+assignee in one intent, lookup-picked,
+  membership-validated), orders.assign, orders.start (own-scope paired), orders.set-priority
+  (EDIT001 window Open|Scheduled). Time and materials rebound to the order (wire
+  orderNumber; booking blocked on terminal states); the record page carries Detaljer / Tid
+  / Material / Dokument / Egenkontroll / Fakturering — the whole engagement in one place;
+  field mode "Mina ordrar" = the same orders page own-scoped. Invoicing unified: ONE
+  subscriber on order-completed drafts from ACTUALS (approved time + materials) and falls
+  back to the estimate when nothing was booked; Invoice.WorkOrderId dropped;
+  work-order-completed retired. The seeded urgent-schedule-window rule and the
+  requiresLift custom field moved to the order. The `work-orders.*` wire surface is GONE —
+  an intentional D4 break, re-baselined in the same commit by owner decision (manifest
+  66 ops / 45 views; types + contract regenerated). docs/34 carries the supersession
+  note; docs/32/22/14 + tutorial samples synced. Deferred follow-up: time PLANNING
+  (calendar/capacity board over ScheduledDate+assignee) as its own arc. Verified: suites
+  191+38 (OrderPriorityTests port, merged-machine pipeline test publishing
+  order-completed), wire 16+18+22+25 on fresh SQLite AND fresh Postgres (rules-gating
+  ported to orders.schedule/set-priority), screenshots of the merged grid and the
+  order's Tid tab.
 - **Agent tooling in the repo (user-directed: "save that in the repo and perhaps make a
   skill… so agents can find their way around")**: the session-local operational knowledge
   became repo artifacts. `scripts/snap.mjs` — the Playwright driver as CLI + library

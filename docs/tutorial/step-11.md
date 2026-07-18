@@ -46,7 +46,7 @@ effects by contract:
 response.ShouldFailWith("orders.invalid-customer");        // domain finding, stable code
 response.ShouldBeDenied();                                 // pipeline.not-authorized
 stale.ShouldConflictOn("name");                            // three-way merge conflict (docs/07)
-completed.ShouldSucceed().ShouldPublish("work-order-completed");   // event contract (docs/31)
+completed.ShouldSucceed().ShouldPublish("order-completed");   // event contract (docs/31)
 var id = created.Output<CreateProject.Output>().ProjectId; // typed output
 ```
 

@@ -14,9 +14,6 @@ public sealed class Invoice : ITenantScoped
     public Guid Id { get; set; }
     public string TenantId { get; set; } = "";
     public Guid OrderId { get; set; }
-    // docs/34 M4: an invoice may instead be drafted from a completed WORK ORDER — same
-    // wire-key discipline, no host CLR type. Exactly one of OrderId/WorkOrderId is set.
-    public Guid? WorkOrderId { get; set; }
     public string OrderNumber { get; set; } = "";
     public string Status { get; set; } = "draft";      // draft | invoiced | paid
     public Money Amount { get; set; }
@@ -29,17 +26,6 @@ public sealed class Invoice : ITenantScoped
         TenantId = tenantId,
         OrderId = orderId,
         OrderNumber = orderNumber,
-        Amount = amount,
-        CreatedAtIso = IsoTime.Now(),
-    };
-
-    public static Invoice CreateForWorkOrder(
-        string tenantId, Guid workOrderId, string number, decimal amount) => new()
-    {
-        Id = Guid.NewGuid(),
-        TenantId = tenantId,
-        WorkOrderId = workOrderId,
-        OrderNumber = number,     // the SOURCE document number (label reads "source document")
         Amount = amount,
         CreatedAtIso = IsoTime.Now(),
     };

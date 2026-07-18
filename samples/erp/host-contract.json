@@ -27,15 +27,6 @@
       "kinds": {
         "orderId": "guid"
       }
-    },
-    "work-order-completed": {
-      "fields": [
-        "workOrderId",
-        "number"
-      ],
-      "kinds": {
-        "workOrderId": "guid"
-      }
     }
   },
   "views": {
@@ -196,7 +187,7 @@
       "permission": "materials.read",
       "fields": [
         "id",
-        "workOrderNumber",
+        "orderNumber",
         "sku",
         "stockItemName",
         "unit",
@@ -215,7 +206,7 @@
       "permission": "materials.read",
       "fields": [
         "id",
-        "workOrderNumber",
+        "orderNumber",
         "sku",
         "stockItemName",
         "unit",
@@ -254,6 +245,9 @@
         "customerName",
         "type",
         "status",
+        "priority",
+        "scheduledDate",
+        "assignedToName",
         "workAddress",
         "description",
         "requestedDate",
@@ -275,6 +269,9 @@
         "customerName",
         "type",
         "status",
+        "priority",
+        "scheduledDate",
+        "assignedToName",
         "requestedDate",
         "estimatedTotal",
         "tenantId",
@@ -494,7 +491,7 @@
       "permission": "time.read",
       "fields": [
         "id",
-        "workOrderNumber",
+        "orderNumber",
         "date",
         "technicianName",
         "hours",
@@ -514,7 +511,7 @@
       "permission": "time.read",
       "fields": [
         "id",
-        "workOrderNumber",
+        "orderNumber",
         "date",
         "technicianName",
         "hours",
@@ -551,47 +548,6 @@
       ],
       "kinds": {
         "id": "guid"
-      }
-    },
-    "work-orders.detail": {
-      "permission": "work-orders.read",
-      "fields": [
-        "id",
-        "number",
-        "title",
-        "projectNumber",
-        "description",
-        "location",
-        "status",
-        "priority",
-        "scheduledDate",
-        "assignedToName",
-        "version",
-        "extensions"
-      ],
-      "kinds": {
-        "id": "guid",
-        "version": "int"
-      }
-    },
-    "work-orders.list": {
-      "permission": "work-orders.read",
-      "fields": [
-        "id",
-        "number",
-        "title",
-        "projectNumber",
-        "status",
-        "priority",
-        "scheduledDate",
-        "assignedToName",
-        "tenantId",
-        "version",
-        "extensions"
-      ],
-      "kinds": {
-        "id": "guid",
-        "version": "int"
       }
     }
   },
@@ -653,14 +609,10 @@
     },
     "web.users": {
       "view": "users.list"
-    },
-    "web.work-orders.list": {
-      "view": "work-orders.list"
     }
   },
   "extensibleEntities": [
-    "order",
-    "work-order"
+    "order"
   ],
   "operations": [
     "customers.create",
@@ -679,10 +631,14 @@
     "materials.add",
     "nav.override",
     "nav.retire",
+    "orders.assign",
     "orders.cancel",
     "orders.complete",
     "orders.create",
     "orders.edit-details",
+    "orders.schedule",
+    "orders.set-priority",
+    "orders.start",
     "packages.install",
     "packages.uninstall",
     "plugins.activate",
@@ -708,14 +664,6 @@
     "time.book",
     "users.deactivate",
     "users.define",
-    "users.invite",
-    "work-orders.assign",
-    "work-orders.close",
-    "work-orders.complete",
-    "work-orders.create",
-    "work-orders.edit-details",
-    "work-orders.schedule",
-    "work-orders.set-priority",
-    "work-orders.start"
+    "users.invite"
   ]
 }

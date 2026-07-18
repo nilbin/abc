@@ -16,6 +16,12 @@ public static partial class ErpModel
                 // expands the detail slot into one tab per contributing PLUGIN — the host
                 // never names, counts, or labels the plugins (docs/31 D-X4).
                 .Tab("details", "erp.tabs.details", s => s.Form("web.orders.edit"))
+                // The merged execution side (one entity, one lifecycle): time and materials
+                // are the order's own children — bound grids off the record's number.
+                .Tab("time", "erp.tabs.time", s => s
+                    .Grid("web.time.list", bind => bind.Query("orderNumber", fromRecord: "number")))
+                .Tab("materials", "erp.tabs.materials", s => s
+                    .Grid("web.materials.list", bind => bind.Query("orderNumber", fromRecord: "number")))
                 // The record's documents (docs/35): the tam.documents grid filtered by THIS
                 // order's EntityRef — no dedicated view, no React.
                 .Tab("documents", "erp.tabs.documents", s => s
@@ -37,6 +43,7 @@ public static partial class ErpModel
             form.Field(x => x.Description);
             form.Field(x => x.RequestedDate);
             form.Field(x => x.EstimatedTotal);
+            form.Field(x => x.Priority);
             form.Extensions();
         })
 
@@ -50,6 +57,21 @@ public static partial class ErpModel
             form.Extensions();
         })
 
+        .Form<ScheduleOrder.Input>("web.orders.schedule", "orders.schedule", form =>
+        {
+            form.Field(x => x.OrderId).Renderer("hidden");
+            form.Field(x => x.ScheduledDate);
+            form.Field(x => x.AssigneeActorId);   // [Lookup("users.lookup")] renders the picker
+        })
+
+        // Priority is an enum, so it moves through its own intent (EDIT001), not the
+        // change-set — this form is the intent's surface, opened from the grid row.
+        .Form<SetOrderPriority.Input>("web.orders.set-priority", "orders.set-priority", form =>
+        {
+            form.Field(x => x.OrderId).Renderer("hidden");
+            form.Field(x => x.Priority);
+        })
+
         .Grid<OrderList.Result>("web.orders.list", "orders.list", grid =>
         {
             grid.Column(x => x.Number);
@@ -57,11 +79,19 @@ public static partial class ErpModel
             grid.Column(x => x.CustomerName);
             grid.Column(x => x.Type);
             grid.Column(x => x.Status);
-            grid.Column(x => x.RequestedDate);
+            grid.Column(x => x.Priority);
+            grid.Column(x => x.ScheduledDate);
+            grid.Column(x => x.AssignedToName);
             grid.Column(x => x.EstimatedTotal);
             grid.Extensions();
+            grid.RowAction("orders.schedule");
+            grid.RowAction("orders.set-priority");
+            grid.RowAction("orders.start");
             grid.RowAction("orders.complete");
             grid.RowAction("orders.cancel");
+            // Time and materials are booked FROM the order — the row prefills OrderId.
+            grid.RowAction("time.book");
+            grid.RowAction("materials.add");
             grid.ToolbarAction("orders.create");
         });
 }

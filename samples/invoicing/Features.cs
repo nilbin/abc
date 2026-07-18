@@ -195,10 +195,12 @@ internal sealed class DraftPendingGate(ITamDb tam) : IOperationGate
 }
 
 /// <summary>
-/// Step 17 beat 4: on order completion, draft the invoice. Idempotent (at-least-once
-/// delivery); order number from the payload; the amount backfilled through a SERVICE-MODE
-/// declared read (docs/31 D-X3) — no actor exists here, so the readable surface is exactly
-/// the RequiresView list. The status lands on the order via the writer (D-X2).
+/// Step 17 beat 4 + docs/34 M4, unified for the merged model: on order completion, draft the
+/// invoice from what the work ACTUALLY cost — approved time entries plus every material line
+/// — and fall back to the commercial estimate when nothing was booked (a pure sales order).
+/// Idempotent (at-least-once delivery); all reads are SERVICE-MODE declared reads (docs/31
+/// D-X3) — no actor exists here, so the readable surface is exactly the RequiresView list.
+/// The status lands on the order via the writer (D-X2).
 /// </summary>
 [OnEffect(OrderCompletedEvent.EventType)]
 internal sealed class DraftOnCompletion(
@@ -211,43 +213,23 @@ internal sealed class DraftOnCompletion(
             return;   // redelivery or already invoiced by hand — idempotent
 
         var number = payload.Number ?? "";
-        var detail = await host.RowsAsync("orders.detail",
-            new Dictionary<string, string?> { ["orderId"] = orderId.ToString() }, ct);
-        var amount = (detail.FirstRow() is { } row ? OrdersDetailRow.From(row) : null)?.EstimatedTotal ?? 0m;
+        var actuals = number.Length == 0 ? 0m :
+            await SumAsync("time.list", new Dictionary<string, string?>
+                { ["orderNumber"] = number, ["status"] = "approved", ["pageSize"] = "200" }, ct)
+            + await SumAsync("materials.list", new Dictionary<string, string?>
+                { ["orderNumber"] = number, ["pageSize"] = "200" }, ct);
+
+        var amount = actuals;
+        if (amount == 0m)
+        {
+            var detail = await host.RowsAsync("orders.detail",
+                new Dictionary<string, string?> { ["orderId"] = orderId.ToString() }, ct);
+            amount = (detail.FirstRow() is { } row ? OrdersDetailRow.From(row) : null)?.EstimatedTotal ?? 0m;
+        }
 
         tam.Db.Add(Invoice.Create(effect.TenantId, orderId, number, amount));
         await tam.Db.SaveChangesAsync(ct);
         await fields.SetAsync("order", orderId, "invoiceStatus", "draft", ct);
-    }
-}
-
-/// <summary>
-/// docs/34 M4: on WORK ORDER completion, draft the invoice from what the work actually cost —
-/// APPROVED time entries plus every material line, read through the same service-mode declared
-/// reads as the order path (docs/31 D-X3), filtered by the number the payload carries. The
-/// aggregates postdate this plugin's original design; only the CONTRACT grew.
-/// </summary>
-[OnEffect(WorkOrderCompletedEvent.EventType)]
-internal sealed class DraftOnWorkOrderCompletion(
-    ITamDb tam, IHostViewReader host) : IEffectHandler
-{
-    public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
-    {
-        if (WorkOrderCompletedEvent.From(effect) is not { WorkOrderId: { } workOrderId } payload) return;
-        if (await tam.Db.Set<Invoice>().AnyAsync(x => x.WorkOrderId == workOrderId, ct))
-            return;   // at-least-once delivery — idempotent
-
-        var number = payload.Number ?? "";
-        if (number.Length == 0) return;
-
-        var amount =
-            await SumAsync("time.list", new Dictionary<string, string?>
-                { ["workOrderNumber"] = number, ["status"] = "approved", ["pageSize"] = "200" }, ct)
-            + await SumAsync("materials.list", new Dictionary<string, string?>
-                { ["workOrderNumber"] = number, ["pageSize"] = "200" }, ct);
-
-        tam.Db.Add(Invoice.CreateForWorkOrder(effect.TenantId, workOrderId, number, amount));
-        await tam.Db.SaveChangesAsync(ct);
     }
 
     private async Task<decimal> SumAsync(

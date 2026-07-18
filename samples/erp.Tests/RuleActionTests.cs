@@ -14,35 +14,35 @@ public sealed class RuleActionTests : IAsyncLifetime
 {
     private TamTestHost<ErpDbContext> host = null!;
     private TestActor<ErpDbContext> admin = null!;
-    private Guid workOrder;
-    private Guid otherWorkOrder;
+    private Guid order;
+    private Guid otherOrder;
 
     public async Task InitializeAsync()
     {
         host = await TamTestHost<ErpDbContext>.CreateSqliteAsync(ErpModel.Build());
         admin = host.Actor("demo",
             "rules.manage", "extensions.manage",
-            "work-orders.edit", "work-orders.edit-all", "work-orders.read", "work-orders.read-all");
+            "orders.edit", "orders.edit-all", "orders.read", "orders.read-all");
         await host.SeedAsync("demo", db =>
         {
             var customer = Customer.Create("demo", new("Acme"), new("Road 1"), null, null);
             db.Customers.Add(customer);
             var project = Project.Create("demo", new("P-1"), customer.Id, "P");
             db.Projects.Add(project);
-            var wo1 = WorkOrder.Create("demo", new("WO-1"), project.Id, "One",
-                new("First"), customer.VisitAddress);
-            var wo2 = WorkOrder.Create("demo", new("WO-2"), project.Id, "Two",
-                new("Second"), customer.VisitAddress);
-            db.WorkOrders.AddRange(wo1, wo2);
-            workOrder = wo1.Id.Value;
-            otherWorkOrder = wo2.Id.Value;
+            var o1 = Order.Create("demo", new("O-1"), customer.Id, OrderType.Project,
+                project.Id, customer.VisitAddress, new("First"), null, null);
+            var o2 = Order.Create("demo", new("O-2"), customer.Id, OrderType.Project,
+                project.Id, customer.VisitAddress, new("Second"), null, null);
+            db.Orders.AddRange(o1, o2);
+            order = o1.Id.Value;
+            otherOrder = o2.Id.Value;
             return Task.CompletedTask;
         });
 
         // The tenant defines the extension field the action will write — the admin's real path.
         (await admin.ExecuteAsync("extensions.define-field", new
         {
-            entity = "work-order",
+            entity = "order",
             key = "reviewFlag",
             type = "boolean",
             labels = new Dictionary<string, string> { ["sv"] = "Granskas", ["en"] = "Review" },
@@ -55,15 +55,15 @@ public sealed class RuleActionTests : IAsyncLifetime
         admin.ExecuteAsync("rules.define", new
         {
             name,
-            onOperation = "work-orders.set-priority",
+            onOperation = "orders.set-priority",
             condition = """{"t":"bin","op":"eq","l":{"t":"field","f":"priority"},"r":{"t":"const","v":"urgent"}}""",
             messages = new Dictionary<string, string>(),
             action,
         });
 
     private Task<ExtensionData> ExtensionsOf(Guid id) =>
-        host.QueryDbAsync("demo", db => db.WorkOrders
-            .Where(w => w.Id == new WorkOrderId(id)).Select(w => w.Extensions).SingleAsync());
+        host.QueryDbAsync("demo", db => db.Orders
+            .Where(o => o.Id == new OrderId(id)).Select(o => o.Extensions).SingleAsync());
 
     [Fact]
     public async Task Set_field_action_writes_the_target_rows_extension_in_the_same_commit()
@@ -71,13 +71,13 @@ public sealed class RuleActionTests : IAsyncLifetime
         (await DefineAsync("flag-urgent", """{"type":"set-field","field":"ext.reviewFlag","value":true}"""))
             .ShouldSucceed();
 
-        (await admin.ExecuteAsync("work-orders.set-priority",
-            new { workOrderId = workOrder, priority = "urgent" })).ShouldSucceed();
-        Assert.Equal(true, (await ExtensionsOf(workOrder)).Raw("reviewFlag"));
+        (await admin.ExecuteAsync("orders.set-priority",
+            new { orderId = order, priority = "urgent" })).ShouldSucceed();
+        Assert.Equal(true, (await ExtensionsOf(order)).Raw("reviewFlag"));
 
-        (await admin.ExecuteAsync("work-orders.set-priority",
-            new { workOrderId = otherWorkOrder, priority = "low" })).ShouldSucceed();
-        Assert.Null((await ExtensionsOf(otherWorkOrder)).Raw("reviewFlag"));
+        (await admin.ExecuteAsync("orders.set-priority",
+            new { orderId = otherOrder, priority = "low" })).ShouldSucceed();
+        Assert.Null((await ExtensionsOf(otherOrder)).Raw("reviewFlag"));
     }
 
     [Fact]
@@ -85,8 +85,8 @@ public sealed class RuleActionTests : IAsyncLifetime
     {
         (await DefineAsync("urgent-alert", """{"type":"publish-event"}""")).ShouldSucceed();
 
-        (await admin.ExecuteAsync("work-orders.set-priority",
-            new { workOrderId = workOrder, priority = "urgent" })).ShouldSucceed();
+        (await admin.ExecuteAsync("orders.set-priority",
+            new { orderId = order, priority = "urgent" })).ShouldSucceed();
         var events = await host.QueryDbAsync("demo", db =>
             db.Set<Tam.EntityFrameworkCore.OutboxRecord>().IgnoreQueryFilters()
                 .Where(x => x.EventType == "rules.urgent-alert").CountAsync());
@@ -112,12 +112,11 @@ public sealed class RuleActionTests : IAsyncLifetime
     {
         // Review round 5, F1: the wire channel refuses ReadOnly extension fields (plugin-owned
         // state, docs/31 D-X2); the rule action path must too, or a rules.manage admin could
-        // overwrite plugin state through someone else's operation. inspect's requiresInspection
-        // is a packaged (plugin-owned) field on the order — but our target entity is work-order,
-        // so instead prove the value-validation arm: an out-of-options value is refused.
+        // overwrite plugin state through someone else's operation. Here we prove the
+        // value-validation arm: an out-of-options value is refused.
         (await admin.ExecuteAsync("extensions.define-field", new
         {
-            entity = "work-order",
+            entity = "order",
             key = "riskBand",
             type = "selection",
             options = new[] { "low", "high" },

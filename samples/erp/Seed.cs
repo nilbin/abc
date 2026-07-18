@@ -66,25 +66,26 @@ public static class Seed
         orders[0].Complete();
         db.Orders.AddRange(orders);
 
-        // Work orders (docs/34 M2): one per state so the machine is visible in the demo.
-        // Assignment stamps happen below once account ids exist.
-        var woDraft = WorkOrder.Create(Tenant, new("WO-2026-0001"), pumpRefurb.Id,
-            "Demontera pumphus", new("Demontera och rengör pumphus etapp 1"), acme.VisitAddress);
-        var woScheduled = WorkOrder.Create(Tenant, new("WO-2026-0002"), pumpRefurb.Id,
-            "Byt slitringar", new("Byt slitringar och lager på pump 2"), acme.VisitAddress);
-        var woInProgress = WorkOrder.Create(Tenant, new("WO-2026-0003"), sveaVent.Id,
-            "Riv gammalt aggregat", new("Demontering av befintligt ventilationsaggregat plan 3"),
-            new("Storgatan 1, Stockholm"));
-        var woDone = WorkOrder.Create(Tenant, new("WO-2026-0004"), sveaVent.Id,
-            "Montera nya don", new("Montering av tilluftsdon plan 2"), new("Storgatan 1, Stockholm"));
-        var woClosed = WorkOrder.Create(Tenant, new("WO-2026-0005"), pumpRefurb.Id,
-            "Förbesiktning", new("Förbesiktning inför etapp 1"), acme.VisitAddress);
-        // An URGENT draft (priority is set at creation, Normal elsewhere by default): a fresh
-        // boot shows the priority column and the urgent-schedule-window rule has a live target.
-        var woUrgent = WorkOrder.Create(Tenant, new("WO-2026-0006"), serviceDeal.Id,
-            "Pumphaveri hos kund", new("Huvudpumpen har havererat — kunden står utan kyla"),
-            acme.VisitAddress, WorkOrderPriority.Urgent);
-        db.WorkOrders.AddRange(woDraft, woScheduled, woInProgress, woDone, woClosed, woUrgent);
+        // Execution-side orders (the merged machine, one entity): one per state so the whole
+        // Open → Scheduled → InProgress → Completed board is visible in the demo.
+        // Scheduling/assignment stamps happen below once account ids exist.
+        var ordOpen = Order.Create(Tenant, new("2026-01417"), acme.Id, OrderType.Project, pumpRefurb.Id,
+            acme.VisitAddress, new("Demontera och rengör pumphus etapp 1"), null, null);
+        var ordScheduled = Order.Create(Tenant, new("2026-01418"), acme.Id, OrderType.Project, pumpRefurb.Id,
+            acme.VisitAddress, new("Byt slitringar och lager på pump 2"), null, null);
+        var ordInProgress = Order.Create(Tenant, new("2026-01419"), svea.Id, OrderType.Project, sveaVent.Id,
+            new("Storgatan 1, Stockholm"), new("Demontering av befintligt ventilationsaggregat plan 3"),
+            null, null);
+        var ordDone = Order.Create(Tenant, new("2026-01420"), svea.Id, OrderType.Project, sveaVent.Id,
+            new("Storgatan 1, Stockholm"), new("Montering av tilluftsdon plan 2"), null, null);
+        var ordFinished = Order.Create(Tenant, new("2026-01421"), acme.Id, OrderType.Project, pumpRefurb.Id,
+            acme.VisitAddress, new("Förbesiktning inför etapp 1"), null, null);
+        // An URGENT open order (priority is set at creation, Normal elsewhere by default): a
+        // fresh boot shows the priority column and the urgent-schedule-window rule has a target.
+        var ordUrgent = Order.Create(Tenant, new("2026-01422"), acme.Id, OrderType.Service, null,
+            acme.VisitAddress, new("Huvudpumpen har havererat — kunden står utan kyla"), null, null,
+            OrderPriority.Urgent);
+        db.Orders.AddRange(ordOpen, ordScheduled, ordInProgress, ordDone, ordFinished, ordUrgent);
 
         // Tenant-managed roles (decision D1): named grant sets, stored as data.
         void Role(string name, params string[] permissions) => db.Add(new RoleEntity
@@ -104,10 +105,7 @@ public static class Seed
             "customers.read", "customers.create", "customers.edit",
             "projects.read", "projects.create", "projects.edit", "projects.close",
             "stock.read", "stock.manage",
-            "work-orders.read", "work-orders.read-all", "work-orders.create",
-            "work-orders.edit", "work-orders.edit-all", "work-orders.schedule",
-            "work-orders.assign", "work-orders.start", "work-orders.start-all",
-            "work-orders.complete", "work-orders.complete-all", "work-orders.close",
+            "orders.schedule", "orders.assign", "orders.start", "orders.start-all",
             "users.lookup",
             // Time is own-scoped by default; the office reads the whole board and approves.
             "time.read", "time.read-all", "time.book", "time.approve",
@@ -128,12 +126,11 @@ public static class Seed
         });
         // Technicians carry only the base atoms — own-scoped by construction, no suffixes.
         Role("technician",
-            "orders.read", "orders.edit", "orders.complete", "customers.read",
+            "orders.read", "orders.edit", "orders.start", "orders.complete", "customers.read",
             "projects.read", "stock.read",
-            "work-orders.read", "work-orders.edit", "work-orders.start", "work-orders.complete",
             "users.lookup",
             // Base atoms only: a technician books and reads her OWN time; materials follow
-            // the work order (no own scope — see materials.add).
+            // the order (no own scope — see materials.add).
             "time.read", "time.book",
             "materials.read", "materials.add",
             "documents.read",
@@ -319,34 +316,33 @@ public static class Seed
 
         // Ownership (:own scope) compares against the actor id, which is now the global account id
         // (docs/26), so assign by Tekla's account id — not the login handle.
-        orders[3].AssignTo(accountIds["tekla"].ToString());
-        orders[4].AssignTo(accountIds["tekla"].ToString());
+        orders[3].Reassign(accountIds["tekla"].ToString(), "Tekla Nilsson");
+        orders[4].Reassign(accountIds["tekla"].ToString(), "Tekla Nilsson");
 
-        // Walk the seeded work orders through the machine — Tekla owns the active ones, so the
-        // own-scope pairs and the technician's board are demonstrable from first login.
+        // Walk the execution-side orders through the machine — Tekla owns the active ones, so
+        // the own-scope pairs and the technician's board are demonstrable from first login.
         var tekla = accountIds["tekla"].ToString();
-        woScheduled.Schedule(new DateOnly(2026, 7, 21), tekla, "Tekla Nilsson");
-        woInProgress.Schedule(new DateOnly(2026, 7, 14), tekla, "Tekla Nilsson");
-        woInProgress.Start();
-        woDone.Schedule(new DateOnly(2026, 7, 10), tekla, "Tekla Nilsson");
-        woDone.Start();
-        woDone.Complete();
-        woClosed.Schedule(new DateOnly(2026, 6, 30), accountIds["didrik"].ToString(), "Didrik Berg");
-        woClosed.Start();
-        woClosed.Complete();
-        woClosed.CloseOut();
+        ordScheduled.Schedule(new DateOnly(2026, 7, 21), tekla, "Tekla Nilsson");
+        ordInProgress.Schedule(new DateOnly(2026, 7, 14), tekla, "Tekla Nilsson");
+        ordInProgress.Start();
+        ordDone.Schedule(new DateOnly(2026, 7, 10), tekla, "Tekla Nilsson");
+        ordDone.Start();
+        ordDone.Complete();
+        ordFinished.Schedule(new DateOnly(2026, 6, 30), accountIds["didrik"].ToString(), "Didrik Berg");
+        ordFinished.Start();
+        ordFinished.Complete();
 
         // Time entries (docs/34 M3): owned by the booking technician; Draft until the office
         // approves (time.approve — the M4 invoicing seam takes approved time only).
         var didrik = accountIds["didrik"].ToString();
-        var teklaDay1 = TimeEntry.Book(Tenant, woInProgress.Id, tekla, "Tekla Nilsson",
+        var teklaDay1 = TimeEntry.Book(Tenant, ordInProgress.Id, tekla, "Tekla Nilsson",
             new DateOnly(2026, 7, 14), 6m, 950m, new("Demontering av aggregat, plan 3"));
-        var teklaDay2 = TimeEntry.Book(Tenant, woInProgress.Id, tekla, "Tekla Nilsson",
+        var teklaDay2 = TimeEntry.Book(Tenant, ordInProgress.Id, tekla, "Tekla Nilsson",
             new DateOnly(2026, 7, 15), 4.5m, 950m, null);
-        var teklaDone = TimeEntry.Book(Tenant, woDone.Id, tekla, "Tekla Nilsson",
+        var teklaDone = TimeEntry.Book(Tenant, ordDone.Id, tekla, "Tekla Nilsson",
             new DateOnly(2026, 7, 10), 8m, 950m, new("Montering av tilluftsdon"));
         teklaDone.Approve();
-        var didrikClosed = TimeEntry.Book(Tenant, woClosed.Id, didrik, "Didrik Berg",
+        var didrikClosed = TimeEntry.Book(Tenant, ordFinished.Id, didrik, "Didrik Berg",
             new DateOnly(2026, 6, 30), 3m, 895m, new("Förbesiktning på plats"));
         didrikClosed.Approve();
         db.TimeEntries.AddRange(teklaDay1, teklaDay2, teklaDone, didrikClosed);
@@ -355,10 +351,10 @@ public static class Seed
         // The copper line deliberately carries 79 kr — the catalog price was raised to 89
         // afterwards; booked history must not follow it.
         db.MaterialLines.AddRange(
-            MaterialLine.Add(Tenant, woInProgress.Id, packning.Id, 2m, packning.UnitPrice),
-            MaterialLine.Add(Tenant, woInProgress.Id, koldmedium.Id, 3.2m, koldmedium.UnitPrice),
-            MaterialLine.Add(Tenant, woDone.Id, kopparror.Id, 12m, 79m),
-            MaterialLine.Add(Tenant, woClosed.Id, packning.Id, 1m, packning.UnitPrice));
+            MaterialLine.Add(Tenant, ordInProgress.Id, packning.Id, 2m, packning.UnitPrice),
+            MaterialLine.Add(Tenant, ordInProgress.Id, koldmedium.Id, 3.2m, koldmedium.UnitPrice),
+            MaterialLine.Add(Tenant, ordDone.Id, kopparror.Id, 12m, 79m),
+            MaterialLine.Add(Tenant, ordFinished.Id, packning.Id, 1m, packning.UnitPrice));
 
         // Integration config (docs/25): a non-secret base URL and — via the vault at startup —
         // an encrypted API key. The base URL points at this app's own mock Fortnox endpoint so
@@ -387,19 +383,18 @@ public static class Seed
         });
         orders[4].Extensions = orders[4].Extensions.WithValue("machineSerialNumber", "KA-2201-X");
 
-        // A runtime custom field on the NEW entity (docs/34 M2): proves docs/15 generalizes
-        // beyond the tutorial's order — boolean this time (a third wire kind in the demo).
+        // A second runtime custom field — boolean this time (a third wire kind in the demo).
         db.Add(new ExtensionFieldEntity
         {
             Id = Guid.NewGuid(),
             TenantId = Tenant,
-            Entity = "work-order",
+            Entity = "order",
             Key = "requiresLift",
             Type = "boolean",
             LabelsJson = """{"sv":"Kräver lift","en":"Requires lift"}""",
             State = ExtensionFieldState.Active,
         });
-        woScheduled.Extensions = woScheduled.Extensions.WithValue("requiresLift", true);
+        ordScheduled.Extensions = ordScheduled.Extensions.WithValue("requiresLift", true);
 
         // A numeric tenant field: exercises typed JSON predicates (equality + ranges) end to end.
         db.Add(new ExtensionFieldEntity
@@ -417,7 +412,7 @@ public static class Seed
         orders[4].Extensions = orders[4].Extensions.WithValue("weightKg", 95.5);
 
         // The tenant's automation rule (docs/22), stored exactly as rules.define writes it:
-        // "an URGENT work order cannot be scheduled more than 7 days out." The condition is
+        // "an URGENT order cannot be scheduled more than 7 days out." The condition is
         // Px AST data over the schedule intent's input (scheduledDate) AND its target row
         // (row.priority — enums compare as wire strings); the cutoff is the RELATIVE-DATE
         // node {"t":"fn","op":"today","days":7} — evaluated fresh on every check, so the
@@ -428,13 +423,13 @@ public static class Seed
             Id = Guid.NewGuid(),
             TenantId = Tenant,
             Name = "urgent-schedule-window",
-            OnOperation = "work-orders.schedule",
+            OnOperation = "orders.schedule",
             ConditionJson =
                 """{"t":"bin","op":"and","l":{"t":"bin","op":"eq","l":{"t":"field","f":"row.priority"},"r":{"t":"const","v":"urgent"}},"r":{"t":"bin","op":"gt","l":{"t":"field","f":"scheduledDate"},"r":{"t":"fn","op":"today","days":7}}}""",
             TargetField = "scheduledDate",
-            MessagesJson = """{"sv":"Akuta arbetsordrar måste planeras inom 7 dagar.","en":"Urgent work orders must be scheduled within 7 days."}""",
-            RowEntityKey = "work-order",
-            RowIdField = "workOrderId",
+            MessagesJson = """{"sv":"Akuta ordrar måste planeras inom 7 dagar.","en":"Urgent orders must be scheduled within 7 days."}""",
+            RowEntityKey = "order",
+            RowIdField = "orderId",
         });
 
         db.SaveChanges();

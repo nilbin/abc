@@ -294,7 +294,7 @@ operational tell: **if it needs per-tenant activation and a price, it is a plugi
 
 **The rule that keeps granularity honest: plugins depend on the HOST's contract, never on
 each other.** The moment two plugins genuinely need each other, merge them or promote the
-shared concept down into the host (work-order-completed became a host event both invoicing
+shared concept down into the host (work-order-completed — since merged into order-completed — became a host event both invoicing
 and inspect consume). Plugin-to-plugin contracts are a deliberately unbuilt seam — that is
 where marketplace ecosystems grow their dependency hell, and this line is cheaper to hold
 than to win back. **ENFORCED: PLG010** — a plugin's `RequiresView`/`RequiresEvent`/

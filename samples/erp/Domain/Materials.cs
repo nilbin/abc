@@ -11,11 +11,11 @@ public static class MaterialFindings
 {
     public static readonly FindingFactory InvalidQuantity = Finding.Error("materials.invalid-quantity");
     public static readonly FindingFactory StockItemInactive = Finding.Error("materials.stock-item-inactive");
-    public static readonly FindingFactory WorkOrderClosed = Finding.Error("materials.work-order-closed");
+    public static readonly FindingFactory OrderClosed = Finding.Error("materials.order-closed");
 }
 
 
-/// <summary>Stock consumption on a work order (docs/34 M3). UnitPrice is a SNAPSHOT of the
+/// <summary>Stock consumption on an order (docs/34 M3). UnitPrice is a SNAPSHOT of the
 /// stock item's price at entry time — catalog price changes never rewrite booked history —
 /// and Amount (quantity × snapshot price) is stored with it.</summary>
 public sealed class MaterialLine : Tam.EntityFrameworkCore.ITenantScoped
@@ -24,19 +24,19 @@ public sealed class MaterialLine : Tam.EntityFrameworkCore.ITenantScoped
 
     public MaterialLineId Id { get; private set; }
     public string TenantId { get; private set; } = "";
-    public WorkOrderId WorkOrderId { get; private set; }
+    public OrderId OrderId { get; private set; }
     public StockItemId StockItemId { get; private set; }
     public decimal Quantity { get; private set; }
     public Money UnitPrice { get; private set; }
     public Money Amount { get; private set; }
 
     public static MaterialLine Add(
-        string tenantId, WorkOrderId workOrderId, StockItemId stockItemId,
+        string tenantId, OrderId orderId, StockItemId stockItemId,
         decimal quantity, decimal unitPriceSnapshot) => new()
     {
         Id = new MaterialLineId(Guid.NewGuid()),
         TenantId = tenantId,
-        WorkOrderId = workOrderId,
+        OrderId = orderId,
         StockItemId = stockItemId,
         Quantity = quantity,
         UnitPrice = unitPriceSnapshot,

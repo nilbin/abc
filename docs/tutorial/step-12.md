@@ -24,7 +24,7 @@ CHANGED view time.list
     ✓ HTTP endpoint + OpenAPI + MCP tool schema update from the model
     ✓ grid(s) re-render from the manifest: web.time.list
     ✓ TypeScript client: regenerate (scripts/generate-types.mjs) — CI baseline gate reminds
-    ! plugin 'invoicing' reads this view (declared contract: id, workOrderNumber, amount, status)
+    ! plugin 'invoicing' reads this view (declared contract: id, orderNumber, amount, status)
 CHANGED event order-created +[orderType]
     ! subscriber 'inspect' consumes this payload — verify its reads
 

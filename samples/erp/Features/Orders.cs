@@ -27,6 +27,25 @@ public static class OrderRules
             x => x.Id == projectId && x.CustomerId == customerId && x.Status == ProjectStatus.Open, ct);
         return ok ? Result.Success() : OrderFindings.ProjectNotForCustomer;
     }
+
+    /// <summary>Resolves an assignee against THIS tenant's memberships and returns the display
+    /// name to snapshot. Views never join the framework's account table (docs/34 friction log:
+    /// no framework story for rendering actor references — the name is denormalized at
+    /// assignment time instead).</summary>
+    public static async Task<(Result Result, string Name)> ResolveAssignee(
+        string assigneeActorId, ErpDbContext db, CancellationToken ct)
+    {
+        if (!Guid.TryParse(assigneeActorId, out var accountId))
+            return (OrderFindings.ScheduleNeedsAssignee.Create(), "");
+        var member = await db.Set<TenantMembershipEntity>()
+            .AnyAsync(m => m.AccountId == accountId && m.Active, ct);
+        if (!member) return (OrderFindings.ScheduleNeedsAssignee.Create(), "");
+        var name = await db.Set<AccountEntity>()
+            .Where(a => a.Id == accountId)
+            .Select(a => a.DisplayName)
+            .SingleAsync(ct);
+        return (Result.Success(), name);
+    }
 }
 
 [Operation("orders.create")]
@@ -41,7 +60,9 @@ public static class CreateOrder
         OrderDescription Description,
         ProjectId? ProjectId = null,
         DateOnly? RequestedDate = null,
-        Money? EstimatedTotal = null);
+        Money? EstimatedTotal = null,
+        // Optional on the wire (D4-additive); the domain default is Normal.
+        OrderPriority Priority = OrderPriority.Normal);
 
     public sealed record Output(OrderId OrderId, OrderNumber Number);
 
@@ -70,7 +91,8 @@ public static class CreateOrder
             input.WorkAddress,
             input.Description,
             input.RequestedDate,
-            input.EstimatedTotal);
+            input.EstimatedTotal,
+            input.Priority);
 
         db.Orders.Add(order);
         // The creation is a committed fact other modules build on (docs/31 D-X5): the event
@@ -154,7 +176,7 @@ public static class EditOrderDetails
         var scope = context.CheckOwnershipUnless("orders.edit-all", order.AssignedToActorId);
         if (scope.IsError) return scope.As<Output>();
 
-        if (order.Status != OrderStatus.Open) return OrderFindings.NotEditable;
+        if (!order.IsEditable) return OrderFindings.NotEditable;
 
         var merge = TamMerge.Apply(order, input);
         if (merge.HasConflicts) return merge.ToConflictResult<Output>();
@@ -218,6 +240,109 @@ public static class CancelOrder
     }
 }
 
+/// <summary>Scheduling assigns AND dates in one intent — an order on the board without an
+/// owner is not "scheduled" in this domain (the merged execution machine's first arrow).</summary>
+[Operation("orders.schedule")]
+[Authorize("orders.schedule")]
+public static class ScheduleOrder
+{
+    public sealed record Input(
+        OrderId OrderId,
+        DateOnly ScheduledDate,
+        [property: LabelKey("labels.assignee"), Lookup("users.lookup")] string AssigneeActorId);
+
+    public sealed record Output(OrderStatus Status);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderFindings.NotFound;
+
+        var (assignee, name) = await OrderRules.ResolveAssignee(input.AssigneeActorId, db, ct);
+        if (assignee.IsError) return assignee.As<Output>();
+
+        var result = order.Schedule(input.ScheduledDate, input.AssigneeActorId, name);
+        if (result.IsError) return result.As<Output>();
+        return new Output(order.Status);
+    }
+}
+
+[Operation("orders.assign")]
+[Authorize("orders.assign")]
+public static class AssignOrder
+{
+    public sealed record Input(
+        OrderId OrderId,
+        [property: LabelKey("labels.assignee"), Lookup("users.lookup")] string AssigneeActorId);
+
+    public sealed record Output(OrderStatus Status);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderFindings.NotFound;
+
+        var (assignee, name) = await OrderRules.ResolveAssignee(input.AssigneeActorId, db, ct);
+        if (assignee.IsError) return assignee.As<Output>();
+
+        var result = order.Reassign(input.AssigneeActorId, name);
+        if (result.IsError) return result.As<Output>();
+        return new Output(order.Status);
+    }
+}
+
+[Operation("orders.start")]
+[Authorize("orders.start")]
+[Widens("orders.start-all")]
+public static class StartOrder
+{
+    public sealed record Input(OrderId OrderId);
+
+    public sealed record Output(OrderStatus Status);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderFindings.NotFound;
+
+        var scope = context.CheckOwnershipUnless("orders.start-all", order.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
+
+        var result = order.Start();
+        if (result.IsError) return result.As<Output>();
+        return new Output(order.Status);
+    }
+}
+
+/// <summary>Priority is an enum, so EDIT001 keeps it OFF the generic change-set: re-prioritizing
+/// is an intent of its own, guarded by the same editability window as edit-details.</summary>
+[Operation("orders.set-priority")]
+[Authorize("orders.edit")]
+[Widens("orders.edit-all")]
+public static class SetOrderPriority
+{
+    public sealed record Input(OrderId OrderId, OrderPriority Priority);
+
+    public sealed record Output(OrderPriority Priority);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderFindings.NotFound;
+
+        var scope = context.CheckOwnershipUnless("orders.edit-all", order.AssignedToActorId);
+        if (scope.IsError) return scope.As<Output>();
+
+        var result = order.SetPriority(input.Priority);
+        if (result.IsError) return result.As<Output>();
+        return new Output(order.Priority);
+    }
+}
+
 [View("orders.list")]
 [Authorize("orders.read")]
 [Widens("orders.read-all")]
@@ -235,6 +360,10 @@ public static class OrderList
         public CustomerName CustomerName { get; init; }
         public OrderType Type { get; init; }
         public OrderStatus Status { get; init; }
+        public OrderPriority Priority { get; init; }
+        public DateOnly? ScheduledDate { get; init; }
+        [LabelKey("labels.assignee")]
+        public string? AssignedToName { get; init; }
         public DateOnly? RequestedDate { get; init; }
         public Money? EstimatedTotal { get; init; }
         [LabelKey("labels.company")]
@@ -264,7 +393,8 @@ public static class OrderList
                 o => o.CustomerId, c => c.Id, (o, c) => new Result
             {
                 Id = o.Id, Number = o.Number, CustomerName = c.Name, Type = o.Type,
-                Status = o.Status, RequestedDate = o.RequestedDate,
+                Status = o.Status, Priority = o.Priority, ScheduledDate = o.ScheduledDate,
+                AssignedToName = o.AssignedToName, RequestedDate = o.RequestedDate,
                 EstimatedTotal = o.EstimatedTotal, TenantId = o.TenantId,
                 Version = o.Version, Extensions = o.Extensions,
             });
@@ -276,7 +406,8 @@ public static class OrderList
     // replaces is retired (docs/29 ledger).
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Number), nameof(Result.CustomerName), nameof(Result.RequestedDate))
-        .Filterable(nameof(Result.Status), nameof(Result.Type), nameof(Result.CustomerName),
+        .Filterable(nameof(Result.Status), nameof(Result.Type), nameof(Result.Priority),
+            nameof(Result.ScheduledDate), nameof(Result.AssignedToName), nameof(Result.CustomerName),
             nameof(Result.RequestedDate), nameof(Result.EstimatedTotal))
         .SubtreeRead(nameof(Result.TenantId))
         .DefaultSort(nameof(Result.Number), descending: true);
@@ -299,6 +430,10 @@ public static class OrderDetail
         public CustomerName CustomerName { get; init; }
         public OrderType Type { get; init; }
         public OrderStatus Status { get; init; }
+        public OrderPriority Priority { get; init; }
+        public DateOnly? ScheduledDate { get; init; }
+        [LabelKey("labels.assignee")]
+        public string? AssignedToName { get; init; }
         public Address WorkAddress { get; init; }
         public OrderDescription Description { get; init; }
         public DateOnly? RequestedDate { get; init; }
@@ -316,8 +451,10 @@ public static class OrderDetail
                 o => o.CustomerId, c => c.Id, (o, c) => new Result
             {
                 Id = o.Id, Number = o.Number, CustomerName = c.Name, Type = o.Type,
-                Status = o.Status, WorkAddress = o.WorkAddress, Description = o.Description,
-                RequestedDate = o.RequestedDate, EstimatedTotal = o.EstimatedTotal,
+                Status = o.Status, Priority = o.Priority, ScheduledDate = o.ScheduledDate,
+                AssignedToName = o.AssignedToName, WorkAddress = o.WorkAddress,
+                Description = o.Description, RequestedDate = o.RequestedDate,
+                EstimatedTotal = o.EstimatedTotal,
                 Version = o.Version, Extensions = o.Extensions,
             });
 }

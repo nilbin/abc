@@ -47,7 +47,7 @@ set a registered extension field on the target row or publish a `rules.{name}` e
 condition's wire shape and operator set are exactly docs/22's (discriminator `t`; a firing
 rule's finding is `rules.{name}`), and EDIT001 is broader than the status examples suggest —
 the analyzer refuses ANY enum inside a `Change<T>`, so "let users change priority later" is
-an intent operation (`work-orders.set-priority`), never an edit field. The
+an intent operation (`orders.set-priority`), never an edit field. The
 executor has no rules special case: rules run as the `tam.rules` package's own wildcard gate,
 through the very seam Step 16's approvals plugin uses; and because Px is portable, the same
 condition drives client-side form behavior without a round trip. What rules never get is

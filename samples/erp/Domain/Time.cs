@@ -20,11 +20,11 @@ public static class TimeFindings
     public static readonly FindingFactory InvalidHours = Finding.Error("time.invalid-hours");
     public static readonly FindingFactory InvalidRate = Finding.Error("time.invalid-rate");
     public static readonly FindingFactory AlreadyApproved = Finding.Error("time.already-approved");
-    public static readonly FindingFactory WorkOrderClosed = Finding.Error("time.work-order-closed");
+    public static readonly FindingFactory OrderClosed = Finding.Error("time.order-closed");
 }
 
 
-/// <summary>A technician's time booking on a work order (docs/34 M3). Owned by the BOOKING
+/// <summary>A technician's time booking on an order (docs/34 M3). Owned by the BOOKING
 /// technician — the paired-atom OWN scope rides TechnicianActorId. Amount is computed and
 /// STORED at booking time (hours × rate), so later rate conventions never rewrite history;
 /// approval is an intent operation (EDIT001), never an edit.</summary>
@@ -34,10 +34,10 @@ public sealed class TimeEntry : Tam.EntityFrameworkCore.ITenantScoped
 
     public TimeEntryId Id { get; private set; }
     public string TenantId { get; private set; } = "";
-    public WorkOrderId WorkOrderId { get; private set; }
+    public OrderId OrderId { get; private set; }
     public string TechnicianActorId { get; private set; } = "";
     // Snapshot of the technician's display name at booking time — same denormalization as
-    // WorkOrder.AssignedToName (docs/34 friction log: no actor-reference rendering story).
+    // Order.AssignedToName (docs/34 friction log: no actor-reference rendering story).
     public string TechnicianName { get; private set; } = "";
     public DateOnly Date { get; private set; }
     public decimal Hours { get; private set; }
@@ -47,12 +47,12 @@ public sealed class TimeEntry : Tam.EntityFrameworkCore.ITenantScoped
     public TimeEntryStatus Status { get; private set; }
 
     public static TimeEntry Book(
-        string tenantId, WorkOrderId workOrderId, string technicianActorId, string technicianName,
+        string tenantId, OrderId orderId, string technicianActorId, string technicianName,
         DateOnly date, decimal hours, decimal hourlyRate, TimeNote? note) => new()
     {
         Id = new TimeEntryId(Guid.NewGuid()),
         TenantId = tenantId,
-        WorkOrderId = workOrderId,
+        OrderId = orderId,
         TechnicianActorId = technicianActorId,
         TechnicianName = technicianName,
         Date = date,

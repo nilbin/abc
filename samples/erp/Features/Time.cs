@@ -8,7 +8,7 @@ namespace Erp.Features;
 public static class TimeRules
 {
     /// <summary>The display name to snapshot onto the entry — the BOOKING actor's own account
-    /// name, resolved once at write time (same denormalization as WorkOrder.AssignedToName;
+    /// name, resolved once at write time (same denormalization as Order.AssignedToName;
     /// docs/34 friction log: views have no actor-reference rendering story).</summary>
     public static async Task<string> TechnicianDisplayName(
         string actorId, ErpDbContext db, CancellationToken ct)
@@ -30,7 +30,7 @@ public static class TimeRules
 public static class BookTime
 {
     public sealed record Input(
-        [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
+        [property: LabelKey("labels.order")] OrderId OrderId,
         DateOnly Date,
         decimal Hours,
         Money HourlyRate,
@@ -42,10 +42,11 @@ public static class BookTime
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
-        var workOrder = await db.WorkOrders.SingleOrDefaultAsync(x => x.Id == input.WorkOrderId, ct);
-        if (workOrder is null) return WorkOrderFindings.NotFound.Create();
-        if (workOrder.Status == WorkOrderStatus.Closed)
-            return TimeFindings.WorkOrderClosed.At(nameof(Input.WorkOrderId));
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderFindings.NotFound;
+        // Time books onto LIVE work: a completed or cancelled order takes no new hours.
+        if (order.Status is OrderStatus.Completed or OrderStatus.Cancelled)
+            return TimeFindings.OrderClosed.At(nameof(Input.OrderId));
 
         if (input.Hours <= 0 || input.Hours > 24)
             return TimeFindings.InvalidHours.At(nameof(Input.Hours));
@@ -54,7 +55,7 @@ public static class BookTime
 
         var technicianName = await TimeRules.TechnicianDisplayName(context.Actor.Id, db, ct);
         var entry = TimeEntry.Book(
-            context.TenantId.Value, workOrder.Id, context.Actor.Id, technicianName,
+            context.TenantId.Value, order.Id, context.Actor.Id, technicianName,
             input.Date, input.Hours, input.HourlyRate, input.Note);
         db.TimeEntries.Add(entry);
         return new Output(entry.Id, entry.Amount);
@@ -64,15 +65,15 @@ public static class BookTime
 public static class BookTimeDerivations
 {
     /// <summary>Rate default: the technician's most recent booked rate, else the catalog's
-    /// hour-priced labor item (the seeded "Servicetekniker, timme"). Keyed on WorkOrderId
-    /// because the row action prefills it when the form opens — the same "SOMETHING must
-    /// fire" trigger choice as work-orders.schedule.assignees (docs/34 friction log).</summary>
+    /// hour-priced labor item (the seeded "Servicetekniker, timme"). Keyed on OrderId
+    /// because the row action prefills it when the form opens — the "SOMETHING must
+    /// fire" trigger choice (docs/34 friction log).</summary>
     [ServerDerivation("time.book.rate-default")]
-    [DependsOn(nameof(BookTime.Input.WorkOrderId))]
+    [DependsOn(nameof(BookTime.Input.OrderId))]
     public static async Task<DerivationResult> RateDefault(
         BookTime.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
     {
-        if (input.WorkOrderId.Value == Guid.Empty) return DerivationResult.Empty;
+        if (input.OrderId.Value == Guid.Empty) return DerivationResult.Empty;
 
         var actorId = context.Operation.Actor.Id;
         var lastRate = await db.TimeEntries
@@ -137,7 +138,7 @@ public static class TimeEntryList
     public sealed record Result
     {
         public TimeEntryId Id { get; init; }
-        public WorkOrderNumber WorkOrderNumber { get; init; }
+        public OrderNumber OrderNumber { get; init; }
         public DateOnly Date { get; init; }
         [LabelKey("labels.technician")]
         public string TechnicianName { get; init; } = "";
@@ -153,24 +154,24 @@ public static class TimeEntryList
         // Both join sides ride the ambient tenant filter — nothing here widens, so no InScope.
         var rows = db.TimeEntries
             .ScopedUnless(context, "time.read-all", x => x.TechnicianActorId)
-            .Join(db.WorkOrders, t => t.WorkOrderId, w => w.Id, (t, w) => new Result
+            .Join(db.Orders, t => t.OrderId, o => o.Id, (t, o) => new Result
             {
-                Id = t.Id, WorkOrderNumber = w.Number, Date = t.Date,
+                Id = t.Id, OrderNumber = o.Number, Date = t.Date,
                 TechnicianName = t.TechnicianName, Hours = t.Hours,
                 HourlyRate = t.HourlyRate, Amount = t.Amount, Status = t.Status,
             });
         if (!string.IsNullOrWhiteSpace(query.Search))
             rows = rows.Where(x =>
-                ((string)(object)x.WorkOrderNumber).Contains(query.Search!) ||
+                ((string)(object)x.OrderNumber).Contains(query.Search!) ||
                 x.TechnicianName.Contains(query.Search!));
         return rows;
     }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
-        .Sortable(nameof(Result.Date), nameof(Result.WorkOrderNumber), nameof(Result.Hours),
+        .Sortable(nameof(Result.Date), nameof(Result.OrderNumber), nameof(Result.Hours),
             nameof(Result.Amount))
         .Filterable(nameof(Result.Status), nameof(Result.Date), nameof(Result.TechnicianName),
-            nameof(Result.WorkOrderNumber))
+            nameof(Result.OrderNumber))
         .DefaultSort(nameof(Result.Date), descending: true);
 }
 
@@ -186,7 +187,7 @@ public static class TimeEntryDetail
     public sealed record Result
     {
         public TimeEntryId Id { get; init; }
-        public WorkOrderNumber WorkOrderNumber { get; init; }
+        public OrderNumber OrderNumber { get; init; }
         public DateOnly Date { get; init; }
         [LabelKey("labels.technician")]
         public string TechnicianName { get; init; } = "";
@@ -200,9 +201,9 @@ public static class TimeEntryDetail
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context) =>
         db.TimeEntries.Where(x => x.Id == query.TimeEntryId)
             .ScopedUnless(context, "time.read-all", x => x.TechnicianActorId)
-            .Join(db.WorkOrders, t => t.WorkOrderId, w => w.Id, (t, w) => new Result
+            .Join(db.Orders, t => t.OrderId, o => o.Id, (t, o) => new Result
             {
-                Id = t.Id, WorkOrderNumber = w.Number, Date = t.Date,
+                Id = t.Id, OrderNumber = o.Number, Date = t.Date,
                 TechnicianName = t.TechnicianName, Hours = t.Hours,
                 HourlyRate = t.HourlyRate, Amount = t.Amount, Note = t.Note, Status = t.Status,
             });

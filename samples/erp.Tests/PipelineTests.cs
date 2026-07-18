@@ -77,20 +77,20 @@ public sealed class PipelineTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Completing_a_work_order_publishes_the_event_contract()
+    public async Task The_merged_machine_runs_schedule_start_complete_and_publishes()
     {
         var dispatcher = host.Actor("demo",
-            "work-orders.create", "work-orders.schedule", "work-orders.start",
-            "work-orders.start-all", "work-orders.complete", "work-orders.complete-all");
+            "orders.create", "orders.schedule", "orders.start",
+            "orders.start-all", "orders.complete", "orders.complete-all");
 
-        var created = await dispatcher.ExecuteAsync("work-orders.create", new
+        var created = await dispatcher.ExecuteAsync("orders.create", new
         {
-            projectId,
-            title = "Testarbete",
+            customerId,
+            orderType = "service",
+            workAddress = "Testgatan 1",
             description = "Kontraktstest",
-            location = "Testgatan 1",
         });
-        var workOrderId = created.Output<CreateWorkOrder.Output>().WorkOrderId.Value;
+        var orderId = created.Output<CreateOrder.Output>().OrderId.Value;
 
         // Scheduling validates the assignee against real memberships — seed one.
         var accountId = Guid.NewGuid();
@@ -102,30 +102,30 @@ public sealed class PipelineTests : IAsyncLifetime
                 { Id = Guid.NewGuid(), TenantId = "demo", AccountId = accountId });
             return Task.CompletedTask;
         });
-        (await dispatcher.ExecuteAsync("work-orders.schedule", new
-            { workOrderId, scheduledDate = "2026-08-01", assigneeActorId = accountId.ToString() }))
+        (await dispatcher.ExecuteAsync("orders.schedule", new
+            { orderId, scheduledDate = "2026-08-01", assigneeActorId = accountId.ToString() }))
             .ShouldSucceed();
-        (await dispatcher.ExecuteAsync("work-orders.start", new { workOrderId })).ShouldSucceed();
+        (await dispatcher.ExecuteAsync("orders.start", new { orderId })).ShouldSucceed();
 
-        var completed = await dispatcher.ExecuteAsync("work-orders.complete", new { workOrderId });
-        completed.ShouldSucceed().ShouldPublish("work-order-completed");
+        var completed = await dispatcher.ExecuteAsync("orders.complete", new { orderId });
+        completed.ShouldSucceed().ShouldPublish("order-completed");
     }
 
     [Fact]
     public async Task Own_scope_holds_without_the_widening_atom()
     {
         // Two technicians book time; each sees only their own entries through the view.
-        var woActor = host.Actor("demo", "work-orders.create");
-        var created = await woActor.ExecuteAsync("work-orders.create", new
-            { projectId, title = "T", description = "D", location = "L" });
-        var workOrderId = created.Output<CreateWorkOrder.Output>().WorkOrderId.Value;
+        var orderActor = host.Actor("demo", "orders.create");
+        var created = await orderActor.ExecuteAsync("orders.create", new
+            { customerId, orderType = "service", workAddress = "L", description = "D" });
+        var orderId = created.Output<CreateOrder.Output>().OrderId.Value;
 
         var tekla = host.ActorWithId("demo", Guid.NewGuid().ToString(), "time.book", "time.read");
         var didrik = host.ActorWithId("demo", Guid.NewGuid().ToString(), "time.book", "time.read", "time.read-all");
         (await tekla.ExecuteAsync("time.book", new
-            { workOrderId, date = "2026-07-16", hours = 2, hourlyRate = 900 })).ShouldSucceed();
+            { orderId, date = "2026-07-16", hours = 2, hourlyRate = 900 })).ShouldSucceed();
         (await didrik.ExecuteAsync("time.book", new
-            { workOrderId, date = "2026-07-16", hours = 1, hourlyRate = 950 })).ShouldSucceed();
+            { orderId, date = "2026-07-16", hours = 1, hourlyRate = 950 })).ShouldSucceed();
 
         var teklaSees = (await tekla.QueryAsync("time.list")).ShouldSucceed();
         Assert.Equal(1, teklaSees.Total);                       // own scope: hers only

@@ -28,7 +28,6 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<StockItem> Stock => Set<StockItem>();
-    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
     public DbSet<MaterialLine> MaterialLines => Set<MaterialLine>();
 
@@ -56,26 +55,19 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
             b.Property(x => x.Name).HasMaxLength(200);
             b.HasIndex(x => new { x.TenantId, x.Sku }).IsUnique();
         });
-        modelBuilder.Entity<WorkOrder>(b =>
-        {
-            b.HasKey(x => x.Id);
-            b.Property(x => x.Title).HasMaxLength(200);
-            b.Property(x => x.Description).HasMaxLength(1000);
-            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
-        });
         modelBuilder.Entity<TimeEntry>(b =>
         {
             b.HasKey(x => x.Id);
             b.Property(x => x.TechnicianName).HasMaxLength(200);
             b.Property(x => x.Note).HasMaxLength(500);
             // No natural unique key — a technician may book several entries per day on one
-            // work order; the index serves the per-work-order lists.
-            b.HasIndex(x => new { x.TenantId, x.WorkOrderId });
+            // order; the index serves the per-order lists.
+            b.HasIndex(x => new { x.TenantId, x.OrderId });
         });
         modelBuilder.Entity<MaterialLine>(b =>
         {
             b.HasKey(x => x.Id);
-            b.HasIndex(x => new { x.TenantId, x.WorkOrderId });
+            b.HasIndex(x => new { x.TenantId, x.OrderId });
         });
         modelBuilder.Entity<Order>(b =>
         {

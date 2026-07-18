@@ -9,7 +9,7 @@ export interface TypedOperationResponse<TOutput> extends OperationResponse {
 }
 
 export interface MaterialsAddInput {
-  workOrderId: string;
+  orderId: string;
   stockItemId: string;
   quantity: number;
 }
@@ -27,17 +27,17 @@ export interface TimeApproveOutput {
   status: "draft" | "approved";
 }
 
-export interface WorkOrdersAssignInput {
-  workOrderId: string;
+export interface OrdersAssignInput {
+  orderId: string;
   assigneeActorId: string;
 }
 
-export interface WorkOrdersAssignOutput {
-  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+export interface OrdersAssignOutput {
+  status: "open" | "scheduled" | "inProgress" | "completed" | "cancelled";
 }
 
 export interface TimeBookInput {
-  workOrderId: string;
+  orderId: string;
   date: string;
   hours: number;
   hourlyRate: number;
@@ -66,28 +66,12 @@ export interface ProjectsCloseOutput {
   status: "open" | "closed";
 }
 
-export interface WorkOrdersCloseInput {
-  workOrderId: string;
-}
-
-export interface WorkOrdersCloseOutput {
-  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
-}
-
 export interface OrdersCompleteInput {
   orderId: string;
 }
 
 export interface OrdersCompleteOutput {
   version: number;
-}
-
-export interface WorkOrdersCompleteInput {
-  workOrderId: string;
-}
-
-export interface WorkOrdersCompleteOutput {
-  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
 }
 
 export interface CustomersCreateInput {
@@ -109,6 +93,7 @@ export interface OrdersCreateInput {
   projectId?: string;
   requestedDate?: string;
   estimatedTotal?: number;
+  priority?: "low" | "normal" | "urgent";
   extensions?: Record<string, Change<unknown>>;
 }
 
@@ -137,20 +122,6 @@ export interface StockCreateInput {
 
 export interface StockCreateOutput {
   stockItemId: string;
-}
-
-export interface WorkOrdersCreateInput {
-  projectId: string;
-  title: string;
-  description: string;
-  location: string;
-  priority?: "low" | "normal" | "urgent";
-  extensions?: Record<string, Change<unknown>>;
-}
-
-export interface WorkOrdersCreateOutput {
-  workOrderId: string;
-  number: string;
 }
 
 export interface CustomersDeactivateInput {
@@ -214,18 +185,6 @@ export interface StockEditOutput {
   stockItemId: string;
 }
 
-export interface WorkOrdersEditDetailsInput {
-  workOrderId: string;
-  title?: Change<string>;
-  description?: Change<string>;
-  location?: Change<string>;
-  extensions?: Record<string, Change<unknown>>;
-}
-
-export interface WorkOrdersEditDetailsOutput {
-  version: number;
-}
-
 export interface ProjectsReopenInput {
   projectId: string;
 }
@@ -234,31 +193,31 @@ export interface ProjectsReopenOutput {
   status: "open" | "closed";
 }
 
-export interface WorkOrdersScheduleInput {
-  workOrderId: string;
+export interface OrdersScheduleInput {
+  orderId: string;
   scheduledDate: string;
   assigneeActorId: string;
 }
 
-export interface WorkOrdersScheduleOutput {
-  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+export interface OrdersScheduleOutput {
+  status: "open" | "scheduled" | "inProgress" | "completed" | "cancelled";
 }
 
-export interface WorkOrdersSetPriorityInput {
-  workOrderId: string;
+export interface OrdersSetPriorityInput {
+  orderId: string;
   priority: "low" | "normal" | "urgent";
 }
 
-export interface WorkOrdersSetPriorityOutput {
+export interface OrdersSetPriorityOutput {
   priority: "low" | "normal" | "urgent";
 }
 
-export interface WorkOrdersStartInput {
-  workOrderId: string;
+export interface OrdersStartInput {
+  orderId: string;
 }
 
-export interface WorkOrdersStartOutput {
-  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
+export interface OrdersStartOutput {
+  status: "open" | "scheduled" | "inProgress" | "completed" | "cancelled";
 }
 
 export interface ExtensionsDefineFieldInput {
@@ -735,7 +694,7 @@ export interface CustomersLookupQuery {
 
 export interface MaterialsDetailRow {
   id: string;
-  workOrderNumber: string;
+  orderNumber: string;
   sku: string;
   stockItemName: string;
   unit: "piece" | "hour" | "meter" | "kilogram" | "litre";
@@ -750,7 +709,7 @@ export interface MaterialsDetailQuery {
 
 export interface MaterialsListRow {
   id: string;
-  workOrderNumber: string;
+  orderNumber: string;
   sku: string;
   stockItemName: string;
   unit: "piece" | "hour" | "meter" | "kilogram" | "litre";
@@ -768,7 +727,10 @@ export interface OrdersDetailRow {
   number: string;
   customerName: string;
   type: "service" | "project";
-  status: "open" | "completed" | "cancelled";
+  status: "open" | "scheduled" | "inProgress" | "completed" | "cancelled";
+  priority: "low" | "normal" | "urgent";
+  scheduledDate?: string;
+  assignedToName?: string;
   workAddress: string;
   description: string;
   requestedDate?: string;
@@ -786,7 +748,10 @@ export interface OrdersListRow {
   number: string;
   customerName: string;
   type: "service" | "project";
-  status: "open" | "completed" | "cancelled";
+  status: "open" | "scheduled" | "inProgress" | "completed" | "cancelled";
+  priority: "low" | "normal" | "urgent";
+  scheduledDate?: string;
+  assignedToName?: string;
   requestedDate?: string;
   estimatedTotal?: number;
   tenantId: string;
@@ -873,7 +838,7 @@ export interface StockLookupQuery {
 
 export interface TimeDetailRow {
   id: string;
-  workOrderNumber: string;
+  orderNumber: string;
   date: string;
   technicianName: string;
   hours: number;
@@ -889,7 +854,7 @@ export interface TimeDetailQuery {
 
 export interface TimeListRow {
   id: string;
-  workOrderNumber: string;
+  orderNumber: string;
   date: string;
   technicianName: string;
   hours: number;
@@ -899,43 +864,6 @@ export interface TimeListRow {
 }
 
 export interface TimeListQuery {
-  search?: string;
-}
-
-export interface WorkOrdersDetailRow {
-  id: string;
-  number: string;
-  title: string;
-  projectNumber: string;
-  description: string;
-  location: string;
-  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
-  priority: "low" | "normal" | "urgent";
-  scheduledDate?: string;
-  assignedToName?: string;
-  version: number;
-  extensions: Record<string, unknown>;
-}
-
-export interface WorkOrdersDetailQuery {
-  workOrderId?: string;
-}
-
-export interface WorkOrdersListRow {
-  id: string;
-  number: string;
-  title: string;
-  projectNumber: string;
-  status: "draft" | "scheduled" | "inProgress" | "done" | "closed";
-  priority: "low" | "normal" | "urgent";
-  scheduledDate?: string;
-  assignedToName?: string;
-  tenantId: string;
-  version: number;
-  extensions: Record<string, unknown>;
-}
-
-export interface WorkOrdersListQuery {
   search?: string;
 }
 
@@ -1313,9 +1241,9 @@ export class TypedTamClient {
     return this.client.operation("time.approve", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<TimeApproveOutput>>;
   }
 
-  /** work-orders.assign (requires work-orders.assign) */
-  workOrdersAssign(input: WorkOrdersAssignInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersAssignOutput>> {
-    return this.client.operation("work-orders.assign", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersAssignOutput>>;
+  /** orders.assign (requires orders.assign) */
+  ordersAssign(input: OrdersAssignInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersAssignOutput>> {
+    return this.client.operation("orders.assign", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersAssignOutput>>;
   }
 
   /** time.book (requires time.book) */
@@ -1333,19 +1261,9 @@ export class TypedTamClient {
     return this.client.operation("projects.close", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsCloseOutput>>;
   }
 
-  /** work-orders.close (requires work-orders.close) */
-  workOrdersClose(input: WorkOrdersCloseInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersCloseOutput>> {
-    return this.client.operation("work-orders.close", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersCloseOutput>>;
-  }
-
   /** orders.complete (requires orders.complete) */
   ordersComplete(input: OrdersCompleteInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersCompleteOutput>> {
     return this.client.operation("orders.complete", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersCompleteOutput>>;
-  }
-
-  /** work-orders.complete (requires work-orders.complete) */
-  workOrdersComplete(input: WorkOrdersCompleteInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersCompleteOutput>> {
-    return this.client.operation("work-orders.complete", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersCompleteOutput>>;
   }
 
   /** customers.create (requires customers.create) */
@@ -1366,11 +1284,6 @@ export class TypedTamClient {
   /** stock.create (requires stock.manage) */
   stockCreate(input: StockCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<StockCreateOutput>> {
     return this.client.operation("stock.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<StockCreateOutput>>;
-  }
-
-  /** work-orders.create (requires work-orders.create) */
-  workOrdersCreate(input: WorkOrdersCreateInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersCreateOutput>> {
-    return this.client.operation("work-orders.create", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersCreateOutput>>;
   }
 
   /** customers.deactivate (requires customers.edit) */
@@ -1403,29 +1316,24 @@ export class TypedTamClient {
     return this.client.operation("stock.edit", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<StockEditOutput>>;
   }
 
-  /** work-orders.edit-details (requires work-orders.edit) */
-  workOrdersEditDetails(input: WorkOrdersEditDetailsInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersEditDetailsOutput>> {
-    return this.client.operation("work-orders.edit-details", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersEditDetailsOutput>>;
-  }
-
   /** projects.reopen (requires projects.close) */
   projectsReopen(input: ProjectsReopenInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<ProjectsReopenOutput>> {
     return this.client.operation("projects.reopen", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<ProjectsReopenOutput>>;
   }
 
-  /** work-orders.schedule (requires work-orders.schedule) */
-  workOrdersSchedule(input: WorkOrdersScheduleInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersScheduleOutput>> {
-    return this.client.operation("work-orders.schedule", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersScheduleOutput>>;
+  /** orders.schedule (requires orders.schedule) */
+  ordersSchedule(input: OrdersScheduleInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersScheduleOutput>> {
+    return this.client.operation("orders.schedule", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersScheduleOutput>>;
   }
 
-  /** work-orders.set-priority (requires work-orders.edit) */
-  workOrdersSetPriority(input: WorkOrdersSetPriorityInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersSetPriorityOutput>> {
-    return this.client.operation("work-orders.set-priority", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersSetPriorityOutput>>;
+  /** orders.set-priority (requires orders.edit) */
+  ordersSetPriority(input: OrdersSetPriorityInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersSetPriorityOutput>> {
+    return this.client.operation("orders.set-priority", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersSetPriorityOutput>>;
   }
 
-  /** work-orders.start (requires work-orders.start) */
-  workOrdersStart(input: WorkOrdersStartInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<WorkOrdersStartOutput>> {
-    return this.client.operation("work-orders.start", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<WorkOrdersStartOutput>>;
+  /** orders.start (requires orders.start) */
+  ordersStart(input: OrdersStartInput, options?: { idempotencyKey?: string }): Promise<TypedOperationResponse<OrdersStartOutput>> {
+    return this.client.operation("orders.start", input as unknown as Record<string, unknown>, options) as Promise<TypedOperationResponse<OrdersStartOutput>>;
   }
 
   /** extensions.define-field (requires extensions.manage) */
@@ -1726,16 +1634,6 @@ export class TypedTamClient {
   /** view time.list (requires time.read) */
   timeList(query?: TimeListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: TimeListRow[] }> {
     return this.client.view("time.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: TimeListRow[] }>;
-  }
-
-  /** view work-orders.detail (requires work-orders.read) */
-  workOrdersDetail(query?: WorkOrdersDetailQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersDetailRow[] }> {
-    return this.client.view("work-orders.detail", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersDetailRow[] }>;
-  }
-
-  /** view work-orders.list (requires work-orders.read) */
-  workOrdersList(query?: WorkOrdersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersListRow[] }> {
-    return this.client.view("work-orders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: WorkOrdersListRow[] }>;
   }
 
   /** view extensions.fields (requires extensions.manage) */

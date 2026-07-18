@@ -5,7 +5,7 @@ using Tam.EntityFrameworkCore;
 
 namespace Erp.Features;
 
-/// <summary>Material consumption follows the WORK ORDER, not the person: any technician on
+/// <summary>Material consumption follows the ORDER, not the person: any technician on
 /// site may register what was used (an assisting tech books parts on a colleague's order), so
 /// there is no own scope here — the honest boundary is the tenant plus the materials.add atom.
 /// The price SNAPSHOT is taken from the stock item at entry time (docs/34 M3): a later
@@ -15,7 +15,7 @@ namespace Erp.Features;
 public static class AddMaterialLine
 {
     public sealed record Input(
-        [property: LabelKey("labels.work-order")] WorkOrderId WorkOrderId,
+        [property: LabelKey("labels.order")] OrderId OrderId,
         StockItemId StockItemId,
         decimal Quantity);
 
@@ -24,10 +24,11 @@ public static class AddMaterialLine
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ErpDbContext db, CancellationToken ct)
     {
-        var workOrder = await db.WorkOrders.SingleOrDefaultAsync(x => x.Id == input.WorkOrderId, ct);
-        if (workOrder is null) return WorkOrderFindings.NotFound.Create();
-        if (workOrder.Status == WorkOrderStatus.Closed)
-            return MaterialFindings.WorkOrderClosed.At(nameof(Input.WorkOrderId));
+        var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == input.OrderId, ct);
+        if (order is null) return OrderFindings.NotFound;
+        // Materials book onto LIVE work, same window as time.
+        if (order.Status is OrderStatus.Completed or OrderStatus.Cancelled)
+            return MaterialFindings.OrderClosed.At(nameof(Input.OrderId));
 
         if (input.Quantity <= 0)
             return MaterialFindings.InvalidQuantity.At(nameof(Input.Quantity));
@@ -39,7 +40,7 @@ public static class AddMaterialLine
             return MaterialFindings.StockItemInactive.At(nameof(Input.StockItemId));
 
         var line = MaterialLine.Add(
-            context.TenantId.Value, workOrder.Id, item.Id, input.Quantity, item.UnitPrice);
+            context.TenantId.Value, order.Id, item.Id, input.Quantity, item.UnitPrice);
         db.MaterialLines.Add(line);
         return new Output(line.Id, line.Amount);
     }
@@ -54,7 +55,7 @@ public static class MaterialLineList
     public sealed record Result
     {
         public MaterialLineId Id { get; init; }
-        public WorkOrderNumber WorkOrderNumber { get; init; }
+        public OrderNumber OrderNumber { get; init; }
         public Sku Sku { get; init; }
         [LabelKey("labels.stock-item")]
         public string StockItemName { get; init; } = "";
@@ -66,29 +67,29 @@ public static class MaterialLineList
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
     {
-        // Materials follow the work order (see materials.add): no own scope, no roll-up —
+        // Materials follow the order (see materials.add): no own scope, no roll-up —
         // every source below rides the ambient tenant filter.
         var rows = db.MaterialLines
-            .Join(db.WorkOrders, m => m.WorkOrderId, w => w.Id, (m, w) => new { m, w })
+            .Join(db.Orders, m => m.OrderId, o => o.Id, (m, o) => new { m, o })
             .Join(db.Stock, x => x.m.StockItemId, s => s.Id, (x, s) => new Result
             {
-                Id = x.m.Id, WorkOrderNumber = x.w.Number, Sku = s.Sku, StockItemName = s.Name,
+                Id = x.m.Id, OrderNumber = x.o.Number, Sku = s.Sku, StockItemName = s.Name,
                 Unit = s.Unit, Quantity = x.m.Quantity, UnitPrice = x.m.UnitPrice,
                 Amount = x.m.Amount,
             });
         if (!string.IsNullOrWhiteSpace(query.Search))
             rows = rows.Where(x =>
-                ((string)(object)x.WorkOrderNumber).Contains(query.Search!) ||
+                ((string)(object)x.OrderNumber).Contains(query.Search!) ||
                 x.StockItemName.Contains(query.Search!) ||
                 ((string)(object)x.Sku).Contains(query.Search!));
         return rows;
     }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
-        .Sortable(nameof(Result.WorkOrderNumber), nameof(Result.StockItemName), nameof(Result.Amount))
-        .Filterable(nameof(Result.WorkOrderNumber), nameof(Result.Sku), nameof(Result.StockItemName),
+        .Sortable(nameof(Result.OrderNumber), nameof(Result.StockItemName), nameof(Result.Amount))
+        .Filterable(nameof(Result.OrderNumber), nameof(Result.Sku), nameof(Result.StockItemName),
             nameof(Result.Unit))
-        .DefaultSort(nameof(Result.WorkOrderNumber), descending: true);
+        .DefaultSort(nameof(Result.OrderNumber), descending: true);
 }
 
 /// <summary>Read-only record surface behind the declared materials page: a booked line is
@@ -102,7 +103,7 @@ public static class MaterialLineDetail
     public sealed record Result
     {
         public MaterialLineId Id { get; init; }
-        public WorkOrderNumber WorkOrderNumber { get; init; }
+        public OrderNumber OrderNumber { get; init; }
         public Sku Sku { get; init; }
         [LabelKey("labels.stock-item")]
         public string StockItemName { get; init; } = "";
@@ -114,10 +115,10 @@ public static class MaterialLineDetail
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context) =>
         db.MaterialLines.Where(x => x.Id == query.MaterialLineId)
-            .Join(db.WorkOrders, m => m.WorkOrderId, w => w.Id, (m, w) => new { m, w })
+            .Join(db.Orders, m => m.OrderId, o => o.Id, (m, o) => new { m, o })
             .Join(db.Stock, x => x.m.StockItemId, s => s.Id, (x, s) => new Result
             {
-                Id = x.m.Id, WorkOrderNumber = x.w.Number, Sku = s.Sku, StockItemName = s.Name,
+                Id = x.m.Id, OrderNumber = x.o.Number, Sku = s.Sku, StockItemName = s.Name,
                 Unit = s.Unit, Quantity = x.m.Quantity, UnitPrice = x.m.UnitPrice,
                 Amount = x.m.Amount,
             });

@@ -39,11 +39,11 @@ surface, extendable with new tabs (including plugin ones) without touching the o
 
 ```csharp
 .Record(record => record
-    .Detail("work-orders.detail", key: "workOrderId")
+    .Detail("orders.detail", key: "orderId")
     .Title("number")
-    .Tab("details", "erp.tabs.details", s => s.Form("web.work-orders.edit"))
+    .Tab("details", "erp.tabs.details", s => s.Form("web.orders.edit"))
     .Tab("time", "erp.tabs.time", s => s
-        .Grid("web.time.list", bind => bind.Query("workOrderNumber", fromRecord: "number")))
+        .Grid("web.time.list", bind => bind.Query("orderNumber", fromRecord: "number")))
     .PanelTabs("web.orders.detail"))
 ```
 
@@ -53,7 +53,7 @@ surface, extendable with new tabs (including plugin ones) without touching the o
   OR flat sections, never both (PAGE001).
 - A **`Grid` record section** is a child listing filtered off the open record: each
   `bind.Query(param, fromRecord: field)` fills a grid query param from a detail-view field, so
-  the child filters MECHANICALLY (docs/20) — a work order's time entries, no dedicated view.
+  the child filters MECHANICALLY (docs/20) — an order's time entries, no dedicated view.
   `bind.QueryEntityRef(param, entityKey)` instead fills the param with the record's own
   IDENTITY as a canonical EntityRef ("order:{id}", docs/35) — the documents-tab shape, where
   the child filters on WHICH record, not one of its fields (wire: bind value `$ref:order`).

@@ -92,37 +92,37 @@ const bigClose2 = await op(didrik,'projects.close',{projectId: bigP.body?.output
 check('retired row rule no longer blocks', retireRow.status === 200 && bigClose2.status === 200,
   `${retireRow.status}/${bigClose2.status} ${codes(bigClose2).join(',')}`);
 
-// The SEEDED fn-node rule (docs/22 relative dates): urgent WO-2026-0006 can't be scheduled
+// The SEEDED fn-node rule (docs/22 relative dates): the urgent order can't be scheduled
 // more than 7 days out — the cutoff comes from {"t":"fn","op":"today","days":7}, not a
 // baked-in date, so this check is stable on any run day.
-const wos = await view(didrik,'work-orders.list','?pageSize=50');
-const urgentWo = (wos.body?.rows ?? wos.rows ?? []).find(r=>r.number==='WO-2026-0006');
+const wos = await view(didrik,'orders.list','?pageSize=50');
+const urgentWo = (wos.body?.rows ?? wos.rows ?? []).find(r=>r.number==='2026-01422');
 const iso = (d)=>{const x=new Date(); x.setUTCDate(x.getUTCDate()+d); return x.toISOString().slice(0,10);};
 // Assign to Didrik, not Tekla — fieldm2 asserts Tekla's own-scope count later in sequence.
 const users = await view(didrik,'users.lookup','?search=Didrik');
 const teklaId = (users.body?.rows ?? users.rows ?? [])[0]?.id;
-const farOut = await op(didrik,'work-orders.schedule',{workOrderId: urgentWo?.id,
+const farOut = await op(didrik,'orders.schedule',{orderId: urgentWo?.id,
   scheduledDate: iso(10), assigneeActorId: String(teklaId)});
 check('seeded fn-node rule blocks urgent schedule 10 days out', codes(farOut).includes('rules.urgent-schedule-window'),
   `status=${farOut.status} ${codes(farOut).join(',')}`);
-const nearIn = await op(didrik,'work-orders.schedule',{workOrderId: urgentWo?.id,
+const nearIn = await op(didrik,'orders.schedule',{orderId: urgentWo?.id,
   scheduledDate: iso(3), assigneeActorId: String(teklaId)});
 check('urgent schedule 3 days out passes', nearIn.status===200, `status=${nearIn.status} ${codes(nearIn).join(',')}`);
 
 // docs/22 ACTION catalog: a firing rule can DO something — set a registered extension
 // field on the target row (transactional, same commit) or publish a derived event.
-const actRule = await op(alva,'rules.define',{name:'urgent-needs-lift', onOperation:'work-orders.set-priority',
+const actRule = await op(alva,'rules.define',{name:'urgent-needs-lift', onOperation:'orders.set-priority',
   condition: JSON.stringify({t:'bin', op:'eq', l:{t:'field', f:'priority'}, r:{t:'const', v:'urgent'}}),
   messages:{}, action: JSON.stringify({type:'set-field', field:'ext.requiresLift', value:true})});
 check('action rule defined (set-field, validated against the registry)',
   actRule.status===200 && !!actRule.body?.output?.ruleId, `status=${actRule.status} ${codes(actRule).join(',')}`);
-const reprioritized = await op(didrik,'work-orders.set-priority',{workOrderId: urgentWo?.id, priority:'urgent'});
+const reprioritized = await op(didrik,'orders.set-priority',{orderId: urgentWo?.id, priority:'urgent'});
 check('operation succeeds — actions never block', reprioritized.status===200, `status=${reprioritized.status}`);
-const woAfter = await view(didrik,'work-orders.list','?pageSize=50');
-const woRow = (woAfter.body?.rows ?? woAfter.rows ?? []).find(r=>r.number==='WO-2026-0006');
+const woAfter = await view(didrik,'orders.list','?pageSize=50');
+const woRow = (woAfter.body?.rows ?? woAfter.rows ?? []).find(r=>r.number==='2026-01422');
 check('set-field action wrote the extension in the same commit', woRow?.extensions?.requiresLift===true,
   JSON.stringify(woRow?.extensions??{}));
-const badAction = await op(alva,'rules.define',{name:'bad-action', onOperation:'work-orders.set-priority',
+const badAction = await op(alva,'rules.define',{name:'bad-action', onOperation:'orders.set-priority',
   condition: JSON.stringify({t:'bin', op:'eq', l:{t:'field', f:'priority'}, r:{t:'const', v:'urgent'}}),
   messages:{}, action: JSON.stringify({type:'set-field', field:'ext.nope', value:true})});
 check('unregistered set-field target rejected (rules.invalid-action)', codes(badAction).includes('rules.invalid-action'),

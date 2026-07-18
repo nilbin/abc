@@ -6,16 +6,16 @@ using Tam.Testing;
 namespace Erp.Tests;
 
 /// <summary>
-/// Work-order priority (docs/02: the enum is the semantic; docs/21: members localize as
+/// Order priority (docs/02: the enum is the semantic; docs/21: members localize as
 /// enums.{kebab(value)}) plus the tenant policy from docs/22 automation rules: "an URGENT
-/// work order cannot be scheduled more than 7 days out". The rule is authored exactly as a
+/// order cannot be scheduled more than 7 days out". The rule is authored exactly as a
 /// tenant admin would — through rules.define, as Px condition DATA over the schedule
 /// operation's input (scheduledDate) and its target row (row.priority) — never compiled code.
 /// </summary>
-public sealed class WorkOrderPriorityTests : IAsyncLifetime
+public sealed class OrderPriorityTests : IAsyncLifetime
 {
     private TamTestHost<ErpDbContext> host = null!;
-    private Guid projectId;
+    private Guid customerId;
     private Guid accountId;
     private TestActor<ErpDbContext> dispatcher = null!;
 
@@ -26,10 +26,8 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
         await host.SeedAsync("demo", db =>
         {
             var customer = Customer.Create("demo", new("Testkund AB"), new("Testgatan 1"), null, null);
-            var project = Project.Create("demo", new("P-TEST-001"), customer.Id, "Testprojekt");
             db.Customers.Add(customer);
-            db.Projects.Add(project);
-            projectId = project.Id.Value;
+            customerId = customer.Id.Value;
             // Scheduling validates the assignee against real memberships — seed one.
             db.Add(new Tam.EntityFrameworkCore.AccountEntity
                 { Id = accountId, Email = "tech@test", DisplayName = "Test Tech" });
@@ -38,9 +36,9 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
             return Task.CompletedTask;
         });
         dispatcher = host.Actor("demo",
-            "work-orders.create", "work-orders.read", "work-orders.read-all",
-            "work-orders.edit", "work-orders.edit-all",
-            "work-orders.schedule", "work-orders.start", "work-orders.start-all");
+            "orders.create", "orders.read", "orders.read-all",
+            "orders.edit", "orders.edit-all",
+            "orders.schedule", "orders.start", "orders.start-all");
     }
 
     public async Task DisposeAsync() => await host.DisposeAsync();
@@ -48,19 +46,19 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
     private async Task<Guid> CreateAsync(string? priority = null)
     {
         var response = priority is null
-            ? await dispatcher.ExecuteAsync("work-orders.create", new
-                { projectId, title = "T", description = "D", location = "L" })
-            : await dispatcher.ExecuteAsync("work-orders.create", new
-                { projectId, title = "T", description = "D", location = "L", priority });
-        return response.ShouldSucceed().Output<CreateWorkOrder.Output>().WorkOrderId.Value;
+            ? await dispatcher.ExecuteAsync("orders.create", new
+                { customerId, orderType = "service", workAddress = "L", description = "D" })
+            : await dispatcher.ExecuteAsync("orders.create", new
+                { customerId, orderType = "service", workAddress = "L", description = "D", priority });
+        return response.ShouldSucceed().Output<CreateOrder.Output>().OrderId.Value;
     }
 
-    private async Task<WorkOrderDetail.Result> DetailAsync(Guid workOrderId)
+    private async Task<OrderDetail.Result> DetailAsync(Guid orderId)
     {
-        var detail = (await dispatcher.QueryAsync("work-orders.detail",
-            new Dictionary<string, string?> { ["workOrderId"] = workOrderId.ToString() }!))
+        var detail = (await dispatcher.QueryAsync("orders.detail",
+            new Dictionary<string, string?> { ["orderId"] = orderId.ToString() }!))
             .ShouldSucceed();
-        return Assert.IsType<WorkOrderDetail.Result>(Assert.Single(detail.Rows));
+        return Assert.IsType<OrderDetail.Result>(Assert.Single(detail.Rows));
     }
 
     // ---- Round-trip: create → detail → grid ----
@@ -69,24 +67,24 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
     public async Task Priority_defaults_to_normal_when_omitted()
     {
         var id = await CreateAsync();
-        Assert.Equal(WorkOrderPriority.Normal, (await DetailAsync(id)).Priority);
+        Assert.Equal(OrderPriority.Normal, (await DetailAsync(id)).Priority);
     }
 
     [Fact]
     public async Task Priority_round_trips_through_create_detail_and_grid()
     {
         var id = await CreateAsync("urgent");
-        Assert.Equal(WorkOrderPriority.Urgent, (await DetailAsync(id)).Priority);
+        Assert.Equal(OrderPriority.Urgent, (await DetailAsync(id)).Priority);
 
-        var grid = (await dispatcher.QueryAsync("work-orders.list")).ShouldSucceed();
-        var row = Assert.IsType<WorkOrderList.Result>(Assert.Single(grid.Rows));
-        Assert.Equal(WorkOrderPriority.Urgent, row.Priority);
+        var grid = (await dispatcher.QueryAsync("orders.list")).ShouldSucceed();
+        var row = Assert.IsType<OrderList.Result>(Assert.Single(grid.Rows));
+        Assert.Equal(OrderPriority.Urgent, row.Priority);
 
         // The declared filter capability, on the wire: enum equality by wire string.
-        var urgentOnly = (await dispatcher.QueryAsync("work-orders.list",
+        var urgentOnly = (await dispatcher.QueryAsync("orders.list",
             new Dictionary<string, string?> { ["priority"] = "urgent" }!)).ShouldSucceed();
         Assert.Equal(1, urgentOnly.Total);
-        var none = (await dispatcher.QueryAsync("work-orders.list",
+        var none = (await dispatcher.QueryAsync("orders.list",
             new Dictionary<string, string?> { ["priority"] = "low" }!)).ShouldSucceed();
         Assert.Equal(0, none.Total);
     }
@@ -97,30 +95,30 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
     public async Task Priority_changes_through_the_intent_while_editable()
     {
         var id = await CreateAsync();
-        (await dispatcher.ExecuteAsync("work-orders.set-priority", new
-            { workOrderId = id, priority = "urgent" })).ShouldSucceed();
-        Assert.Equal(WorkOrderPriority.Urgent, (await DetailAsync(id)).Priority);
+        (await dispatcher.ExecuteAsync("orders.set-priority", new
+            { orderId = id, priority = "urgent" })).ShouldSucceed();
+        Assert.Equal(OrderPriority.Urgent, (await DetailAsync(id)).Priority);
     }
 
     [Fact]
     public async Task Priority_freezes_once_work_starts()
     {
         var id = await CreateAsync();
-        (await dispatcher.ExecuteAsync("work-orders.schedule", new
+        (await dispatcher.ExecuteAsync("orders.schedule", new
         {
-            workOrderId = id,
+            orderId = id,
             scheduledDate = Iso(2),
             assigneeActorId = accountId.ToString(),
         })).ShouldSucceed();
-        (await dispatcher.ExecuteAsync("work-orders.start", new { workOrderId = id }))
+        (await dispatcher.ExecuteAsync("orders.start", new { orderId = id }))
             .ShouldSucceed();
 
-        (await dispatcher.ExecuteAsync("work-orders.set-priority", new
-            { workOrderId = id, priority = "low" }))
-            .ShouldFailWith("work-orders.not-editable");
+        (await dispatcher.ExecuteAsync("orders.set-priority", new
+            { orderId = id, priority = "low" }))
+            .ShouldFailWith("orders.not-editable");
     }
 
-    // ---- The tenant policy: urgent work orders schedule within 7 days ----
+    // ---- The tenant policy: urgent orders schedule within 7 days ----
 
     private static string Iso(int daysFromToday) =>
         DateOnly.FromDateTime(DateTime.UtcNow).AddDays(daysFromToday).ToString("yyyy-MM-dd");
@@ -141,23 +139,23 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "urgent-schedule-window",
-            onOperation = "work-orders.schedule",
+            onOperation = "orders.schedule",
             condition = UrgentWindowCondition(Iso(7)),
             // Rule messages are tenant DATA per culture (RUL003 gates the default culture),
             // the registry twin of the locale catalogs — no display text in code.
             messages = new Dictionary<string, string>
             {
-                ["sv"] = "Akuta arbetsordrar måste planeras inom 7 dagar.",
-                ["en"] = "Urgent work orders must be scheduled within 7 days.",
+                ["sv"] = "Akuta ordrar måste planeras inom 7 dagar.",
+                ["en"] = "Urgent orders must be scheduled within 7 days.",
             },
             targetField = "scheduledDate",
         })).ShouldSucceed();
     }
 
-    private Task<Tam.OperationResponse> ScheduleAsync(Guid workOrderId, int daysOut) =>
-        dispatcher.ExecuteAsync("work-orders.schedule", new
+    private Task<Tam.OperationResponse> ScheduleAsync(Guid orderId, int daysOut) =>
+        dispatcher.ExecuteAsync("orders.schedule", new
         {
-            workOrderId,
+            orderId,
             scheduledDate = Iso(daysOut),
             assigneeActorId = accountId.ToString(),
         });
@@ -170,8 +168,8 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
 
         var blocked = await ScheduleAsync(id, daysOut: 10);
         blocked.ShouldFailWith("rules.urgent-schedule-window");
-        Assert.Equal(WorkOrderPriority.Urgent, (await DetailAsync(id)).Priority);
-        Assert.Equal(WorkOrderStatus.Draft, (await DetailAsync(id)).Status);
+        Assert.Equal(OrderPriority.Urgent, (await DetailAsync(id)).Priority);
+        Assert.Equal(OrderStatus.Open, (await DetailAsync(id)).Status);
     }
 
     [Fact]
@@ -181,7 +179,7 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
         var id = await CreateAsync("urgent");
 
         (await ScheduleAsync(id, daysOut: 3)).ShouldSucceed();
-        Assert.Equal(WorkOrderStatus.Scheduled, (await DetailAsync(id)).Status);
+        Assert.Equal(OrderStatus.Scheduled, (await DetailAsync(id)).Status);
     }
 
     [Fact]
@@ -191,7 +189,7 @@ public sealed class WorkOrderPriorityTests : IAsyncLifetime
         var id = await CreateAsync();   // Normal by default
 
         (await ScheduleAsync(id, daysOut: 30)).ShouldSucceed();
-        Assert.Equal(WorkOrderStatus.Scheduled, (await DetailAsync(id)).Status);
+        Assert.Equal(OrderStatus.Scheduled, (await DetailAsync(id)).Status);
     }
 
     [Fact]
