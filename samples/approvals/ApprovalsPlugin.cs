@@ -183,7 +183,7 @@ internal sealed class ApprovalsGate(ITamDb tam) : IOperationGate
             Culture = gate.Context.Culture,
             CreatedAtIso = IsoTime.Now(),
         });
-        return ApprovalsFindings.Pending.With(("operation", gate.OperationId));
+        return RequestFindings.Pending.With(("operation", gate.OperationId));
     }
 
     /// <summary>No threshold → the rule always applies; with one, the named wire field must

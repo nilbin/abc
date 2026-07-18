@@ -197,7 +197,7 @@ internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
             .FirstOrDefaultAsync(ct);
         return blocking is null
             ? Result.Success()
-            : InspectFindings.ChecklistIncomplete.With(
+            : ChecklistFindings.ChecklistIncomplete.With(
                 ("title", blocking.Title), ("open", blocking.Open));
     }
 }
