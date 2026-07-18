@@ -54,7 +54,9 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   mirroring the ERP host's Features/ + ErpModel.<Domain>.cs fragments; <Name>Plugin.cs keeps
   only the plugin class, its Configure table of contents, gates/handlers, and EF mapping. A
   single-aggregate plugin may stay Domain.cs + Features.cs. No file mixes two aggregates'
-  classes, and ~400 lines is the split tripwire everywhere (same as packages).
+  classes, and ~400 lines is the split tripwire everywhere (same as packages). ENFORCED in
+  CI by scripts/check_structure.py (line cap + one wire prefix per file; exceptions are
+  allowlisted there with a reason).
 - Sample DOMAINS model tactical DDD where invariants exist — factory methods, private
   setters, Result-returning guarded transitions, semantic value types (the Order/WorkOrder
   shape) — and stay plain data ONLY for genuinely dumb rows (join/lookup tables). An entity

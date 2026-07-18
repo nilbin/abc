@@ -38,6 +38,9 @@ jobs:
           dotnet test tests/Tam.Tests --no-build
           dotnet test samples/erp.Tests --no-build
 
+      - name: Structure check (CLAUDE.md file conventions)
+        run: python3 scripts/check_structure.py
+
       - name: Manifest baseline check (D4, additive-only)
         run: |
           dotnet run --project samples/erp --no-build -- manifest /tmp/manifest.current.json

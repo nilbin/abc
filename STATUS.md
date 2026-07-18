@@ -474,6 +474,24 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Sample structure + DDD pass (user-directed)**: the convention drift fixed at the root —
+  in three commits, each proven behavior-identical. (1) MECHANICAL SPLIT: inspect (395-line
+  Features.cs) and approvals restructured to Domain/<Aggregate>.cs + Features/<Aggregate>.cs
+  per aggregate; the monolithic findings classes split per aggregate (internal names only,
+  wire codes unchanged); invoicing already complied (single aggregate). (2) DDD HYGIENE
+  where invariants exist: inspect's Checklist/Item/Template got private setters + intent
+  methods (Pass/Reopen, Check/Uncheck, Retire — the cross-entity open-items invariant stays
+  in the operations, which need the database; the ERP idiom); approvals' ApprovalRequest got
+  a Park factory and ATOMIC decision transitions (Approve/Reject/CloseOut — no half-decided
+  request is representable); genuine config/join rows stay plain data. (3) THE GUARDRAIL:
+  scripts/check_structure.py in CI — line cap (~400) and one-wire-prefix-per-file over
+  samples/ and Packages/, allowlisted exceptions carrying reasons. Its FIRST RUN caught the
+  ERP host's own 467-line Domain.cs — now split into Domain/<Aggregate>.cs (8 files
+  mirroring Features/ and the ErpModel fragments) — plus the Seed (allowlisted: one demo
+  narrative) and the Vault's two claimed prefixes (allowlisted: one area). Every commit:
+  manifest deep-equal against the pre-pass export, suites 191+38, wire 18+22+22 on fresh
+  SQLite AND fresh Postgres. CLAUDE.md and the docs/29 enforcement map now state the rule
+  AND its enforcement — the canon, the convention, and the check agree.
 - **Beauty arc 5, part 3b — the documents FE (arc 5 CLOSES)**: three surfaces, one new bind.
   (1) THE ENTITYREF RECORD BIND: `bind.QueryEntityRef("attachedTo", "order")` fills a record
   tab's grid param with the open record's own IDENTITY as a canonical EntityRef (wire
