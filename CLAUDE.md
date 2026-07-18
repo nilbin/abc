@@ -15,6 +15,11 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   samples/web/src/generated/tam.ts` (scripts/check_manifest.py fails CI otherwise).
 - "Verified on the wire" means exercised over HTTP against the running sample — on SQLite
   AND PostgreSQL when query translation is involved. Don't claim it in STATUS.md otherwise.
+  The suites live in `verify/` (`node verify/all.mjs` against a running host on a FRESH
+  database — they are not idempotent). The full loop — build gates, regen trio, fresh-DB
+  matrix on both engines, operational traps — is the **verify-loop** skill
+  (.claude/skills/verify-loop). Driving/screenshotting the app with Playwright (login flow,
+  tenant picker, locator gotchas) is `scripts/snap.mjs` + the **app-snap** skill.
 
 ## Hard rules (build-enforced — don't fight the analyzers, extend them)
 

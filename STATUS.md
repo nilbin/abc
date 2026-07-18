@@ -474,6 +474,20 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Agent tooling in the repo (user-directed: "save that in the repo and perhaps make a
+  skill… so agents can find their way around")**: the session-local operational knowledge
+  became repo artifacts. `scripts/snap.mjs` — the Playwright driver as CLI + library
+  (auto-detected chromium, the login traps absorbed: novalidate on the credential form,
+  conditional tenant picker with exact-match labels, Mantine locator gotchas), documented
+  in the **app-snap** skill. The four wire suites moved into `verify/`
+  (field-service/rule-builder/rules-gating/documents + `all.mjs` runner that refuses to
+  run without a live host and warns the suites are NOT idempotent). The **verify-loop**
+  skill writes down the whole develop-and-verify loop: solution-build gotcha,
+  build-server shutdown after generator changes, the generated trio with absolute paths,
+  additive baseline semantics, fresh-DB matrix one-liners for BOTH engines, the pkill
+  exit-144 trap, per-milestone wrap expectations. CLAUDE.md points at all of it.
+  Smoke-verified: `node verify/all.mjs` green (16+18+22+25) against a fresh SQLite host,
+  snap CLI produced order-documents-tab and admin-mode shots.
 - **Tenant-in-URL deep links (autonomous, per the communicated order)**: the URL grammar
   grew `?tenant=` (the ACTING node — written by the company picker, seeded into App state
   on load after validation against the standable set; the server still validates the
