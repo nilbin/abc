@@ -112,6 +112,20 @@ public sealed class PluginBuilder
     }
 
     /// <summary>
+    /// Declares a dependency on ANOTHER plugin (docs/37 D-V4, the plugin relationship model).
+    /// The edge is what sanctions crossing PLG010 to consume the parent's contract
+    /// (RequiresEvent/RequiresView/OnEffect against its surface), and at activation it makes
+    /// this plugin activatable only where the parent is active. Edges must be acyclic (PLG011),
+    /// target a registered plugin, and — like every wire relationship — chains are allowed at
+    /// any depth; only cycles are refused.
+    /// </summary>
+    public PluginBuilder DependsOn(string pluginId)
+    {
+        Model.PluginDependsOn(Id, pluginId);
+        return this;
+    }
+
+    /// <summary>
     /// Attaches one of THIS plugin's operations as a row action on a HOST grid (docs/31 D-X1),
     /// with a declared input↔column bind. Placement mirrors nav: the plugin suggests, tenant
     /// activation and user permission decide visibility. Validated at Build (PLG006).

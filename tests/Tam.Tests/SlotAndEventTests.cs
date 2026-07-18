@@ -46,6 +46,7 @@ public class SlotAndEventTests
             ["labels.id"] = "Id",
             ["labels.name"] = "Name",
             ["plugins.notes.title"] = "Notes",
+            ["plugins.dependent.title"] = "Dependent",
             ["notes.labels.text"] = "Text",
         })
         .AddViewType(typeof(ThingsList))
@@ -171,6 +172,39 @@ public class SlotAndEventTests
             Host().AddPlugin<SlotGrabbingPlugin>().Build()).Message);
     }
 
+    [Fact]
+    public void A_declared_dependency_edge_lifts_PLG010_on_the_parents_contract()
+    {
+        // docs/37 D-V4: the SAME consumption that poaches without an edge is legal WITH one —
+        // event require, view require, and subscribe, all across the declared notes edge.
+        Host().AddPlugin<NotesPlugin>().AddPlugin<DependentPlugin>().Build();
+    }
+
+    [Fact]
+    public void PLG011_rejects_a_dependency_cycle()
+    {
+        var message = Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<CycleAPlugin>().AddPlugin<CycleBPlugin>().Build()).Message;
+        Assert.StartsWith("PLG011", message);
+        Assert.Contains("cycle", message);
+    }
+
+    [Fact]
+    public void PLG011_rejects_a_dependency_on_an_unregistered_plugin()
+    {
+        Assert.StartsWith("PLG011", Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<DanglingDependencyPlugin>().Build()).Message);
+    }
+
+    [Fact]
+    public void PLG011_rejects_a_self_dependency()
+    {
+        var message = Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<SelfDependentPlugin>().Build()).Message;
+        Assert.StartsWith("PLG011", message);
+        Assert.Contains("itself", message);
+    }
+
     [TamPlugin("hungry")]
     private sealed class GreedyEventPlugin : ITamPlugin
     {
@@ -218,5 +252,43 @@ public class SlotAndEventTests
     {
         public void Configure(PluginBuilder plugin) =>
             plugin.Model.Slot("architect.slot", s => s.Key("x"));
+    }
+
+    // The legal twin of the three poachers: consumes notes' contract on EVERY seam, but
+    // declares the edge first — docs/37 D-V4.
+    [TamPlugin("dependent")]
+    private sealed class DependentPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin)
+        {
+            plugin.DependsOn("notes");
+            plugin.RequiresEvent("notes.note-added", "noteId");
+            plugin.RequiresView("notes.for-thing", "text");
+            plugin.OnEffect<Handler>("notes.note-added");
+        }
+    }
+
+    [TamPlugin("cyclea")]
+    private sealed class CycleAPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) => plugin.DependsOn("cycleb");
+    }
+
+    [TamPlugin("cycleb")]
+    private sealed class CycleBPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) => plugin.DependsOn("cyclea");
+    }
+
+    [TamPlugin("dangling")]
+    private sealed class DanglingDependencyPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) => plugin.DependsOn("nonexistent");
+    }
+
+    [TamPlugin("narcissist")]
+    private sealed class SelfDependentPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) => plugin.DependsOn("narcissist");
     }
 }

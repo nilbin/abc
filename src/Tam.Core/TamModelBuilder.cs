@@ -24,6 +24,7 @@ public sealed partial class TamModelBuilder
     private readonly Dictionary<string, NavTreeBuilder> navTrees = [];
     private readonly List<NavContribution> navContributions = [];
     private readonly HashSet<string> navDeclaringPlugins = [];
+    private readonly Dictionary<string, List<string>> pluginDependsOn = [];
     private readonly List<SubscriberDefinition> subscribers = [];
     private readonly Dictionary<string, ReachDefinition> reaches = [];
     private readonly List<DocumentFolderBinding> documentFolders = [];
@@ -174,6 +175,16 @@ public sealed partial class TamModelBuilder
     /// <summary>The plugin CALLED Nav — even with zero pages. Declaring is graduating
     /// (docs/30 D-N1): its word is authoritative, the mechanical More-page never applies.</summary>
     internal void NavDeclared(string plugin) => navDeclaringPlugins.Add(plugin);
+
+    /// <summary>Records a plugin→plugin dependency edge (docs/37 D-V4). Staged here and folded
+    /// into the <see cref="PluginDefinition"/> at Build; verified acyclic before PLG010 trusts it.</summary>
+    internal void PluginDependsOn(string plugin, string dependsOn)
+    {
+        if (!pluginDependsOn.TryGetValue(plugin, out var list))
+            pluginDependsOn[plugin] = list = [];
+        if (!list.Contains(dependsOn))
+            list.Add(dependsOn);
+    }
 
     public TamModelBuilder AddOperationType(Type type)
     {
@@ -402,6 +413,11 @@ public sealed partial class TamModelBuilder
                 $"PLG002: plugin '{duplicateGate.Key.PluginId}' gates '{duplicateGate.Key.OperationId}' "
                 + $"with '{duplicateGate.Key.HandlerType.Name}' more than once.");
 
+        // Fold the staged plugin→plugin dependency edges (docs/37 D-V4) into the definitions.
+        foreach (var (plugin, deps) in pluginDependsOn)
+            if (plugins.TryGetValue(plugin, out var def))
+                plugins[plugin] = def with { DependsOn = deps };
+
         var mergedNav = MergeNav(gridDefs);
 
         // Placement IS declaration (docs/34 M5 fix 9): a slot placed on a declared page
@@ -460,6 +476,7 @@ public sealed partial class TamModelBuilder
         };
 
         VerifyPluginNamespaces(model);
+        VerifyPluginRelationships(model);
         VerifyNav(model);
         VerifySubtreeViews(model);
         VerifyContributions(model);

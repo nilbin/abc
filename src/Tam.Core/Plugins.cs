@@ -24,6 +24,12 @@ public interface ITamPlugin
 public sealed record PluginDefinition(string Id)
 {
     public string TitleKey => $"plugins.{Id}.title";
+
+    /// <summary>The other plugins this one declares a dependency on (docs/37 D-V4). A declared,
+    /// acyclic edge is what lifts PLG010 for consuming that plugin's contract, and — at
+    /// activation — what makes this plugin activatable only where its parents are active.
+    /// Empty for the overwhelming majority of plugins, which depend on the host alone.</summary>
+    public IReadOnlyList<string> DependsOn { get; init; } = [];
 }
 
 /// <summary>

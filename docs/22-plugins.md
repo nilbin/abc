@@ -355,9 +355,14 @@ sanctioned extension of this line: `DependsOn` at two levels (level 1, an activa
 dependency with no code coupling; level 2, contract coupling that relaxes PLG010 along a
 declared acyclic edge and exports the parent's contract as a second provider), `Provides`-one-of
 singleton capability slots for mutual exclusion, and `Conflicts` as the escape hatch. Chains are
-allowed at any depth — the guardrail is acyclicity, not a depth cap. The heavy lifecycle
-machinery (cascade/suspend, auto-activation, entitlement coupling) stays deferred until a real
-consumer needs it.
+allowed at any depth — the guardrail is acyclicity, not a depth cap. **PLG011** enforces the graph
+is well-formed (every `DependsOn` edge targets a registered plugin; no self-dependency; no cycles)
+and runs before the PLG010 sites, so the acyclic-edge fact PLG010 trusts is already proven; PLG010
+then accepts a consumed contract whose owner is reachable through the declared `DependsOn` closure.
+The heavy lifecycle machinery (cascade/suspend, auto-activation, entitlement coupling) stays
+deferred until a real consumer needs it. **Built so far: `DependsOn` declaration + PLG011 + the
+build-time PLG010 relaxation; the activation-time edge guard, per-plugin contract export, generated
+facades follow; `Provides`/`Conflicts` remain designed-not-built.**
 
 ## The marketplace: three tiers, one trust model
 

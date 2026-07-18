@@ -160,20 +160,88 @@ public sealed partial class TamModelBuilder
     }
 
     /// <summary>PLG010: the docs/22 dependency rule, made mechanical — a PLUGIN may consume
-    /// contracts owned by the HOST, by a framework PACKAGE (always-on, host-like trust), or
-    /// by ITSELF; never another plugin's. Packages themselves are exempt as consumers. The
-    /// sanctioned escape when two plugins genuinely need each other: merge them, or promote
-    /// the shared concept into the host (the work-order-completed story).</summary>
+    /// contracts owned by the HOST, by a framework PACKAGE (always-on, host-like trust), by
+    /// ITSELF, or by another plugin it has DECLARED a dependency on (docs/37 D-V4 — a sanctioned,
+    /// acyclic edge, verified by PLG011 before we get here). Absent such an edge the old rule
+    /// stands: promote the shared concept into the host, or merge the plugins. Packages
+    /// themselves are exempt as consumers.</summary>
     private static void VerifyContractOwnership(
         TamModel model, string consumerId, string? ownerId, string contract)
     {
         if (model.Packages.ContainsKey(consumerId)) return;
         if (ownerId is null || ownerId == consumerId || model.Packages.ContainsKey(ownerId))
             return;
+        if (model.Plugins.ContainsKey(ownerId) && DependsOnTransitively(model, consumerId, ownerId))
+            return;
         throw new InvalidOperationException(
             $"PLG010: plugin '{consumerId}' depends on {contract} owned by plugin '{ownerId}' — "
-            + "plugins depend on the HOST's contract, never on each other (docs/22). Promote the "
-            + "shared concept into the host, or merge the plugins.");
+            + "plugins depend on the HOST's contract, not on each other, unless the consumer "
+            + $"declares DependsOn(\"{ownerId}\") (docs/37). Promote the shared concept into the "
+            + "host, merge the plugins, or declare the dependency edge.");
+    }
+
+    /// <summary>Does <paramref name="consumerId"/> reach <paramref name="ownerId"/> through the
+    /// declared DependsOn graph? Chains are legal at any depth (docs/37 D-V4); the graph is
+    /// acyclic (PLG011 ran first), and the visited set is belt-and-suspenders.</summary>
+    private static bool DependsOnTransitively(TamModel model, string consumerId, string ownerId)
+    {
+        var seen = new HashSet<string>();
+        var stack = new Stack<string>();
+        if (model.Plugins.TryGetValue(consumerId, out var start))
+            foreach (var d in start.DependsOn) stack.Push(d);
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            if (current == ownerId) return true;
+            if (!seen.Add(current)) continue;
+            if (model.Plugins.TryGetValue(current, out var def))
+                foreach (var d in def.DependsOn) stack.Push(d);
+        }
+        return false;
+    }
+
+    /// <summary>PLG011: the plugin relationship graph is well-formed (docs/37 D-V4) — every
+    /// DependsOn edge targets a REGISTERED plugin (a package is always-on and needs no edge; the
+    /// host is not a plugin), no plugin depends on itself, and there are NO CYCLES. Runs before
+    /// the PLG010 sites so the acyclic-edge fact they trust is already proven.</summary>
+    private static void VerifyPluginRelationships(TamModel model)
+    {
+        foreach (var (id, def) in model.Plugins)
+            foreach (var dep in def.DependsOn)
+            {
+                if (dep == id)
+                    throw new InvalidOperationException(
+                        $"PLG011: plugin '{id}' declares DependsOn on itself.");
+                if (!model.Plugins.ContainsKey(dep))
+                    throw new InvalidOperationException(
+                        $"PLG011: plugin '{id}' declares DependsOn('{dep}') but no such plugin is "
+                        + (model.Packages.ContainsKey(dep)
+                            ? "a plugin — '" + dep + "' is a framework package, always available without an edge."
+                            : "registered."));
+            }
+
+        // Cycle detection: DFS with a three-colour marking, reporting the offending path.
+        var colour = new Dictionary<string, int>();   // 0 unvisited, 1 in-progress, 2 done
+        var path = new List<string>();
+        void Visit(string id)
+        {
+            colour[id] = 1;
+            path.Add(id);
+            foreach (var dep in model.Plugins[id].DependsOn)
+            {
+                if (!model.Plugins.ContainsKey(dep)) continue;   // reported above
+                if (colour.GetValueOrDefault(dep) == 1)
+                    throw new InvalidOperationException(
+                        $"PLG011: dependency cycle {string.Join(" → ", path.Skip(path.IndexOf(dep)).Append(dep))}.");
+                if (colour.GetValueOrDefault(dep) == 0)
+                    Visit(dep);
+            }
+            path.RemoveAt(path.Count - 1);
+            colour[id] = 2;
+        }
+        foreach (var id in model.Plugins.Keys)
+            if (colour.GetValueOrDefault(id) == 0)
+                Visit(id);
     }
 
     /// <summary>PLG007: panels land in a declared slot, use the plugin's OWN grid, and bind
