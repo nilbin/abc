@@ -154,4 +154,23 @@ public class CrossDomainTests
         Assert.StartsWith("PLG008",
             Assert.Throws<InvalidOperationException>(() => missing.Build()).Message);
     }
+
+    [TamPlugin("wrongkind")]
+    private sealed class WrongViewKindPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) =>
+            plugin.RequiresView("things.list", "id:decimal", "name");
+    }
+
+    [Fact]
+    public void PLG008_rejects_a_declared_kind_the_view_does_not_expose()
+    {
+        // The read-side twin of PLG009: a facade compiled from a stale artifact fails the
+        // BUILD when the live view's wire kind drifted, instead of misreading at runtime.
+        var message = Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<WrongViewKindPlugin>().Build()).Message;
+        Assert.StartsWith("PLG008", message);
+        Assert.Contains("as 'decimal'", message);
+        Assert.Contains("exposes 'guid'", message);
+    }
 }

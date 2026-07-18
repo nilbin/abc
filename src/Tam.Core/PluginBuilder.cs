@@ -139,7 +139,13 @@ public sealed class PluginBuilder
     /// </summary>
     public PluginBuilder RequiresView(string viewId, params string[] fields)
     {
-        Model.RequireView(viewId, fields.Select(BareName).ToArray());
+        var kinds = new Dictionary<string, string>();
+        foreach (var field in fields)
+        {
+            var parts = field.Split(':');
+            if (parts.Length == 2) kinds[Naming.Camel(parts[0])] = parts[1];
+        }
+        Model.RequireView(viewId, fields.Select(BareName).ToArray(), kinds);
         return this;
     }
 
@@ -210,12 +216,23 @@ public sealed class PluginBuilder
     public PluginBuilder RequiresView<TRow>(
         params System.Linq.Expressions.Expression<Func<TRow, object?>>[] fields)
     {
+        // The facade property's CLR type IS the declared kind (ContractKinds.FromClr, the
+        // same derivation the artifact used to emit it) — so a host view whose wire kind
+        // drifts from the artifact the plugin compiled against fails the BUILD, not a read.
+        static string WithKind(System.Reflection.PropertyInfo property) =>
+            ContractKinds.FromClr(property.PropertyType) is { } kind
+                ? $"{Naming.Camel(property.Name)}:{kind}"
+                : Naming.Camel(property.Name);
         var names = fields.Length == 0
             ? typeof(TRow)
                 .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
-                .Select(p => Naming.Camel(p.Name))
+                .Select(WithKind)
                 .ToArray()
-            : fields.Select(f => Naming.Camel(MemberName(f))).ToArray();
+            : fields.Select(f => WithKind(
+                typeof(TRow).GetProperty(MemberName(f))
+                ?? throw new InvalidOperationException(
+                    $"'{MemberName(f)}' is not a property of facade '{typeof(TRow).Name}'.")))
+                .ToArray();
         return RequiresView(FacadeId<TRow>("ViewId"), names);
     }
 

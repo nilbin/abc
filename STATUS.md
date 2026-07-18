@@ -474,6 +474,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Framework batch 3: RequiresView kind-compat (the docs/31 deferral, closed)**:
+  `RequiresView` now speaks the same `"name[:kind]"` grammar as `PublishesEvent`
+  (`ContractKinds`, one parser for both sides), and the typed path pays nothing for it —
+  `RequiresView<TRow>` derives each field's kind from the facade record's CLR property
+  type, so generated requirements are kind-checked without the author writing a kind.
+  PLG008 compares every declared kind against the live view's result field at Build()
+  ("requires field 'id' of view 'things.list' as 'decimal' but the view exposes 'guid'");
+  string stays the open end of the grammar — no declared kind, no check — mirroring
+  PLG009's agreement-not-presence rule. Build-time only: manifest, contract and tam.ts
+  byte-stable. Verified: suites 192+38 (new PLG008 mismatch test), wire 16+18+22+31 on
+  fresh SQLite; Postgres skipped deliberately — the check has zero query surface (it runs
+  before any database exists).
 - **Framework batch 2: streaming uploads (autonomous, "go ahead I'm afk")**: the 5 MB
   base64 bound falls to STAGE-THEN-INTEND. A multipart staging endpoint
   (`POST /api/documents/staging`, documents.add-gated, 50 MB cap, own transaction)

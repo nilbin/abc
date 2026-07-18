@@ -139,7 +139,14 @@ public sealed record GridActionContribution(
 
 /// <summary>A plugin's declared read dependency on a host VIEW (docs/31 D-X3): compatibility
 /// as a build-time fact (PLG008) and the service-mode read whitelist for effect handlers.</summary>
-public sealed record ViewRequirement(string ViewId, string PluginId, IReadOnlyList<string> Fields);
+public sealed record ViewRequirement(string ViewId, string PluginId, IReadOnlyList<string> Fields)
+{
+    /// <summary>Bare field name → declared contract kind, where the requirement stated one
+    /// ("estimatedTotal:decimal" or a typed facade property). Checked against the view's
+    /// live wire kinds at Build() — the PLG009 discipline applied to reads.</summary>
+    public IReadOnlyDictionary<string, string> Kinds { get; init; } =
+        new Dictionary<string, string>();
+}
 
 /// <summary>A declared domain event (docs/31 D-X5): the payload contract subscribers and
 /// event-triggered integrations bind to. Owner is the declaring plugin, or null for host

@@ -142,6 +142,20 @@ public sealed partial class TamModelBuilder
                 if (field != "id" && !view.ResultFields.Any(fld => fld.WireName == field))
                     throw new InvalidOperationException(
                         $"PLG008: plugin '{requirement.PluginId}' requires field '{field}' which view '{requirement.ViewId}' does not expose.");
+            // Declared kinds against the LIVE wire kinds (the PLG009 discipline for reads):
+            // a facade compiled from yesterday's artifact fails the build when the view's
+            // type drifted, instead of misreading rows at runtime. Undeclared (string-ish)
+            // actual kinds are never checked — string stays the open end of the grammar.
+            foreach (var (field, declared) in requirement.Kinds)
+            {
+                var resultField = view.ResultFields.FirstOrDefault(fld => fld.WireName == field);
+                if (resultField is null) continue;   // absence already reported above
+                var actual = ContractKinds.FromClr(resultField.EffectiveType);
+                if (actual is not null && actual != declared)
+                    throw new InvalidOperationException(
+                        $"PLG008: plugin '{requirement.PluginId}' requires field '{field}' of view "
+                        + $"'{requirement.ViewId}' as '{declared}' but the view exposes '{actual}'.");
+            }
         }
     }
 

@@ -114,11 +114,12 @@ public sealed partial class TamModelBuilder
         gridActions.Add(new GridActionContribution(gridId, operationId, currentPlugin, bind));
     }
 
-    internal void RequireView(string viewId, IReadOnlyList<string> fields)
+    internal void RequireView(string viewId, IReadOnlyList<string> fields,
+        IReadOnlyDictionary<string, string> kinds)
     {
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: view requirements can only be declared by a plugin.");
-        viewRequirements.Add(new ViewRequirement(viewId, currentPlugin, fields));
+        viewRequirements.Add(new ViewRequirement(viewId, currentPlugin, fields) { Kinds = kinds });
     }
 
     internal void OnEffect(string eventType, Type handlerType)

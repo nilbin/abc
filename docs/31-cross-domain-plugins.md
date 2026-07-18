@@ -311,8 +311,17 @@ target packaged fields, `HostContract.Grids.*` target grid actions — and the e
 in a plugin are its OWN ids — its vocabulary to name. CI keeps the committed artifact honest
 (re-export + compare, like the manifest baseline). PLG008/PLG009/PLG010 still verify every
 requirement against the REAL composed host at Build() — the artifact is compile-time
-convenience; Build() stays the truth. Deferred: RequiresView kind-compatibility checking
-against live wire kinds.
+convenience; Build() stays the truth.
+
+**RequiresView kind-compat (the deferral, closed).** `RequiresView` accepts the same
+`"name[:kind]"` grammar as `PublishesEvent`, and `RequiresView<TRow>` emits the kinds
+automatically from the facade record's CLR property types (`ContractKinds.FromClr`) — so
+the typed path declares kinds without the author writing any. PLG008 then compares each
+declared kind against the live view's result field (`ContractKinds.FromClr` over the
+field's effective type) and fails the build on disagreement: *"plugin 'X' requires field
+'f' of view 'v' as 'decimal' but the view exposes 'guid'"*. String stays the open end of
+the grammar on both sides — an undeclared kind (or a field whose wire kind maps to
+string) is never an error, mirroring PLG009's agreement-not-presence rule for events.
 
 **The end-state scorecard (what "as beautiful as it gets" means here).** ONE hand-written
 declaration — the host's event record / the view's Result record. Everything else is
