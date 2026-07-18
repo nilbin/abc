@@ -61,8 +61,12 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
         "TAM005", "Widened query composes an implicitly-filtered source",
         "EF's IgnoreQueryFilters is query-wide: composing a widened source (InSubtree/WithInherited/IgnoreQueryFilters) strips the global tenant filter from EVERY source in this query. Scope this side explicitly — .InNode(tenant) for strict, .InScope(db, tenant) for the ambient (possibly subtree-widened) scope, or its own InSubtree/WithInherited (docs/27, the composition rule).");
 
+    public static readonly DiagnosticDescriptor Tam008 = Rule(
+        "TAM008", "Anemic domain entity",
+        "Domain entity '{0}' exposes '{1}' with a mutable public setter — state under Domain/ moves through intent methods (private set + factory; the Order/Checklist shape, CLAUDE.md \"Where code goes\"). A genuinely plain row (join/lookup/config) declares itself: wrap the class in #pragma warning disable/restore TAM008 with a reason comment.");
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006, Tam007];
+        [Tam001, Tam002, Tam003, L10n001, Edit001, Tam004, Tam005, Tam006, Tam007, Tam008];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -84,6 +88,12 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
             start.RegisterSymbolAction(
                 ctx => AnalyzeType(ctx, catalog, defaultCulture),
                 SymbolKind.NamedType);
+
+            // TAM008: the Domain/ directory IS the declaration "this is guarded domain state"
+            // (docs/29) — an ITenantScoped class there with a mutable public setter is the
+            // anemic shape both DDD passes had to fix by hand. Plain rows opt out visibly
+            // with a #pragma + reason; infrastructure tables live outside Domain/ untouched.
+            start.RegisterSymbolAction(AnalyzeDomainEntityShape, SymbolKind.NamedType);
 
             // TAM004: a manual x.TenantId == … predicate is redundant now that isolation is a
             // global query filter, and a forgotten one used to be the leak. Flag every copy so the
@@ -338,6 +348,30 @@ public sealed class TamAnalyzer : DiagnosticAnalyzer
                 return true;
         }
         return false;
+    }
+
+    private static void AnalyzeDomainEntityShape(SymbolAnalysisContext context)
+    {
+        if (context.Symbol is not INamedTypeSymbol { TypeKind: TypeKind.Class, IsStatic: false } type)
+            return;
+        if (!type.AllInterfaces.Any(i =>
+                i.ToDisplayString() == "Tam.EntityFrameworkCore.ITenantScoped"))
+            return;
+        var path = type.Locations.FirstOrDefault()?.SourceTree?.FilePath?.Replace('\\', '/');
+        if (path is null || !path.Contains("/Domain/")) return;
+
+        foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
+        {
+            if (property.IsStatic || property.SetMethod is not { } setter) continue;
+            if (setter.IsInitOnly) continue;   // immutable-after-create is not anemic
+            if (setter.DeclaredAccessibility is Accessibility.Private or Accessibility.Protected)
+                continue;
+            // The two pipeline-stamped contracts (IVersioned/IExtensible) REQUIRE public set.
+            if (property.Name is "Version" or "Extensions") continue;
+            context.ReportDiagnostic(Diagnostic.Create(
+                Tam008, property.Locations.FirstOrDefault() ?? type.Locations[0],
+                type.Name, property.Name));
+        }
     }
 
     private static void AnalyzeType(

@@ -67,6 +67,9 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   identities (group members, role grants) are references, not owned children — those stay
   flat. EF note: when the root is already tracked, a newly created child must be Db.Add()ed
   explicitly (its client-set key otherwise reads as an existing row → phantom UPDATE).
+  ENFORCED by analyzer TAM008: an ITenantScoped class under Domain/ with a mutable public
+  setter is a build error; a genuinely plain row opts out with #pragma warning
+  disable/restore TAM008 plus a reason comment (grep the pragmas to audit the exceptions).
 - Cross-package calls: only to a package's public policy helper (e.g. RoleRules — the single
   validation path for roles.define AND tenant-package install), never to its operations.
 - Findings: `static class <Area>Findings { public static readonly FindingFactory X =

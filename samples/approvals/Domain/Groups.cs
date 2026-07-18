@@ -4,6 +4,11 @@ using Tam.EntityFrameworkCore;
 namespace Approvals;
 
 
+// Plain rows by design (TAM008 opt-out): a group is a NAMED NODE and a member is a JOIN ROW
+// to an external actor — no state machine, no owned children; the one real invariant (the
+// nesting/effective-approver policy) is cross-row and lives in ApprovalGroups below.
+#pragma warning disable TAM008
+
 /// <summary>
 /// An approver group — NESTED if the tenant wants (docs/28 D-AG3/D-AG4: nesting semantics are
 /// the PLUGIN's problem; the framework never learns about groups). A member of a subgroup can
@@ -26,6 +31,8 @@ public sealed class ApprovalGroupMember : ITenantScoped
     public Guid GroupId { get; set; }
     public string ActorId { get; set; } = "";
 }
+
+#pragma warning restore TAM008
 
 
 public static class ApprovalGroups

@@ -117,6 +117,7 @@ possible pre-1.0 but must be its own deliberate commit, never ride a refactor.
 | Wire-name permanence | CI baseline check (scripts/check_manifest.py) |
 | Declared capabilities actually translate | Tam.Testing CapabilitySweep (samples/erp.Tests, runs in CI) |
 | File layout: line cap (~400) + one wire prefix per file | CI structure check (scripts/check_structure.py; allowlisted exceptions carry a reason) |
+| Guarded domain entities: no mutable public setters under Domain/ (plain rows opt out with a visible pragma + reason) | analyzer TAM008 (build error) |
 | Naming, cross-package policy-helper rule | review + this doc — promote to analyzer when it hurts |
 
 ## Refactor ledger

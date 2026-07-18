@@ -474,6 +474,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **TAM008 — the anemic-entity build gate (user-prompted: "how do we ensure better DDD")**:
+  the domain-shape convention got the same teeth as every convention that actually holds
+  here. New analyzer rule: an ITenantScoped class declared under a Domain/ directory with
+  a MUTABLE PUBLIC SETTER is a build error — the Domain/ path IS the declaration "this is
+  guarded state" (docs/29), so intent methods + private set + factory become the compiler-
+  checked default for every future aggregate, in the IDE before the app boots. Init-only
+  properties pass (immutable-after-create is not anemic); IVersioned.Version and
+  IExtensible.Extensions are exempt (pipeline-stamped contracts); genuinely plain rows opt
+  OUT visibly — #pragma warning disable/restore TAM008 with a reason comment, greppable
+  like the python-check allowlists. First run flagged exactly the three deliberate plain
+  rows (ApprovalGroup / ApprovalGroupMember / ApprovalRule — now annotated with their
+  reasons) and nothing else: the erp, inspect and remaining approvals domains are clean,
+  which doubles as the negative test. Enforcement map (docs/29) + CLAUDE.md updated.
+  Verified: suites 191+38, manifest byte-identical, wire 16+18+22+22 on fresh SQLite AND
+  fresh Postgres.
 - **Aggregate ownership pass (user-flagged)**: the inspect sample's roots now OWN their
   lines — the DDD gap the checklist-template sampling exposed (items were free-floating
   rows keyed by parent id; every invariant lived in operations as cross-row queries).
