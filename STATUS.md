@@ -484,18 +484,31 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   FRM001–005, dormancy, tenant tier + fact-keyed pack presets), compiled named validator
   sets (tighten-only, manifest-carried), and the conventions trade=plugin / size=plan /
   country=locale+presets+validator-sets. The structured-address superset is the designated
-  proving consumer (also the opening move of the parked order-location arc). Revision 2
-  (user-directed: "country is probably also a plugin — ROT/RUT, German order-line sections,
-  per-country integrations"): country reassigned to the activation channel — a country pack
-  carries domain machinery (ROT/RUT fields+ops+Skatteverket integration, sectioned order
-  lines, e-invoicing) AND ships the presentation materials; the combination problem answered
-  with SPARSE BRIDGE PACKS (axis packs stay pure and never depend on each other; a real
-  country×trade feature is a small plugin depending on both parents, auto-activated when
-  both are active; data-before-code); the plugin-on-plugin tier (docs/22) promoted from
-  someday to prerequisite — exported plugin contracts (host-contract machinery, second
-  provider), declared acyclic DependsOn edges, PLG010 relaxed only along declared edges,
-  depth-two layering host→axis→bridge. Decisions D-V1–V10; six slices proposed to the user
-  before any build (5 = the dependency tier, 6 = the `se` pack + one bridge).
+  proving consumer (also the opening move of the parked order-location arc). Went through a
+  four-lens review round (YAGNI, prior-art vs Odoo/SAP/Dynamics, framework-coherence against
+  the real code, lifecycle/marketplace) that dissolved the rev-2 scaffolding, then a design
+  conversation with the user landed REVISION 3: **variability is just plugins at capability
+  granularity**. Each capability is its own small plugin (Fortnox, Skatteverket, ROT, RUT,
+  electrician, SäkerEl) — country and trade are EMERGENT from the active set, not framework
+  concepts and not "axis/bridge" tiers (both deleted). The existing tenant-package tier (P3)
+  is the RETROACTIVE onboarding bundle ("Swedish electrician starter", minted once a
+  tenant-shape recurs — no pre-built matrix). The one genuinely new framework concept is the
+  **plugin relationship model** (D-V4): `DependsOn` at two levels (L1 activation dependency,
+  no code coupling, needed now as the guardrail; L2 contract coupling that relaxes PLG010
+  along a declared acyclic edge + exports the parent contract as a second provider, when the
+  first cross-plugin hook lands), `Provides`-one-of singleton capability slots for mutual
+  exclusion (Fortnox vs Visma; one invoice tax-treatment per node), `Conflicts` as escape
+  hatch; chains allowed at any depth (acyclicity is the guard, not a depth cap). Profile
+  facts demoted to onboarding HINTS only; a plugin owns its own forms/locale/validation (the
+  CIUS tighten-in-own-gate pattern the prior-art review validated) so the tam.forms overlay
+  registry + validator-set abstraction are dropped; the structured-address host superset
+  survives as the one host-field presentation case. The review surfaced a MUST-SOLVE blocker:
+  packaged-field data (ROT amounts, Skatteverket-auditable) must survive its plugin via a
+  retirement tombstone (D-V8). Heavy lifecycle machinery (cascade/suspend, auto-activation,
+  entitlement coupling) deferred. Decisions rewritten D-V1–V9; six shippable slices (1 =
+  address superset, 2 = relationship model L1, 3 = real SE plugin set + tombstone, 4 =
+  plugin-on-plugin L2, 5 = retroactive package, 6 = pack-shipped host-field presentation only
+  if a 2nd consumer appears). Still design only; nothing built.
 - **Framework batch 3: RequiresView kind-compat (the docs/31 deferral, closed)**:
   `RequiresView` now speaks the same `"name[:kind]"` grammar as `PublishesEvent`
   (`ContractKinds`, one parser for both sides), and the typed path pays nothing for it —

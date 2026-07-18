@@ -348,11 +348,16 @@ What IS genuinely new — and why the line stays until it is designed deliberate
 When the need is real, lifting PLG010 for a DECLARED dependency edge is the design
 commit — the gate is the placeholder for that decision, not a refusal of it.
 
-The need has now been named: the variability design (docs/37) makes country and trade AXIS
-packs and their real intersections (ROT/RUT eligibility per trade) small BRIDGE packs that
-depend on both parents — which is exactly this tier, with one addition (auto-activation when
-all parents are active). docs/37 D-V10 carries the composition rules; the layering stays
-depth two: host → axis packs → bridge packs.
+The need has now been named: the variability design (docs/37) makes every capability its own
+fine-grained plugin (Fortnox, Skatteverket, ROT, RUT, electrician, SäkerEl), so plugins depend
+on one another by construction. docs/37 D-V4 carries the **plugin relationship model** — the
+sanctioned extension of this line: `DependsOn` at two levels (level 1, an activation-time
+dependency with no code coupling; level 2, contract coupling that relaxes PLG010 along a
+declared acyclic edge and exports the parent's contract as a second provider), `Provides`-one-of
+singleton capability slots for mutual exclusion, and `Conflicts` as the escape hatch. Chains are
+allowed at any depth — the guardrail is acyclicity, not a depth cap. The heavy lifecycle
+machinery (cascade/suspend, auto-activation, entitlement coupling) stays deferred until a real
+consumer needs it.
 
 ## The marketplace: three tiers, one trust model
 
