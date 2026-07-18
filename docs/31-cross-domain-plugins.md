@@ -258,7 +258,30 @@ model.PublishesEvent("order-completed", "orderId:guid", "number");
   build fails ("published as 'guid' but required as 'decimal'"). A typo'd kind is an
   error at declaration, never a silent string.
 
-**Slice 2 — generate the plugin's contracts FROM the host artifact (next).** A plugin
+**Slice 2 — events are records (next).** The honest audit ("is this as beautiful as it
+gets?") found the real remaining anomaly: everywhere else in Tam the contract IS a C#
+record and the wire derives from it — operations declare Input records, views declare
+Result records — but events are declared as STRING LISTS and PUBLISHED as anonymous
+objects nothing checks against the declaration. The contract has three edges and only one
+is verified: declaration↔consumption is PLG009-checked; declaration↔publish-site is
+folklore. So events become the same idiom as everything else:
+
+```csharp
+[DomainEvent("order-completed")]
+public sealed record OrderCompleted(Guid OrderId, string Number);
+…
+.Effect(Publish(new OrderCompleted(order.Id.Value, number)))
+```
+
+- The contract (fields AND kinds) derives from the record; the string-list
+  `PublishesEvent` retires from hand-written models (compile-time discovery registers
+  declared event records — the AddDiscovered idiom). Kinds inherit the FULL wire
+  vocabulary (money, date, …) from CLR types instead of the five-token facade set.
+- The publish site is compile-checked, and an analyzer rule closes the anonymous-object
+  hole: publishing a payload that is not a declared event record is a build error.
+- The manifest events section becomes fully DERIVED — an artifact nobody hand-maintains.
+
+**Slice 3 — generate the plugin's contracts FROM the host artifact.** A plugin
 project references the host's exported manifest (an `AdditionalFiles` item, versioned in
 the plugin repo like a lockfile); the source generator emits the typed facades from the
 artifact's `events`/view sections instead of from the plugin's re-declaration, and the
@@ -269,3 +292,13 @@ dependency = replacing one json file; every rename or kind change becomes a comp
 in the plugin (D4 makes this stable: wire names are permanent, so snapshots age
 gracefully). RequiresView kind checking against the view's REAL wire kinds (money↔decimal
 compatibility) rides this slice.
+
+**The end-state scorecard (what "as beautiful as it gets" means here).** ONE hand-written
+declaration — the host's event record / the view's Result record. Everything else is
+derived or verified: the publish site (compiler), the manifest contract (derived), the
+plugin's facade (generated from the artifact), the requirement registration (generated),
+and the composition check against the real host (PLG008/PLG009). The two mirrored record
+types — host's and plugin's — are inherent to the no-shared-assembly constraint (the
+same way the TS client mirrors server types) and neither is maintained by hand. What
+deliberately STAYS stringly: bind sites (grid actions, panels, context keys) — checked at
+Build(), and typing them would buy ceremony, not safety.
