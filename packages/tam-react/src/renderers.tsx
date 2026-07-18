@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Badge, Button, Checkbox, Group, NumberInput, SegmentedControl, Select, Stack, Text, TextInput, Textarea } from '@mantine/core';
+import { Badge, Button, Checkbox, FileInput, Group, NumberInput, SegmentedControl, Select, Stack, Text, TextInput, Textarea } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import dayjs from 'dayjs';
 import { ManifestField, enumLabel, toWireEnum } from '@tam/core';
@@ -182,6 +182,29 @@ export const keyValueMap = (choices: string[]) => function KeyValueMap(p: FieldR
 };
 // The framework's access levels (docs/27 D-A1) — the framework's client library may know them.
 registerRenderer('level-map', keyValueMap(['view', 'edit', 'manage']));
+
+// The FILE renderer (docs/35): a real file input carried as base64 in the wire field. It also
+// fills the upload contract's metadata SIBLINGS (fileName, contentType) through setField —
+// extra keys are ignored by forms that lack them, the same tolerance the wire binder has.
+registerRenderer('file', function FilePick(p: FieldRendererProps) {
+  return (
+    <FileInput
+      label={p.label}
+      required={p.required}
+      error={p.error}
+      onChange={file => {
+        if (!file) { p.onChange(null); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          p.onChange(String(reader.result).split(',')[1] ?? '');
+          p.setField?.('fileName', file.name);
+          p.setField?.('contentType', file.type || 'application/octet-stream');
+        };
+        reader.readAsDataURL(file);
+      }}
+    />
+  );
+});
 
 /** Built-in: repeated-value editor (role names, permission atoms). Server validates every name. */
 registerRenderer('string-list', function StringList(p: FieldRendererProps) {

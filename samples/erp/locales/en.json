@@ -25,6 +25,7 @@
   "enums.service": "Service",
   "enums.urgent": "Urgent",
   "erp.tabs.details": "Details",
+  "erp.tabs.documents": "Documents",
   "erp.tabs.materials": "Materials",
   "erp.tabs.time": "Time",
   "labels.active-only": "Active only",

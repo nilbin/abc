@@ -26,8 +26,11 @@ public sealed record RecordSection(string Kind, string Id, IReadOnlyList<RecordB
     public const string SlotKind = "slot";
 }
 
-/// <summary>A grid section's query param filled from a record (detail-view) field.</summary>
-public sealed record RecordBind(string Param, string Field);
+/// <summary>A grid section's query param filled from a record (detail-view) field — or,
+/// when <see cref="EntityKey"/> is set, from the record's own IDENTITY as a canonical
+/// EntityRef string ("order:{recordKey}", docs/35): the documents-tab shape, where the child
+/// listing filters on WHICH RECORD, not on one of its fields.</summary>
+public sealed record RecordBind(string Param, string? Field, string? EntityKey = null);
 
 /// <summary>
 /// A group of record sections shown under one tab (docs/32 record tabs). Declaration order is
@@ -160,6 +163,14 @@ public sealed class RecordBindBuilder
     public RecordBindBuilder Query(string param, string fromRecord)
     {
         Binds.Add(new RecordBind(Naming.Camel(param), Naming.Camel(fromRecord)));
+        return this;
+    }
+
+    /// <summary>Fills a grid query param with the open record's EntityRef ("order:{id}",
+    /// docs/35) — the documents-tab bind: every document attached to THIS record.</summary>
+    public RecordBindBuilder QueryEntityRef(string param, string entityKey)
+    {
+        Binds.Add(new RecordBind(Naming.Camel(param), null, entityKey));
         return this;
     }
 }

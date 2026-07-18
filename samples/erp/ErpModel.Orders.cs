@@ -16,6 +16,10 @@ public static partial class ErpModel
                 // expands the detail slot into one tab per contributing PLUGIN — the host
                 // never names, counts, or labels the plugins (docs/31 D-X4).
                 .Tab("details", "erp.tabs.details", s => s.Form("web.orders.edit"))
+                // The record's documents (docs/35): the tam.documents grid filtered by THIS
+                // order's EntityRef — no dedicated view, no React.
+                .Tab("documents", "erp.tabs.documents", s => s
+                    .Grid("web.documents.list", bind => bind.QueryEntityRef("attachedTo", "order")))
                 .PanelTabs("web.orders.detail")))
 
         .Form<CreateOrder.Input>("web.orders.create", "orders.create", form =>

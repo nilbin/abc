@@ -474,6 +474,27 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 5, part 3b — the documents FE (arc 5 CLOSES)**: three surfaces, one new bind.
+  (1) THE ENTITYREF RECORD BIND: `bind.QueryEntityRef("attachedTo", "order")` fills a record
+  tab's grid param with the open record's own IDENTITY as a canonical EntityRef (wire
+  `$ref:order`; the client composes "order:{recordKey}") — the documents tab filters on WHICH
+  record, not one of its fields; PAGE001 validates the entity key. The orders record now
+  reads Detaljer / Dokument / Besiktning / Fakturering. (2) THE TREE BROWSER is the app's ONE
+  registered React page — the docs/32 D-P2 escape hatch used as intended for genuinely custom
+  UX (two-pane tree + file list), composed ENTIRELY from framework capabilities: useView over
+  the ACL-filtered listings, OperationForm for the folder/upload intents, authorized
+  downloads via the new `client.blob()` (bearer-carried; an <a href> cannot). Placed in
+  work-mode nav by the host with its explicit permission (NAV005 for registered pages); the
+  package's suggested admin listing renamed to documents.list (NAV001 caught the collision).
+  (3) THE "file" RENDERER: a real file input carried as base64 in the wire field, filling the
+  upload contract's fileName/contentType siblings through the renderer setField seam.
+  Deferred with a STATUS note: per-kind PackageDocument contracts (no small honest version
+  exists — per-kind contracts need real demand to shape them; revisit when a plugin ships
+  document kinds). Verified: suites 191+38, manifest additive (documents tab + $ref bind +
+  nav node), regen types, wire 18+22+22 on fresh SQLite AND fresh Postgres, Playwright — the
+  browser lists the tree and files, the order record's Dokument tab shows the seeded attached
+  instruction (screenshots 5-01/5-02), zero page errors. Arc 5 complete: reach seam →
+  documents core → magic folders → FE.
 - **Beauty arc 5, part 3a — magic folders (event-driven tree materialization)**: the host
   declares `.DocumentFolder("order-created", "/order/{number}")` and every created order gets
   its document folder — no handler learns about documents. DOC001 verifies the binding at

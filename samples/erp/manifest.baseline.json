@@ -52,6 +52,7 @@
       "filters.from": "from",
       "filters.to": "to",
       "grid.action-failed": "The action could not be completed. Try again.",
+      "grid.empty": "No rows.",
       "grid.load-failed": "Could not load the list. Try again.",
       "grid.total": "{count} records",
       "integrations.dead-letter-not-found": "No dead-lettered item with that id.",
@@ -156,6 +157,7 @@
       "nav.audit": "History",
       "nav.documents": "Documents",
       "nav.documents.folders": "Document folders",
+      "nav.documents.list": "Document list",
       "nav.extensions": "Custom fields",
       "nav.invalid-parent": "Only pages can move, and only into a section.",
       "nav.more": "More",
@@ -384,6 +386,7 @@
       "enums.service": "Service",
       "enums.urgent": "Urgent",
       "erp.tabs.details": "Details",
+      "erp.tabs.documents": "Documents",
       "erp.tabs.materials": "Materials",
       "erp.tabs.time": "Time",
       "labels.active-only": "Active only",
@@ -545,6 +548,7 @@
       "filters.from": "fr\u00E5n",
       "filters.to": "till",
       "grid.action-failed": "\u00C5tg\u00E4rden kunde inte genomf\u00F6ras. F\u00F6rs\u00F6k igen.",
+      "grid.empty": "Inga rader.",
       "grid.load-failed": "Kunde inte l\u00E4sa in listan. F\u00F6rs\u00F6k igen.",
       "grid.total": "{count} tr\u00E4ffar",
       "integrations.dead-letter-not-found": "Ingen k\u00F6ad post med det id:t.",
@@ -649,6 +653,7 @@
       "nav.audit": "Historik",
       "nav.documents": "Dokument",
       "nav.documents.folders": "Dokumentmappar",
+      "nav.documents.list": "Dokumentlista",
       "nav.extensions": "Anpassade f\u00E4lt",
       "nav.invalid-parent": "Endast sidor kan flyttas, och endast in i en sektion.",
       "nav.more": "Mer",
@@ -877,6 +882,7 @@
       "enums.service": "Service",
       "enums.urgent": "Akut",
       "erp.tabs.details": "Detaljer",
+      "erp.tabs.documents": "Dokument",
       "erp.tabs.materials": "Material",
       "erp.tabs.time": "Tid",
       "labels.active-only": "Endast aktiva",
@@ -10772,6 +10778,17 @@
             "children": []
           },
           {
+            "id": "documents",
+            "kind": "page",
+            "labelKey": "nav.documents",
+            "order": 50,
+            "target": {
+              "page": "documents-browser"
+            },
+            "permission": "documents.read",
+            "children": []
+          },
+          {
             "id": "inspect.checklists",
             "kind": "page",
             "labelKey": "nav.inspect.checklists",
@@ -10888,9 +10905,9 @@
                 "children": []
               },
               {
-                "id": "documents",
+                "id": "documents.list",
                 "kind": "page",
-                "labelKey": "nav.documents",
+                "labelKey": "nav.documents.list",
                 "order": 60,
                 "target": {
                   "grid": "web.documents.list"
@@ -11065,6 +11082,19 @@
               {
                 "kind": "form",
                 "id": "web.orders.edit"
+              }
+            ]
+          },
+          {
+            "id": "documents",
+            "headingKey": "erp.tabs.documents",
+            "sections": [
+              {
+                "kind": "grid",
+                "id": "web.documents.list",
+                "bind": {
+                  "attachedTo": "$ref:order"
+                }
               }
             ]
           },

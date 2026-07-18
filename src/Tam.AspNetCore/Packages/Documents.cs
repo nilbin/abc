@@ -19,7 +19,7 @@ public sealed class TamDocumentsPackage : ITamPlugin
         // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement; the ERP host
         // will surface a richer browser when the FE tree lands.
         plugin.Nav(nav => nav
-            .Page("documents", grid: "web.documents.list", suggest: "administration", order: 60)
+            .Page("documents.list", grid: "web.documents.list", suggest: "administration", order: 60)
             .Page("documents.folders", grid: "web.documents.folders", suggest: "administration", order: 61));
         plugin
             .AddOperationType(typeof(DefineFolder))

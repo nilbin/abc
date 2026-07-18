@@ -56,7 +56,11 @@ public static partial class ErpModel
                 .Page("work-orders", page: "work-orders", order: 15)
                 .Page("projects", page: "projects", order: 20)
                 .Page("customers", page: "customers", order: 30)
-                .Page("stock", page: "stock", order: 40))
+                .Page("stock", page: "stock", order: 40)
+                // The documents tree browser — the app's ONE registered React page (docs/32
+                // D-P2: the escape hatch is for genuinely custom UX; registered pages carry
+                // their explicit permission).
+                .Page("documents", page: "documents-browser", permission: "documents.read", order: 50))
             // The technician's mode (docs/34 M4): the same declared pages, curated for the
             // field — and the thing a tenant can HIDE via the nav override registry (docs/30 v2).
             .Mode("field", m => m

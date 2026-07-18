@@ -36,6 +36,13 @@ export class TamClient {
     return response;
   }
 
+  /** Authorized binary GET (document content, docs/35): the same 401→refresh→retry as
+   *  every call — a bare <a href> cannot carry the bearer token. Null on any non-OK. */
+  async blob(path: string): Promise<Blob | null> {
+    const response = await this.send(`${this.baseUrl}${path}`);
+    return response.ok ? await response.blob() : null;
+  }
+
   async manifest(): Promise<Manifest> {
     const response = await this.send(this.url('/api/manifest'));
     if (!response.ok) throw new Error(`manifest: ${response.status}`);

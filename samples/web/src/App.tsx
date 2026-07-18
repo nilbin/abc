@@ -1,3 +1,4 @@
+import { DocumentsBrowser } from './DocumentsBrowser';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   AppShell, Button, Center, Group, Loader, SegmentedControl, Select, Stack, Text,
@@ -7,7 +8,7 @@ import { TamClient, type StandableInfo } from '@tam/core';
 import {
   NavModeSwitcher, NavPage, NavProvider, NavSidebar, NavTabs,
   TamProvider, registerBadgeColors,
-  useTam, useTamAuth,
+  registerPage, useTam, useTamAuth,
 } from '@tam/react';
 
 const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
@@ -22,9 +23,10 @@ registerBadgeColors({
   open: 'blue', completed: 'green', cancelled: 'gray', project: 'grape', service: 'cyan',
 });
 
-// ---- Pages: the orders page is DECLARED in the model (docs/32) and rendered by the
-// framework's ModelPage — no app React left for it. registerPage() remains available for
-// genuinely custom pages; this app currently needs none.
+// ---- Pages: model-declared pages render through the framework's ModelPage (docs/32).
+// The documents tree browser is the app's ONE registered page — genuinely custom UX, the
+// escape hatch used as intended (the registerPage ratio is the architecture tripwire).
+registerPage('documents-browser', () => <DocumentsBrowser />);
 
 function Shell(props: {
   userName: string;

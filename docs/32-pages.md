@@ -54,6 +54,9 @@ surface, extendable with new tabs (including plugin ones) without touching the o
 - A **`Grid` record section** is a child listing filtered off the open record: each
   `bind.Query(param, fromRecord: field)` fills a grid query param from a detail-view field, so
   the child filters MECHANICALLY (docs/20) — a work order's time entries, no dedicated view.
+  `bind.QueryEntityRef(param, entityKey)` instead fills the param with the record's own
+  IDENTITY as a canonical EntityRef ("order:{id}", docs/35) — the documents-tab shape, where
+  the child filters on WHICH record, not one of its fields (wire: bind value `$ref:order`).
   PAGE001 verifies the grid exists, every bound field is a detail-view result field, AND every
   bound param is a query field or declared filter of the grid's view — the server ignores
   unknown params, so an unchecked typo would silently show every row as this record's children.

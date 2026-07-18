@@ -349,7 +349,10 @@ public static class ManifestBuilder
 
     /// <summary>A record section → manifest, carrying a grid section's bind as {param: field}.</summary>
     private static ManifestRecordSection RecordSectionOf(RecordSection sec) =>
-        new(sec.Kind, sec.Id, sec.Bind?.ToDictionary(b => b.Param, b => b.Field));
+        // An entityRef bind rides the same map as "$ref:{entityKey}" — the client composes
+        // "{entityKey}:{recordKey}" (docs/35); a plain value names a detail field as before.
+        new(sec.Kind, sec.Id, sec.Bind?.ToDictionary(
+            b => b.Param, b => b.EntityKey is null ? b.Field! : $"$ref:{b.EntityKey}"));
 
     /// <summary>
     /// Read masking for the manifest (docs/27 D-A3): every field carrying a Sensitive atom the actor

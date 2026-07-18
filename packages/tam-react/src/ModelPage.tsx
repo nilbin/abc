@@ -135,9 +135,12 @@ export function ModelPage(props: { page: string }) {
       );
     }
     if (s.kind === 'grid') {
-      // A child listing filtered off the open record: each bind param ← a record detail field.
+      // A child listing filtered off the open record: each bind param ← a record detail
+      // field — or, for a "$ref:{entityKey}" bind (docs/35), the record's own EntityRef
+      // ("order:{id}"): the documents-tab shape, filtering on WHICH record.
       const query = Object.fromEntries(
-        Object.entries(s.bind ?? {}).map(([param, field]) => [param, record.row[field]]));
+        Object.entries(s.bind ?? {}).map(([param, field]) => [param,
+          field.startsWith('$ref:') ? `${field.slice(5)}:${record.key}` : record.row[field]]));
       return <ViewGrid key={s.id} grid={s.id} query={query} actAs={record.actAs} />;
     }
     return (

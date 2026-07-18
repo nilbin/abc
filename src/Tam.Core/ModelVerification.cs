@@ -287,7 +287,13 @@ public sealed partial class TamModelBuilder
                     {
                         // The field side reads a detail-view result field — it must exist or
                         // the child listing would filter on nothing.
-                        if (!detail.ResultFields.Any(f => f.WireName == bind.Field))
+                        if (bind.EntityKey is { } entityKey)
+                        {
+                            if (!model.ExtensibleEntityKeys.Contains(entityKey))
+                                throw new InvalidOperationException(
+                                    $"PAGE001: page '{page.Id}' record grid '{section.Id}' binds entityRef '{entityKey}', not a known wire entity key.");
+                        }
+                        else if (!detail.ResultFields.Any(f => f.WireName == bind.Field))
                             throw new InvalidOperationException(
                                 $"PAGE001: page '{page.Id}' record grid '{section.Id}' binds from '{bind.Field}', which is not a result field of '{record.DetailViewId}'.");
                         // The param side must be a query field or a declared filter of the
