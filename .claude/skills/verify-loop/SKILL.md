@@ -31,20 +31,33 @@ dotnet test Tam.slnx        # tests/Tam.Tests + samples/erp.Tests — all must p
 New behavior ships with tests (Tam.Testing's in-process pipeline harness for
 operations/gates; model-verification tests for new build rules).
 
-## 3. The generated trio (only when the wire surface or locale catalogs changed)
+## 3. The generated artifacts (only when the wire surface or locale catalogs changed)
+
+ONE command regenerates every committed artifact — manifest baseline, host contract, all
+per-plugin contract slices (auto-discovered), and the TS client:
+
+```sh
+scripts/regen.sh        # then: git add -A, and check additivity below
+python3 scripts/check_manifest.py <(git show HEAD:samples/erp/manifest.baseline.json) samples/erp/manifest.baseline.json
+```
+
+The individual exporters (if you need one in isolation):
 
 ```sh
 dotnet run --project samples/erp -- manifest  $PWD/samples/erp/manifest.baseline.json
 dotnet run --project samples/erp -- contract  $PWD/samples/erp/host-contract.json
+dotnet run --project samples/erp -- contract  $PWD/samples/invoicing/invoicing.contract.json --plugin invoicing
 node scripts/generate-types.mjs samples/erp/manifest.baseline.json samples/web/src/generated/tam.ts
-python3 scripts/check_manifest.py <(git show HEAD:samples/erp/manifest.baseline.json) samples/erp/manifest.baseline.json
 ```
 
-- Paths to the exporters must be ABSOLUTE — relative paths resolve under the project dir.
+- Paths to the exporters must be ABSOLUTE — relative paths resolve under the project dir
+  (`scripts/regen.sh` handles this for you).
 - The baseline check is additive-only (D4): removals/type-changes/permission-changes fail.
   Wire names are permanent; retire, don't drop.
 - CI gates that must match the committed files byte-for-byte: manifest baseline (additive),
-  `samples/web/src/generated/tam.ts`, `samples/erp/host-contract.json`, plus
+  `samples/web/src/generated/tam.ts`, `samples/erp/host-contract.json`, every
+  `samples/*/*.contract.json` plugin slice (docs/37 D-V4 — CI re-exports and byte-compares each;
+  `scripts/regen.sh` refreshes them all), plus
   `scripts/check_docs.py` and `scripts/check_structure.py` (the ~420-line file cap and
   wire-prefix conventions — run BOTH locally; a file that grew past the cap fails CI even
   when everything else is green).

@@ -53,8 +53,12 @@ jobs:
 
       - name: Plugin contract slices are current (docs/37 D-V4)
         run: |
-          dotnet run --project samples/erp --no-build -- contract /tmp/invoicing.contract.current.json --plugin invoicing
-          python3 -c "import json,sys; sys.exit(0 if json.load(open('samples/invoicing/invoicing.contract.json')) == json.load(open('/tmp/invoicing.contract.current.json')) else sys.exit('invoicing.contract.json is stale — re-export with: dotnet run --project samples/erp -- contract samples/invoicing/invoicing.contract.json --plugin invoicing'))"
+          # Auto-discovered from the committed slices, so a new dependency parent needs no edit here.
+          for slice in samples/*/*.contract.json; do
+            plugin="$(basename "$slice" .contract.json)"
+            dotnet run --project samples/erp --no-build -- contract "/tmp/$plugin.contract.current.json" --plugin "$plugin"
+            python3 -c "import json,sys; a='$slice'; b='/tmp/$plugin.contract.current.json'; sys.exit(0 if json.load(open(a))==json.load(open(b)) else sys.exit(f'{a} is stale — run scripts/regen.sh'))"
+          done
 
       - name: Generated TS client is current
         run: |
