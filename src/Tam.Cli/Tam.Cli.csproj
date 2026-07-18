@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Packaged as a .NET tool: `dotnet tool install Tam.Cli` gives a consumer `dotnet tam`
+         in their OWN repo — the framework's artifact-regeneration surface, no bespoke scripts. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>tam</ToolCommandName>
+    <PackageId>Tam.Cli</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Tam framework CLI — regenerate and verify the committed model artifacts (manifest, host contract, per-plugin contract slices, TS client) for any Tam host.</Description>
+  </PropertyGroup>
+
+</Project>

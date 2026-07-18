@@ -1,0 +1,7 @@
+{
+  "host": "samples/erp/Erp.csproj",
+  "manifest": "samples/erp/manifest.baseline.json",
+  "hostContract": "samples/erp/host-contract.json",
+  "webTypes": "samples/web/src/generated/tam.ts",
+  "typesCommand": ["node", "scripts/generate-types.mjs", "{manifest}", "{webTypes}"]
+}

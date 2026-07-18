@@ -474,6 +474,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **`dotnet tam` — the artifact tooling, productized (docs/38, BUILT)**: the hand-run regen
+  dance (and a plugin-slice CI gate that hardcoded `invoicing`) became a packaged .NET tool,
+  `Tam.Cli`, so a framework CONSUMER gets the same surface in their own repo — no bespoke
+  scripts. `dotnet tam regen` rewrites every committed artifact (manifest baseline, host
+  contract, every plugin contract slice, TS client); `dotnet tam verify` re-exports to a temp
+  dir and byte-compares (the CI freshness gate); `manifest`/`contract` are one-off pass-throughs.
+  Zero hardcoded paths — layout comes from a `tam.json` found by walking up from cwd, and plugin
+  slices auto-discover from the committed `*.contract.json` files (so a new dependency parent
+  needs no edit anywhere). The three separate CI freshness steps collapsed to one `tam verify`;
+  `scripts/regen.sh` is now a one-line shim over the tool; the additive D4 check stays separate
+  (freshness vs additivity are different concerns). The exports still can't be a source
+  generator — they serialize the composed runtime model — and the slices stay committed build
+  inputs (a plugin references them as AdditionalFiles); the tool just removes the friction and
+  the tackiness. Verified: `regen` produces a byte-identical tree, `verify` passes clean and
+  fails (naming the file, exit 1) on a tampered slice; docs/38 documents the consumer story.
 - **Plugin-on-plugin: the `DependsOn` edge, both levels (docs/37 D-V4, BUILT)**: a plugin may
   now declare `DependsOn(otherPlugin)`, and that declared edge is what lifts PLG010 to consume
   the parent's contract. Landed in five verified slices on nilbin/abc main. (1) DependsOn

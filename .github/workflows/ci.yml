@@ -46,24 +46,11 @@ jobs:
           dotnet run --project samples/erp --no-build -- manifest /tmp/manifest.current.json
           python3 scripts/check_manifest.py samples/erp/manifest.baseline.json /tmp/manifest.current.json
 
-      - name: Host contract artifact is current
-        run: |
-          dotnet run --project samples/erp --no-build -- contract /tmp/host-contract.current.json
-          python3 -c "import json,sys; sys.exit(0 if json.load(open('samples/erp/host-contract.json')) == json.load(open('/tmp/host-contract.current.json')) else sys.exit('host-contract.json is stale — re-export with: dotnet run --project samples/erp -- contract samples/erp/host-contract.json'))"
-
-      - name: Plugin contract slices are current (docs/37 D-V4)
-        run: |
-          # Auto-discovered from the committed slices, so a new dependency parent needs no edit here.
-          for slice in samples/*/*.contract.json; do
-            plugin="$(basename "$slice" .contract.json)"
-            dotnet run --project samples/erp --no-build -- contract "/tmp/$plugin.contract.current.json" --plugin "$plugin"
-            python3 -c "import json,sys; a='$slice'; b='/tmp/$plugin.contract.current.json'; sys.exit(0 if json.load(open(a))==json.load(open(b)) else sys.exit(f'{a} is stale — run scripts/regen.sh'))"
-          done
-
-      - name: Generated TS client is current
-        run: |
-          node scripts/generate-types.mjs samples/erp/manifest.baseline.json samples/web/src/generated/tam.ts
-          git diff --exit-code samples/web/src/generated/tam.ts
+      # All committed artifacts current — manifest, host contract, every plugin contract slice
+      # (auto-discovered), and the TS client — in one layout-driven tool (docs/38). A consumer
+      # runs the same `dotnet tam verify` in their own repo.
+      - name: Artifacts are current (dotnet tam verify)
+        run: dotnet run --project src/Tam.Cli --no-build -- verify
 
       # The app role is NOSUPERUSER NOBYPASSRLS: the RLS backstop (docs/33 D-R3) REFUSES to
       # provision under a bypassing role, so CI runs exactly like a real deployment.
