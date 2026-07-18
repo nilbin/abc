@@ -206,6 +206,49 @@ registerRenderer('file', function FilePick(p: FieldRendererProps) {
   );
 });
 
+// Staged file input (docs/36 streaming uploads): the file goes to the multipart staging
+// endpoint and THIS field carries the returned content hash; fileName/contentType fill as
+// siblings. When staging is unavailable the bytes fall back to the base64 sibling — the
+// upload intent accepts either, exactly one.
+registerRenderer('file-staged', function FileStaged(p: FieldRendererProps) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <FileInput
+      label={p.label}
+      required={p.required}
+      error={p.error}
+      disabled={busy}
+      onChange={file => {
+        if (!file) { p.onChange(null); return; }
+        void (async () => {
+          setBusy(true);
+          try {
+            const staged = await p.tam.client.upload('/api/documents/staging', file, file.name);
+            if (staged) {
+              p.onChange(staged.contentHash);
+              p.setField?.('contentBase64', null);
+            } else {
+              await new Promise<void>(resolve => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  p.setField?.('contentBase64', String(reader.result).split(',')[1] ?? '');
+                  p.onChange(null);
+                  resolve();
+                };
+                reader.readAsDataURL(file);
+              });
+            }
+            p.setField?.('fileName', file.name);
+            p.setField?.('contentType', file.type || 'application/octet-stream');
+          } finally {
+            setBusy(false);
+          }
+        })();
+      }}
+    />
+  );
+});
+
 // The REACH picker (docs/35 D-R5): people-set selection over the reach.search view —
 // options grouped by kind (locale key reach.kinds.{kind}, shipped by the kind's owner;
 // unknown kinds fall back to the raw token), value = the canonical ReachRef string. The

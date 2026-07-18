@@ -1,10 +1,10 @@
 # 36 — Documents: folders, files, and the first reach consumer
 
 Status: **BUILT** (the `tam.documents` framework package, the reach-backed folder ACLs, magic
-folders with `DOC001`, the record documents tab, the documents browser page; 22-check wire
-suite on SQLite and PostgreSQL). Deferred, tracked in STATUS: streaming/multipart uploads
-(today's upload is base64 with a 5 MB cap), the reach picker UI for shares (D-R5), per-kind
-document contracts for plugins.
+folders with `DOC001`, the record documents tab, the documents browser page, the reach picker
+share dialog (D-R5/D-R6), and STREAMING UPLOADS; 31-check wire suite on SQLite and
+PostgreSQL). Deferred, tracked in STATUS: per-kind document contracts for plugins, sweeping
+unreferenced staged blobs (the retention janitor's seam).
 
 `tam.documents` is a framework package by docs/22's own test: domain-agnostic (every business
 app grows a "put the PDF somewhere" need), no meaningful per-tenant activation toggle, and it
@@ -52,6 +52,13 @@ restores it.
   `TryAddScoped` — the DB-backed default swaps for S3/disk without touching the package).
 - **Download** (`GET /api/documents/{id}/content`) requires the read atom AND folder
   visibility, and answers **404 — not 403 — when out of reach**: an existence leak is a leak.
+- **Upload is STAGE-THEN-INTEND**: small files ride the JSON pipeline as base64 (5 MB cap);
+  larger ones POST raw bytes as multipart to `/api/documents/staging` (documents.add, 50 MB
+  cap) which content-addresses them into the store and returns the hash — then
+  `documents.upload` references the hash and the WRITE still rides the full pipeline
+  (authorization, folder visibility, audit, idempotency). Exactly one of
+  `contentBase64`/`contentHash` carries the content; an unstaged hash fails closed. An
+  unused staged blob is inert (content addressing dedupes; sweeping is the janitor's seam).
 - `documents.retire` retires; nothing deletes.
 
 ## Magic folders: the tree grows itself
@@ -79,8 +86,10 @@ document folder.
 - **The browser page** (`samples/web` `documents-browser`, registered page): folder tree from
   `documents.folders.list`, files from `documents.list`, download through the typed client's
   `blob()` (bearer + retry like every other call), define/upload as ordinary operation forms.
-  The file input is a standard renderer (`file`): base64 payload plus `fileName`/`contentType`
-  side fields — no bespoke upload endpoint.
+  The file input is the `file-staged` renderer: it stages the bytes as multipart and carries
+  the returned hash (falling back to the base64 sibling when staging is unavailable), with
+  `fileName`/`contentType` filled as side fields. The plain `file` renderer (inline base64)
+  remains for hosts that want it.
 - **Sharing lives in the browser too**: the share dialog is ONE multi-select whose pills ARE
   the selected folder's own grants (`documents.folders.shares`, admin-only like the intents,
   described labels via docs/35 D-R6) — picking adds a grant, removing a pill revokes it, each

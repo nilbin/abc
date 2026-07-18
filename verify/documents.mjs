@@ -69,6 +69,33 @@ const dl = await fetch(`${BASE}/api/documents/${uploaded.body.output.documentId}
 check('download round-trips the content', dl.status === 200
   && Buffer.from(await dl.arrayBuffer()).toString() === 'Projektplan 2026 — utkast.', `status=${dl.status}`);
 
+// Streaming upload (docs/36 stage-then-intend): bytes go multipart to the staging endpoint
+// (no base64, capacity-gated there); the WRITE is the ordinary intent referencing the hash.
+const stagedBytes = 'Stort dokument — multipart, ingen base64.';
+const fd = new FormData();
+fd.append('file', new Blob([Buffer.from(stagedBytes)], {type: 'text/plain'}), 'stor-fil.txt');
+const staged = await fetch(`${BASE}/api/documents/staging`,
+  {method: 'POST', headers: {authorization: `Bearer ${alva}`}, body: fd})
+  .then(async r => ({status: r.status, body: await r.json().catch(()=>null)}));
+check('multipart staging returns the content hash', staged.status === 200 && !!staged.body?.contentHash,
+  `status=${staged.status}`);
+const teklaFd = new FormData();
+teklaFd.append('file', new Blob([Buffer.from('x')]), 'x.txt');
+const teklaStage = await fetch(`${BASE}/api/documents/staging`,
+  {method: 'POST', headers: {authorization: `Bearer ${tekla}`}, body: teklaFd});
+check('staging requires documents.add', teklaStage.status === 403, `status=${teklaStage.status}`);
+const hashUp = await op(alva,'documents.upload',{folderId, fileName: 'stor-fil.txt',
+  contentHash: staged.body?.contentHash, contentType: 'text/plain'});
+check('upload by hash rides the pipeline', hashUp.status === 200 && hashUp.body?.output?.size > 0,
+  `status=${hashUp.status} ${codeOf(hashUp)}`);
+const dlStaged = await fetch(`${BASE}/api/documents/${hashUp.body?.output?.documentId}/content`,
+  {headers:{authorization:`Bearer ${alva}`}});
+check('staged content round-trips', dlStaged.status === 200
+  && Buffer.from(await dlStaged.arrayBuffer()).toString() === stagedBytes, `status=${dlStaged.status}`);
+const bogusUp = await op(alva,'documents.upload',{folderId, fileName: 'spok.txt',
+  contentHash: 'deadbeef'.repeat(8)});
+check('an unstaged hash fails closed', codeOf(bogusUp).includes('documents.invalid-content'), codeOf(bogusUp));
+
 // Share /projekt with tekla by USER reach — the subtree (/projekt/2026 inherits) opens for her.
 const projekt = await op(alva,'documents.folders.define',{path: '/projekt'});
 const users = await view(alva,'users.list').then(r => r.body?.rows ?? []);

@@ -80,6 +80,23 @@ export class TamClient {
     return await response.json();
   }
 
+  /** Multipart upload to a staging endpoint (docs/36 streaming uploads): the file's bytes
+   *  travel raw — no base64 overhead — and the caller gets back the content hash the write
+   *  intent references. Null on any failure so callers can fall back to inline base64. */
+  async upload(
+    path: string, file: Blob, fileName?: string,
+  ): Promise<{ contentHash: string; size: number } | null> {
+    const body = new FormData();
+    body.append('file', file, fileName);
+    try {
+      const response = await this.send(this.url(path), { method: 'POST', body });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
   async resolve(
     formId: string,
     input: Record<string, unknown>,

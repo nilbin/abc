@@ -494,9 +494,10 @@ export interface DocumentsFoldersUnshareOutput {
 export interface DocumentsUploadInput {
   folderId: string;
   fileName: string;
-  contentBase64: string;
+  contentBase64?: string;
   contentType?: string;
   attachedTo?: string;
+  contentHash?: string;
 }
 
 export interface DocumentsUploadOutput {

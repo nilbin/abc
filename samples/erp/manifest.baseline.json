@@ -3597,7 +3597,7 @@
           "labelKey": "labels.file",
           "type": "text",
           "wireKind": "string",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false,
           "readOnly": false
@@ -3615,6 +3615,16 @@
         {
           "name": "attachedTo",
           "labelKey": "labels.attached-to",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "contentHash",
+          "labelKey": "labels.file",
           "type": "text",
           "wireKind": "string",
           "required": false,
@@ -8736,14 +8746,25 @@
           "readOnly": false
         },
         {
+          "name": "contentHash",
+          "labelKey": "labels.file",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "renderer": "file-staged",
+          "readOnly": false
+        },
+        {
           "name": "contentBase64",
           "labelKey": "labels.file",
           "type": "text",
           "wireKind": "string",
-          "required": true,
+          "required": false,
           "changeSet": false,
           "extension": false,
-          "renderer": "file",
+          "renderer": "hidden",
           "readOnly": false
         },
         {

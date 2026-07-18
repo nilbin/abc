@@ -188,6 +188,33 @@ public static partial class TamAspNetCore
                 : Results.Stream(content, document.ContentType, document.FileName);
         });
 
+        // Document CONTENT staging (docs/36 streaming uploads): bytes arrive HERE as
+        // multipart — no base64 overhead, no JSON-body bound — and are content-addressed
+        // into the store. The WRITE stays an intent: documents.upload references the
+        // returned hash and rides the full pipeline (authorization, folder visibility,
+        // audit, idempotency). An unused staged blob is inert data (content addressing
+        // dedupes; sweeping unreferenced blobs is the retention janitor's seam).
+        app.MapPost("/api/documents/staging", async (
+            HttpContext http, ITamDb tam, IDocumentStore store, CancellationToken ct) =>
+        {
+            var context = BuildContext(http, model);
+            if (!context.Actor.Can("documents.add"))
+                return FindingsResult(model, context,
+                    PipelineFindings.NotAuthorized.With(("permission", "documents.add")));
+            if (!http.Request.HasFormContentType) return Results.BadRequest();
+            var form = await http.Request.ReadFormAsync(ct);
+            var file = form.Files.Count > 0 ? form.Files[0] : null;
+            if (file is null || file.Length == 0 || file.Length > UploadDocument.StagedMaxBytes)
+                return Results.BadRequest();
+            using var buffer = new MemoryStream();
+            await file.OpenReadStream().CopyToAsync(buffer, ct);
+            var hash = await store.PutAsync(buffer.ToArray(), ct);
+            // Staging is its own transaction — the blob row must exist before the intent
+            // that references it arrives.
+            await tam.Db.SaveChangesAsync(ct);
+            return Results.Json(new { contentHash = hash, size = file.Length }, TamJson.Options);
+        });
+
         app.MapGet("/openapi.json", (HttpContext http) => OpenApiEndpoint.Handle(http, model));
 
         return app;

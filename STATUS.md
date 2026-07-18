@@ -474,6 +474,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Framework batch 2: streaming uploads (autonomous, "go ahead I'm afk")**: the 5 MB
+  base64 bound falls to STAGE-THEN-INTEND. A multipart staging endpoint
+  (`POST /api/documents/staging`, documents.add-gated, 50 MB cap, own transaction)
+  content-addresses raw bytes into IDocumentStore and returns the hash;
+  `documents.upload` gains an optional `contentHash` (exactly one of base64/hash carries
+  content — base64 became optional, additive D4) so the WRITE still rides the full
+  pipeline: authorization, the folder-visibility predicate, audit, idempotency. An
+  unstaged hash fails closed (documents.invalid-content); an unused staged blob is inert
+  (content addressing dedupes; sweeping is the retention janitor's seam, noted deferred).
+  Client: `TamClient.upload` (multipart through the same auth/retry path); FE: the new
+  `file-staged` renderer sits ON the hash field — stages, carries the hash, falls back to
+  the base64 sibling if staging is unavailable; the upload form switched to it. Verified:
+  suites 191+38, additive baseline (+types/contract), wire 16+18+22+31 on fresh SQLite
+  AND fresh Postgres (documents +5: staging returns hash, 403 without documents.add,
+  upload-by-hash, staged round-trip, unstaged-hash fails closed), and a real file
+  uploaded through the staged renderer in the browser (screenshot). docs/36 updated.
 - **Share dialog: the picker holds the selection (user-directed: "shouldn't the picker
   have the selection")**: the folder share dialog collapsed from list-plus-form (two
   "Delas med" labels, a submit button) into ONE MultiSelect — the pills ARE the folder's

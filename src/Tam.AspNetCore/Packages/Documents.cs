@@ -45,7 +45,11 @@ public sealed class TamDocumentsPackage : ITamPlugin
             {
                 form.Field(x => x.FolderId).Renderer("hidden");
                 form.Field(x => x.FileName);
-                form.Field(x => x.ContentBase64).Renderer("file");
+                // The visible file input SITS ON the hash field (docs/36 streaming): it
+                // stages the bytes as multipart and carries the returned hash; base64 is
+                // its own fallback sibling when staging is unavailable.
+                form.Field(x => x.ContentHash).Renderer("file-staged");
+                form.Field(x => x.ContentBase64).Renderer("hidden");
                 form.Field(x => x.ContentType).Renderer("hidden");
                 form.Field(x => x.AttachedTo).Renderer("hidden");
             })
@@ -302,14 +306,22 @@ public static class UnshareFolder
 [Authorize("documents.add")]
 public static class UploadDocument
 {
+    /// <summary>The base64-in-JSON bound; STAGED uploads (multipart, docs/36) are capped by
+    /// <see cref="StagedMaxBytes"/> at the staging endpoint instead.</summary>
     public const int MaxBytes = 5_000_000;
 
+    public const long StagedMaxBytes = 50_000_000;
+
+    // Exactly one of ContentBase64 / ContentHash carries the content: inline base64 for
+    // small files, or a hash returned by the multipart staging endpoint (docs/36) — the
+    // intent (and its authorization, visibility check, audit, idempotency) is the same.
     public sealed record Input(
         [property: LabelKey("labels.folder")] Guid FolderId,
         [property: LabelKey("labels.file-name")] string FileName,
-        [property: LabelKey("labels.file")] string ContentBase64,
+        [property: LabelKey("labels.file")] string? ContentBase64 = null,
         [property: LabelKey("labels.content-type")] string? ContentType = null,
-        [property: LabelKey("labels.attached-to")] string? AttachedTo = null);
+        [property: LabelKey("labels.attached-to")] string? AttachedTo = null,
+        [property: LabelKey("labels.file")] string? ContentHash = null);
 
     public sealed record Output(Guid DocumentId, long Size);
 
@@ -324,14 +336,33 @@ public static class UploadDocument
         var visible = await DocumentAccess.VisibleFolderIdsAsync(tam, reach, context, ct);
         if (!visible.Contains(folder.Id)) return DocumentFindings.NoAccess;
 
-        byte[] content;
-        try { content = Convert.FromBase64String(input.ContentBase64); }
-        catch (FormatException)
+        string contentHash;
+        long size;
+        if (!string.IsNullOrWhiteSpace(input.ContentHash))
         {
-            return DocumentFindings.InvalidContent.At(nameof(Input.ContentBase64));
+            // The staged path: bytes were capacity-gated at the multipart endpoint; the
+            // intent references them by hash — fail closed when nothing is staged.
+            var staged = await store.OpenAsync(input.ContentHash!, ct);
+            if (staged is null)
+                return DocumentFindings.InvalidContent.At(nameof(Input.ContentHash));
+            await using (staged) size = staged.Length;
+            contentHash = input.ContentHash!;
         }
-        if (content.Length is 0 or > MaxBytes)
-            return DocumentFindings.TooLarge.At(nameof(Input.ContentBase64));
+        else
+        {
+            if (string.IsNullOrWhiteSpace(input.ContentBase64))
+                return DocumentFindings.InvalidContent.At(nameof(Input.ContentBase64));
+            byte[] content;
+            try { content = Convert.FromBase64String(input.ContentBase64!); }
+            catch (FormatException)
+            {
+                return DocumentFindings.InvalidContent.At(nameof(Input.ContentBase64));
+            }
+            if (content.Length is 0 or > MaxBytes)
+                return DocumentFindings.TooLarge.At(nameof(Input.ContentBase64));
+            contentHash = await store.PutAsync(content, ct);
+            size = content.Length;
+        }
 
         string? attachedTo = null;
         if (!string.IsNullOrWhiteSpace(input.AttachedTo))
@@ -350,8 +381,8 @@ public static class UploadDocument
             FileName = input.FileName,
             ContentType = string.IsNullOrWhiteSpace(input.ContentType)
                 ? "application/octet-stream" : input.ContentType!,
-            Size = content.Length,
-            ContentHash = await store.PutAsync(content, ct),
+            Size = size,
+            ContentHash = contentHash,
             AttachedTo = attachedTo,
             UploadedByActorId = context.Actor.Id,
             UploadedByName = context.Actor.Name,
