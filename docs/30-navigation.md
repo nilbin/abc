@@ -6,8 +6,8 @@ slot components, package declarations, App.tsx on slots. v2: the `tam.nav` overr
 override fingerprint in the revision/ETag). Decisions D-N1…D-N8. Owner calls made: modes are
 the top level of the tree; hiding is presentation-only; per-surface trees with `web` fallback.
 v1 additions settled in code: `Place()` adopts content but the HOST's order replaces the
-contribution's; a plugin that declared any nav contribution never also gets the mechanical
-fallback page. v2 shipped LEAN: `nav.define-section` (tenant-authored sections) and
+contribution's; a plugin that DECLARED nav — even `nav.None()`, the explicit "my surfaces are
+reached elsewhere" opt-out — never also gets the mechanical fallback page. v2 shipped LEAN: `nav.define-section` (tenant-authored sections) and
 nav-overrides-in-bundles (P3) deferred until real demand, and no missing-culture-label
 diagnostic — override labels overlay COMPILED labels, so a partial relabel falls back per
 culture instead of breaking. Moves are pages-into-sections

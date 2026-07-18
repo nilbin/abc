@@ -105,6 +105,7 @@ public sealed class PluginBuilder
     {
         var builder = new NavContributionBuilder(Id);
         configure(builder);
+        Model.NavDeclared(Id);
         foreach (var contribution in builder.Contributions)
             Model.NavContribute(contribution);
         return this;

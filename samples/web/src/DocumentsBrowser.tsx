@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ActionIcon, Alert, Button, Group, Modal, NavLink, Paper, Stack, Table, Text, Title,
+  ActionIcon, Alert, Badge, Button, Group, Modal, NavLink, Paper, Stack, Table, Text, Title,
 } from '@mantine/core';
 import { OperationForm, useTam, useView } from '@tam/react';
 
@@ -14,7 +14,7 @@ import { OperationForm, useTam, useView } from '@tam/react';
 export function DocumentsBrowser() {
   const { t, can, client, invalidate } = useTam();
   const [selected, setSelected] = useState<{ id: string; path: string } | null>(null);
-  const [dialog, setDialog] = useState<'folder' | 'upload' | null>(null);
+  const [dialog, setDialog] = useState<'folder' | 'upload' | 'share' | null>(null);
   const folders = useView('documents.folders.list', {});
   const files = useView('documents.list', selected ? { folderId: selected.id } : {});
 
@@ -42,6 +42,11 @@ export function DocumentsBrowser() {
           {can('documents.manage') && (
             <Button variant="light" size="xs" onClick={() => setDialog('folder')}>
               {t('operations.documents.folders.define.title')}
+            </Button>
+          )}
+          {can('documents.manage') && selected && (
+            <Button variant="light" size="xs" onClick={() => setDialog('share')}>
+              {t('operations.documents.folders.share.title')}
             </Button>
           )}
           {can('documents.add') && selected && (
@@ -112,6 +117,62 @@ export function DocumentsBrowser() {
           initialValues={{ folderId: selected?.id }}
           onSuccess={r => { setDialog(null); invalidate(r.effects); }} />
       </Modal>
+      <Modal opened={dialog === 'share'} onClose={() => setDialog(null)}
+        title={t('operations.documents.folders.share.title')}>
+        {selected && <FolderShares folderId={selected.id} />}
+      </Modal>
+    </Stack>
+  );
+}
+
+/**
+ * The share dialog's body: the folder's OWN grants (documents.folders.shares) with one-click
+ * revoke, and the share form's reach picker to add more. Inherited/open access shows as the
+ * empty-state hint — the effective-ACL question stays server-side (docs/35).
+ */
+function FolderShares({ folderId }: { folderId: string }) {
+  const { t, client, invalidate } = useTam();
+  const shares = useView('documents.folders.shares', { folderId });
+  const rows = (shares.data?.rows ?? []) as { id: string; reach: string }[];
+
+  const describe = (reach: string) => {
+    const cut = reach.indexOf(':');
+    const kind = cut < 0 ? reach : reach.slice(0, cut);
+    const id = cut < 0 ? null : reach.slice(cut + 1);
+    const kindLabel = t(`reach.kinds.${kind}`);
+    return { kind: kindLabel === `reach.kinds.${kind}` ? kind : kindLabel, id };
+  };
+
+  const revoke = async (reach: string) => {
+    const result = await client.operation('documents.folders.unshare',
+      { folderId, reach }, { idempotencyKey: crypto.randomUUID() });
+    invalidate(result.effects);
+  };
+
+  return (
+    <Stack gap="sm">
+      <Text size="sm" fw={500}>{t('labels.shared-with')}</Text>
+      {rows.length === 0
+        ? <Text size="sm" c="dimmed">{t('documents.no-own-shares')}</Text>
+        : rows.map(row => {
+            const { kind, id } = describe(row.reach);
+            return (
+              <Group key={row.id} justify="space-between" gap="xs">
+                <Group gap="xs">
+                  <Badge variant="light">{kind}</Badge>
+                  {id && <Text size="sm">{id}</Text>}
+                </Group>
+                <ActionIcon variant="subtle" color="red"
+                  aria-label={t('operations.documents.folders.unshare.title')}
+                  onClick={() => void revoke(row.reach)}>
+                  ✕
+                </ActionIcon>
+              </Group>
+            );
+          })}
+      <OperationForm form="web.documents.folders.share"
+        initialValues={{ folderId }}
+        onSuccess={r => invalidate(r.effects)} />
     </Stack>
   );
 }

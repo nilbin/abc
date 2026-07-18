@@ -16,11 +16,10 @@ public sealed class TamDocumentsPackage : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
-        // Nav CONTENT + suggestion (docs/30 D-N2) — the host owns placement; the ERP host
-        // will surface a richer browser when the FE tree lands.
-        plugin.Nav(nav => nav
-            .Page("documents.list", grid: "web.documents.list", suggest: "administration", order: 60)
-            .Page("documents.folders", grid: "web.documents.folders", suggest: "administration", order: 61));
+        // Deliberately NO nav: documents surface where they belong — on the record's tab and
+        // in the host's tree browser (which carries sharing too). The grids stay declared
+        // (wire names are permanent, D4) for hosts that want flat pages.
+        plugin.Nav(nav => nav.None());
         plugin
             .AddOperationType(typeof(DefineFolder))
             .AddOperationType(typeof(ShareFolder))
@@ -28,6 +27,7 @@ public sealed class TamDocumentsPackage : ITamPlugin
             .AddOperationType(typeof(UploadDocument))
             .AddOperationType(typeof(RetireDocument))
             .AddViewType(typeof(FolderList))
+            .AddViewType(typeof(FolderShares))
             .AddViewType(typeof(DocumentList))
             .Form<DefineFolder.Input>("web.documents.folders.define", "documents.folders.define")
             .Form<ShareFolder.Input>("web.documents.folders.share", "documents.folders.share", form =>
@@ -422,6 +422,33 @@ public static class FolderList
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Path), nameof(Result.Name))
         .DefaultSort(nameof(Result.Path));
+}
+
+/// <summary>One folder's OWN share entries — the share dialog's list (admin-only, like the
+/// share intent itself). Rows carry the canonical ref; the client renders the kind's label.
+/// Inherited reach is deliberately absent: this view answers "what is granted HERE", the
+/// effective-ACL question stays inside the one predicate.</summary>
+[View("documents.folders.shares")]
+[Authorize("documents.manage")]
+public static class FolderShares
+{
+    public sealed record Query([property: LabelKey("labels.folder")] Guid FolderId);
+
+    public sealed record Result
+    {
+        public Guid Id { get; init; }
+        [LabelKey("labels.reach")]
+        public string Reach { get; init; } = "";
+    }
+
+    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
+        tam.Db.Set<DocumentAclEntity>()
+            .Where(a => a.FolderId == query.FolderId)
+            .Select(a => new Result { Id = a.Id, Reach = a.Reach });
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+        .Sortable(nameof(Result.Reach))
+        .DefaultSort(nameof(Result.Reach));
 }
 
 /// <summary>Documents in visible folders; <c>attachedTo</c> is the record-tab query (every

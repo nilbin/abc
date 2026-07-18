@@ -29,6 +29,7 @@
       "documents.invalid-content": "The file content could not be read.",
       "documents.invalid-path": "Invalid path.",
       "documents.no-access": "You do not have access to the folder.",
+      "documents.no-own-shares": "No shares of its own \u2013 access is inherited or open.",
       "documents.not-found": "The document was not found.",
       "documents.share-not-found": "The share was not found.",
       "documents.too-large": "The file is too large (max 5 MB).",
@@ -138,6 +139,7 @@
       "labels.seats-used": "Seats used",
       "labels.secret-set": "Set",
       "labels.shared": "Shared",
+      "labels.shared-with": "Shared with",
       "labels.size": "Size",
       "labels.spec": "Schedule",
       "labels.state": "State",
@@ -156,8 +158,6 @@
       "labels.wire-kind": "Type",
       "nav.audit": "History",
       "nav.documents": "Documents",
-      "nav.documents.folders": "Document folders",
-      "nav.documents.list": "Document list",
       "nav.extensions": "Custom fields",
       "nav.invalid-parent": "Only pages can move, and only into a section.",
       "nav.more": "More",
@@ -543,6 +543,7 @@
       "documents.invalid-content": "Filinneh\u00E5llet kunde inte l\u00E4sas.",
       "documents.invalid-path": "Ogiltig s\u00F6kv\u00E4g.",
       "documents.no-access": "Du har inte \u00E5tkomst till mappen.",
+      "documents.no-own-shares": "Inga egna delningar \u2013 \u00E5tkomsten \u00E4rvs eller \u00E4r \u00F6ppen.",
       "documents.not-found": "Dokumentet hittades inte.",
       "documents.share-not-found": "Delningen hittades inte.",
       "documents.too-large": "Filen \u00E4r f\u00F6r stor (max 5 MB).",
@@ -652,6 +653,7 @@
       "labels.seats-used": "Anv\u00E4nda platser",
       "labels.secret-set": "Angiven",
       "labels.shared": "Delad",
+      "labels.shared-with": "Delas med",
       "labels.size": "Storlek",
       "labels.spec": "Schema",
       "labels.state": "Tillst\u00E5nd",
@@ -670,8 +672,6 @@
       "labels.wire-kind": "Typ",
       "nav.audit": "Historik",
       "nav.documents": "Dokument",
-      "nav.documents.folders": "Dokumentmappar",
-      "nav.documents.list": "Dokumentlista",
       "nav.extensions": "Anpassade f\u00E4lt",
       "nav.invalid-parent": "Endast sidor kan flyttas, och endast in i en sektion.",
       "nav.more": "Mer",
@@ -7504,6 +7504,50 @@
       "defaultSortDescending": false,
       "plugin": "tam.documents"
     },
+    "documents.folders.shares": {
+      "permission": "documents.manage",
+      "queryFields": [
+        {
+          "name": "folderId",
+          "labelKey": "labels.folder",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "reach",
+          "labelKey": "labels.reach",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "reach"
+      ],
+      "filterable": [],
+      "defaultSort": "reach",
+      "defaultSortDescending": false,
+      "plugin": "tam.documents"
+    },
     "documents.list": {
       "permission": "documents.read",
       "queryFields": [
@@ -11043,17 +11087,6 @@
                 "children": []
               },
               {
-                "id": "documents.list",
-                "kind": "page",
-                "labelKey": "nav.documents.list",
-                "order": 60,
-                "target": {
-                  "grid": "web.documents.list"
-                },
-                "plugin": "tam.documents",
-                "children": []
-              },
-              {
                 "id": "inspect.templates",
                 "kind": "page",
                 "labelKey": "nav.inspect.templates",
@@ -11062,17 +11095,6 @@
                   "page": "inspect.templates"
                 },
                 "plugin": "inspect",
-                "children": []
-              },
-              {
-                "id": "documents.folders",
-                "kind": "page",
-                "labelKey": "nav.documents.folders",
-                "order": 61,
-                "target": {
-                  "grid": "web.documents.folders"
-                },
-                "plugin": "tam.documents",
                 "children": []
               },
               {

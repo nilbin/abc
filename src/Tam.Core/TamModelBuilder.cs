@@ -23,6 +23,7 @@ public sealed partial class TamModelBuilder
     private readonly List<EventRequirement> eventRequirements = [];
     private readonly Dictionary<string, NavTreeBuilder> navTrees = [];
     private readonly List<NavContribution> navContributions = [];
+    private readonly HashSet<string> navDeclaringPlugins = [];
     private readonly List<SubscriberDefinition> subscribers = [];
     private readonly Dictionary<string, ReachDefinition> reaches = [];
     private readonly List<DocumentFolderBinding> documentFolders = [];
@@ -169,6 +170,10 @@ public sealed partial class TamModelBuilder
 
     internal void NavContribute(NavContribution contribution) =>
         navContributions.Add(contribution);
+
+    /// <summary>The plugin CALLED Nav — even with zero pages. Declaring is graduating
+    /// (docs/30 D-N1): its word is authoritative, the mechanical More-page never applies.</summary>
+    internal void NavDeclared(string plugin) => navDeclaringPlugins.Add(plugin);
 
     public TamModelBuilder AddOperationType(Type type)
     {

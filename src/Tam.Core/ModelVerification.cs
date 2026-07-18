@@ -70,9 +70,9 @@ public sealed partial class TamModelBuilder
                 leftovers.AddRange(navContributions.Where(c => !consumed.Contains(c)).Select(c => c.Page));
                 // Plugins whose grids no node references get the generic per-plugin page —
                 // exactly the pre-nav behavior, now as the declared model's safety net. A plugin
-                // that declared ANY nav contribution has graduated (docs/30 D-N1): its
+                // that DECLARED nav — even `nav.None()` — has graduated (docs/30 D-N1): its
                 // declaration is authoritative and it never also gets the mechanical page.
-                var declared = navContributions.Select(c => c.Plugin).ToHashSet();
+                var declared = navDeclaringPlugins;
                 foreach (var plugin in gridDefs.Values
                              .Where(g => g.Plugin is not null && !referenced.Contains(g.Id))
                              .Select(g => g.Plugin!).Distinct().Order())

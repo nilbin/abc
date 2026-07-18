@@ -112,4 +112,9 @@ public sealed class NavContributionBuilder
                 new NavTarget(Grid: grid, Page: page), permission, plugin, [])));
         return this;
     }
+
+    /// <summary>Deliberately NO nav: the plugin's surfaces are reached elsewhere (record tabs,
+    /// a host-registered page). Declaring nav — even empty — graduates the plugin (docs/30
+    /// D-N1), so the mechanical More-page safety net does not resurrect its grids.</summary>
+    public NavContributionBuilder None() => this;
 }

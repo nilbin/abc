@@ -1143,6 +1143,15 @@ export interface DocumentsFoldersListQuery {
   search?: string;
 }
 
+export interface DocumentsFoldersSharesRow {
+  id: string;
+  reach: string;
+}
+
+export interface DocumentsFoldersSharesQuery {
+  folderId?: string;
+}
+
 export interface DocumentsListRow {
   id: string;
   fileName: string;
@@ -1812,6 +1821,11 @@ export class TypedTamClient {
   /** view documents.folders.list (requires documents.read) */
   documentsFoldersList(query?: DocumentsFoldersListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsFoldersListRow[] }> {
     return this.client.view("documents.folders.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsFoldersListRow[] }>;
+  }
+
+  /** view documents.folders.shares (requires documents.manage) */
+  documentsFoldersShares(query?: DocumentsFoldersSharesQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsFoldersSharesRow[] }> {
+    return this.client.view("documents.folders.shares", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsFoldersSharesRow[] }>;
   }
 
   /** view documents.list (requires documents.read) */

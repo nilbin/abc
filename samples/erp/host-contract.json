@@ -121,6 +121,16 @@
         "shared": "bool"
       }
     },
+    "documents.folders.shares": {
+      "permission": "documents.manage",
+      "fields": [
+        "id",
+        "reach"
+      ],
+      "kinds": {
+        "id": "guid"
+      }
+    },
     "documents.list": {
       "permission": "documents.read",
       "fields": [

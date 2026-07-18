@@ -474,6 +474,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Documents nav cleanup (user-directed: "documents and document folders as nav pages
+  seems a bit weird")**: the tam.documents package no longer suggests flat admin pages —
+  documents surface where they belong: the record's documents tab and the work-mode tree
+  browser. Folder SHARING folded into the browser: a share dialog listing the selected
+  folder's OWN grants (new `documents.folders.shares` view, documents.manage like the
+  intents) with one-click revoke, plus the reach-picker share form; inherited/open access
+  is the empty-state hint (the effective-ACL question stays server-side). Framework
+  refinement: `nav.None()` — declaring nav, even empty, graduates a plugin past the
+  mechanical More-page (docs/30 D-N1 sharpened; previously graduation required ≥1
+  contribution, so a deliberately nav-less package would have resurrected its grids under
+  "Mer"). Grids stay declared (wire names permanent). Screenshots: share dialog with
+  revoke, clean admin nav. Order-GRID docs affordance deliberately deferred to the
+  tenant-in-URL deep-link arc (a row action jumping to the record's documents tab).
+  Verified: suites 191+38, manifest additive (baseline + types + contract regenerated),
+  wire 16+18+22+25 on fresh SQLite AND fresh Postgres (documents suite grew 3 checks:
+  shares list, 403 for non-managers, empty after unshare).
 - **The reach picker (autonomous, user-authorized "proceed as you see fit")**: docs/35
   D-R5 closed — the seam's last rough edge. The tam.reach package (FIFTEENTH) ships the
   reach.search view (permission reach.search): every registered provider's SearchAsync
