@@ -84,8 +84,8 @@ internal sealed class OrdersContract : IPluginPart
 
         // Event contracts (PLG009): payload shapes are declared, never folklore.
         // order-created is the v2 seam — matching templates instantiate onto the new order.
-        plugin.RequiresEvent("order-created", "orderId:guid", "number", "orderType");
-        plugin.RequiresEvent("order-completed", "orderId:guid", "number");
+        plugin.RequiresEvent(HostContract.Events.OrderCreated);
+        plugin.RequiresEvent(HostContract.Events.OrderCompleted);
         // Published events: the [DomainEvent] record in Domain/ is the declaration.
 
         // The order detail wears its checklists (docs/31 D-X4): two panels bound to the

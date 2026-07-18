@@ -46,6 +46,11 @@ jobs:
           dotnet run --project samples/erp --no-build -- manifest /tmp/manifest.current.json
           python3 scripts/check_manifest.py samples/erp/manifest.baseline.json /tmp/manifest.current.json
 
+      - name: Host contract artifact is current
+        run: |
+          dotnet run --project samples/erp --no-build -- contract /tmp/host-contract.current.json
+          python3 -c "import json,sys; sys.exit(0 if json.load(open('samples/erp/host-contract.json')) == json.load(open('/tmp/host-contract.current.json')) else sys.exit('host-contract.json is stale — re-export with: dotnet run --project samples/erp -- contract samples/erp/host-contract.json'))"
+
       - name: Generated TS client is current
         run: |
           node scripts/generate-types.mjs samples/erp/manifest.baseline.json samples/web/src/generated/tam.ts

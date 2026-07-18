@@ -302,6 +302,17 @@ than to win back. **ENFORCED: PLG010** — a plugin's `RequiresView`/`RequiresEv
 trust), or by the plugin itself; anything else fails the build. Until PLG010 the rule was
 doctrine only — the checks verified existence and fields, not ownership.
 
+### "What can I extend?" — the host contract artifact
+
+A plugin author's first question has one answer: the host's exported
+**`host-contract.json`** (docs/31 slice 3) — every consumable event (fields, kinds), view
+(fields, kinds, permission), slot (panel targets + context keys), extensible entity
+(packaged-field targets) and gateable operation, in one versioned file. Reference it as an
+`AdditionalFiles` item and the source generator turns the whole surface into IntelliSense:
+`HostContract.Events.*` / `HostContract.Views.*` for requirements, plus a typed facade per
+event and view. Update the host dependency by replacing the file; every rename becomes a
+compile error (D4 keeps snapshots stable: wire names are permanent).
+
 ### Plugin-on-plugin: the tier that isn't (yet)
 
 If a real extension ecosystem arrives ("a photos plugin extending inspect's checklists"),

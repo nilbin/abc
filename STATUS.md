@@ -474,6 +474,30 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **The host contract artifact — contract arc slice 3, the finale (user-directed, shaped
+  by "how does a plugin author know what's available to extend?")**: `dotnet run --
+  contract` exports the host's EXTENSION SURFACE as one versioned file
+  (samples/erp/host-contract.json): consumable events (fields+kinds), consumable views
+  (fields+kinds+permission), slots with context keys, extensible entities, gateable
+  operations — filtered to what PLG010 permits (host + framework packages, never another
+  plugin's). A plugin references it as an AdditionalFile and Tam.Compiler generates the
+  ENTIRE surface into IntelliSense: a typed facade per event/view (sourced from the
+  ARTIFACT now — the declaration-derived facades remain only as the artifact-less
+  fallback) plus the HostContract index —
+  plugin.RequiresEvent(HostContract.Events.OrderCompleted),
+  plugin.RequiresView(HostContract.Views.OrdersDetail, "id", "number",
+  "estimatedTotal") — ids, fields and kinds ride the artifact, NOTHING re-typed; events
+  required whole, view subsets stay explicit (minimal read whitelist). inspect + invoicing
+  migrated as proof; a MiniJson reader keeps the generator dependency-free; CI gains the
+  artifact freshness gate (re-export + compare, like the manifest baseline). PLG008/9/10
+  still verify everything against the REAL composed host at Build() — the artifact is
+  compile-time convenience, Build() is the truth. DISCOVERABILITY IS THE ARTIFACT: the
+  json is what an author browses, the generated symbols are what they type. The arc's
+  end-state scorecard is now real: ONE hand-written declaration (the host's event/Result
+  record); publish site, manifest, artifact, facades, requirement registrations and the
+  composition check all derived or verified. Deferred: RequiresView kind-compatibility vs
+  live wire kinds; generated symbols for slots/entities/operations. Verified: suites
+  191+38, manifest deep-equal, wire 16+18+22+22 on fresh SQLite AND fresh Postgres.
 - **Events are records — contract arc slice 2 (user-directed: "let's do 113 now")**: the
   last stringly contract in Tam is gone. Every published event is now a [DomainEvent("id")]
   payload record beside its aggregate (OrderCreated/OrderCompleted/OrderCancelled,

@@ -231,24 +231,12 @@ public sealed partial class TamModelBuilder
         {
             var name = Naming.Camel(property.Name);
             fields.Add(name);
-            if (DerivedKind(property.PropertyType) is { } kind) kinds[name] = kind;
+            if (ContractKinds.FromClr(property.PropertyType) is { } kind) kinds[name] = kind;
         }
         events[attribute.Id] = new EventDeclaration(attribute.Id, fields, currentPlugin, kinds);
         return this;
     }
 
-    /// <summary>CLR → contract kind (string is the default and stays undeclared, matching the
-    /// hand-written grammar so record-derived and string-declared contracts are identical on
-    /// the manifest). Money publishes as its decimal wire shape.</summary>
-    private static string? DerivedKind(Type type)
-    {
-        type = Nullable.GetUnderlyingType(type) ?? type;
-        if (type == typeof(Guid)) return "guid";
-        if (type == typeof(decimal) || type == typeof(Money)) return "decimal";
-        if (type == typeof(int) || type == typeof(long)) return "int";
-        if (type == typeof(bool)) return "bool";
-        return null;
-    }
 
     public TamModelBuilder AddDerivationHost(Type type)
     {

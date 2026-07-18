@@ -26,6 +26,17 @@ public static class TamManifestExport
             return true;
         }
 
+        // The host's extension-surface artifact (docs/31 slice 3): what a plugin author
+        // browses to see what is extendable, and references as an AdditionalFile for the
+        // generated typed contracts.
+        if (args is ["contract", ..])
+        {
+            var contractPath = args.Length > 1 ? args[1] : "host-contract.json";
+            File.WriteAllText(contractPath, HostContractExport.Write(model));
+            Console.WriteLine($"host contract written to {contractPath}");
+            return true;
+        }
+
         if (args is not ["manifest", ..]) return false;
         var path = args.Length > 1 ? args[1] : "manifest.baseline.json";
         var exported = ManifestBuilder.Build(

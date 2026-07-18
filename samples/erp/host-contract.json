@@ -1,0 +1,636 @@
+{
+  "events": {
+    "order-cancelled": {
+      "fields": [
+        "orderId",
+        "number"
+      ],
+      "kinds": {
+        "orderId": "guid"
+      }
+    },
+    "order-completed": {
+      "fields": [
+        "orderId",
+        "number"
+      ],
+      "kinds": {
+        "orderId": "guid"
+      }
+    },
+    "order-created": {
+      "fields": [
+        "orderId",
+        "number",
+        "orderType"
+      ],
+      "kinds": {
+        "orderId": "guid"
+      }
+    },
+    "work-order-completed": {
+      "fields": [
+        "workOrderId",
+        "number"
+      ],
+      "kinds": {
+        "workOrderId": "guid"
+      }
+    }
+  },
+  "views": {
+    "audit.entries": {
+      "permission": "audit.read",
+      "fields": [
+        "id",
+        "timestamp",
+        "operationId",
+        "actorName",
+        "entity",
+        "entityId",
+        "field",
+        "oldValue",
+        "newValue"
+      ],
+      "kinds": {
+        "id": "guid"
+      }
+    },
+    "customers.detail": {
+      "permission": "customers.read",
+      "fields": [
+        "id",
+        "name",
+        "email",
+        "phone",
+        "visitAddress",
+        "isActive"
+      ],
+      "kinds": {
+        "id": "guid",
+        "isActive": "bool"
+      }
+    },
+    "customers.list": {
+      "permission": "customers.read",
+      "fields": [
+        "id",
+        "name",
+        "email",
+        "phone",
+        "visitAddress",
+        "isActive"
+      ],
+      "kinds": {
+        "id": "guid",
+        "isActive": "bool"
+      }
+    },
+    "customers.lookup": {
+      "permission": "customers.read",
+      "fields": [
+        "id",
+        "name",
+        "isActive"
+      ],
+      "kinds": {
+        "id": "guid",
+        "isActive": "bool"
+      }
+    },
+    "documents.folders.list": {
+      "permission": "documents.read",
+      "fields": [
+        "id",
+        "path",
+        "name",
+        "shared"
+      ],
+      "kinds": {
+        "id": "guid",
+        "shared": "bool"
+      }
+    },
+    "documents.list": {
+      "permission": "documents.read",
+      "fields": [
+        "id",
+        "fileName",
+        "folderPath",
+        "contentType",
+        "size",
+        "attachedTo",
+        "uploadedByName",
+        "uploadedAtIso"
+      ],
+      "kinds": {
+        "id": "guid",
+        "size": "int"
+      }
+    },
+    "extensions.fields": {
+      "permission": "extensions.manage",
+      "fields": [
+        "id",
+        "entity",
+        "key",
+        "type",
+        "required",
+        "state"
+      ],
+      "kinds": {
+        "id": "guid",
+        "required": "bool"
+      }
+    },
+    "integrations.dead-letter": {
+      "permission": "integrations.manage",
+      "fields": [
+        "id",
+        "kind",
+        "integrationId",
+        "reference",
+        "attempts",
+        "lastError"
+      ],
+      "kinds": {
+        "id": "guid",
+        "attempts": "int"
+      }
+    },
+    "integrations.runs": {
+      "permission": "integrations.manage",
+      "fields": [
+        "id",
+        "integrationId",
+        "trigger",
+        "status",
+        "detail",
+        "ranAt"
+      ],
+      "kinds": {
+        "id": "guid"
+      }
+    },
+    "materials.detail": {
+      "permission": "materials.read",
+      "fields": [
+        "id",
+        "workOrderNumber",
+        "sku",
+        "stockItemName",
+        "unit",
+        "quantity",
+        "unitPrice",
+        "amount"
+      ],
+      "kinds": {
+        "id": "guid",
+        "quantity": "decimal",
+        "unitPrice": "decimal",
+        "amount": "decimal"
+      }
+    },
+    "materials.list": {
+      "permission": "materials.read",
+      "fields": [
+        "id",
+        "workOrderNumber",
+        "sku",
+        "stockItemName",
+        "unit",
+        "quantity",
+        "unitPrice",
+        "amount"
+      ],
+      "kinds": {
+        "id": "guid",
+        "quantity": "decimal",
+        "unitPrice": "decimal",
+        "amount": "decimal"
+      }
+    },
+    "nav.overrides": {
+      "permission": "nav.manage",
+      "fields": [
+        "id",
+        "nodeId",
+        "hidden",
+        "order",
+        "parent",
+        "labels"
+      ],
+      "kinds": {
+        "id": "guid",
+        "hidden": "bool",
+        "order": "int"
+      }
+    },
+    "orders.detail": {
+      "permission": "orders.read",
+      "fields": [
+        "id",
+        "number",
+        "customerName",
+        "type",
+        "status",
+        "workAddress",
+        "description",
+        "requestedDate",
+        "estimatedTotal",
+        "version",
+        "extensions"
+      ],
+      "kinds": {
+        "id": "guid",
+        "estimatedTotal": "decimal",
+        "version": "int"
+      }
+    },
+    "orders.list": {
+      "permission": "orders.read",
+      "fields": [
+        "id",
+        "number",
+        "customerName",
+        "type",
+        "status",
+        "requestedDate",
+        "estimatedTotal",
+        "tenantId",
+        "version",
+        "extensions"
+      ],
+      "kinds": {
+        "id": "guid",
+        "estimatedTotal": "decimal",
+        "version": "int"
+      }
+    },
+    "packages.list": {
+      "permission": "packages.manage",
+      "fields": [
+        "id",
+        "package",
+        "version",
+        "installedAt"
+      ],
+      "kinds": {
+        "id": "guid",
+        "version": "int"
+      }
+    },
+    "plugins.list": {
+      "permission": "plugins.manage",
+      "fields": [
+        "pluginId",
+        "active"
+      ],
+      "kinds": {
+        "active": "bool"
+      }
+    },
+    "projects.detail": {
+      "permission": "projects.read",
+      "fields": [
+        "id",
+        "number",
+        "name",
+        "customerName",
+        "status",
+        "budget"
+      ],
+      "kinds": {
+        "id": "guid",
+        "budget": "decimal"
+      }
+    },
+    "projects.list": {
+      "permission": "projects.read",
+      "fields": [
+        "id",
+        "number",
+        "name",
+        "customerName",
+        "status",
+        "budget",
+        "tenantId"
+      ],
+      "kinds": {
+        "id": "guid",
+        "budget": "decimal"
+      }
+    },
+    "projects.lookup": {
+      "permission": "projects.read",
+      "fields": [
+        "id",
+        "name",
+        "number"
+      ],
+      "kinds": {
+        "id": "guid"
+      }
+    },
+    "roles.list": {
+      "permission": "roles.manage",
+      "fields": [
+        "id",
+        "name",
+        "permissions",
+        "levels",
+        "retired"
+      ],
+      "kinds": {
+        "id": "guid",
+        "retired": "bool"
+      }
+    },
+    "rules.list": {
+      "permission": "rules.manage",
+      "fields": [
+        "id",
+        "name",
+        "onOperation",
+        "onEvent",
+        "condition",
+        "messages",
+        "targetField",
+        "action",
+        "retired"
+      ],
+      "kinds": {
+        "id": "guid",
+        "retired": "bool"
+      }
+    },
+    "rules.schema": {
+      "permission": "rules.manage",
+      "fields": [
+        "path",
+        "labelKey",
+        "wireKind",
+        "options",
+        "entityKey"
+      ],
+      "kinds": {}
+    },
+    "secrets.list": {
+      "permission": "secrets.manage",
+      "fields": [
+        "key",
+        "isSet"
+      ],
+      "kinds": {
+        "isSet": "bool"
+      }
+    },
+    "settings.list": {
+      "permission": "settings.manage",
+      "fields": [
+        "key",
+        "value"
+      ],
+      "kinds": {}
+    },
+    "stock.detail": {
+      "permission": "stock.read",
+      "fields": [
+        "id",
+        "sku",
+        "name",
+        "unit",
+        "unitPrice",
+        "isActive"
+      ],
+      "kinds": {
+        "id": "guid",
+        "unitPrice": "decimal",
+        "isActive": "bool"
+      }
+    },
+    "stock.list": {
+      "permission": "stock.read",
+      "fields": [
+        "id",
+        "sku",
+        "name",
+        "unit",
+        "unitPrice",
+        "isActive"
+      ],
+      "kinds": {
+        "id": "guid",
+        "unitPrice": "decimal",
+        "isActive": "bool"
+      }
+    },
+    "stock.lookup": {
+      "permission": "stock.read",
+      "fields": [
+        "id",
+        "name",
+        "sku"
+      ],
+      "kinds": {
+        "id": "guid"
+      }
+    },
+    "subscriptions.current": {
+      "permission": "subscriptions.read",
+      "fields": [
+        "plan",
+        "seats",
+        "seatsUsed",
+        "status",
+        "entitlements",
+        "anchorTenantId"
+      ],
+      "kinds": {
+        "seats": "int",
+        "seatsUsed": "int"
+      }
+    },
+    "tenants.list": {
+      "permission": "tenants.read",
+      "fields": [
+        "id",
+        "displayName",
+        "parentId",
+        "path"
+      ],
+      "kinds": {}
+    },
+    "time.detail": {
+      "permission": "time.read",
+      "fields": [
+        "id",
+        "workOrderNumber",
+        "date",
+        "technicianName",
+        "hours",
+        "hourlyRate",
+        "amount",
+        "note",
+        "status"
+      ],
+      "kinds": {
+        "id": "guid",
+        "hours": "decimal",
+        "hourlyRate": "decimal",
+        "amount": "decimal"
+      }
+    },
+    "time.list": {
+      "permission": "time.read",
+      "fields": [
+        "id",
+        "workOrderNumber",
+        "date",
+        "technicianName",
+        "hours",
+        "hourlyRate",
+        "amount",
+        "status"
+      ],
+      "kinds": {
+        "id": "guid",
+        "hours": "decimal",
+        "hourlyRate": "decimal",
+        "amount": "decimal"
+      }
+    },
+    "users.list": {
+      "permission": "users.manage",
+      "fields": [
+        "id",
+        "userName",
+        "displayName",
+        "roles",
+        "active"
+      ],
+      "kinds": {
+        "id": "guid",
+        "active": "bool"
+      }
+    },
+    "users.lookup": {
+      "permission": "users.lookup",
+      "fields": [
+        "id",
+        "displayName"
+      ],
+      "kinds": {
+        "id": "guid"
+      }
+    },
+    "work-orders.detail": {
+      "permission": "work-orders.read",
+      "fields": [
+        "id",
+        "number",
+        "title",
+        "projectNumber",
+        "description",
+        "location",
+        "status",
+        "priority",
+        "scheduledDate",
+        "assignedToName",
+        "version",
+        "extensions"
+      ],
+      "kinds": {
+        "id": "guid",
+        "version": "int"
+      }
+    },
+    "work-orders.list": {
+      "permission": "work-orders.read",
+      "fields": [
+        "id",
+        "number",
+        "title",
+        "projectNumber",
+        "status",
+        "priority",
+        "scheduledDate",
+        "assignedToName",
+        "tenantId",
+        "version",
+        "extensions"
+      ],
+      "kinds": {
+        "id": "guid",
+        "version": "int"
+      }
+    }
+  },
+  "slots": {
+    "web.orders.detail": {
+      "keys": [
+        "orderId"
+      ]
+    }
+  },
+  "extensibleEntities": [
+    "order",
+    "work-order"
+  ],
+  "operations": [
+    "customers.create",
+    "customers.deactivate",
+    "customers.edit-contact",
+    "documents.folders.define",
+    "documents.folders.share",
+    "documents.folders.unshare",
+    "documents.retire",
+    "documents.upload",
+    "extensions.define-field",
+    "extensions.retire-field",
+    "integrations.requeue",
+    "integrations.run",
+    "integrations.schedule",
+    "materials.add",
+    "nav.override",
+    "nav.retire",
+    "orders.cancel",
+    "orders.complete",
+    "orders.create",
+    "orders.edit-details",
+    "packages.install",
+    "packages.uninstall",
+    "plugins.activate",
+    "plugins.deactivate",
+    "projects.close",
+    "projects.create",
+    "projects.edit-details",
+    "projects.reopen",
+    "roles.define",
+    "roles.retire",
+    "rules.define",
+    "rules.retire",
+    "secrets.set",
+    "settings.set",
+    "stock.create",
+    "stock.deactivate",
+    "stock.edit",
+    "subscriptions.set-plan",
+    "tenants.create",
+    "tenants.move",
+    "tenants.rename",
+    "time.approve",
+    "time.book",
+    "users.deactivate",
+    "users.define",
+    "users.invite",
+    "work-orders.assign",
+    "work-orders.close",
+    "work-orders.complete",
+    "work-orders.create",
+    "work-orders.edit-details",
+    "work-orders.schedule",
+    "work-orders.set-priority",
+    "work-orders.start"
+  ]
+}

@@ -45,13 +45,13 @@ internal sealed class OrdersContract : IPluginPart
     {
         // Compatibility as a build-time fact — the views/fields this plugin reads (PLG008);
         // service-mode reads (the draft subscriber) are limited to exactly this list.
-        plugin.RequiresView("orders.detail", "id:guid", "number", "estimatedTotal:decimal");
+        plugin.RequiresView(HostContract.Views.OrdersDetail, "id", "number", "estimatedTotal");
 
         // The field-service path (docs/34 M4): a completed work order is invoiced from its
         // APPROVED time + materials — service-mode reads over the M3 views, filtered by the
         // number the event payload carries.
-        plugin.RequiresView("time.list", "id:guid", "workOrderNumber", "amount:decimal", "status");
-        plugin.RequiresView("materials.list", "id:guid", "workOrderNumber", "amount:decimal");
+        plugin.RequiresView(HostContract.Views.TimeList, "id", "workOrderNumber", "amount", "status");
+        plugin.RequiresView(HostContract.Views.MaterialsList, "id", "workOrderNumber", "amount");
 
         // The order wears its invoice status (docs/22 P2). Read-only: only this plugin's
         // IPackagedFieldWriter sets it — the state machine stays the plugin's.

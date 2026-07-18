@@ -11,21 +11,23 @@ everything per-tenant activated and entitlement-priced.
 2. **Its own vertical.** `invoicing.create-from-order` / `finalize` / `mark-paid`, an invoice
    list whose Query takes `Guid? OrderId` (the mechanical filter), embedded sv/en locales, a
    nav contribution. Nothing new — Step 13 machinery.
-3. **Compatibility, stated at build time.** `plugin.RequiresView("orders.detail", "id:guid",
-   "number", "estimatedTotal:decimal")` — PLG008 fails the BUILD if the host doesn't expose
-   exactly that, and the create operation reads the order through the ACTOR-mode
-   `IHostViewReader`: permission-checked like the wire, so a user who may not see an order
-   cannot invoice it. The `:guid`/`:decimal` suffixes are DECLARED kinds, and they pay twice:
-   the source generator turns every such declaration into a typed facade in `Tam.Generated`
-   (`OrdersDetailRow.From(row)` — real names and CLR types over the same checked wire
-   contract, no host CLR type referenced; [31-cross-domain-plugins.md](../31-cross-domain-plugins.md)).
+3. **Compatibility, stated at build time.** The plugin references the host's exported
+   contract artifact (`host-contract.json` — the "what can I extend?" file) and declares
+   `plugin.RequiresView(HostContract.Views.OrdersDetail, "id", "number", "estimatedTotal")`
+   — the id, fields and kinds ride the ARTIFACT, nothing is re-typed; PLG008 still fails
+   the BUILD against the real host if it doesn't expose exactly that. The create operation
+   reads the order through the ACTOR-mode `IHostViewReader`: permission-checked like the
+   wire, so a user who may not see an order cannot invoice it — and the generated
+   `OrdersDetailRow.From(row)` facade gives the read real names and CLR types with no host
+   CLR reference ([31-cross-domain-plugins.md](../31-cross-domain-plugins.md)).
 4. **The draft writes itself — against a contract, not folklore.** An
    `OnEffect("order-completed")` subscriber drafts the invoice post-commit — idempotent under
    redelivery, number from the payload, amount backfilled through a SERVICE-MODE declared read
    (no actor exists in the outbox; the readable surface is exactly the RequiresView list,
    never a superuser). The payload shape is a build-time fact (D-X5): the host declares
-   `.PublishesEvent("order-completed", "orderId:guid", "number")` in its model, the plugin
-   declares `plugin.RequiresEvent("order-completed", "orderId:guid", "number")`, and PLG009
+   the `[DomainEvent("order-completed")] record OrderCompleted(Guid OrderId, string Number)`
+   in its model (the record IS the declaration; the publish site is compile-checked), the
+   plugin declares `plugin.RequiresEvent(HostContract.Events.OrderCompleted)`, and PLG009
    fails the BUILD on a subscription to an unknown event, a required field the publisher
    doesn't carry, or a kind the two sides disagree on — the publisher owns the shape, and the
    generated `OrderCompletedEvent.From(effect)` facade gives the subscriber typed access to

@@ -155,6 +155,15 @@ public sealed record EventRequirement(
     string EventType, string PluginId, IReadOnlyList<string> Fields,
     IReadOnlyDictionary<string, string> Kinds);
 
+/// <summary>A host EVENT contract handle (docs/31 slice 3): generated into each plugin's
+/// HostContract index from the host's exported contract artifact, so consumers reference
+/// contracts by SYMBOL — ids, fields and kinds ride the artifact, never re-typed.</summary>
+public sealed record EventContractRef(string EventType, IReadOnlyList<string> Fields);
+
+/// <summary>The view twin of <see cref="EventContractRef"/> — requirement subsets select by
+/// bare field name against the artifact's field list.</summary>
+public sealed record ViewContractRef(string ViewId, IReadOnlyList<string> Fields);
+
 /// <summary>The contract-field grammar "name[:kind]" (docs/31), ONE parser for both sides of
 /// the seam: publishers (PublishesEvent) and consumers (RequiresEvent/RequiresView). The kind
 /// vocabulary matches the generated facades' accessors; a typo'd kind is an error, never a
@@ -162,6 +171,21 @@ public sealed record EventRequirement(
 public static class ContractKinds
 {
     public static readonly IReadOnlyList<string> Known = ["guid", "decimal", "int", "bool", "string"];
+
+    /// <summary>CLR → contract kind for DERIVED contracts (event records, the exported view
+    /// surface). String is the default and stays UNDECLARED, so derived and hand-written
+    /// contracts serialize identically; semantic wrappers unwrap first.</summary>
+    public static string? FromClr(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        type = ValueWrapper.UnderlyingType(type) ?? type;
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        if (type == typeof(Guid)) return "guid";
+        if (type == typeof(decimal) || type == typeof(Money)) return "decimal";
+        if (type == typeof(int) || type == typeof(long)) return "int";
+        if (type == typeof(bool)) return "bool";
+        return null;
+    }
 
     public static (IReadOnlyList<string> Fields, IReadOnlyDictionary<string, string> Kinds) Parse(
         IEnumerable<string> declared, string context)

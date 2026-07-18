@@ -281,17 +281,34 @@ public sealed record OrderCompleted(Guid OrderId, string Number);
   hole: publishing a payload that is not a declared event record is a build error.
 - The manifest events section becomes fully DERIVED — an artifact nobody hand-maintains.
 
-**Slice 3 — generate the plugin's contracts FROM the host artifact (next).** A plugin
-project references the host's exported manifest (an `AdditionalFiles` item, versioned in
-the plugin repo like a lockfile); the source generator emits the typed facades from the
-artifact's `events`/view sections instead of from the plugin's re-declaration, and the
-`RequiresEvent`/`RequiresView` calls shrink toward id-only — the generator emits the
-field/kind requirements INTO the model registration from the snapshot, so PLG009 still
-verifies the full shape against the real host at composition time. Updating the host
-dependency = replacing one json file; every rename or kind change becomes a compile error
-in the plugin (D4 makes this stable: wire names are permanent, so snapshots age
-gracefully). RequiresView kind checking against the view's REAL wire kinds (money↔decimal
-compatibility) rides this slice.
+**Slice 3 — the host contract artifact (BUILT).** `dotnet run -- contract` exports the
+host's EXTENSION SURFACE as one versioned file — `host-contract.json`: consumable events
+(fields + kinds), consumable views (fields + kinds + permission), slots with their context
+keys, extensible entities, gateable operations — filtered to what PLG010 permits (host +
+framework packages, never another plugin's). A plugin references it as an `AdditionalFiles`
+item (in a vendor repo: a committed copy, updated like a lockfile) and the source generator
+turns it into:
+
+- a typed facade per event/view (`OrderCompletedEvent.From(effect)`,
+  `OrdersDetailRow.From(row)`) — sourced from the ARTIFACT, not the plugin's re-declaration
+  (the declaration-derived facades remain only as the artifact-less fallback);
+- the **`HostContract` index** — `plugin.RequiresEvent(HostContract.Events.OrderCompleted)`,
+  `plugin.RequiresView(HostContract.Views.OrdersDetail, "id", "number", "estimatedTotal")`.
+  Events are required whole (subscribers read the declared payload); view subsets stay
+  explicit by bare name (the service-read whitelist should be minimal). Nothing re-typed:
+  ids, fields and kinds all ride the artifact.
+
+**Discoverability IS the artifact** (the question that shaped this slice: *"how does a
+plugin author know what events, pages, panels are available to extend?"*). The answer has
+one canonical form — the artifact file, browsable json — and one ergonomic form — the
+generated `HostContract.Events.*` / `HostContract.Views.*` symbols plus the facades, i.e.
+IntelliSense over the entire extension surface. Slots (panel targets), extensible entities
+(packaged-field targets) and gateable operations are listed in the artifact for the author
+even where v1 generates no symbols for them. CI keeps the committed artifact honest
+(re-export + compare, like the manifest baseline). PLG008/PLG009/PLG010 still verify every
+requirement against the REAL composed host at Build() — the artifact is compile-time
+convenience; Build() stays the truth. Deferred: RequiresView kind-compatibility checking
+against live wire kinds; artifact symbols for slots/entities/operations.
 
 **The end-state scorecard (what "as beautiful as it gets" means here).** ONE hand-written
 declaration — the host's event record / the view's Result record. Everything else is

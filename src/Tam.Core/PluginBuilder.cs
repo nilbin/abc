@@ -156,6 +156,18 @@ public sealed class PluginBuilder
         return this;
     }
 
+    /// <summary>The artifact-backed form (docs/31 slice 3): the generated HostContract index
+    /// carries id, fields AND kinds from the host's exported contract — nothing re-typed. An
+    /// event is required whole (subscribers read the payload it declares).</summary>
+    public PluginBuilder RequiresEvent(EventContractRef contract) =>
+        RequiresEvent(contract.EventType, [.. contract.Fields]);
+
+    /// <summary>The artifact-backed view requirement: the id comes from the handle; the field
+    /// SUBSET stays explicit by bare name (the service-mode read whitelist should be minimal —
+    /// require what you read, not what exists). No names = the whole contract.</summary>
+    public PluginBuilder RequiresView(ViewContractRef contract, params string[] fields) =>
+        RequiresView(contract.ViewId, fields.Length == 0 ? [.. contract.Fields] : fields);
+
     /// <summary>Composes a registration PART (review round 4): big plugins split Configure
     /// into cohesive units and list them here — explicitly, so Configure stays the index.</summary>
     public PluginBuilder AddPart<TPart>() where TPart : IPluginPart, new()
