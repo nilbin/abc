@@ -65,9 +65,13 @@ function refLabel(p: FieldRendererProps, ref: RuleRef): string {
   return label === ref.labelKey ? ref.path : label;   // t() echoes the key when unresolved
 }
 
-const OP_LABEL: Record<ClauseOp, string> = {
-  eq: '=', ne: '≠', gt: '>', ge: '≥', lt: '<', le: '≤', isNull: 'is empty', isNotNull: 'is set',
+// Symbols are universal; the two word-shaped operators come from the catalog (the Swedish
+// error text references them by their localized names).
+const OP_SYMBOL: Partial<Record<ClauseOp, string>> = {
+  eq: '=', ne: '≠', gt: '>', ge: '≥', lt: '<', le: '≤',
 };
+const opLabel = (t: (key: string) => string, op: ClauseOp): string =>
+  OP_SYMBOL[op] ?? (op === 'isNull' ? t('rules.op-is-empty') : t('rules.op-is-set'));
 
 // ---- trigger pickers ----------------------------------------------------------------------------
 // Pure presentation: searchable selects over the manifest's operation/event catalogs. All the
@@ -283,12 +287,12 @@ export function RuleConditionField(p: FieldRendererProps): React.ReactNode {
               />
               <Select
                 style={{ width: 96 }}
-                data={ops.map(o => ({ value: o, label: OP_LABEL[o] }))}
+                data={ops.map(o => ({ value: o, label: opLabel(p.tam.t, o) }))}
                 value={ops.includes(clause.op) ? clause.op : 'eq'}
                 onChange={v => setClause(i, { ...clause, op: (v as ClauseOp) ?? 'eq' })}
               />
               <ClauseValue p={p} reference={ref} clause={clause} onClause={next => setClause(i, next)} />
-              <ActionIcon variant="subtle" color="red" onClick={() => removeClause(i)} aria-label="remove">✕</ActionIcon>
+              <ActionIcon variant="subtle" color="red" onClick={() => removeClause(i)} aria-label={p.tam.t('rules.remove-condition')}>✕</ActionIcon>
             </Group>
             {incomplete && <Text size="xs" c="red">{p.tam.t('rules.value-required')}</Text>}
           </Stack>

@@ -224,6 +224,19 @@ attribute appears ONLY when it deviates from the convention default — an attri
 restates `labels.{kebab(member)}` is noise and gets deleted. Storage encodings never leak
 into label keys (`NextRunIso` labels as `labels.next-run`).
 
+**Operation label surfaces** — one title cannot be simultaneously an imperative (button), a
+noun phrase (dialog title) and a display name (rule picker), so the runtime resolves
+convention keys with fallback (`tOr` in tam-react): the form submit button tries
+`operations.{id}.submit`, then — for an EDIT form (any changeSet field) — the generic
+`actions.save`, then the title; grid toolbar/row buttons try `operations.{id}.action`, then
+the title. Catalog convention: create-shaped operations title as "Ny/Nytt X" with
+`.submit: "Skapa"`; edit operations title as "Redigera X" and get "Spara" for free; a `.action`
+override exists only where the title is too long for a button. Terminology is one word per
+concept per catalog family: *egenkontroll* (not besiktning) for the inspect capability,
+checklist items are *punkter* (rader are order/material lines), approvals say *godkännande*
+(not attest), retire is *avveckla*, invoices are *färdigställda* (orders *slutförda*),
+hierarchy parents are *överordnad*, dead-letter requeue is *köa om*.
+
 **The tenant word**: framework catalogs say *organization* (`labels.tenant`, `nav.tenants`,
 the `tenants.*` messages). A host that sells another word ("company", "site", "клиника")
 overrides those keys in its own locale files — that is what the override layer is for, and

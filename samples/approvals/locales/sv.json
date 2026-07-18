@@ -32,13 +32,15 @@
   "labels.request-id": "Begäran",
   "labels.retired": "Avvecklad",
   "nav.approvals.admin": "Godkännandeflöden",
-  "nav.approvals.requests": "Godkännandebegäran",
+  "nav.approvals.requests": "Godkännandebegäranden",
   "operations.approvals.approve.title": "Godkänn",
   "operations.approvals.groups.assign.title": "Lägg till godkännare",
+  "operations.approvals.groups.define.submit": "Skapa",
   "operations.approvals.groups.define.title": "Ny godkännandegrupp",
   "operations.approvals.reject.title": "Avslå",
+  "operations.approvals.rules.define.submit": "Skapa",
   "operations.approvals.rules.define.title": "Ny godkännanderegel",
-  "operations.approvals.rules.retire.title": "Avsluta regel",
+  "operations.approvals.rules.retire.title": "Avveckla regel",
   "plugins.approvals.title": "Godkännandeflöden",
-  "reach.kinds.approvals.group": "Attestgrupper"
+  "reach.kinds.approvals.group": "Godkännandegrupper"
 }

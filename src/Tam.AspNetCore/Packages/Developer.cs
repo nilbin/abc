@@ -48,7 +48,7 @@ public sealed class TamDeveloperPackage : ITamPlugin
             ["dev.hint.views"] = "Läsbara fält per vy (RequiresView<OrdersDetailRow>(r => r.Id, …)); behörighet i etiketten.",
             ["dev.hint.slots"] = "Värdytor där en plugins paneler kan landa, med sina kontextnycklar.",
             ["dev.hint.entities"] = "Entiteter som tar emot paketerade utökningsfält.",
-            ["dev.hint.operations"] = "Operations-id:n en plugin kan grinda eller rikta rutnätsåtgärder mot.",
+            ["dev.hint.operations"] = "Operations-id:n som en plugin kan spärra (gate) eller rikta liståtgärder mot.",
         });
     }
 }

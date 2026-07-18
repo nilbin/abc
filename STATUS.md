@@ -474,6 +474,28 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Swedish copy pass (user-directed: "besiktning… not sure it's the right meaning";
+  "the Save button… might need multiple labels")**: a native-register audit (focused
+  subagent) applied across all six catalog families. The A-fix: the inspect capability is
+  EGENKONTROLL, not besiktning (a statutory third-party inspection) — plugin title, tab
+  heading, extension-field label renamed (en: Checklists); checklist items are PUNKTER,
+  not rader. The B-fix (mechanism): one `operations.{id}.title` was landing on six
+  surfaces; tam-react now resolves convention keys with fallback (`tOr`): submit button →
+  `.submit` → `actions.save` for EDIT forms (any changeSet field — every edit form reads
+  "Spara" for free) → title; grid buttons → `.action` → title. Create ops retitled
+  "Ny/Nytt X" + `.submit: "Skapa"` (auto-added for every Ny/Nytt/New title, sv+en parity
+  kept). C/D-fixes: godkännande (not attest), avveckla (not avsluta) for retire,
+  färdigställ faktura (frees slutför for orders), överordnad (not förälder), köa om +
+  stoppad post (not "köa död post igen"), abonnemang (not plan), replay-actor message no
+  longer says "beställare" for a request submitter, bolag-branded tenant error overrides
+  in the ERP catalog, RuleBuilder's hardcoded "is empty"/"is set" moved to catalog keys
+  (the Swedish error text finally matches the operators on screen), dev-portal hint
+  de-calqued. Conventions written into docs/29 (label surfaces + terminology decisions).
+  Deferred: `.name` disambiguation for the rule-trigger picker (colliding bare
+  imperatives), grid.total pluralization. Screenshots: "Ny order"+Skapa modal, record
+  page with Spara + Egenkontroll tab. Verified: suites 191+38, additive baseline
+  (types/contract byte-identical — locale-only), wire 16+18+22+25 fresh SQLite AND
+  Postgres.
 - **Documents nav cleanup (user-directed: "documents and document folders as nav pages
   seems a bit weird")**: the tam.documents package no longer suggests flat admin pages —
   documents surface where they belong: the record's documents tab and the work-mode tree

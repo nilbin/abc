@@ -1,5 +1,5 @@
 {
-  "ext.inspect.requiresInspection": "Requires inspection",
+  "ext.inspect.requiresInspection": "Requires checklist",
   "inspect.checklist-incomplete": "The mandatory checklist \"{title}\" has {open} open lines — the order cannot be completed.",
   "inspect.headings.template-items": "Template lines",
   "inspect.headings.templates": "Templates",
@@ -31,12 +31,14 @@
   "labels.template-id": "Template",
   "nav.inspect.checklists": "Checklists",
   "nav.inspect.templates": "Checklist templates",
+  "operations.inspect.checklists.create.submit": "Create",
   "operations.inspect.checklists.create.title": "New checklist",
   "operations.inspect.checklists.pass.title": "Pass",
   "operations.inspect.items.check.title": "Check off",
   "operations.inspect.items.uncheck.title": "Un-check",
   "operations.inspect.templates.add-item.title": "Add line",
+  "operations.inspect.templates.define.submit": "Create",
   "operations.inspect.templates.define.title": "New checklist template",
   "operations.inspect.templates.retire.title": "Retire",
-  "plugins.inspect.title": "Inspections"
+  "plugins.inspect.title": "Checklists"
 }

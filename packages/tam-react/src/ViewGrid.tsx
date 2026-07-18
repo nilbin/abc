@@ -206,7 +206,8 @@ export function ViewGrid(props: ViewGridProps) {
               onClick={() => action.mode === 'form'
                 ? setModalAction({ operation: action.operation })
                 : void runOperation(action.operation, {})}>
-              {t(`operations.${action.operation}.title`)}
+              {/* Buttons prefer the imperative `.action` key; the title is the fallback. */}
+              {tam.tOr([`operations.${action.operation}.action`, `operations.${action.operation}.title`])}
             </Button>
           ))}
         </Group>
@@ -270,7 +271,7 @@ export function ViewGrid(props: ViewGridProps) {
                           onClick={() => action.mode === 'form'
                             ? openRowForm(action.operation, row)
                             : void runRowAction(action, row)}>
-                          {t(`operations.${action.operation}.title`)}
+                          {tam.tOr([`operations.${action.operation}.action`, `operations.${action.operation}.title`])}
                         </Button>
                       ))}
                     </Group>

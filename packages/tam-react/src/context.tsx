@@ -14,6 +14,12 @@ export interface TamContextValue {
   setCulture: (culture: string) => void;
   refreshManifest: () => Promise<void>;
   t: (key: string, args?: Record<string, unknown>) => string;
+  /**
+   * First key that RESOLVES wins (an unresolved key echoes itself). The convention-key
+   * fallback: a surface-specific key (`operations.x.submit`, `operations.x.action`) overlays
+   * a general one without every catalog having to ship every variant.
+   */
+  tOr: (keys: string[], args?: Record<string, unknown>) => string;
   /** Effective-permission check from the manifest's actor overlay (decision D1). */
   can: (permission: string) => boolean;
   /**
@@ -176,6 +182,13 @@ function TamInner(props: {
     setCulture,
     refreshManifest,
     t: (key: string, args?: Record<string, unknown>) => translate(manifest, culture, key, args),
+    tOr: (keys: string[], args?: Record<string, unknown>) => {
+      for (const key of keys) {
+        const value = translate(manifest, culture, key, args);
+        if (value !== key) return value;
+      }
+      return keys[keys.length - 1];
+    },
     can: (permission: string) => {
       const granted = manifest.actorPermissions ?? ['*'];
       return granted.includes('*')

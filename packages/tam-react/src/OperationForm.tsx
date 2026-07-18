@@ -248,7 +248,14 @@ export function OperationForm(props: OperationFormProps) {
 
       <Group justify="flex-end" mt="xs">
         <Button loading={submitting} onClick={() => void submit()}>
-          {props.submitLabel ?? t(`operations.${formDef.operation}.title`)}
+          {/* A button wants an imperative, a dialog title a noun phrase — one key can't be
+              both. `.submit` overrides; an EDIT form (any changeSet field) defaults to the
+              generic save verb; only then the operation title. */}
+          {props.submitLabel ?? tam.tOr([
+            `operations.${formDef.operation}.submit`,
+            ...(formDef.fields.some(f => f.changeSet) ? ['actions.save'] : []),
+            `operations.${formDef.operation}.title`,
+          ])}
         </Button>
       </Group>
     </Stack>
