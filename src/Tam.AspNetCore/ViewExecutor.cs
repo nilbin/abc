@@ -89,50 +89,56 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         // operator set derives from the declared spec's wire kind, exactly like compiled
         // fields: equality everywhere, from/to for numbers/strings/dates, contains for strings.
         var extensionFilters = new List<ExtensionFilter>();
-        if (view.ExtensibleEntity is { } extensibleEntity)
+        var rawExt = query
+            .Where(kv => kv.Key.StartsWith("ext.", StringComparison.Ordinal)
+                && !string.IsNullOrEmpty(kv.Value))
+            .Select(kv => (Param: kv.Key["ext.".Length..], kv.Value))
+            .ToList();
+        if (rawExt.Count > 0)
         {
-            var raw = query
-                .Where(kv => kv.Key.StartsWith("ext.", StringComparison.Ordinal)
-                    && !string.IsNullOrEmpty(kv.Value))
-                .Select(kv => (Param: kv.Key["ext.".Length..], kv.Value))
-                .ToList();
-            if (raw.Count > 0
-                && services.GetService(typeof(IExtensionRegistry)) is IExtensionRegistry registry)
+            // Fail-closed (Sol review, Finding 7): an ext.* filter the view cannot honour is
+            // REJECTED, never silently dropped — a caller (agent, export, report) that asked to
+            // NARROW a result set must not get a WIDER one back with 200 OK. The same holds for
+            // an ext.* filter on a view that carries no extensions, or an unresolved registry.
+            if (view.ExtensibleEntity is not { } extensibleEntity
+                || services.GetService(typeof(IExtensionRegistry)) is not IExtensionRegistry registry)
+                return (null, PipelineFindings.InvalidInput.Create());
+
+            var specs = (await registry.For(
+                    context.TenantId, TamModel.EntityKey(extensibleEntity), ct))
+                .Where(s => s.State is ExtensionFieldState.Active or ExtensionFieldState.Deprecated)
+                .ToDictionary(s => s.Key, StringComparer.Ordinal);
+            foreach (var (param, value) in rawExt)
             {
-                var specs = (await registry.For(
-                        context.TenantId, TamModel.EntityKey(extensibleEntity), ct))
-                    .Where(s => s.State is ExtensionFieldState.Active or ExtensionFieldState.Deprecated)
-                    .ToDictionary(s => s.Key, StringComparer.Ordinal);
-                foreach (var (param, value) in raw)
+                var (key, op) = param switch
                 {
-                    var (key, op) = param switch
-                    {
-                        _ when param.EndsWith(".from", StringComparison.Ordinal) =>
-                            (param[..^".from".Length], FilterOperator.From),
-                        _ when param.EndsWith(".to", StringComparison.Ordinal) =>
-                            (param[..^".to".Length], FilterOperator.To),
-                        _ when param.EndsWith(".contains", StringComparison.Ordinal) =>
-                            (param[..^".contains".Length], FilterOperator.Contains),
-                        _ => (param, FilterOperator.Equal),
-                    };
-                    if (!specs.TryGetValue(key, out var spec)) continue;   // undeclared → ignored
-                    var kind = spec.Semantic.WireKind;
-                    var legal = op switch
-                    {
-                        FilterOperator.Contains => kind == "string",
-                        FilterOperator.From or FilterOperator.To =>
-                            kind is "string" or "number" or "integer" or "date",
-                        _ => true,
-                    };
-                    if (!legal) continue;
-                    if (kind is "number" or "integer"
-                        && !decimal.TryParse(value, System.Globalization.NumberStyles.Number,
-                            System.Globalization.CultureInfo.InvariantCulture, out _))
-                        return (null, PipelineFindings.InvalidInput.Create());
-                    if (kind == "boolean" && value is not ("true" or "false"))
-                        return (null, PipelineFindings.InvalidInput.Create());
-                    extensionFilters.Add(new ExtensionFilter(key, kind, op, value!));
-                }
+                    _ when param.EndsWith(".from", StringComparison.Ordinal) =>
+                        (param[..^".from".Length], FilterOperator.From),
+                    _ when param.EndsWith(".to", StringComparison.Ordinal) =>
+                        (param[..^".to".Length], FilterOperator.To),
+                    _ when param.EndsWith(".contains", StringComparison.Ordinal) =>
+                        (param[..^".contains".Length], FilterOperator.Contains),
+                    _ => (param, FilterOperator.Equal),
+                };
+                if (!specs.TryGetValue(key, out var spec))
+                    return (null, PipelineFindings.InvalidInput.Create());   // unknown extension field
+                var kind = spec.Semantic.WireKind;
+                var legal = op switch
+                {
+                    FilterOperator.Contains => kind == "string",
+                    FilterOperator.From or FilterOperator.To =>
+                        kind is "string" or "number" or "integer" or "date",
+                    _ => true,
+                };
+                if (!legal)
+                    return (null, PipelineFindings.InvalidInput.Create());   // operator unsupported for kind
+                if (kind is "number" or "integer"
+                    && !decimal.TryParse(value, System.Globalization.NumberStyles.Number,
+                        System.Globalization.CultureInfo.InvariantCulture, out _))
+                    return (null, PipelineFindings.InvalidInput.Create());
+                if (kind == "boolean" && value is not ("true" or "false"))
+                    return (null, PipelineFindings.InvalidInput.Create());
+                extensionFilters.Add(new ExtensionFilter(key, kind, op, value!));
             }
         }
         var args = view.Execute.GetParameters().Select(p =>
@@ -156,14 +162,18 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             queryable = pending.GetType().GetProperty(nameof(Task<int>.Result))!.GetValue(pending)!;
         }
 
-        var sort = query.GetValueOrDefault("sort") ?? view.Capabilities.DefaultSort;
+        var requestedSort = query.GetValueOrDefault("sort");
+        var sort = requestedSort ?? view.Capabilities.DefaultSort;
         var descending = query.GetValueOrDefault("dir") is "desc"
-            || (query.GetValueOrDefault("sort") is null && view.Capabilities.DefaultSortDescending);
+            || (requestedSort is null && view.Capabilities.DefaultSortDescending);
 
         // Extension fields sort mechanically like they filter (docs/04): "sort=ext.{key}",
-        // typed by the declared spec via the same JSON-extraction functions.
+        // typed by the declared spec via the same JSON-extraction functions. Fail-closed on an
+        // EXPLICIT sort the view cannot honour (Sol review, Finding 7): silently returning
+        // default-ordered data to a caller who asked for a specific order is a data hazard for
+        // exports and agents. The default sort (no ?sort= given) is never rejected.
         ExtensionFilter? extensionSort = null;
-        if (sort is { } s && s.StartsWith("ext.", StringComparison.Ordinal))
+        if (requestedSort is { } s && s.StartsWith("ext.", StringComparison.Ordinal))
         {
             var key = s["ext.".Length..];
             if (view.ExtensibleEntity is { } sortEntity
@@ -177,12 +187,12 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             }
             else
             {
-                sort = view.Capabilities.DefaultSort;
+                return (null, PipelineFindings.InvalidInput.Create());   // unknown extension sort field
             }
         }
-        else if (sort is not null && !view.Capabilities.Sortable.Contains(sort))
+        else if (requestedSort is not null && !view.Capabilities.Sortable.Contains(requestedSort))
         {
-            sort = view.Capabilities.DefaultSort;
+            return (null, PipelineFindings.InvalidInput.Create());   // field not declared sortable
         }
 
         var page = int.TryParse(query.GetValueOrDefault("page"), out var p1) ? Math.Max(1, p1) : 1;
