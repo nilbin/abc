@@ -142,12 +142,48 @@ public sealed record GridActionContribution(
 public sealed record ViewRequirement(string ViewId, string PluginId, IReadOnlyList<string> Fields);
 
 /// <summary>A declared domain event (docs/31 D-X5): the payload contract subscribers and
-/// event-triggered integrations bind to. Owner is the declaring plugin, or null for host events.</summary>
-public sealed record EventDeclaration(string EventType, IReadOnlyList<string> Fields, string? Plugin);
+/// event-triggered integrations bind to. Owner is the declaring plugin, or null for host
+/// events. Kinds map bare field names to their declared contract kind where one was given.</summary>
+public sealed record EventDeclaration(
+    string EventType, IReadOnlyList<string> Fields, string? Plugin,
+    IReadOnlyDictionary<string, string> Kinds);
 
 /// <summary>A plugin's declared dependency on an EVENT contract (docs/31 D-X5): PLG009 verifies
-/// the event is declared and carries the named payload fields.</summary>
-public sealed record EventRequirement(string EventType, string PluginId, IReadOnlyList<string> Fields);
+/// the event is declared, carries the named payload fields, and — where BOTH sides declare a
+/// kind — that the kinds agree.</summary>
+public sealed record EventRequirement(
+    string EventType, string PluginId, IReadOnlyList<string> Fields,
+    IReadOnlyDictionary<string, string> Kinds);
+
+/// <summary>The contract-field grammar "name[:kind]" (docs/31), ONE parser for both sides of
+/// the seam: publishers (PublishesEvent) and consumers (RequiresEvent/RequiresView). The kind
+/// vocabulary matches the generated facades' accessors; a typo'd kind is an error, never a
+/// silent string.</summary>
+public static class ContractKinds
+{
+    public static readonly IReadOnlyList<string> Known = ["guid", "decimal", "int", "bool", "string"];
+
+    public static (IReadOnlyList<string> Fields, IReadOnlyDictionary<string, string> Kinds) Parse(
+        IEnumerable<string> declared, string context)
+    {
+        var fields = new List<string>();
+        var kinds = new Dictionary<string, string>();
+        foreach (var entry in declared)
+        {
+            var split = entry.Split(':', 2);
+            var name = Naming.Camel(split[0]);
+            fields.Add(name);
+            if (split.Length == 2)
+            {
+                if (!Known.Contains(split[1]))
+                    throw new InvalidOperationException(
+                        $"{context}: unknown contract kind '{split[1]}' on field '{name}' — known kinds: {string.Join(", ", Known)}.");
+                kinds[name] = split[1];
+            }
+        }
+        return (fields, kinds);
+    }
+}
 
 /// <summary>Declared-bind author for <see cref="PluginBuilder.GridAction"/>.</summary>
 public sealed class GridActionBindBuilder

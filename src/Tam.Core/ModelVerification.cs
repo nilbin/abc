@@ -221,9 +221,19 @@ public sealed partial class TamModelBuilder
                 throw new InvalidOperationException(
                     $"PLG009: plugin '{requirement.PluginId}' requires undeclared event '{requirement.EventType}'.");
             foreach (var field in requirement.Fields)
+            {
                 if (!declared.Fields.Contains(field))
                     throw new InvalidOperationException(
                         $"PLG009: event '{requirement.EventType}' does not carry field '{field}' required by plugin '{requirement.PluginId}'.");
+                // Where BOTH sides declare a kind they must agree — the publisher owns the
+                // shape; a consumer's facade must not read a guid as a decimal.
+                if (requirement.Kinds.TryGetValue(field, out var required)
+                    && declared.Kinds.TryGetValue(field, out var published)
+                    && required != published)
+                    throw new InvalidOperationException(
+                        $"PLG009: event '{requirement.EventType}' field '{field}' is published as "
+                        + $"'{published}' but required as '{required}' by plugin '{requirement.PluginId}' — the kinds must agree.");
+            }
         }
     }
 

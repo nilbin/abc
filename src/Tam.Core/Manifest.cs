@@ -149,7 +149,8 @@ public sealed record ManifestPanel(
     string? HeadingKey = null, int? Order = null);
 
 public sealed record ManifestEvent(
-    IReadOnlyList<string> Fields, IReadOnlyList<string> SubscribedBy);
+    IReadOnlyList<string> Fields, IReadOnlyList<string> SubscribedBy,
+    IReadOnlyDictionary<string, string> Kinds);
 
 /// <summary>A framework-composed page (docs/32): ORDERED sections — {"kind":"grid"|"slot"} —
 /// plus an optional record surface. Declaration order is layout order.</summary>
@@ -343,7 +344,8 @@ public static class ManifestBuilder
                 kv => new ManifestEvent(
                     kv.Value.Fields,
                     model.Subscribers.Where(s => s.EventType == kv.Key && Included(s.PluginId))
-                        .Select(s => s.PluginId).Distinct().Order().ToList())),
+                        .Select(s => s.PluginId).Distinct().Order().ToList(),
+                    kv.Value.Kinds)),
         };
     }
 

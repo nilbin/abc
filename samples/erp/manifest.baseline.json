@@ -11279,7 +11279,10 @@
       "fields": [
         "checklistId"
       ],
-      "subscribedBy": []
+      "subscribedBy": [],
+      "kinds": {
+        "checklistId": "guid"
+      }
     },
     "approvals.requested": {
       "fields": [
@@ -11287,7 +11290,10 @@
       ],
       "subscribedBy": [
         "approvals"
-      ]
+      ],
+      "kinds": {
+        "requestId": "guid"
+      }
     },
     "approvals.approved": {
       "fields": [
@@ -11295,28 +11301,43 @@
       ],
       "subscribedBy": [
         "approvals"
-      ]
+      ],
+      "kinds": {
+        "requestId": "guid"
+      }
     },
     "invoicing.invoice-created": {
       "fields": [
         "invoiceId",
         "orderId"
       ],
-      "subscribedBy": []
+      "subscribedBy": [],
+      "kinds": {
+        "invoiceId": "guid",
+        "orderId": "guid"
+      }
     },
     "invoicing.invoice-finalized": {
       "fields": [
         "invoiceId",
         "orderId"
       ],
-      "subscribedBy": []
+      "subscribedBy": [],
+      "kinds": {
+        "invoiceId": "guid",
+        "orderId": "guid"
+      }
     },
     "invoicing.invoice-paid": {
       "fields": [
         "invoiceId",
         "orderId"
       ],
-      "subscribedBy": []
+      "subscribedBy": [],
+      "kinds": {
+        "invoiceId": "guid",
+        "orderId": "guid"
+      }
     },
     "order-created": {
       "fields": [
@@ -11326,7 +11347,10 @@
       ],
       "subscribedBy": [
         "inspect"
-      ]
+      ],
+      "kinds": {
+        "orderId": "guid"
+      }
     },
     "order-completed": {
       "fields": [
@@ -11336,14 +11360,20 @@
       "subscribedBy": [
         "inspect",
         "invoicing"
-      ]
+      ],
+      "kinds": {
+        "orderId": "guid"
+      }
     },
     "order-cancelled": {
       "fields": [
         "orderId",
         "number"
       ],
-      "subscribedBy": []
+      "subscribedBy": [],
+      "kinds": {
+        "orderId": "guid"
+      }
     },
     "work-order-completed": {
       "fields": [
@@ -11352,7 +11382,10 @@
       ],
       "subscribedBy": [
         "invoicing"
-      ]
+      ],
+      "kinds": {
+        "workOrderId": "guid"
+      }
     }
   }
 }

@@ -74,9 +74,9 @@ internal sealed class OrdersContract : IPluginPart
         plugin.RequiresEvent("order-completed", "orderId:guid", "number");
         plugin.RequiresEvent("work-order-completed", "workOrderId:guid", "number");
         plugin
-            .PublishesEvent("invoicing.invoice-created", "invoiceId", "orderId")
-            .PublishesEvent("invoicing.invoice-finalized", "invoiceId", "orderId")
-            .PublishesEvent("invoicing.invoice-paid", "invoiceId", "orderId");
+            .PublishesEvent("invoicing.invoice-created", "invoiceId:guid", "orderId:guid")
+            .PublishesEvent("invoicing.invoice-finalized", "invoiceId:guid", "orderId:guid")
+            .PublishesEvent("invoicing.invoice-paid", "invoiceId:guid", "orderId:guid");
     }
 }
 

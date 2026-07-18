@@ -24,14 +24,15 @@ everything per-tenant activated and entitlement-priced.
    redelivery, number from the payload, amount backfilled through a SERVICE-MODE declared read
    (no actor exists in the outbox; the readable surface is exactly the RequiresView list,
    never a superuser). The payload shape is a build-time fact (D-X5): the host declares
-   `.PublishesEvent("order-completed", "orderId", "number")` in its model, the plugin declares
-   `plugin.RequiresEvent("order-completed", "orderId:guid", "number")`, and PLG009 fails the
-   BUILD on a subscription to an unknown event or a required field the publisher doesn't carry
-   (kinds are the plugin's reading declaration — the generated `OrderCompletedEvent.From(effect)`
-   facade gives the subscriber typed access to the same payload). The
-   manifest gains an `events` section — `"order-completed": { "fields": ["orderId","number"],
-   "subscribedBy": ["inspect","invoicing"] }` — so `SubscribedBy` shows in the impact report,
-   symmetric with `GatedBy`.
+   `.PublishesEvent("order-completed", "orderId:guid", "number")` in its model, the plugin
+   declares `plugin.RequiresEvent("order-completed", "orderId:guid", "number")`, and PLG009
+   fails the BUILD on a subscription to an unknown event, a required field the publisher
+   doesn't carry, or a kind the two sides disagree on — the publisher owns the shape, and the
+   generated `OrderCompletedEvent.From(effect)` facade gives the subscriber typed access to
+   the same payload. The manifest gains an `events` section — `"order-completed": { "fields":
+   ["orderId","number"], "kinds": { "orderId": "guid" }, "subscribedBy":
+   ["inspect","invoicing"] }` — the machine-readable contract artifact (and `SubscribedBy`
+   shows in the impact report, symmetric with `GatedBy`).
 5. **Invoicing pushes back.** A gate on `orders.complete`: an order with a PENDING DRAFT
    invoice cannot complete. The gate reads the plugin's own table off the wire input; the
    manifest shows `orders.complete → gatedBy: ["invoicing"]`.

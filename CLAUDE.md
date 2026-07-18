@@ -70,6 +70,9 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   ENFORCED by analyzer TAM008: an ITenantScoped class under Domain/ with a mutable public
   setter is a build error; a genuinely plain row opts out with #pragma warning
   disable/restore TAM008 plus a reason comment (grep the pragmas to audit the exceptions).
+  Before ADDING a new domain/aggregate (or making an operation write a child entity
+  directly), run the domain-design skill (.claude/skills/domain-design) and write the
+  aggregate classification down FIRST — domains are designed, never fast-forwarded.
 - Cross-package calls: only to a package's public policy helper (e.g. RoleRules — the single
   validation path for roles.define AND tenant-package install), never to its operations.
 - Findings: `static class <Area>Findings { public static readonly FindingFactory X =

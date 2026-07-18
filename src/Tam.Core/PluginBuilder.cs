@@ -152,7 +152,7 @@ public sealed class PluginBuilder
     /// subscribers read stops being folklore.</summary>
     public PluginBuilder RequiresEvent(string eventType, params string[] fields)
     {
-        Model.RequireEvent(eventType, fields.Select(BareName).ToArray());
+        Model.RequireEvent(eventType, fields);   // "name[:kind]" — parsed + kind-checked (PLG009)
         return this;
     }
 

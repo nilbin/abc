@@ -27,8 +27,8 @@ public sealed class ApprovalsPlugin : ITamPlugin
         // gate and both subscribers register from their own attributes (below, via
         // AddDiscovered); only the event CONTRACTS are declared here.
         plugin
-            .PublishesEvent("approvals.requested", "requestId")
-            .PublishesEvent("approvals.approved", "requestId");
+            .PublishesEvent("approvals.requested", "requestId:guid")
+            .PublishesEvent("approvals.approved", "requestId:guid");
 
         // The plugin's people-sets become referencable by HOST domains (docs/35): a folder
         // ACL can name "approvals.group:{id}" — containment is the group's effective approver

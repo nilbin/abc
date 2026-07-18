@@ -79,12 +79,14 @@ public sealed partial class TamModelBuilder
     }
 
     /// <summary>Declares a domain event contract (docs/31 D-X5): the type and payload fields
-    /// EventPublished carries. Host events are free-named; plugin events sit under the plugin
-    /// prefix (PLG001). OnEffect / event triggers must target a declared event (PLG009).</summary>
+    /// EventPublished carries, each optionally kinded ("orderId:guid") — the publisher OWNS
+    /// the shape, consumers' declared kinds are checked against it (PLG009), and the manifest
+    /// carries it as the machine-readable contract artifact. Host events are free-named;
+    /// plugin events sit under the plugin prefix (PLG001).</summary>
     public TamModelBuilder PublishesEvent(string eventType, params string[] fields)
     {
-        events[eventType] = new EventDeclaration(
-            eventType, fields.Select(Naming.Camel).ToArray(), currentPlugin);
+        var (bare, kinds) = ContractKinds.Parse(fields, $"PublishesEvent('{eventType}')");
+        events[eventType] = new EventDeclaration(eventType, bare, currentPlugin, kinds);
         return this;
     }
 
@@ -96,11 +98,12 @@ public sealed partial class TamModelBuilder
         panels.Add(new PanelContribution(slotId, gridId, currentPlugin, bind, headingKey, order));
     }
 
-    internal void RequireEvent(string eventType, IReadOnlyList<string> fields)
+    internal void RequireEvent(string eventType, IReadOnlyList<string> declaredFields)
     {
         if (currentPlugin is null)
             throw new InvalidOperationException("PLG005: event requirements can only be declared by a plugin.");
-        eventRequirements.Add(new EventRequirement(eventType, currentPlugin, fields));
+        var (bare, kinds) = ContractKinds.Parse(declaredFields, $"RequiresEvent('{eventType}')");
+        eventRequirements.Add(new EventRequirement(eventType, currentPlugin, bare, kinds));
     }
 
     internal void GridAction(string gridId, string operationId,

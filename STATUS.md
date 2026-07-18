@@ -474,6 +474,23 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Contract artifact, slice 1 — the publisher owns the shape (user-directed: "can the
+  plugin just reference the manifest?")**: the answer is yes, and this slice builds the
+  substrate. PublishesEvent now takes the same "name[:kind]" grammar as the requirements
+  (ContractKinds — ONE parser for both sides; a typo'd kind is an error, never a silent
+  string); the manifest's events section carries kinds (additive, baseline + types
+  regenerated) — the manifest is now a complete machine-readable contract artifact; PLG009
+  checks kind AGREEMENT (published guid required as decimal = build error) on top of the
+  existing presence check; all nine sample publishers migrated to kinded declarations.
+  NEW REPO SKILL .claude/skills/domain-design (user-directed): the aggregate design pass
+  (classify root/owned-child/plain-row, place invariants, shape checklist, EF gotchas) that
+  MUST run before a new domain is written — domains are designed, never fast-forwarded;
+  CLAUDE.md points at it. Next slice (#113): plugin projects reference the host manifest as
+  an AdditionalFile and the generator emits facades + requirements FROM the artifact —
+  id-only Requires, shapes from the snapshot, still Build()-verified against the real host.
+  Design written into docs/31 ("The manifest is the contract artifact"). Verified: suites
+  191+38 (new PLG009 kind-mismatch + typo-kind + manifest-kinds assertions), manifest
+  additive over baseline, wire 16+18+22+22 on fresh SQLite AND fresh Postgres.
 - **TAM008 — the anemic-entity build gate (user-prompted: "how do we ensure better DDD")**:
   the domain-shape convention got the same teeth as every convention that actually holds
   here. New analyzer rule: an ITenantScoped class declared under a Domain/ directory with

@@ -26,10 +26,10 @@ public static partial class ErpModel
         .AddPlugin<Invoicing.InvoicingPlugin>()  // Step 17: extends the Orders domain (docs/31)
 
         // Event contracts (docs/31 D-X5): what subscribers/triggers may bind to, with payload shape.
-        .PublishesEvent("order-created", "orderId", "number", "orderType")
-        .PublishesEvent("order-completed", "orderId", "number")
-        .PublishesEvent("order-cancelled", "orderId", "number")
-        .PublishesEvent("work-order-completed", "workOrderId", "number")
+        .PublishesEvent("order-created", "orderId:guid", "number", "orderType")
+        .PublishesEvent("order-completed", "orderId:guid", "number")
+        .PublishesEvent("order-cancelled", "orderId:guid", "number")
+        .PublishesEvent("work-order-completed", "workOrderId:guid", "number")
 
         // Magic folder (docs/35): every created order gets its document folder — the tree
         // layout is the HOST's declaration; no handler learns about documents.

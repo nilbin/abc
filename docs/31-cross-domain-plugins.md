@@ -228,3 +228,44 @@ compile-time names while the WIRE CONTRACT stays the contract:
   in its OWN assembly (internal, `Tam.Generated`) — never a reference to host CLR types.
 - The fluent call is read directly by a syntax provider (literal arguments); no attribute
   ceremony. Non-literal arguments simply generate nothing.
+
+## The manifest is the contract artifact (user question, arc in progress)
+
+The facades above generate from the plugin's OWN declaration — which means the shape is
+still typed twice: the host writes `PublishesEvent("order-completed", …)`, the plugin
+re-types the fields in `RequiresEvent`. The user's challenge lands: *"can't the plugin just
+reference the manifest?"* — yes. The manifest already IS the machine-readable contract
+(the TS client is generated from it); plugin authoring should consume the same artifact.
+The duck typing was never the design goal — it was the residue of not having a consumable
+contract artifact on the plugin side.
+
+What does NOT change: plugins still never reference host CLR types (a plugin compiles
+against a contract, not an assembly — the cross-vendor requirement), and composition-time
+verification (PLG008/PLG009) remains the enforcement — whatever the plugin compiled
+against, the REAL host it activates on is checked at Build(). The artifact is compile-time
+convenience; the Build() check is the truth.
+
+**Slice 1 — the publisher owns the shape (BUILT).** `PublishesEvent` now takes the same
+`"name[:kind]"` grammar as the requirements (`ContractKinds`, one parser for both sides):
+
+```csharp
+model.PublishesEvent("order-completed", "orderId:guid", "number");
+```
+
+- The manifest's `events` section carries `kinds` (additive) — the contract artifact is
+  now complete enough to generate from.
+- PLG009 checks kind AGREEMENT: where both sides declare a kind and they differ, the
+  build fails ("published as 'guid' but required as 'decimal'"). A typo'd kind is an
+  error at declaration, never a silent string.
+
+**Slice 2 — generate the plugin's contracts FROM the host artifact (next).** A plugin
+project references the host's exported manifest (an `AdditionalFiles` item, versioned in
+the plugin repo like a lockfile); the source generator emits the typed facades from the
+artifact's `events`/view sections instead of from the plugin's re-declaration, and the
+`RequiresEvent`/`RequiresView` calls shrink toward id-only — the generator emits the
+field/kind requirements INTO the model registration from the snapshot, so PLG009 still
+verifies the full shape against the real host at composition time. Updating the host
+dependency = replacing one json file; every rename or kind change becomes a compile error
+in the plugin (D4 makes this stable: wire names are permanent, so snapshots age
+gracefully). RequiresView kind checking against the view's REAL wire kinds (money↔decimal
+compatibility) rides this slice.

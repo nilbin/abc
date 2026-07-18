@@ -51,7 +51,7 @@ public class SlotAndEventTests
         .AddViewType(typeof(ThingsList))
         .Grid<ThingsList.Result>("web.things", "things.list", g => g.Column(x => x.Name))
         .Slot("web.things.detail", slot => slot.Key("thingId"), external: true)
-        .PublishesEvent("thing-archived", "thingId", "name");
+        .PublishesEvent("thing-archived", "thingId:guid", "name");
 
     [TamPlugin("notes")]
     private sealed class NotesPlugin : ITamPlugin
@@ -85,6 +85,10 @@ public class SlotAndEventTests
         Assert.Equal("thingId", panel.Bind["thingId"]);
         Assert.Equal(["notes"], active.Events["thing-archived"].SubscribedBy);
         Assert.Equal(["thingId", "name"], active.Events["thing-archived"].Fields);
+        // The manifest carries the publisher's declared kinds — the contract artifact
+        // downstream generators read (docs/31).
+        Assert.Equal("guid", active.Events["thing-archived"].Kinds["thingId"]);
+        Assert.False(active.Events["thing-archived"].Kinds.ContainsKey("name"));
 
         var inactive = ManifestBuilder.Build(model, extensions, 0, new HashSet<string>());
         Assert.Empty(inactive.Slots["web.things.detail"]);   // slot exists, panel does not
@@ -144,6 +148,14 @@ public class SlotAndEventTests
         Assert.StartsWith("PLG009", Assert.Throws<InvalidOperationException>(() =>
             Host().AddPlugin<GreedyEventPlugin>().Build()).Message);
 
+        // both sides declare a kind and they disagree — the publisher owns the shape
+        Assert.Contains("kinds must agree", Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<KindMismatchPlugin>().Build()).Message);
+
+        // a typo'd kind is an error at declaration, never a silent string
+        Assert.Contains("unknown contract kind", Assert.Throws<InvalidOperationException>(() =>
+            Host().AddPlugin<TypoKindPlugin>().Build()).Message);
+
         // plugins cannot declare slots — layout is the host's
         Assert.StartsWith("PLG005", Assert.Throws<InvalidOperationException>(() =>
             Host().AddPlugin<SlotGrabbingPlugin>().Build()).Message);
@@ -154,6 +166,20 @@ public class SlotAndEventTests
     {
         public void Configure(PluginBuilder plugin) =>
             plugin.RequiresEvent("thing-archived", "secretPrice");
+    }
+
+    [TamPlugin("mismatched")]
+    private sealed class KindMismatchPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) =>
+            plugin.RequiresEvent("thing-archived", "thingId:decimal");
+    }
+
+    [TamPlugin("typoed")]
+    private sealed class TypoKindPlugin : ITamPlugin
+    {
+        public void Configure(PluginBuilder plugin) =>
+            plugin.RequiresEvent("thing-archived", "thingId:gui");
     }
 
     [TamPlugin("architect")]
