@@ -8,7 +8,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const suites = ['field-service.mjs', 'rule-builder.mjs', 'rules-gating.mjs', 'documents.mjs'];
+// plugin-on-plugin runs LAST: it toggles invoicing/fortnox activation and restores the seed
+// state at the end, so it must not run between suites that rely on invoicing being active.
+const suites = ['field-service.mjs', 'rule-builder.mjs', 'rules-gating.mjs', 'documents.mjs', 'plugin-on-plugin.mjs'];
 
 const ping = await fetch('http://localhost:5100/api/manifest').catch(() => null);
 if (!ping?.ok) {

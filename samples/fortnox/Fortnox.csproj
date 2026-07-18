@@ -15,7 +15,11 @@
 
   <ItemGroup>
     <EmbeddedResource Include="locales/*.json" />
+    <ProjectReference Include="..\..\src\Tam.Compiler\Tam.Compiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="locales/**/*.json" />
+    <!-- The invoicing plugin's contract slice (docs/37 D-V4): its events/views become typed
+         facades (InvoicingInvoiceFinalizedEvent) fortnox declares against. -->
+    <AdditionalFiles Include="..\invoicing\invoicing.contract.json" />
     <CompilerVisibleProperty Include="TamDefaultCulture" />
   </ItemGroup>
 

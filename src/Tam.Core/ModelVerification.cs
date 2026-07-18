@@ -316,9 +316,16 @@ public sealed partial class TamModelBuilder
                         $"DOC001: template '{binding.PathTemplate}' names '{{{match.Groups[1].Value}}}', not a payload field of '{binding.EventType}'.");
         }
         foreach (var outbound in model.OutboundIntegrations.Values)
-            if (outbound.Trigger is EventTrigger trigger && !model.Events.ContainsKey(trigger.EventType))
-                throw new InvalidOperationException(
-                    $"PLG009: outbound integration '{outbound.Id}' triggers on undeclared event '{trigger.EventType}' — declare it with PublishesEvent.");
+            if (outbound.Trigger is EventTrigger trigger)
+            {
+                if (!model.Events.TryGetValue(trigger.EventType, out var triggerEvent))
+                    throw new InvalidOperationException(
+                        $"PLG009: outbound integration '{outbound.Id}' triggers on undeclared event '{trigger.EventType}' — declare it with PublishesEvent.");
+                // Triggering on another plugin's event is consuming its contract — PLG010 applies
+                // here too (closing the outbound-trigger gap), lifted only by a declared edge.
+                VerifyContractOwnership(model, outbound.PluginId, triggerEvent.Plugin,
+                    $"event '{trigger.EventType}'");
+            }
 
         foreach (var requirement in eventRequirements)
         {

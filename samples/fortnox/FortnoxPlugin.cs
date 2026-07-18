@@ -1,24 +1,36 @@
 using System.Text.Json;
 using Tam;
 using Tam.AspNetCore;
+using Tam.Generated;
 
 namespace Fortnox;
 
 /// <summary>
-/// A plugin whose whole job is one inbound integration (docs/10 + docs/22): Fortnox order
-/// exports become orders in the host — without the plugin referencing a single host CLR type.
-/// It maps the vendor payload to the "orders.create" wire contract and resolves the vendor's
-/// customer name against the host's customers.lookup VIEW (the actor's permissions), never a
-/// host table. Activation-gated and entitlement-gated like every plugin surface.
+/// An accounting integration (docs/10 + docs/22): Fortnox order exports become orders in the
+/// host, and — the plugin-on-plugin edge (docs/37 D-V4) — a finalized INVOICE from the
+/// invoicing plugin is pushed to Fortnox's ledger. It depends on the invoicing plugin's
+/// contract (DependsOn), consuming its `invoicing.invoice-finalized` event through the generated
+/// facade — never a host or sibling CLR type. Everything stays activation- and entitlement-gated,
+/// and fortnox is now activatable only where invoicing is active (the L1 guard).
 /// </summary>
 [TamPlugin("fortnox")]
 public sealed class FortnoxPlugin : ITamPlugin
 {
     public void Configure(PluginBuilder plugin)
     {
+        // The plugin-on-plugin dependency edge (docs/37 D-V4): fortnox consumes the invoicing
+        // plugin's contract, so it declares the edge. This is what lifts PLG010 for the
+        // invoice-finalized event below, and makes fortnox activatable only where invoicing is.
+        plugin.DependsOn("invoicing");
+
         // D-X3: the read footprint is a BUILD-TIME fact — the mapper resolves customers through
         // the host lookup view, and the install screen can show exactly that.
         plugin.RequiresView("customers.lookup", "id");
+
+        // The invoice event fortnox consumes, declared through invoicing's generated facade
+        // (from the referenced invoicing.contract.json slice) — the L2 contract coupling, and
+        // the payload footprint the push handler reads.
+        plugin.RequiresEvent<InvoicingInvoiceFinalizedEvent>();
 
         // POST /api/integrations/fortnox.orders.import — a JSON array of Fortnox orders.
         // Key: the vendor document number (idempotent replays). Map: one order → orders.create
@@ -32,6 +44,13 @@ public sealed class FortnoxPlugin : ITamPlugin
         // API. Reads the tenant's base URL (setting) and API key (secret) from the vault.
         plugin.OutboundIntegration(
             "push-completed-order", new EventTrigger("order-completed"), PushCompletedOrderAsync);
+
+        // OUTBOUND on a SIBLING PLUGIN's event (docs/37 D-V4): the invoicing plugin finalizes an
+        // invoice, fortnox pushes it to the ledger. The trigger names invoicing's event, legal
+        // only because of the declared DependsOn edge (the closed outbound-trigger PLG010 gap).
+        plugin.OutboundIntegration(
+            "push-finalized-invoice", new EventTrigger("invoicing.invoice-finalized"),
+            PushFinalizedInvoiceAsync);
 
         // OUTBOUND on schedule (docs/25): poll Fortnox for new orders and hand them to the same
         // inbound import. The tenant configures the cadence via integrations.schedule.
@@ -57,6 +76,29 @@ public sealed class FortnoxPlugin : ITamPlugin
             ct);
         return response.IsSuccessStatusCode
             ? OutboundResult.Success($"pushed {number}")
+            : OutboundResult.Failure($"http {(int)response.StatusCode}");
+    }
+
+    private static async Task<OutboundResult> PushFinalizedInvoiceAsync(
+        IIntegrationRunContext run, CancellationToken ct)
+    {
+        var baseUrl = await run.Setting("fortnox.baseUrl", ct);
+        var apiKey = await run.Secret("fortnox.apiKey", ct);
+        if (baseUrl is null || apiKey is null)
+            return OutboundResult.Failure("not-configured");
+
+        // The payload footprint is DECLARED (RequiresEvent<InvoicingInvoiceFinalizedEvent>) —
+        // invoiceId rides invoicing's contract, verified against the real event at Build().
+        var invoiceId = run.EventPayload?.String("invoiceId");
+        run.Http.DefaultRequestHeaders.TryAddWithoutValidation("Access-Token", apiKey);
+        var response = await run.Http.PostAsync(
+            $"{baseUrl.TrimEnd('/')}/invoices",
+            new StringContent(
+                JsonSerializer.Serialize(new { invoiceId }),
+                System.Text.Encoding.UTF8, "application/json"),
+            ct);
+        return response.IsSuccessStatusCode
+            ? OutboundResult.Success($"pushed invoice {invoiceId}")
             : OutboundResult.Failure($"http {(int)response.StatusCode}");
     }
 
