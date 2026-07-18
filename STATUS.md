@@ -474,6 +474,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Beauty arc 5, part 3a — magic folders (event-driven tree materialization)**: the host
+  declares `.DocumentFolder("order-created", "/order/{number}")` and every created order gets
+  its document folder — no handler learns about documents. DOC001 verifies the binding at
+  Build (the event is declared; every `{placeholder}` names a payload field of its contract).
+  Delivery is ONE wildcard effect subscriber in tam.documents (subscriber `EventType = "*"`,
+  the GateDefinition.Wildcard precedent extended to subscribers — dispatch and PLG009 both
+  exempt it) reading the model's bindings — which events materialize folders is model data,
+  never per-event registration. The subscriber renders the template from the payload, skips a
+  binding whose placeholder rendered empty (never file into a collapsed path), and mkdir -p's
+  through the SAME `EnsureFoldersAsync` helper the define intent now delegates to —
+  idempotent under at-least-once delivery. Verified: suites 191+38 (DOC001 cases + carriage),
+  manifest byte-identical (server-side behavior only), wire 18+22+22 on fresh SQLite AND
+  fresh Postgres — the documents suite now creates an order over the wire and polls the
+  folder tree until `/order/{number}` appears via the outbox. Remaining for part 3b: the FE
+  tree browser + record documents tab + Playwright, then #106 closes.
 - **Beauty arc 5, part 2 — tam.documents core (the reach seam's first consumer)**: the
   THIRTEENTH framework package — the tenant's document tree, model-driven end to end. Folders
   are a materialized path-tree (the tenants-table idiom; `documents.folders.define` is

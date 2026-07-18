@@ -58,6 +58,11 @@ public sealed class TamDocumentsPackage : ITamPlugin
             {
                 grid.RowAction("documents.retire");
             });
+
+        // Magic folders (docs/35): ONE wildcard subscriber serves every host-declared
+        // DocumentFolder binding — which events materialize folders is MODEL data, so the
+        // package never registers per event (the wildcard-gate precedent, docs/28).
+        plugin.OnEffect<MagicFolderSubscriber>("*");
     }
 }
 
@@ -160,6 +165,36 @@ public static class DocumentAccess
         return cut <= 0 ? null : byPath.GetValueOrDefault(folder.Path[..cut]);
     }
 
+    /// <summary>mkdir -p, shared by the define intent and the magic-folder subscriber:
+    /// creates every missing folder along the path, un-retires ones that exist, and returns
+    /// the leaf — or null for an invalid path. Idempotent (at-least-once delivery safe).</summary>
+    public static async Task<FolderEntity?> EnsureFoldersAsync(
+        ITamDb tam, string path, CancellationToken ct)
+    {
+        var prefixes = NormalizedPrefixes(path);
+        if (prefixes is null) return null;
+        var existing = await tam.Db.Set<FolderEntity>()
+            .Where(f => prefixes.Contains(f.Path)).ToDictionaryAsync(f => f.Path, ct);
+        FolderEntity leaf = null!;
+        foreach (var prefix in prefixes)
+        {
+            if (existing.TryGetValue(prefix, out var found))
+            {
+                found.Retired = false;
+                leaf = found;
+                continue;
+            }
+            leaf = new FolderEntity
+            {
+                Id = Guid.NewGuid(),
+                Path = prefix,
+                Name = prefix[(prefix.LastIndexOf('/') + 1)..],
+            };
+            tam.Db.Add(leaf);
+        }
+        return leaf;
+    }
+
     /// <summary>"/avtal/2026" → ["/avtal", "/avtal/2026"]; null for an empty or overlong path.
     /// Segments are free text minus '/' — human names, not slugs.</summary>
     public static IReadOnlyList<string>? NormalizedPrefixes(string path)
@@ -190,29 +225,8 @@ public static class DefineFolder
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
-        var prefixes = DocumentAccess.NormalizedPrefixes(input.Path);
-        if (prefixes is null)
-            return DocumentFindings.InvalidPath.At(nameof(Input.Path));
-
-        var existing = await tam.Db.Set<FolderEntity>()
-            .Where(f => prefixes.Contains(f.Path)).ToDictionaryAsync(f => f.Path, ct);
-        FolderEntity leaf = null!;
-        foreach (var path in prefixes)
-        {
-            if (existing.TryGetValue(path, out var found))
-            {
-                found.Retired = false;
-                leaf = found;
-                continue;
-            }
-            leaf = new FolderEntity
-            {
-                Id = Guid.NewGuid(),
-                Path = path,
-                Name = path[(path.LastIndexOf('/') + 1)..],
-            };
-            tam.Db.Add(leaf);
-        }
+        var leaf = await DocumentAccess.EnsureFoldersAsync(tam, input.Path, ct);
+        if (leaf is null) return DocumentFindings.InvalidPath.At(nameof(Input.Path));
         return new Output(leaf.Id, leaf.Path);
     }
 }
@@ -470,4 +484,28 @@ public static class DocumentList
         .Sortable(nameof(Result.FileName), nameof(Result.UploadedAtIso))
         .Filterable(nameof(Result.ContentType))
         .DefaultSort(nameof(Result.UploadedAtIso), descending: true);
+}
+
+/// <summary>
+/// The magic-folder materializer (docs/35): on ANY committed event, renders each matching
+/// host-declared binding's template from the payload — "/order/{number}" → "/order/2026-01412"
+/// — and ensures the folder exists. Skips a binding whose placeholder value is absent (the
+/// contract is DOC001-checked, but payloads are data). Idempotent under at-least-once
+/// delivery; runs in the record's tenant-pinned scope like every subscriber.
+/// </summary>
+internal sealed class MagicFolderSubscriber(ITamDb tam, TamModel model) : IEffectHandler
+{
+    public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
+    {
+        foreach (var binding in model.DocumentFolders.Where(b => b.EventType == effect.EventType))
+        {
+            var path = System.Text.RegularExpressions.Regex.Replace(
+                binding.PathTemplate, "\\{([^}]*)\\}",
+                match => effect.String(match.Groups[1].Value) ?? "");
+            if (path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Length != binding.PathTemplate.Split('/', StringSplitOptions.RemoveEmptyEntries).Length)
+                continue;   // a placeholder rendered empty — never file into a collapsed path
+            await DocumentAccess.EnsureFoldersAsync(tam, path, ct);
+        }
+    }
 }

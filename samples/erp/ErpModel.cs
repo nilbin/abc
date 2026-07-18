@@ -31,6 +31,10 @@ public static partial class ErpModel
         .PublishesEvent("order-cancelled", "orderId", "number")
         .PublishesEvent("work-order-completed", "workOrderId", "number")
 
+        // Magic folder (docs/35): every created order gets its document folder — the tree
+        // layout is the HOST's declaration; no handler learns about documents.
+        .DocumentFolder("order-created", "/order/{number}")
+
         // The order detail is a CONTRIBUTION POINT (docs/31 D-X4): placing it on the record
         // DECLARES it (docs/34 M5 — placement is declaration; the record's key is its
         // context). model.Slot() would only be needed for external slots or a custom key.

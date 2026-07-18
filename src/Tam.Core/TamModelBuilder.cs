@@ -25,6 +25,7 @@ public sealed partial class TamModelBuilder
     private readonly List<NavContribution> navContributions = [];
     private readonly List<SubscriberDefinition> subscribers = [];
     private readonly Dictionary<string, ReachDefinition> reaches = [];
+    private readonly List<DocumentFolderBinding> documentFolders = [];
     private readonly List<(string Id, string OperationId, IntegrationKeySelector Key, IntegrationRowMapper Map, string Plugin)> integrations = [];
     private readonly List<(string Id, IntegrationTrigger Trigger, OutboundIntegrationHandler Handler, string Plugin)> outboundIntegrations = [];
     private readonly LocaleCatalogsBuilder locales = new();
@@ -421,6 +422,7 @@ public sealed partial class TamModelBuilder
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<GateDefinition>)g.ToList()),
             Subscribers = subscribers,
             Reaches = reaches,
+            DocumentFolders = documentFolders,
             Integrations = integrations.ToDictionary(
                 i => i.Id,
                 i => new PluginIntegrationDefinition(i.Id, i.Plugin, i.OperationId, i.Key, i.Map)),

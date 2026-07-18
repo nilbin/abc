@@ -189,10 +189,26 @@ public sealed partial class TamModelBuilder
                     + "that namespace belongs to tenant automation-rule actions.");
         }
 
+        // "*" mirrors GateDefinition.Wildcard: a subscriber that runs on EVERY committed
+        // event and decides from model data (the magic-folder bindings) whether to act.
         foreach (var subscriber in model.Subscribers)
-            if (!model.Events.ContainsKey(subscriber.EventType))
+            if (subscriber.EventType != "*" && !model.Events.ContainsKey(subscriber.EventType))
                 throw new InvalidOperationException(
                     $"PLG009: plugin '{subscriber.PluginId}' subscribes to undeclared event '{subscriber.EventType}' — declare it with PublishesEvent.");
+
+        // DOC001 (docs/35 magic folders): a binding must target a declared event, and every
+        // "{placeholder}" must name a field of that event's payload contract.
+        foreach (var binding in model.DocumentFolders)
+        {
+            if (!model.Events.TryGetValue(binding.EventType, out var declared))
+                throw new InvalidOperationException(
+                    $"DOC001: document folder binding targets undeclared event '{binding.EventType}' — declare it with PublishesEvent.");
+            foreach (System.Text.RegularExpressions.Match match in
+                System.Text.RegularExpressions.Regex.Matches(binding.PathTemplate, "\\{([^}]*)\\}"))
+                if (!declared.Fields.Contains(match.Groups[1].Value))
+                    throw new InvalidOperationException(
+                        $"DOC001: template '{binding.PathTemplate}' names '{{{match.Groups[1].Value}}}', not a payload field of '{binding.EventType}'.");
+        }
         foreach (var outbound in model.OutboundIntegrations.Values)
             if (outbound.Trigger is EventTrigger trigger && !model.Events.ContainsKey(trigger.EventType))
                 throw new InvalidOperationException(

@@ -128,7 +128,8 @@ public sealed class OutboxDispatcher(
         var activator = services.GetService(typeof(ITamActivator)) as ITamActivator
             ?? new TamActivator(services);
         foreach (var subscriber in model.Subscribers
-            .Where(s => s.EventType == record.EventType && active.Contains(s.PluginId)))
+            .Where(s => (s.EventType == record.EventType || s.EventType == "*")
+                && active.Contains(s.PluginId)))
         {
             try
             {

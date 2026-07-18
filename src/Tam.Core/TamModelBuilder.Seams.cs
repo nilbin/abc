@@ -68,6 +68,16 @@ public sealed partial class TamModelBuilder
         return this;
     }
 
+    /// <summary>Declares a MAGIC FOLDER (docs/35): when the named event commits, the documents
+    /// package materializes the folder rendered from the template — "{field}" placeholders bind
+    /// to the event's declared payload fields (DOC001 verifies both at Build). The tree layout
+    /// stays the declarer's; no handler learns about documents.</summary>
+    public TamModelBuilder DocumentFolder(string eventType, string pathTemplate)
+    {
+        documentFolders.Add(new DocumentFolderBinding(eventType, pathTemplate));
+        return this;
+    }
+
     /// <summary>Declares a domain event contract (docs/31 D-X5): the type and payload fields
     /// EventPublished carries. Host events are free-named; plugin events sit under the plugin
     /// prefix (PLG001). OnEffect / event triggers must target a declared event (PLG009).</summary>

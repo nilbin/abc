@@ -94,6 +94,9 @@ public sealed class TamModel
     public IReadOnlyDictionary<string, ReachDefinition> Reaches { get; init; } =
         new Dictionary<string, ReachDefinition>();
 
+    /// <summary>Magic-folder bindings (docs/35): event → folder-path template.</summary>
+    public IReadOnlyList<DocumentFolderBinding> DocumentFolders { get; init; } = [];
+
     /// <summary>Plugin-shipped inbound integrations by id (docs/10 + docs/22).</summary>
     public IReadOnlyDictionary<string, PluginIntegrationDefinition> Integrations { get; init; } =
         new Dictionary<string, PluginIntegrationDefinition>();

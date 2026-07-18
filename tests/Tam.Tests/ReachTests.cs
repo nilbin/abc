@@ -130,3 +130,38 @@ public class ReachTests
         Assert.Contains("REACH001", ex.Message);
     }
 }
+
+// Magic-folder bindings (docs/35): DOC001 at Build.
+public class DocumentFolderTests
+{
+    private static TamModelBuilder Host() => new TamModelBuilder()
+        .LocaleDefaults("en", new Dictionary<string, string>())
+        .PublishesEvent("thing-created", "thingId", "number");
+
+    [Fact]
+    public void Binding_lands_in_the_model()
+    {
+        var model = Host().DocumentFolder("thing-created", "/thing/{number}").Build();
+        var binding = Assert.Single(model.DocumentFolders);
+        Assert.Equal("thing-created", binding.EventType);
+        Assert.Equal("/thing/{number}", binding.PathTemplate);
+    }
+
+    [Fact]
+    public void DOC001_rejects_an_undeclared_event()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Host().DocumentFolder("thing-deleted", "/x").Build());
+        Assert.Contains("DOC001", ex.Message);
+        Assert.Contains("undeclared", ex.Message);
+    }
+
+    [Fact]
+    public void DOC001_rejects_a_placeholder_outside_the_payload_contract()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Host().DocumentFolder("thing-created", "/thing/{title}").Build());
+        Assert.Contains("DOC001", ex.Message);
+        Assert.Contains("{title}", ex.Message);
+    }
+}

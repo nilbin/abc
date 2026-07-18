@@ -85,3 +85,9 @@ public readonly record struct EntityRef(string EntityKey, Guid Id)
             ? reference
             : throw new FormatException($"'{value}' is not an EntityRef ('entityKey:guid').");
 }
+
+/// <summary>A host-declared MAGIC FOLDER binding (docs/35): when the named event commits, the
+/// documents package materializes the folder rendered from the template — placeholders name
+/// payload fields of the event's declared contract ("/order/{number}"). Every order gets its
+/// folder without any handler knowing about documents. Verified at Build (DOC001).</summary>
+public sealed record DocumentFolderBinding(string EventType, string PathTemplate);
