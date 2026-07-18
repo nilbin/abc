@@ -114,6 +114,12 @@ public static partial class TamAspNetCore
             s => s.GetRequiredService<TDbContext>(),
             model));
 
+        // DB error classification (Sol review, Finding 4): only a unique-constraint violation is a
+        // retryable conflict; everything else is a real failure that must surface as such, not as a
+        // fake version conflict. A provider package registers a precise classifier after AddTam
+        // (last registration wins); the default is a portable message heuristic.
+        services.AddSingleton<ITamDbErrorClassifier, HeuristicDbErrorClassifier>();
+
         services.AddSingleton<IActorProvider, DevActorProvider>();
         services.AddSingleton<ITenantProvider>(new FixedTenantProvider("demo"));
         services.AddSingleton<EffectBroadcaster>();

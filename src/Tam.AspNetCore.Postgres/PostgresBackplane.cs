@@ -89,6 +89,17 @@ public static class PostgresBackplaneExtensions
             connectionString, sp.GetRequiredService<EffectBroadcaster>()));
         services.AddSingleton<IEffectBackplane>(sp => sp.GetRequiredService<PostgresEffectBackplane>());
         services.AddHostedService(sp => sp.GetRequiredService<PostgresEffectBackplane>());
+        // Precise unique-violation classification (Sol review, Finding 4): SQLSTATE 23505,
+        // overriding the framework's message heuristic (last registration wins).
+        services.AddSingleton<ITamDbErrorClassifier, PostgresDbErrorClassifier>();
         return services;
     }
+}
+
+/// <summary>Postgres unique-violation by SQLSTATE 23505 — the code-based classification the
+/// framework's default message heuristic stands in for (Sol review, Finding 4).</summary>
+internal sealed class PostgresDbErrorClassifier : ITamDbErrorClassifier
+{
+    public bool IsUniqueViolation(Microsoft.EntityFrameworkCore.DbUpdateException exception) =>
+        exception.InnerException is Npgsql.PostgresException { SqlState: "23505" };
 }

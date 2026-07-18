@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
@@ -232,11 +233,21 @@ public sealed class OperationExecutor(
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException) when (ct.IsCancellationRequested is false)
+        catch (DbUpdateConcurrencyException) when (ct.IsCancellationRequested is false)
         {
-            // A check-then-insert race lost to a unique index (two concurrent installs,
+            // A genuine optimistic-concurrency conflict on a versioned row this operation wrote.
+            await transaction.RollbackAsync(ct);
+            return Fail(context, ConcurrencyFindings.VersionConflict.Create());
+        }
+        catch (DbUpdateException ex) when (ct.IsCancellationRequested is false
+            && services.GetService<ITamDbErrorClassifier>()?.IsUniqueViolation(ex) == true)
+        {
+            // A check-then-insert race lost to a UNIQUE index (two concurrent installs,
             // activations, definitions). The serial path would have produced a duplicate
-            // finding; surface the same conflict shape instead of a 500.
+            // finding; surface the same conflict shape instead of a 500. Every OTHER
+            // DbUpdateException — FK, check, not-null, conversion, provider/connection fault —
+            // is a real failure and propagates uncaught rather than masquerading as a retryable
+            // version conflict (Sol review, Finding 4).
             await transaction.RollbackAsync(ct);
             return Fail(context, ConcurrencyFindings.VersionConflict.Create());
         }
