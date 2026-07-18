@@ -119,8 +119,7 @@ public static partial class TamAspNetCore
 
         // Plugin-shipped inbound integrations (docs/22): activation-gated, inbox-idempotent.
         app.MapPost("/api/integrations/{integrationId}", async (
-            string integrationId, HttpContext http, OperationExecutor executor,
-            ITamDb tam, CancellationToken ct) =>
+            string integrationId, HttpContext http, ITamDb tam, CancellationToken ct) =>
         {
             if (!model.Integrations.TryGetValue(integrationId, out var integration))
                 return Results.NotFound();
@@ -140,7 +139,7 @@ public static partial class TamAspNetCore
                 // A partner posting malformed JSON is a client error, not a server fault.
                 return FindingsResult(model, context, OutboundFindings.MalformedPayload.Create());
             }
-            var results = await PluginIntegrationRunner.RunAsync(integration, payload, executor, context, tam.Db, ct);
+            var results = await PluginIntegrationRunner.RunAsync(integration, payload, context, tam.Db, ct);
             return Results.Json(new { results }, TamJson.Options);
         });
 

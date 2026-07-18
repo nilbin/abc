@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Tam.EntityFrameworkCore;
 
 namespace Tam.AspNetCore;
@@ -84,7 +85,6 @@ public static class IntegrationRunner
     public static async Task<IReadOnlyList<IntegrationRowResult>> Run<TSource>(
         IntegrationDefinition<TSource> integration,
         IEnumerable<TSource> rows,
-        OperationExecutor executor,
         OperationContext context,
         Microsoft.EntityFrameworkCore.DbContext db,
         CancellationToken ct)
@@ -103,7 +103,7 @@ public static class IntegrationRunner
                     .ToDictionary(m => m.Target, m => m.Value);
                 return Task.FromResult((IReadOnlyDictionary<string, object?>)input);
             },
-            executor, context, db, ct);
+            context, db, ct);
     }
 }
 
@@ -122,7 +122,6 @@ internal static class InboxProcessor
         string operationId,
         IEnumerable<(string Key, string PayloadJson)> incoming,
         Func<string, OperationContext, CancellationToken, Task<IReadOnlyDictionary<string, object?>>> map,
-        OperationExecutor executor,
         OperationContext context,
         Microsoft.EntityFrameworkCore.DbContext db,
         CancellationToken ct)
@@ -163,23 +162,32 @@ internal static class InboxProcessor
             .ToListAsync(ct);
 
         var results = new List<IntegrationRowResult>();
+        var tenant = context.TenantId.Value;
         foreach (var record in retryable)
         {
             var input = await map(record.PayloadJson, context, ct);
             var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
 
-            var rowContext = new OperationContext
+            // Unit-of-work isolation (Sol review, Finding 1): each operation runs in its OWN
+            // scope + DbContext. A rolled-back operation's tracked mutations die with the scope,
+            // so this processor's shared inbox context can never flush them on its later
+            // SaveChanges, and they cannot leak into the next record's extension-target
+            // selection either. The inbox bookkeeping below stays on the outer `db`.
+            var response = await PinnedScope.RunAsync(context.Services, tenant, (rowServices, rct) =>
             {
-                Actor = context.Actor,
-                TenantId = context.TenantId,
-                Source = InvocationSource.Integration,
-                Culture = context.Culture,
-                IdempotencyKey = record.Key,
-                CorrelationId = context.CorrelationId,
-                Services = context.Services,
-            };
-
-            var response = await executor.ExecuteAsync(operationId, body, rowContext, ct);
+                var rowContext = new OperationContext
+                {
+                    Actor = context.Actor,
+                    TenantId = context.TenantId,
+                    Source = InvocationSource.Integration,
+                    Culture = context.Culture,
+                    IdempotencyKey = record.Key,
+                    CorrelationId = context.CorrelationId,
+                    Services = rowServices,
+                };
+                return rowServices.GetRequiredService<OperationExecutor>()
+                    .ExecuteAsync(operationId, body, rowContext, rct);
+            }, ct);
             var failed = response.Findings.Any(f => f.Severity == FindingSeverity.Error);
             var replayed = response.Findings.Any(f => f.Code == PipelineFindings.IdempotentReplay.Code);
 
@@ -225,7 +233,6 @@ public static class PluginIntegrationRunner
     public static async Task<IReadOnlyList<IntegrationRowResult>> RunAsync(
         PluginIntegrationDefinition integration,
         System.Text.Json.JsonElement payload,
-        OperationExecutor executor,
         OperationContext context,
         Microsoft.EntityFrameworkCore.DbContext db,
         CancellationToken ct)
@@ -241,6 +248,6 @@ public static class PluginIntegrationRunner
             integration.Id, integration.OperationId, incoming,
             (payloadJson, ctx, c) =>
                 integration.Map(JsonSerializer.Deserialize<JsonElement>(payloadJson), ctx.Services, ctx, c),
-            executor, context, db, ct);
+            context, db, ct);
     }
 }
