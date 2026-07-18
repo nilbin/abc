@@ -6,6 +6,12 @@
 composition of three mechanisms the framework already has, plus one new registry that mirrors
 nav v2 exactly. Nothing here invents a second model.
 
+Revision 2 (user-directed): **a country is a plugin**, not a bundle of presentation presets.
+ROT/RUT settled it — Swedish tax deductions are operations, packaged fields and a tax-authority
+integration, none of which presentation machinery can carry. This revision reassigns country to
+the activation channel, adds the axis/bridge composition model, and promotes the
+plugin-on-plugin tier (docs/22 "the tier that isn't (yet)") from someday to prerequisite.
+
 ## The spine: one compiled model, three variation channels
 
 There is exactly ONE compiled model per deployment. Variation is never conditional compilation,
@@ -13,10 +19,12 @@ never `if (country == "NO")` in domain code, never a per-tenant build. Every axi
 routes through one of three channels, each already proven elsewhere in the framework:
 
 1. **Activation + entitlements** — *what capability exists here* (docs/22, docs/24). Plugins
-   activate per tenant; plans entitle plugins and seats. This channel answers trade and size.
+   activate per tenant; plans entitle plugins and seats. This channel answers trade, size AND
+   country — anything that adds fields, operations, integrations or structure.
 2. **Overlays** — *how a declared surface presents* (docs/30 nav v2 is the template). Registry
    data merged into the effective manifest per tenant, fingerprinted into the ETag, dormant when
-   its target vanishes, retire-restores-the-default. This channel answers country and taste.
+   its target vanishes, retire-restores-the-default. This channel answers presentation
+   differences — and is the material packs on channel 1 ship their form variants as.
 3. **Tenant data** — *facts and behavior the tenant owns* (extension fields docs/15, automation
    rules P5, nav overrides). Rules already gate and mutate host operations per tenant; "flows
    differ by country" is rules + approval gates shipped as presets, not a new engine.
@@ -80,8 +88,8 @@ NAV001–005 idiom. An override whose field vanished (plugin deactivated, form e
 - **Tenant-authored**: the admin edits their own forms in `web.forms` — the nav.override story.
 - **Pack-shipped**: a plugin or tenant package carries overlay **presets** keyed by a `when`
   clause over profile facts (`when: { country: "NO" }`, `when: { size: "micro" }`). One
-  shipped preset serves every matching tenant; a Norwegian country pack is mostly locale
-  catalogs + form presets + validator sets + (later) tax integrations.
+  shipped preset serves every matching tenant. This is how a country pack delivers its form
+  variants — the presets are part of the plugin, not an alternative to it.
 
 Merge precedence, most specific wins per mutation: declared form ⊕ pack presets (ordered by
 `when` specificity) ⊕ tenant overrides. The tenant always wins over packs — their product.
@@ -113,8 +121,18 @@ The address is the acceptance test for this whole design: if it needs a mechanis
 facts + overlays + validator sets, the design is wrong. It is also the first piece of the
 parked order-domain arc (participants, multi-day, location), so building it pays twice.
 
-## Trade and size: the pack conventions
+## The axis packs: country, trade — and size stays a plan
 
+- **A country is a plugin** (usually a small family). The evidence is concrete: Sweden needs
+  ROT/RUT — a deduction type on the order and invoice, labor-cost shares, buyer identity,
+  per-person yearly caps, and a Skatteverket submission flow (reimbursement claims). That is
+  packaged fields, operations, rules and an outbound integration — channel 1 material through
+  and through. Germany needs sectioned order lines (Titel/positions in the construction
+  idiom), GAEB-flavored exchange and XRechnung/ZUGFeRD e-invoicing. Per-country accounting
+  integrations follow the same shape — the Fortnox sample already IS a Swedish-market plugin.
+  A country pack therefore ships the full range: packaged fields + operations + integrations
+  (only a plugin can), AND locale catalogs, form overlay presets and validator sets (the
+  presentation machinery below, used as its materials).
 - **A trade is a plugin** (or a package of them). The electrician pack ships inspection
   checklist templates, a materials catalog, rule presets (e.g. certification checks gating
   `orders.complete`), nav suggestions, form presets. Install + activate = the product speaks
@@ -123,9 +141,65 @@ parked order-domain arc (participants, multi-day, location), so building it pays
 - **Size is a plan** (docs/24). Capability differences by size are entitlements at the anchor —
   never overlay tricks. Presentation simplification for small shops ("hide the project fields,
   one-person companies don't dispatch") is a pack preset `when: { size: "micro" }` — visual
-  decluttering over the same capability set, honest to D-N6.
-- **A country is locale + presets + validator sets** (+ eventually tax/e-invoice integrations
-  on the docs/25 channel). Notably NOT a fork of any entity.
+  decluttering over the same capability set, honest to D-N6. Size does not need to be a pack:
+  it has no domain machinery of its own, only more-or-less of everyone else's.
+
+The superset principle (D-V8) still governs what lands in the HOST: structure that several
+countries need in different flavors belongs in the host as an optional superset the pack
+lights up. The German line-section case is the test: if order lines gain an optional
+grouping/section concept in the host model, the DE pack contributes presentation and exports
+over it — it does not fork the order. Whether sections clear the bar for the host or stay
+DE-pack-private structure is a call to make when that pack is real; the default lean is
+host-superset, because two countries wanting different flavors of the same structure is
+exactly what forks look like at birth.
+
+## Combining axes: the matrix is sparse — bridges, not mega-packs
+
+Country × trade × size must not produce N×M×K packs. The composition model:
+
+- **Axis packs stay pure.** The `se` pack knows nothing about trades; the `electrical` pack
+  knows nothing about countries; axis packs NEVER depend on each other. Each is written
+  against the host contract alone, exactly as plugins are today.
+- **Real intersections become bridge packs.** ROT vs RUT eligibility is genuinely
+  country×trade (ROT covers construction trades, RUT household services); a German
+  construction-trade pack may need GAEB specifics a plain DE pack shouldn't carry. Such a
+  feature is a SMALL plugin depending on both axis packs' contracts — `se × electrical`
+  ships only the intersection. The matrix is sparse in reality: most cells need nothing,
+  so the handful of bridges that exist are the ones reality demanded, never a generated
+  grid of variants.
+- **Data before code.** If the intersection is expressible as configuration of an axis pack
+  (which deduction types the tenant enables, a rule preset, an overlay), no bridge pack —
+  the tenant setting or the fact-keyed preset carries it. A bridge pack exists only when the
+  intersection needs BEHAVIOR neither parent can host as data.
+- **Auto-activation kills matrix administration.** A bridge pack declares
+  activate-when-parents-active: when both parent packs are active on a tenant (and the plan
+  entitles it), the bridge activates mechanically; deactivate a parent and the bridge
+  suspends (the dormancy idiom again — reactivate and it returns). Tenants pick axes; the
+  matrix manages itself.
+- **Layering stays shallow by convention**: host → axis packs → bridge packs. Depth two,
+  acyclic by construction (bridges depend only on axis packs, axis packs only on the host).
+  Nothing deeper is designed until something real demands it.
+
+## Plugin-on-plugin: promoted from someday to prerequisite
+
+Bridge packs need the tier docs/22 deliberately left unbuilt ("the tier that isn't (yet)").
+The contract side is already generalized: every plugin's contribution is a manifest slice
+with declared events, views and kinds, so a plugin can EXPORT its contract artifact exactly
+as the host exports `host-contract.json`, and a dependent compiles typed facades from it
+identically (docs/31 slice 3 machinery, second provider). What must be designed and built —
+the existence semantics docs/22 already enumerates:
+
+- the declared dependency edge (`DependsOn("se")`, derivable from requirement targets'
+  owners) with activation ordering, cascade/suspend on parent deactivation, and the
+  auto-activation flag above;
+- entitlement coupling across the edge (docs/24): no selling the bridge without its parents,
+  uninstall coherence;
+- PLG010 relaxes from "no inter-plugin targets" to "inter-plugin targets only along a
+  DECLARED, acyclic dependency edge, resolved through the parent's exported contract" —
+  ownership verification stays, the graph just gains sanctioned edges;
+- namespace discipline unchanged: a bridge extends its parents' surfaces (gates on their
+  operations, subscribers on their events, packaged fields on their extensible entities,
+  panels on their slots) but mints ids only in its OWN namespace.
 
 ## Flows
 
@@ -148,10 +222,21 @@ cannot express, that is a new design conversation — not a quiet extension of t
 - **D-V5 — pack presets are fact-keyed; the tenant's own override wins.**
 - **D-V6 — validator sets are compiled and additive**: model-declared, manifest-carried,
   selection can only tighten.
-- **D-V7 — trade = plugin, size = plan, country = locale + presets + validator sets.**
+- **D-V7 — country = plugin, trade = plugin, size = plan.** A country pack carries domain
+  machinery (ROT/RUT, line sections, integrations) AND ships presentation materials (locale,
+  overlay presets, validator sets). Size alone has no machinery — it stays entitlements.
 - **D-V8 — supersets over forks**: an entity that varies by country is declared once as the
   superset of shapes; variation is presentation + validation selection. The structured address
-  is the reference case.
+  is the reference case; order-line sections are the pending structural test.
+- **D-V9 — axis packs are pure; intersections are bridge packs.** Axis packs never depend on
+  each other; a real country×trade feature is a small plugin depending on both parents'
+  contracts. Data before code: configuration on an axis pack beats a bridge pack wherever it
+  suffices. The matrix is sparse — build only the bridges reality demands.
+- **D-V10 — the plugin-on-plugin tier is the enabling mechanism**, designed per docs/22's
+  enumeration: exported plugin contracts (the host-contract machinery, second provider),
+  declared acyclic dependency edges with activation ordering + cascade/suspend +
+  auto-activation, entitlement coupling, PLG010 relaxed only along declared edges. Layering
+  stays depth two: host → axis packs → bridge packs.
 
 ## Phasing (each slice independently shippable)
 
@@ -163,7 +248,14 @@ cannot express, that is a new design conversation — not a quiet extension of t
 4. **Validator sets + the structured address**: named sets in the model, manifest carriage,
    client pre-validation, the address superset on Order with `SE`/`NO` sets and country
    presets — the proving consumer, and the opening move of the order-location domain arc.
-5. **The electrician pack**: a sample trade pack proving the convention end to end.
+5. **Plugin-on-plugin (the dependency tier)**: plugin contract export (second provider of the
+   docs/31 artifact machinery), `DependsOn` edges + activation ordering + cascade/suspend +
+   auto-activation, entitlement coupling, PLG010's declared-edge relaxation. Independent of
+   1–4; prerequisite for 6.
+6. **The `se` country pack + one bridge**: ROT/RUT skeleton (deduction fields on order/invoice,
+   eligibility rules, a mocked Skatteverket outbound) as the axis pack; a small `se ×
+   electrical`-style bridge proving the intersection model and auto-activation end to end.
+   The trade-pack convention proves out here too.
 
 ## Non-goals
 
@@ -172,3 +264,5 @@ cannot express, that is a new design conversation — not a quiet extension of t
   mutation before it joins the set.
 - No workflow engine; flows stay rules + gates + entitlements until proven insufficient.
 - No free-form profile facts; every fact value validates against a host-declared catalog.
+- No dense variant matrix: nobody ever authors "the Swedish electrician edition" — tenants
+  compose axes; bridges exist only where an intersection has real behavior.

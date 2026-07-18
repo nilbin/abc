@@ -484,8 +484,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   FRM001–005, dormancy, tenant tier + fact-keyed pack presets), compiled named validator
   sets (tighten-only, manifest-carried), and the conventions trade=plugin / size=plan /
   country=locale+presets+validator-sets. The structured-address superset is the designated
-  proving consumer (also the opening move of the parked order-location arc). Decisions
-  D-V1–V8; five independently shippable slices proposed to the user before any build.
+  proving consumer (also the opening move of the parked order-location arc). Revision 2
+  (user-directed: "country is probably also a plugin — ROT/RUT, German order-line sections,
+  per-country integrations"): country reassigned to the activation channel — a country pack
+  carries domain machinery (ROT/RUT fields+ops+Skatteverket integration, sectioned order
+  lines, e-invoicing) AND ships the presentation materials; the combination problem answered
+  with SPARSE BRIDGE PACKS (axis packs stay pure and never depend on each other; a real
+  country×trade feature is a small plugin depending on both parents, auto-activated when
+  both are active; data-before-code); the plugin-on-plugin tier (docs/22) promoted from
+  someday to prerequisite — exported plugin contracts (host-contract machinery, second
+  provider), declared acyclic DependsOn edges, PLG010 relaxed only along declared edges,
+  depth-two layering host→axis→bridge. Decisions D-V1–V10; six slices proposed to the user
+  before any build (5 = the dependency tier, 6 = the `se` pack + one bridge).
 - **Framework batch 3: RequiresView kind-compat (the docs/31 deferral, closed)**:
   `RequiresView` now speaks the same `"name[:kind]"` grammar as `PublishesEvent`
   (`ContractKinds`, one parser for both sides), and the typed path pays nothing for it —

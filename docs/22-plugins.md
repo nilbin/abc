@@ -348,6 +348,12 @@ What IS genuinely new — and why the line stays until it is designed deliberate
 When the need is real, lifting PLG010 for a DECLARED dependency edge is the design
 commit — the gate is the placeholder for that decision, not a refusal of it.
 
+The need has now been named: the variability design (docs/37) makes country and trade AXIS
+packs and their real intersections (ROT/RUT eligibility per trade) small BRIDGE packs that
+depend on both parents — which is exactly this tier, with one addition (auto-activation when
+all parents are active). docs/37 D-V10 carries the composition rules; the layering stays
+depth two: host → axis packs → bridge packs.
+
 ## The marketplace: three tiers, one trust model
 
 "Pick and choose from a marketplace" needs no tenant code upload — it decomposes onto the channels above:
