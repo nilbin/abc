@@ -145,5 +145,6 @@
   "work-orders.not-editable": "Arbetsordern kan inte längre redigeras.",
   "work-orders.not-found": "Arbetsordern hittades inte.",
   "work-orders.project-not-open": "Projektet är inte öppet.",
-  "work-orders.schedule-needs-assignee": "Välj en giltig utförare."
+  "work-orders.schedule-needs-assignee": "Välj en giltig utförare.",
+  "nav.developer-portal": "Utvecklarportal"
 }

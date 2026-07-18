@@ -15,9 +15,9 @@ src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effec
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
                              OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, plugin
-                             system, and the framework admin surface as THIRTEEN always-active
+                             system, and the framework admin surface as FOURTEEN always-active
                              [TamPackage] modules (users/roles/audit/tenancy/rules/nav/documents/
-                             ... with their forms, grids and embedded sv/en locales)
+                             developer/... with their forms, grids and embedded sv/en locales)
 src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane + the RLS backstop
                              (TamRls: policies over every tenant-scoped table, scope-synced
                              session settings — docs/33)
@@ -474,6 +474,26 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **The developer portal + fully typed requirements (user-directed: "view it in the web
+  app… its own mode tab" / "strings for view properties still smells")**: BOTH landed.
+  (1) The last strings died: RequiresEvent<OrderCompletedEvent>() derives the event id,
+  fields AND kinds from the generated facade record; RequiresView<OrdersDetailRow>(r =>
+  r.Id, r => r.Number, r => r.EstimatedTotal) selects the read whitelist BY LAMBDA through
+  the facade — a renamed host field is now a compile error at the selection site; inspect +
+  invoicing migrated; manifest deep-equal proves behavior identical. (2) tam.developer —
+  the FOURTEENTH framework package: the developer.contract view (permission
+  developer.read) serves HostContractExport over the live model; the ERP host adds a
+  DEVELOPER nav mode ("Utvecklare" tab) with the portal page (samples/web
+  DeveloperPortal.tsx, the app's second registered page) rendering events (kinded payload
+  cards), the views catalog (accordion, permission badges, kinded field chips), slots with
+  context keys, extensible entities and the operations catalog — every heading and hint
+  from locale catalogs (sv/en package defaults). Discoverability now has three
+  synchronized forms of ONE contract: the artifact file (build input), the HostContract
+  symbols (IntelliSense), the portal (running app). Playwright screenshots delivered
+  (mode tab + events, expanded views, slots/entities/operations). Verified: suites
+  191+38 (fourteen-packages test updated), manifest ADDITIVE (baseline + types + contract
+  regenerated: new view/nav/permission), wire 16+18+22+22 on fresh SQLite AND fresh
+  Postgres.
 - **The host contract artifact — contract arc slice 3, the finale (user-directed, shaped
   by "how does a plugin author know what's available to extend?")**: `dotnet run --
   contract` exports the host's EXTENSION SURFACE as one versioned file

@@ -145,5 +145,6 @@
   "work-orders.not-editable": "The work order can no longer be edited.",
   "work-orders.not-found": "Work order not found.",
   "work-orders.project-not-open": "The project is not open.",
-  "work-orders.schedule-needs-assignee": "Pick a valid assignee."
+  "work-orders.schedule-needs-assignee": "Pick a valid assignee.",
+  "nav.developer-portal": "Developer portal"
 }

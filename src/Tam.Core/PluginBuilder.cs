@@ -168,6 +168,56 @@ public sealed class PluginBuilder
     public PluginBuilder RequiresView(ViewContractRef contract, params string[] fields) =>
         RequiresView(contract.ViewId, fields.Length == 0 ? [.. contract.Fields] : fields);
 
+    /// <summary>The fully TYPED requirement (docs/31 slice 3): the generated event facade IS
+    /// the dependency — its EventType const names the event, its properties carry fields and
+    /// kinds. A renamed host field is a compile error here, never a runtime surprise.</summary>
+    public PluginBuilder RequiresEvent<TEvent>()
+    {
+        var fields = typeof(TEvent)
+            .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Select(p => ContractKinds.FromClr(p.PropertyType) is { } kind
+                ? $"{Naming.Camel(p.Name)}:{kind}"
+                : Naming.Camel(p.Name))
+            .ToArray();
+        return RequiresEvent(FacadeId<TEvent>("EventType"), fields);
+    }
+
+    /// <summary>The typed view requirement: field selection THROUGH the generated row facade
+    /// (<c>RequiresView&lt;OrdersDetailRow&gt;(r =&gt; r.Id, r =&gt; r.Number)</c>) — the
+    /// subset stays explicit and minimal, and every selected field is compiler-checked
+    /// against the artifact. No selectors = the whole contract.</summary>
+    public PluginBuilder RequiresView<TRow>(
+        params System.Linq.Expressions.Expression<Func<TRow, object?>>[] fields)
+    {
+        var names = fields.Length == 0
+            ? typeof(TRow)
+                .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                .Select(p => Naming.Camel(p.Name))
+                .ToArray()
+            : fields.Select(f => Naming.Camel(MemberName(f))).ToArray();
+        return RequiresView(FacadeId<TRow>("ViewId"), names);
+    }
+
+    private static string FacadeId<TFacade>(string constName) =>
+        typeof(TFacade).GetField(constName,
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?.GetRawConstantValue() as string
+        ?? throw new InvalidOperationException(
+            $"'{typeof(TFacade).Name}' is not a generated contract facade — it carries no {constName} const.");
+
+    private static string MemberName<TRow>(
+        System.Linq.Expressions.Expression<Func<TRow, object?>> selector) =>
+        selector.Body switch
+        {
+            System.Linq.Expressions.MemberExpression member => member.Member.Name,
+            System.Linq.Expressions.UnaryExpression
+            {
+                Operand: System.Linq.Expressions.MemberExpression inner,
+            } => inner.Member.Name,
+            _ => throw new InvalidOperationException(
+                "RequiresView selectors must be simple property accesses (r => r.Field)."),
+        };
+
     /// <summary>Composes a registration PART (review round 4): big plugins split Configure
     /// into cohesive units and list them here — explicitly, so Configure stays the index.</summary>
     public PluginBuilder AddPart<TPart>() where TPart : IPluginPart, new()

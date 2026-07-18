@@ -74,9 +74,9 @@ D4 applies per plugin: each plugin's manifest contribution is baseline-checked i
 ### Framework packages (the framework-trust tier) — BUILT
 
 The framework's own admin capabilities register through the SAME `PluginBuilder` surface a
-vendor plugin uses — `AddTamSystem()` is thirteen `[TamPackage]` modules (`tam.users`,
+vendor plugin uses — `AddTamSystem()` is fourteen `[TamPackage]` modules (`tam.users`,
 `tam.audit`, `tam.roles`, `tam.tenancy`, `tam.rules`, `tam.documents`
-([36-documents.md](36-documents.md)), …), each shipping its operations, views,
+([36-documents.md](36-documents.md)), `tam.developer`, …), each shipping its operations, views,
 forms and grids. Every framework capability therefore exercises the plugin seams daily — the
 strongest regression guard the seams can have. A package differs from a vendor plugin on the
 tier axes only:
@@ -310,8 +310,15 @@ A plugin author's first question has one answer: the host's exported
 (packaged-field targets) and gateable operation, in one versioned file. Reference it as an
 `AdditionalFiles` item and the source generator turns the whole surface into IntelliSense:
 `HostContract.Events.*` / `HostContract.Views.*` for requirements, plus a typed facade per
-event and view. Update the host dependency by replacing the file; every rename becomes a
-compile error (D4 keeps snapshots stable: wire names are permanent).
+event and view — and requirement declarations go THROUGH the facades:
+`RequiresEvent<OrderCompletedEvent>()` (fields and kinds from the record),
+`RequiresView<OrdersDetailRow>(r => r.Id, r => r.Number)` (the subset selected by lambda —
+no field strings anywhere). Update the host dependency by replacing the file; every rename
+becomes a compile error (D4 keeps snapshots stable: wire names are permanent). The same
+surface renders IN the running app: the `tam.developer` package serves the contract through
+the `developer.contract` view (permission `developer.read`), and the host places the
+developer PORTAL page in its own nav mode — artifact, IntelliSense and portal are three
+synchronized forms of one contract.
 
 ### Plugin-on-plugin: the tier that isn't (yet)
 

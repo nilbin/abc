@@ -263,6 +263,19 @@
       "validation.too-long": "Must be at most {max} characters.",
       "validation.unknown-field": "Unknown field.",
       "vault.invalid-key": "Invalid key.",
+      "nav.developer": "Developer",
+      "labels.contract": "Contract",
+      "dev.intro": "The host\u0027s extension surface \u2014 what a plugin may compose with. The same contract ships as host-contract.json and as the generated HostContract symbols.",
+      "dev.headings.events": "Events",
+      "dev.headings.views": "Views",
+      "dev.headings.slots": "Slots",
+      "dev.headings.entities": "Extensible entities",
+      "dev.headings.operations": "Operations",
+      "dev.hint.events": "Payload contracts a plugin subscribes to (RequiresEvent\u003COrderCompletedEvent\u003E()).",
+      "dev.hint.views": "Readable fields per view (RequiresView\u003COrdersDetailRow\u003E(r =\u003E r.Id, \u2026)); permission in the badge.",
+      "dev.hint.slots": "Host surfaces a plugin\u0027s panels can land in, with their context keys.",
+      "dev.hint.entities": "Entities accepting packaged extension fields.",
+      "dev.hint.operations": "Operation ids a plugin may gate or target with grid actions.",
       "ext.inspect.requiresInspection": "Requires inspection",
       "inspect.checklist-incomplete": "The mandatory checklist \u0022{title}\u0022 has {open} open lines \u2014 the order cannot be completed.",
       "inspect.headings.template-items": "Template lines",
@@ -496,7 +509,8 @@
       "work-orders.not-editable": "The work order can no longer be edited.",
       "work-orders.not-found": "Work order not found.",
       "work-orders.project-not-open": "The project is not open.",
-      "work-orders.schedule-needs-assignee": "Pick a valid assignee."
+      "work-orders.schedule-needs-assignee": "Pick a valid assignee.",
+      "nav.developer-portal": "Developer portal"
     },
     "sv": {
       "auth.added-body": "Logga in som vanligt och v\u00E4lj organisationen vid inloggning.",
@@ -759,6 +773,19 @@
       "validation.too-long": "F\u00E5r inneh\u00E5lla h\u00F6gst {max} tecken.",
       "validation.unknown-field": "Ok\u00E4nt f\u00E4lt.",
       "vault.invalid-key": "Ogiltig nyckel.",
+      "nav.developer": "Utvecklare",
+      "labels.contract": "Kontrakt",
+      "dev.intro": "V\u00E4rdens ut\u00F6kningsyta \u2014 det en plugin kan komponera mot. Samma kontrakt levereras som host-contract.json och som de genererade HostContract-symbolerna.",
+      "dev.headings.events": "H\u00E4ndelser",
+      "dev.headings.views": "Vyer",
+      "dev.headings.slots": "Platser",
+      "dev.headings.entities": "Ut\u00F6kningsbara entiteter",
+      "dev.headings.operations": "Operationer",
+      "dev.hint.events": "Nyttolastkontrakt en plugin prenumererar p\u00E5 (RequiresEvent\u003COrderCompletedEvent\u003E()).",
+      "dev.hint.views": "L\u00E4sbara f\u00E4lt per vy (RequiresView\u003COrdersDetailRow\u003E(r =\u003E r.Id, \u2026)); beh\u00F6righet i etiketten.",
+      "dev.hint.slots": "V\u00E4rdytor d\u00E4r en plugins paneler kan landa, med sina kontextnycklar.",
+      "dev.hint.entities": "Entiteter som tar emot paketerade ut\u00F6kningsf\u00E4lt.",
+      "dev.hint.operations": "Operations-id:n en plugin kan grinda eller rikta rutn\u00E4ts\u00E5tg\u00E4rder mot.",
       "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
       "inspect.checklist-incomplete": "Den obligatoriska checklistan \u0022{title}\u0022 har {open} \u00F6ppna rader \u2014 ordern kan inte slutf\u00F6ras.",
       "inspect.headings.template-items": "Mallrader",
@@ -992,7 +1019,8 @@
       "work-orders.not-editable": "Arbetsordern kan inte l\u00E4ngre redigeras.",
       "work-orders.not-found": "Arbetsordern hittades inte.",
       "work-orders.project-not-open": "Projektet \u00E4r inte \u00F6ppet.",
-      "work-orders.schedule-needs-assignee": "V\u00E4lj en giltig utf\u00F6rare."
+      "work-orders.schedule-needs-assignee": "V\u00E4lj en giltig utf\u00F6rare.",
+      "nav.developer-portal": "Utvecklarportal"
     }
   },
   "operations": {
@@ -7595,6 +7623,36 @@
       "defaultSortDescending": true,
       "plugin": "tam.documents"
     },
+    "developer.contract": {
+      "permission": "developer.read",
+      "queryFields": [],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.id",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "contract",
+          "labelKey": "labels.contract",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [],
+      "filterable": [],
+      "defaultSortDescending": false,
+      "plugin": "tam.developer"
+    },
     "inspect.items.list": {
       "permission": "inspect.checklists.read",
       "queryFields": [
@@ -10626,6 +10684,7 @@
     "customers.edit",
     "customers.read",
     "customers.sensitive",
+    "developer.read",
     "documents.add",
     "documents.manage",
     "documents.read",
@@ -10696,6 +10755,7 @@
   ],
   "packages": [
     "tam.audit",
+    "tam.developer",
     "tam.documents",
     "tam.extensions",
     "tam.integrations",
@@ -10995,6 +11055,24 @@
             ]
           }
         ]
+      },
+      {
+        "id": "developer",
+        "kind": "mode",
+        "labelKey": "nav.developer",
+        "children": [
+          {
+            "id": "developer-portal",
+            "kind": "page",
+            "labelKey": "nav.developer-portal",
+            "order": 10,
+            "target": {
+              "page": "developer-portal"
+            },
+            "permission": "developer.read",
+            "children": []
+          }
+        ]
       }
     ]
   },
@@ -11275,6 +11353,54 @@
     ]
   },
   "events": {
+    "order-cancelled": {
+      "fields": [
+        "orderId",
+        "number"
+      ],
+      "subscribedBy": [],
+      "kinds": {
+        "orderId": "guid"
+      }
+    },
+    "order-completed": {
+      "fields": [
+        "orderId",
+        "number"
+      ],
+      "subscribedBy": [
+        "inspect",
+        "invoicing"
+      ],
+      "kinds": {
+        "orderId": "guid"
+      }
+    },
+    "order-created": {
+      "fields": [
+        "orderId",
+        "number",
+        "orderType"
+      ],
+      "subscribedBy": [
+        "inspect"
+      ],
+      "kinds": {
+        "orderId": "guid"
+      }
+    },
+    "work-order-completed": {
+      "fields": [
+        "workOrderId",
+        "number"
+      ],
+      "subscribedBy": [
+        "invoicing"
+      ],
+      "kinds": {
+        "workOrderId": "guid"
+      }
+    },
     "inspect.checklist-passed": {
       "fields": [
         "checklistId"
@@ -11284,7 +11410,7 @@
         "checklistId": "guid"
       }
     },
-    "approvals.requested": {
+    "approvals.approved": {
       "fields": [
         "requestId"
       ],
@@ -11295,7 +11421,7 @@
         "requestId": "guid"
       }
     },
-    "approvals.approved": {
+    "approvals.requested": {
       "fields": [
         "requestId"
       ],
@@ -11337,54 +11463,6 @@
       "kinds": {
         "invoiceId": "guid",
         "orderId": "guid"
-      }
-    },
-    "order-created": {
-      "fields": [
-        "orderId",
-        "number",
-        "orderType"
-      ],
-      "subscribedBy": [
-        "inspect"
-      ],
-      "kinds": {
-        "orderId": "guid"
-      }
-    },
-    "order-completed": {
-      "fields": [
-        "orderId",
-        "number"
-      ],
-      "subscribedBy": [
-        "inspect",
-        "invoicing"
-      ],
-      "kinds": {
-        "orderId": "guid"
-      }
-    },
-    "order-cancelled": {
-      "fields": [
-        "orderId",
-        "number"
-      ],
-      "subscribedBy": [],
-      "kinds": {
-        "orderId": "guid"
-      }
-    },
-    "work-order-completed": {
-      "fields": [
-        "workOrderId",
-        "number"
-      ],
-      "subscribedBy": [
-        "invoicing"
-      ],
-      "kinds": {
-        "workOrderId": "guid"
       }
     }
   }

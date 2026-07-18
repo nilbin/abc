@@ -1,4 +1,5 @@
 import { DocumentsBrowser } from './DocumentsBrowser';
+import { DeveloperPortal } from './DeveloperPortal';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   AppShell, Button, Center, Group, Loader, SegmentedControl, Select, Stack, Text,
@@ -24,9 +25,11 @@ registerBadgeColors({
 });
 
 // ---- Pages: model-declared pages render through the framework's ModelPage (docs/32).
-// The documents tree browser is the app's ONE registered page — genuinely custom UX, the
-// escape hatch used as intended (the registerPage ratio is the architecture tripwire).
+// TWO registered pages — both genuinely custom UX, the escape hatch used as intended
+// (the registerPage ratio is the architecture tripwire): the documents tree browser and
+// the developer portal (docs/31 slice 3 — the extension surface rendered in the app).
 registerPage('documents-browser', () => <DocumentsBrowser />);
+registerPage('developer-portal', () => <DeveloperPortal />);
 
 function Shell(props: {
   userName: string;

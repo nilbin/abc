@@ -98,6 +98,16 @@
         "isActive": "bool"
       }
     },
+    "developer.contract": {
+      "permission": "developer.read",
+      "fields": [
+        "id",
+        "contract"
+      ],
+      "kinds": {
+        "id": "guid"
+      }
+    },
     "documents.folders.list": {
       "permission": "documents.read",
       "fields": [

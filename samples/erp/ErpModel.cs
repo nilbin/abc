@@ -64,7 +64,11 @@ public static partial class ErpModel
                 .Page("my-work", page: "work-orders", order: 10)
                 .Page("my-time", page: "time", order: 20))
             .Mode("admin", m => m
-                .Section("administration")))
+                .Section("administration"))
+            // The DEVELOPER mode (docs/31 slice 3): the extension surface rendered in the
+            // running app — the portal page over developer.contract, for developer.read.
+            .Mode("developer", m => m
+                .Page("developer-portal", page: "developer-portal", permission: "developer.read", order: 10)))
 
         .Build();
 }
