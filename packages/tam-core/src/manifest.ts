@@ -97,6 +97,8 @@ export interface Manifest {
      *  contributions carry a bind (input wire name ← row column) and their plugin id. */
     actions: GridAction[];
     includeExtensions: boolean;
+    /** Model-curated default visibility: these columns start hidden; the chooser re-shows. */
+    defaultHiddenColumns?: string[];
     plugin?: string;
   }>;
   extensions: Record<string, ManifestField[]>;

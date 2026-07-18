@@ -474,6 +474,21 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Grid feature round (user-directed: "needs a better frontend overall to support many
+  columns")**: ViewGrid reworked for wide grids. Row actions COLLAPSE into a per-row ⋯
+  menu when there is more than one (the merged orders grid had seven inline buttons —
+  most of its width); a single action stays a button. A COLUMN CHOOSER (toolbar
+  "Kolumner" menu, declared + extension columns alike) persists per grid in localStorage;
+  the MODEL curates the default via `grid.Column(x => x.Foo, defaultHidden: true)` — a
+  new additive manifest field (`defaultHiddenColumns`), demonstrated on the orders grid's
+  Type column. Filters collapse behind a "Filter" toggle with an active-count badge
+  (open stays forced while filters are active). Cells and headers are nowrap with
+  ellipsis (maxWidth 280) and the ScrollContainer's minWidth scales with column count —
+  wide grids now SCROLL sideways instead of squeezing badges into "Ö…"; sticky header +
+  compact vertical spacing. New chrome keys grid.columns/filters/row-actions (sv+en).
+  Verified: suites 191+38, additive baseline (+types/contract regen — byte-stable),
+  wire 16+18+22+25 on fresh SQLite AND fresh Postgres, screenshots (compact grid with
+  whole badges, column chooser, row-action menu).
 - **Order/WorkOrder MERGED into one entity (user decision: "it should be modeled under a
   single entity — splitting doesn't make sense")**: the commercial commitment and its
   execution are now the same Order. The aggregate absorbed Priority, ScheduledDate,

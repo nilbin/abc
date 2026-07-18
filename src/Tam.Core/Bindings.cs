@@ -156,6 +156,11 @@ public sealed record GridDefinition(
     IReadOnlyList<GridActionSpec> Actions,
     bool IncludeExtensions)
 {
+    /// <summary>Columns declared but hidden by DEFAULT — the model's curation of a wide grid.
+    /// The client's column chooser can re-show them (a per-user presentation choice); the
+    /// column stays declared, filterable and sortable either way.</summary>
+    public IReadOnlyList<string> DefaultHiddenColumns { get; init; } = [];
+
     /// <summary>Owning plugin id, or null for host-defined grids (docs/22).</summary>
     public string? Plugin { get; init; }
 }
@@ -163,12 +168,16 @@ public sealed record GridDefinition(
 public sealed class GridBuilder<TResult>
 {
     private readonly List<string> columns = [];
+    private readonly List<string> defaultHidden = [];
     private readonly List<GridActionSpec> actions = [];
     private bool includeExtensions;
 
-    public GridBuilder<TResult> Column<TValue>(Expression<Func<TResult, TValue>> member)
+    public GridBuilder<TResult> Column<TValue>(Expression<Func<TResult, TValue>> member,
+        bool defaultHidden = false)
     {
-        columns.Add(Naming.Camel(FormBuilder<TResult>.MemberName(member)));
+        var name = Naming.Camel(FormBuilder<TResult>.MemberName(member));
+        columns.Add(name);
+        if (defaultHidden) this.defaultHidden.Add(name);
         return this;
     }
 
@@ -202,5 +211,6 @@ public sealed class GridBuilder<TResult>
     }
 
     internal GridDefinition Build(string id, string viewId) =>
-        new(id, viewId, columns, actions, includeExtensions);
+        new(id, viewId, columns, actions, includeExtensions)
+        { DefaultHiddenColumns = defaultHidden };
 }

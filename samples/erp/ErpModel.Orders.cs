@@ -77,7 +77,7 @@ public static partial class ErpModel
             grid.Column(x => x.Number);
             grid.Column(x => x.TenantId);   // the company column — rendered only when acting above a leaf
             grid.Column(x => x.CustomerName);
-            grid.Column(x => x.Type);
+            grid.Column(x => x.Type, defaultHidden: true);
             grid.Column(x => x.Status);
             grid.Column(x => x.Priority);
             grid.Column(x => x.ScheduledDate);

@@ -54,8 +54,11 @@
       "filters.from": "from",
       "filters.to": "to",
       "grid.action-failed": "The action could not be completed. Try again.",
+      "grid.columns": "Columns",
       "grid.empty": "No rows.",
+      "grid.filters": "Filters",
       "grid.load-failed": "Could not load the list. Try again.",
+      "grid.row-actions": "Actions",
       "grid.total": "{count} records",
       "integrations.dead-letter-not-found": "No dead-lettered item with that id.",
       "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00).",
@@ -580,8 +583,11 @@
       "filters.from": "fr\u00E5n",
       "filters.to": "till",
       "grid.action-failed": "\u00C5tg\u00E4rden kunde inte genomf\u00F6ras. F\u00F6rs\u00F6k igen.",
+      "grid.columns": "Kolumner",
       "grid.empty": "Inga rader.",
+      "grid.filters": "Filter",
       "grid.load-failed": "Kunde inte l\u00E4sa in listan. F\u00F6rs\u00F6k igen.",
+      "grid.row-actions": "\u00C5tg\u00E4rder",
       "grid.total": "{count} tr\u00E4ffar",
       "integrations.dead-letter-not-found": "Ingen stoppad post med det id:t.",
       "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
@@ -9663,7 +9669,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.extensions"
+      "plugin": "tam.extensions",
+      "defaultHiddenColumns": []
     },
     "web.roles": {
       "view": "roles.list",
@@ -9686,7 +9693,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.roles"
+      "plugin": "tam.roles",
+      "defaultHiddenColumns": []
     },
     "web.audit.list": {
       "view": "audit.entries",
@@ -9702,7 +9710,8 @@
       ],
       "actions": [],
       "includeExtensions": false,
-      "plugin": "tam.audit"
+      "plugin": "tam.audit",
+      "defaultHiddenColumns": []
     },
     "web.plugins": {
       "view": "plugins.list",
@@ -9723,7 +9732,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.plugins"
+      "plugin": "tam.plugins",
+      "defaultHiddenColumns": []
     },
     "web.packages": {
       "view": "packages.list",
@@ -9745,7 +9755,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.tenantpackages"
+      "plugin": "tam.tenantpackages",
+      "defaultHiddenColumns": []
     },
     "web.rules": {
       "view": "rules.list",
@@ -9772,7 +9783,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.rules"
+      "plugin": "tam.rules",
+      "defaultHiddenColumns": []
     },
     "web.tenants": {
       "view": "tenants.list",
@@ -9799,7 +9811,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.tenancy"
+      "plugin": "tam.tenancy",
+      "defaultHiddenColumns": []
     },
     "web.users": {
       "view": "users.list",
@@ -9822,7 +9835,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.users"
+      "plugin": "tam.users",
+      "defaultHiddenColumns": []
     },
     "web.nav": {
       "view": "nav.overrides",
@@ -9846,7 +9860,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.nav"
+      "plugin": "tam.nav",
+      "defaultHiddenColumns": []
     },
     "web.documents.folders": {
       "view": "documents.folders.list",
@@ -9873,7 +9888,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.documents"
+      "plugin": "tam.documents",
+      "defaultHiddenColumns": []
     },
     "web.documents.list": {
       "view": "documents.list",
@@ -9894,7 +9910,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "tam.documents"
+      "plugin": "tam.documents",
+      "defaultHiddenColumns": []
     },
     "inspect.web.templates": {
       "view": "inspect.templates.list",
@@ -9923,7 +9940,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "defaultHiddenColumns": []
     },
     "inspect.web.template-items": {
       "view": "inspect.templates.items",
@@ -9934,7 +9952,8 @@
       ],
       "actions": [],
       "includeExtensions": false,
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "defaultHiddenColumns": []
     },
     "inspect.web.checklists": {
       "view": "inspect.checklists.list",
@@ -9957,7 +9976,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "defaultHiddenColumns": []
     },
     "inspect.web.items": {
       "view": "inspect.items.list",
@@ -9980,7 +10000,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "defaultHiddenColumns": []
     },
     "approvals.web.groups": {
       "view": "approvals.groups.list",
@@ -10001,7 +10022,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "approvals"
+      "plugin": "approvals",
+      "defaultHiddenColumns": []
     },
     "approvals.web.rules": {
       "view": "approvals.rules.list",
@@ -10025,7 +10047,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "approvals"
+      "plugin": "approvals",
+      "defaultHiddenColumns": []
     },
     "approvals.web.requests": {
       "view": "approvals.requests.list",
@@ -10048,7 +10071,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "approvals"
+      "plugin": "approvals",
+      "defaultHiddenColumns": []
     },
     "invoicing.web.invoices": {
       "view": "invoicing.invoices.list",
@@ -10071,7 +10095,8 @@
         }
       ],
       "includeExtensions": false,
-      "plugin": "invoicing"
+      "plugin": "invoicing",
+      "defaultHiddenColumns": []
     },
     "web.orders.list": {
       "view": "orders.list",
@@ -10137,7 +10162,10 @@
           "plugin": "invoicing"
         }
       ],
-      "includeExtensions": true
+      "includeExtensions": true,
+      "defaultHiddenColumns": [
+        "type"
+      ]
     },
     "web.customers.list": {
       "view": "customers.list",
@@ -10160,7 +10188,8 @@
           "mode": "form"
         }
       ],
-      "includeExtensions": false
+      "includeExtensions": false,
+      "defaultHiddenColumns": []
     },
     "web.projects.list": {
       "view": "projects.list",
@@ -10189,7 +10218,8 @@
           "mode": "form"
         }
       ],
-      "includeExtensions": false
+      "includeExtensions": false,
+      "defaultHiddenColumns": []
     },
     "web.stock.list": {
       "view": "stock.list",
@@ -10212,7 +10242,8 @@
           "mode": "form"
         }
       ],
-      "includeExtensions": false
+      "includeExtensions": false,
+      "defaultHiddenColumns": []
     },
     "web.time.list": {
       "view": "time.list",
@@ -10232,7 +10263,8 @@
           "mode": "execute"
         }
       ],
-      "includeExtensions": false
+      "includeExtensions": false,
+      "defaultHiddenColumns": []
     },
     "web.materials.list": {
       "view": "materials.list",
@@ -10246,7 +10278,8 @@
         "amount"
       ],
       "actions": [],
-      "includeExtensions": false
+      "includeExtensions": false,
+      "defaultHiddenColumns": []
     }
   },
   "extensions": {},

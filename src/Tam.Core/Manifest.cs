@@ -131,6 +131,10 @@ public sealed record ManifestGrid(
     bool IncludeExtensions)
 {
     public string? Plugin { get; init; }
+
+    /// <summary>Model-curated default visibility (additive): columns listed here start
+    /// hidden; the client's chooser can re-show them per user.</summary>
+    public IReadOnlyList<string> DefaultHiddenColumns { get; init; } = [];
 }
 
 /// <summary>One operation affordance on a grid (docs/32): placement "row"|"toolbar" × mode
@@ -283,6 +287,7 @@ public static class ManifestBuilder
                     .ToList(),
                 kv.Value.IncludeExtensions)
             {
+                DefaultHiddenColumns = kv.Value.DefaultHiddenColumns,
                 Plugin = kv.Value.Plugin,
             });
 

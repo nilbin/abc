@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Button, Group, Loader, Modal, Pagination, Select, Stack, Table, Text,
-  Title, UnstyledButton,
+  ActionIcon, Alert, Badge, Button, Checkbox, Collapse, Group, Loader, Menu, Modal,
+  Pagination, Select, Stack, Table, Text, Title, UnstyledButton,
 } from '@mantine/core';
 import { GridAction, ManifestField, OperationResponse, findingMessage } from '@tam/core';
 import { useTam, useView } from './context';
@@ -54,7 +54,28 @@ export function ViewGrid(props: ViewGridProps) {
     useState<{ operation: string; initial?: Record<string, unknown> } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
+  // The filter controls collapse behind a toggle: a wide grid's dozen inputs are noise until
+  // the user is actually narrowing. Active filters keep the panel open across remounts.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = props.pageSize ?? 15;
+
+  // Column visibility: the MODEL curates the default (defaultHiddenColumns), the USER refines
+  // it per grid (persisted locally — a presentation choice, not tenant data). Extension
+  // columns participate like any other.
+  const storageKey = `tam.grid.${props.grid}.hidden`;
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) return new Set(JSON.parse(stored) as string[]);
+    } catch { /* fresh environment or malformed entry — fall through to the model default */ }
+    return new Set(gridDef.defaultHiddenColumns ?? []);
+  });
+  const toggleColumn = (name: string) => setHidden(prev => {
+    const next = new Set(prev);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    try { localStorage.setItem(storageKey, JSON.stringify([...next])); } catch { /* private mode */ }
+    return next;
+  });
 
   // Subtree views (docs/26 D-H1): the manifest names the result field carrying each row's
   // tenant. The standable list supplies display names + the acting node; the company column
@@ -120,13 +141,16 @@ export function ViewGrid(props: ViewGridProps) {
     return displayFor(field)({ field, value, tam });
   };
 
-  const columns: ManifestField[] = [
+  const allColumns: ManifestField[] = [
     ...gridDef.columns
       .map(c => resultByName.get(c))
       .filter((f): f is ManifestField => f !== undefined)
       .filter(f => f.name !== subtreeField || grouped),
     ...extensionColumns,
   ];
+  const columns = allColumns.filter(f => !hidden.has(f.name));
+  const columnLabel = (field: ManifestField) =>
+    field.extension ? t(`ext.${field.name}`) : t(field.labelKey);
 
   const formForOperation = (operationId: string) =>
     Object.entries(manifest.forms).find(([, f]) => f.operation === operationId)?.[0];
@@ -184,21 +208,38 @@ export function ViewGrid(props: ViewGridProps) {
     setModalAction({ operation: operationId, initial });
   };
 
+  const activeFilterCount = Object.keys(filters).length;
+  const hasFilters = filterFields.length > 0 || extensionFilterFields.length > 0;
+
   return (
     <Stack gap="sm">
-      <Group justify="space-between" align="flex-end">
+      <Group justify="space-between" align="center">
         <Group gap="xs">
-          {filterFields.map(field => field.name === subtreeField
-            ? (grouped ? <Select key={field.name} size="xs" clearable searchable
-                placeholder={t(field.labelKey)}
-                data={companies.map(c => ({ value: c.id, label: c.display }))}
-                value={filters[field.name] ?? null}
-                onChange={v => setFilter(field.name, v)} /> : null)
-            : <FilterControl key={field.name} field={field}
-                filters={filters} setFilter={setFilter} />)}
-          {extensionFilterFields.map(field => <FilterControl key={`ext.${field.name}`}
-            field={field} filterKey={`ext.${field.name}`}
-            filters={filters} setFilter={setFilter} />)}
+          {hasFilters && (
+            <Button size="xs" variant={activeFilterCount > 0 ? 'light' : 'subtle'}
+              onClick={() => setFiltersOpen(o => !o)}
+              rightSection={activeFilterCount > 0
+                ? <Badge size="xs" circle>{activeFilterCount}</Badge> : undefined}>
+              {t('grid.filters')}
+            </Button>
+          )}
+          {/* The column chooser: model curation as the default, the user's refinement kept
+              locally per grid. Every declared + extension column is offered. */}
+          <Menu closeOnItemClick={false} shadow="md" position="bottom-start">
+            <Menu.Target>
+              <Button size="xs" variant="subtle">{t('grid.columns')}</Button>
+            </Menu.Target>
+            <Menu.Dropdown mah={320} style={{ overflowY: 'auto' }}>
+              {allColumns.map(field => (
+                <Menu.Item key={field.name}
+                  leftSection={<Checkbox size="xs" readOnly
+                    checked={!hidden.has(field.name)} tabIndex={-1} />}
+                  onClick={() => toggleColumn(field.name)}>
+                  <Text size="sm">{columnLabel(field)}</Text>
+                </Menu.Item>
+              ))}
+            </Menu.Dropdown>
+          </Menu>
         </Group>
         <Group>
           {toolbarActions.map(action => (
@@ -213,6 +254,22 @@ export function ViewGrid(props: ViewGridProps) {
         </Group>
       </Group>
 
+      <Collapse in={filtersOpen || activeFilterCount > 0}>
+        <Group gap="xs">
+          {filterFields.map(field => field.name === subtreeField
+            ? (grouped ? <Select key={field.name} size="xs" clearable searchable
+                placeholder={t(field.labelKey)}
+                data={companies.map(c => ({ value: c.id, label: c.display }))}
+                value={filters[field.name] ?? null}
+                onChange={v => setFilter(field.name, v)} /> : null)
+            : <FilterControl key={field.name} field={field}
+                filters={filters} setFilter={setFilter} />)}
+          {extensionFilterFields.map(field => <FilterControl key={`ext.${field.name}`}
+            field={field} filterKey={`ext.${field.name}`}
+            filters={filters} setFilter={setFilter} />)}
+        </Group>
+      </Collapse>
+
       {loadError && (
         <Alert color="red" variant="light">{t('grid.load-failed')}</Alert>
       )}
@@ -223,17 +280,19 @@ export function ViewGrid(props: ViewGridProps) {
         </Alert>
       )}
 
-      <Table.ScrollContainer minWidth={720}>
-        <Table striped highlightOnHover withTableBorder>
+      {/* Wide grids SCROLL sideways instead of squeezing — nowrap cells keep badges and
+          numbers whole, and the ScrollContainer owns the overflow. */}
+      <Table.ScrollContainer minWidth={Math.max(720, columns.length * 132)}>
+        <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="xs">
           <Table.Thead>
             <Table.Tr>
               {columns.map(field => {
                 // Extension columns sort mechanically ("sort=ext.{key}") like they filter.
                 const sortKey = field.extension ? `ext.${field.name}` : field.name;
                 const sortable = field.extension || view.sortable.includes(field.name);
-                const label = field.extension ? t(`ext.${field.name}`) : t(field.labelKey);
+                const label = columnLabel(field);
                 return (
-                  <Table.Th key={field.name}>
+                  <Table.Th key={field.name} style={{ whiteSpace: 'nowrap' }}>
                     {sortable ? (
                       <UnstyledButton onClick={() => {
                         if (sort === sortKey) setDesc(d => !d);
@@ -261,20 +320,45 @@ export function ViewGrid(props: ViewGridProps) {
                 style={props.onRowClick ? { cursor: 'pointer' } : undefined}
                 onClick={() => props.onRowClick?.(row)}>
                 {columns.map(field => (
-                  <Table.Td key={field.name}>{cell(row, field)}</Table.Td>
+                  <Table.Td key={field.name}
+                    style={{ whiteSpace: 'nowrap', maxWidth: 280,
+                      overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {cell(row, field)}
+                  </Table.Td>
                 ))}
                 {rowActionList.length > 0 && (
-                  <Table.Td onClick={e => e.stopPropagation()}>
-                    <Group gap="xs" justify="flex-end">
-                      {rowActionList.map(action => (
-                        <Button key={action.operation} size="compact-xs" variant="light"
-                          onClick={() => action.mode === 'form'
-                            ? openRowForm(action.operation, row)
-                            : void runRowAction(action, row)}>
-                          {tam.tOr([`operations.${action.operation}.action`, `operations.${action.operation}.title`])}
-                        </Button>
-                      ))}
-                    </Group>
+                  <Table.Td onClick={e => e.stopPropagation()}
+                    style={{ whiteSpace: 'nowrap', width: 1 }}>
+                    {/* ONE action renders as a button; several collapse into a row menu —
+                        seven inline buttons was most of the old grid's width. */}
+                    {rowActionList.length === 1 ? (
+                      <Button size="compact-xs" variant="light"
+                        onClick={() => rowActionList[0].mode === 'form'
+                          ? openRowForm(rowActionList[0].operation, row)
+                          : void runRowAction(rowActionList[0], row)}>
+                        {tam.tOr([`operations.${rowActionList[0].operation}.action`,
+                          `operations.${rowActionList[0].operation}.title`])}
+                      </Button>
+                    ) : (
+                      <Menu shadow="md" position="bottom-end">
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" aria-label={t('grid.row-actions')}>
+                            ⋯
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          {rowActionList.map(action => (
+                            <Menu.Item key={action.operation}
+                              onClick={() => action.mode === 'form'
+                                ? openRowForm(action.operation, row)
+                                : void runRowAction(action, row)}>
+                              {tam.tOr([`operations.${action.operation}.action`,
+                                `operations.${action.operation}.title`])}
+                            </Menu.Item>
+                          ))}
+                        </Menu.Dropdown>
+                      </Menu>
+                    )}
                   </Table.Td>
                 )}
               </Table.Tr>
