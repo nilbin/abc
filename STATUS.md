@@ -474,6 +474,26 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Aggregate ownership pass (user-flagged)**: the inspect sample's roots now OWN their
+  lines — the DDD gap the checklist-template sampling exposed (items were free-floating
+  rows keyed by parent id; every invariant lived in operations as cross-row queries).
+  ChecklistTemplate gained an Items navigation with root intents: AddItem (position
+  sequence + retired guard on the root) and Instantiate — the template is the checklist
+  FACTORY, stamping title, mandatory flag and every line in one call (subscriber and seed
+  both go through it). Checklist gained Items with guarded Pass (refuses while own lines
+  are open — the invariant moved INTO the aggregate now that the root owns the lines),
+  Check(itemId) (last line closing passes the checklist in the SAME transition) and
+  Uncheck(itemId) (re-opens in the same transition); item mutators went internal, so a
+  passed checklist with an open line is unrepresentable through the domain surface.
+  Operations shrank to load-root-with-Items + intent; findings moved beside their
+  aggregates (ERP idiom); views/gate read the navigation. Boundary kept: approvals group
+  MEMBERS stay flat — join rows to external actors are references, not owned children
+  (convention + the EF tracked-root/Add gotcha written into CLAUDE.md). Verified: suites
+  191+38 (six InspectV2 tests surfaced the EF gotcha — a child discovered on a tracked
+  root reads as an existing row; fixed with the explicit Add), manifest byte-identical,
+  wire 16+18+22+22 (fieldm6 revived: its project-order check predated arc 4b's
+  project-belongs-to-customer guard — suite fixed to pair the project with its own
+  customer) on fresh SQLite AND fresh Postgres.
 - **Docs/tutorial sync (user-prompted)**: the recent arcs written down where readers look.
   NEW docs/36-documents.md — the tam.documents design in full (path-tree folders,
   override-not-union reach ACLs behind the one visibility predicate, content-addressed blobs

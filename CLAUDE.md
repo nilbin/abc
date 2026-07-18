@@ -61,6 +61,12 @@ Read docs/01-overview.md for the idea, STATUS.md for what is actually true today
   setters, Result-returning guarded transitions, semantic value types (the Order/WorkOrder
   shape) — and stay plain data ONLY for genuinely dumb rows (join/lookup tables). An entity
   whose state machine lives in its operations is the smell to fix, not the pattern to copy.
+  OWNED CHILDREN live ON their root: a collection navigation plus root intents (AddItem,
+  Check — the ChecklistTemplate/Checklist shape), never free-floating rows keyed by parent
+  id with the invariant re-implemented as queries in each operation. Join rows to EXTERNAL
+  identities (group members, role grants) are references, not owned children — those stay
+  flat. EF note: when the root is already tracked, a newly created child must be Db.Add()ed
+  explicitly (its client-set key otherwise reads as an existing row → phantom UPDATE).
 - Cross-package calls: only to a package's public policy helper (e.g. RoleRules — the single
   validation path for roles.define AND tenant-package install), never to its operations.
 - Findings: `static class <Area>Findings { public static readonly FindingFactory X =

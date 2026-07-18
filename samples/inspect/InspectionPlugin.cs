@@ -34,6 +34,8 @@ public sealed class InspectionPlugin : ITamPlugin
             b.ToTable("inspect_checklists");
             b.HasKey(x => x.Id);
             b.Property(x => x.Title).HasMaxLength(200);
+            // The aggregate edge: the root owns its lines (backing field `items`).
+            b.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.ChecklistId);
             b.HasIndex(x => new { x.TenantId, x.Passed });
             // The gate's hot read: mandatory-open checklists for (tenant, order).
             b.HasIndex(x => new { x.TenantId, x.OrderId });
@@ -52,6 +54,7 @@ public sealed class InspectionPlugin : ITamPlugin
             b.HasKey(x => x.Id);
             b.Property(x => x.Name).HasMaxLength(200);
             b.Property(x => x.OrderType).HasMaxLength(50);
+            b.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.TemplateId);
             // The subscriber's hot read: active templates for (tenant, order type).
             b.HasIndex(x => new { x.TenantId, x.OrderType });
         });
@@ -189,11 +192,7 @@ internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
 
         var blocking = await tam.Db.Set<Checklist>()
             .Where(x => x.OrderId == orderId && x.Mandatory && !x.Passed)
-            .Select(x => new
-            {
-                x.Title,
-                Open = tam.Db.Set<ChecklistItem>().Count(i => i.ChecklistId == x.Id && !i.Done),
-            })
+            .Select(x => new { x.Title, Open = x.Items.Count(i => !i.Done) })
             .FirstOrDefaultAsync(ct);
         return blocking is null
             ? Result.Success()
@@ -217,7 +216,7 @@ internal sealed class InstantiateTemplates(ITamDb tam) : IEffectHandler
         var number = payload.Number ?? "";
 
         var normalized = orderType.Trim().ToLowerInvariant();
-        var templates = await tam.Db.Set<ChecklistTemplate>()
+        var templates = await tam.Db.Set<ChecklistTemplate>().Include(x => x.Items)
             .Where(x => !x.Retired && x.OrderType == normalized)
             .ToListAsync(ct);
         if (templates.Count == 0) return;
@@ -230,17 +229,10 @@ internal sealed class InstantiateTemplates(ITamDb tam) : IEffectHandler
                     x => x.OrderId == orderId && x.TemplateId == template.Id, ct))
                 continue;
 
-            var title = number.Length > 0 ? $"{template.Name} — {number}" : template.Name;
-            var checklist = Checklist.Create(
-                effect.TenantId, title, orderId, template.Mandatory, template.Id);
-            tam.Db.Add(checklist);
-            var items = await tam.Db.Set<ChecklistTemplateItem>()
-                .Where(x => x.TemplateId == template.Id)
-                .OrderBy(x => x.Position)
-                .ToListAsync(ct);
-            foreach (var item in items)
-                tam.Db.Add(ChecklistItem.Create(
-                    effect.TenantId, checklist.Id, orderId, item.Position, item.Text));
+            // The template is the factory: title, mandatory flag and every line in one call.
+            var instantiated = template.Instantiate(orderId, number);
+            if (instantiated.IsError) continue;
+            tam.Db.Add(instantiated.Output!);
             changed = true;
         }
         if (changed) await tam.Db.SaveChangesAsync(ct);

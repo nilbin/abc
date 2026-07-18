@@ -4,22 +4,11 @@ using Tam.EntityFrameworkCore;
 
 namespace Inspect;
 
-public static class TemplateFindings
-{
-    public static readonly FindingFactory TemplateRetired =
-        Finding.Error("inspect.template-retired");
-    public static readonly FindingFactory ItemTextRequired =
-        Finding.Error("inspect.item-text-required");
-    public static readonly FindingFactory NameRequired =
-        Finding.Error("inspect.name-required");
-    public static readonly FindingFactory OrderTypeRequired =
-        Finding.Error("inspect.order-type-required");
-}
-
 // ---------------------------------------------------------------------------------------
 // Template administration (docs/34 M6): a tenant admin defines checklist templates keyed
 // on the host's order type. Plain Tam modules under the plugin prefix (PLG001), ITamDb
-// only — a plugin composes around the host, it does not reach into it.
+// only — a plugin composes around the host, it does not reach into it. Operations load
+// the aggregate root and call its intent; the invariants live on the root.
 // ---------------------------------------------------------------------------------------
 
 [Operation("inspect.templates.define")]
@@ -63,20 +52,19 @@ public static class AddTemplateItem
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
-        var template = await tam.Db.Set<ChecklistTemplate>()
-            .SingleOrDefaultAsync(x => x.Id == input.TemplateId, ct);
-        if (template is null) return PipelineFindings.NotFound.Create();
-        if (template.Retired)
-            return TemplateFindings.TemplateRetired.At(nameof(Input.TemplateId));
         if (string.IsNullOrWhiteSpace(input.Text))
             return TemplateFindings.ItemTextRequired.At(nameof(Input.Text));
 
-        var position = await tam.Db.Set<ChecklistTemplateItem>()
-            .CountAsync(x => x.TemplateId == template.Id, ct) + 1;
-        var item = ChecklistTemplateItem.Create(
-            context.TenantId.Value, template.Id, position, input.Text.Trim());
-        tam.Db.Add(item);
-        return new Output(item.Id, item.Position);
+        var template = await tam.Db.Set<ChecklistTemplate>().Include(x => x.Items)
+            .SingleOrDefaultAsync(x => x.Id == input.TemplateId, ct);
+        if (template is null) return PipelineFindings.NotFound.Create();
+
+        var added = template.AddItem(input.Text);
+        if (added.IsError) return added.As<Output>();
+        // The root is already tracked, so the new line must be marked Added explicitly —
+        // change-tracker discovery would read its client-set key as an existing row.
+        tam.Db.Add(added.Output!);
+        return new Output(added.Output!.Id, added.Output.Position);
     }
 }
 
@@ -135,7 +123,7 @@ public static class TemplateList
             Name = x.Name,
             OrderType = x.OrderType,
             Mandatory = x.Mandatory,
-            ItemCount = tam.Db.Set<ChecklistTemplateItem>().Count(i => i.TemplateId == x.Id),
+            ItemCount = x.Items.Count,
             Retired = x.Retired,
         });
     }

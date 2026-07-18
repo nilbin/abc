@@ -4,17 +4,11 @@ using Tam.EntityFrameworkCore;
 
 namespace Inspect;
 
-public static class ChecklistFindings
-{
-    public static readonly FindingFactory ChecklistIncomplete =
-        Finding.Error("inspect.checklist-incomplete");
-    public static readonly FindingFactory ItemsOpen =
-        Finding.Error("inspect.items-open");
-}
-
 // ---------------------------------------------------------------------------------------
 // Checklists: manual creation (v1, kept), per-item check-off intents (v2), and the pass
 // intent. Consequential state transitions are intents, never partial edits (EDIT001).
+// Every transition goes through the AGGREGATE ROOT (loaded with Items) — the operations
+// only translate the wire to the root's intents.
 // ---------------------------------------------------------------------------------------
 
 [Operation("inspect.checklists.create")]
@@ -38,9 +32,9 @@ public static class CreateChecklist
     }
 }
 
-/// <summary>Passing is the checklist-level close: refused while line items are open, so the
-/// item state and the checklist state can never disagree. Item-less (manual) checklists
-/// pass directly — this is their only completion path.</summary>
+/// <summary>Passing is the checklist-level close: the AGGREGATE refuses it while its lines
+/// are open (<see cref="Checklist.Pass"/>). Item-less (manual) checklists pass directly —
+/// this is their only completion path.</summary>
 [Operation("inspect.checklists.pass")]
 [Authorize("inspect.checklists.manage")]
 public static class PassChecklist
@@ -53,16 +47,12 @@ public static class PassChecklist
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
-        var checklist = await tam.Db.Set<Checklist>().SingleOrDefaultAsync(
-            x => x.Id == input.ChecklistId, ct);
+        var checklist = await tam.Db.Set<Checklist>().Include(x => x.Items)
+            .SingleOrDefaultAsync(x => x.Id == input.ChecklistId, ct);
         if (checklist is null) return PipelineFindings.NotFound.Create();
 
-        var open = await tam.Db.Set<ChecklistItem>().CountAsync(
-            x => x.ChecklistId == checklist.Id && !x.Done, ct);
-        if (open > 0)
-            return ChecklistFindings.ItemsOpen.With(("open", open));
-
-        checklist.Pass();
+        var passed = checklist.Pass();
+        if (passed.IsError) return passed.As<Output>();
         return new Result<Output> { Output = new Output(checklist.Id) }
             .Effect(new EventPublished("inspect.checklist-passed", new { checklistId = checklist.Id }));
     }
@@ -83,29 +73,22 @@ public static class CheckItem
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
-        var item = await tam.Db.Set<ChecklistItem>().SingleOrDefaultAsync(
-            x => x.Id == input.ItemId, ct);
-        if (item is null) return PipelineFindings.NotFound.Create();
+        var checklist = await tam.Db.Set<Checklist>().Include(x => x.Items)
+            .SingleOrDefaultAsync(x => x.Items.Any(i => i.Id == input.ItemId), ct);
+        if (checklist is null) return PipelineFindings.NotFound.Create();
 
-        item.Check();
+        var check = checklist.Check(input.ItemId);
+        if (check.IsError) return check.As<Output>();
+        if (!check.Output) return new Output(checklist.Id, ChecklistPassed: false);
 
-        var stillOpen = await tam.Db.Set<ChecklistItem>().AnyAsync(
-            x => x.ChecklistId == item.ChecklistId && x.Id != item.Id && !x.Done, ct);
-        if (stillOpen) return new Output(item.ChecklistId, ChecklistPassed: false);
-
-        var checklist = await tam.Db.Set<Checklist>().SingleOrDefaultAsync(
-            x => x.Id == item.ChecklistId, ct);
-        if (checklist is null) return new Output(item.ChecklistId, ChecklistPassed: false);
-
-        checklist.Pass();
         return new Result<Output> { Output = new Output(checklist.Id, ChecklistPassed: true) }
             .Effect(new EventPublished("inspect.checklist-passed", new { checklistId = checklist.Id }));
     }
 }
 
-/// <summary>The correction path: un-check re-opens the item AND the checklist — the paired
-/// intent keeps both reachable states honest instead of leaving a passed checklist with an
-/// open item (why this exists rather than a pass-only model: inspections get amended).</summary>
+/// <summary>The correction path: un-check re-opens the item AND the checklist in one root
+/// transition (<see cref="Checklist.Uncheck"/>) — a passed checklist with an open item is
+/// unrepresentable (why this exists rather than a pass-only model: inspections get amended).</summary>
 [Operation("inspect.items.uncheck")]
 [Authorize("inspect.checklists.manage")]
 public static class UncheckItem
@@ -118,15 +101,13 @@ public static class UncheckItem
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, ITamDb tam, CancellationToken ct)
     {
-        var item = await tam.Db.Set<ChecklistItem>().SingleOrDefaultAsync(
-            x => x.Id == input.ItemId, ct);
-        if (item is null) return PipelineFindings.NotFound.Create();
+        var checklist = await tam.Db.Set<Checklist>().Include(x => x.Items)
+            .SingleOrDefaultAsync(x => x.Items.Any(i => i.Id == input.ItemId), ct);
+        if (checklist is null) return PipelineFindings.NotFound.Create();
 
-        item.Uncheck();
-        var checklist = await tam.Db.Set<Checklist>().SingleOrDefaultAsync(
-            x => x.Id == item.ChecklistId, ct);
-        checklist?.Reopen();
-        return new Output(item.ChecklistId);
+        var result = checklist.Uncheck(input.ItemId);
+        if (result.IsError) return result.As<Output>();
+        return new Output(checklist.Id);
     }
 }
 
@@ -161,7 +142,7 @@ public static class ChecklistList
             Id = x.Id,
             Title = x.Title,
             Mandatory = x.Mandatory,
-            OpenItems = tam.Db.Set<ChecklistItem>().Count(i => i.ChecklistId == x.Id && !i.Done),
+            OpenItems = x.Items.Count(i => !i.Done),
             Passed = x.Passed,
         });
     }

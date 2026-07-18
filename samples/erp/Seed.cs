@@ -227,35 +227,26 @@ public static class Seed
         // admin would author them through inspect.templates.define / add-item.
         var safety = Inspect.ChecklistTemplate.Create(
             Tenant, "Säkerhetskontroll", "service", mandatory: true);
+        safety.AddItem("Bryt och lås spänningen");
+        safety.AddItem("Kontrollera tryckkärl och slangar");
+        safety.AddItem("Fotografera arbetsplatsen före arbete");
         var handover = Inspect.ChecklistTemplate.Create(
             Tenant, "Överlämning till kund", "service", mandatory: false);
-        db.AddRange(safety, handover,
-            Inspect.ChecklistTemplateItem.Create(Tenant, safety.Id, 1, "Bryt och lås spänningen"),
-            Inspect.ChecklistTemplateItem.Create(Tenant, safety.Id, 2, "Kontrollera tryckkärl och slangar"),
-            Inspect.ChecklistTemplateItem.Create(Tenant, safety.Id, 3, "Fotografera arbetsplatsen före arbete"),
-            Inspect.ChecklistTemplateItem.Create(Tenant, handover.Id, 1, "Gå igenom utfört arbete med kunden"),
-            Inspect.ChecklistTemplateItem.Create(Tenant, handover.Id, 2, "Lämna serviceprotokoll"));
+        handover.AddItem("Gå igenom utfört arbete med kunden");
+        handover.AddItem("Lämna serviceprotokoll");
+        db.AddRange(safety, handover);
 
         // Checklists the templates WOULD have instantiated (seeded orders bypass the
-        // pipeline, so the subscriber's work is mirrored here): the open service order
-        // 2026-01415 carries both — its mandatory one blocks orders.complete until the
-        // lines are checked off; 2026-01416's shows a partially completed non-mandatory one.
+        // pipeline, so the subscriber's work is mirrored here — through the same root
+        // intents): the open service order 2026-01415 carries both — its mandatory one
+        // blocks orders.complete until the lines are checked off; 2026-01416's shows a
+        // partially completed non-mandatory one.
         void Instantiate(Inspect.ChecklistTemplate template, Order order, int doneLines)
         {
-            var checklist = Inspect.Checklist.Create(
-                Tenant, $"{template.Name} — {order.Number.Value}", order.Id.Value,
-                template.Mandatory, template.Id);
+            var checklist = template.Instantiate(order.Id.Value, order.Number.Value).Output!;
             db.Add(checklist);
-            var lines = db.ChangeTracker.Entries<Inspect.ChecklistTemplateItem>()
-                .Select(e => e.Entity).Where(x => x.TemplateId == template.Id)
-                .OrderBy(x => x.Position).ToList();
-            foreach (var line in lines)
-            {
-                var item = Inspect.ChecklistItem.Create(
-                    Tenant, checklist.Id, order.Id.Value, line.Position, line.Text);
-                if (line.Position <= doneLines) item.Check();
-                db.Add(item);
-            }
+            foreach (var line in checklist.Items.Where(x => x.Position <= doneLines))
+                checklist.Check(line.Id);
         }
         Instantiate(safety, orders[3], doneLines: 0);
         Instantiate(handover, orders[3], doneLines: 0);
