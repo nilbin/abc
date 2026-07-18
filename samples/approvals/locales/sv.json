@@ -39,5 +39,6 @@
   "operations.approvals.reject.title": "Avslå",
   "operations.approvals.rules.define.title": "Ny godkännanderegel",
   "operations.approvals.rules.retire.title": "Avsluta regel",
-  "plugins.approvals.title": "Godkännandeflöden"
+  "plugins.approvals.title": "Godkännandeflöden",
+  "reach.kinds.approvals.group": "Attestgrupper"
 }

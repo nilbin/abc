@@ -27,6 +27,7 @@ public static class SystemModule
         .AddPackage<TamNavPackage>()
         .AddPackage<TamDocumentsPackage>()
         .AddPackage<TamDeveloperPackage>()
+        .AddPackage<TamReachPackage>()
         // The framework's reach kinds (docs/35 D-R2): exactly the people-sets over facts the
         // framework owns — a person, a role at the acting node, everyone here. Registered on
         // the HOST chain (not inside a package Configure) so the kinds stay bare.

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Badge, Button, Checkbox, FileInput, Group, NumberInput, SegmentedControl, Select, Stack, Text, TextInput, Textarea } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import dayjs from 'dayjs';
 import { ManifestField, enumLabel, toWireEnum } from '@tam/core';
 import { LookupSelect } from './LookupSelect';
 import { badgeColor } from './badges';
-import { TamContextValue } from './context';
+import { TamContextValue, useTam, useView } from './context';
 
 export interface FieldRendererProps {
   field: ManifestField;
@@ -202,6 +202,46 @@ registerRenderer('file', function FilePick(p: FieldRendererProps) {
         };
         reader.readAsDataURL(file);
       }}
+    />
+  );
+});
+
+// The REACH picker (docs/35 D-R5): people-set selection over the reach.search view —
+// options grouped by kind (locale key reach.kinds.{kind}, shipped by the kind's owner;
+// unknown kinds fall back to the raw token), value = the canonical ReachRef string. The
+// server filters (activation-gated, fail-closed), so the picker shows exactly the sets a
+// stored ACL could resolve.
+registerRenderer('reach', function ReachPick(p: FieldRendererProps) {
+  const { t } = useTam();
+  const [search, setSearch] = useState('');
+  const [debounced, setDebounced] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(search), search ? 200 : 0);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const result = useView('reach.search', { search: debounced || undefined, pageSize: 50 });
+  const rows = (result.data?.rows ?? []) as { id: string; label: string; kind: string }[];
+  const groups = new Map<string, { value: string; label: string }[]>();
+  for (const row of rows) {
+    const localized = t(`reach.kinds.${row.kind}`);
+    const heading = localized === `reach.kinds.${row.kind}` ? row.kind : localized;
+    if (!groups.has(heading)) groups.set(heading, []);
+    groups.get(heading)!.push({ value: row.id, label: row.label });
+  }
+  const data = [...groups.entries()].map(([group, items]) => ({ group, items }));
+  return (
+    <Select
+      label={p.label}
+      required={p.required}
+      error={p.error}
+      data={data}
+      value={p.value === null || p.value === undefined || p.value === '' ? null : String(p.value)}
+      onChange={v => p.onChange(v)}
+      searchable
+      clearable={!p.required}
+      onSearchChange={setSearch}
+      filter={({ options }) => options /* the server already filtered */}
+      nothingFoundMessage={t('common.no-matches')}
     />
   );
 });

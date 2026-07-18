@@ -15,9 +15,9 @@ src/Tam.EntityFrameworkCore  three-way merge, field-level audit + inferred effec
                              ExtensionData JSON column, tenant field registry storage
 src/Tam.AspNetCore           execution pipeline, view executor, batched resolve, manifest +
                              OpenAPI + MCP endpoints, outbox dispatcher, SSE broadcaster, plugin
-                             system, and the framework admin surface as FOURTEEN always-active
+                             system, and the framework admin surface as FIFTEEN always-active
                              [TamPackage] modules (users/roles/audit/tenancy/rules/nav/documents/
-                             developer/... with their forms, grids and embedded sv/en locales)
+                             developer/reach/... with their forms, grids and embedded sv/en locales)
 src/Tam.AspNetCore.Postgres  the Postgres LISTEN/NOTIFY SSE backplane + the RLS backstop
                              (TamRls: policies over every tenant-scoped table, scope-synced
                              session settings — docs/33)
@@ -474,6 +474,18 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **The reach picker (autonomous, user-authorized "proceed as you see fit")**: docs/35
+  D-R5 closed — the seam's last rough edge. The tam.reach package (FIFTEENTH) ships the
+  reach.search view (permission reach.search): every registered provider's SearchAsync
+  aggregated per request — activation-gated and fail-closed, so the picker offers exactly
+  the sets a stored ACL could resolve. The documents SHARE form's Reach field now renders
+  as the new `reach` picker (tam-react): grouped by kind with localized group headers
+  (reach.kinds.{kind} keys shipped by each kind's OWNER — framework kinds in the package
+  defaults, approver groups in the approvals plugin's catalogs; unknown kinds fall back to
+  the raw token), server-side debounced search, value = the canonical ReachRef string. No
+  more typing raw refs. Screenshots delivered (share form + open grouped picker).
+  Verified: suites 191+38 (fifteen-packages test), manifest additive (baseline + types +
+  contract regenerated), wire 16+18+22+22 on fresh SQLite AND fresh Postgres.
 - **Generated symbols, completed (user-directed: "finish the generated symbols stuff")**:
   every section of the host contract artifact now generates symbols, and the samples'
   last host-vocabulary strings died. The artifact gained a grids section (the D-X1

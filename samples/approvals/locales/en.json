@@ -39,5 +39,6 @@
   "operations.approvals.reject.title": "Reject",
   "operations.approvals.rules.define.title": "New approval rule",
   "operations.approvals.rules.retire.title": "Retire rule",
-  "plugins.approvals.title": "Approval flows"
+  "plugins.approvals.title": "Approval flows",
+  "reach.kinds.approvals.group": "Approver groups"
 }

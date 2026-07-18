@@ -74,7 +74,7 @@ D4 applies per plugin: each plugin's manifest contribution is baseline-checked i
 ### Framework packages (the framework-trust tier) — BUILT
 
 The framework's own admin capabilities register through the SAME `PluginBuilder` surface a
-vendor plugin uses — `AddTamSystem()` is fourteen `[TamPackage]` modules (`tam.users`,
+vendor plugin uses — `AddTamSystem()` is fifteen `[TamPackage]` modules (`tam.users`,
 `tam.audit`, `tam.roles`, `tam.tenancy`, `tam.rules`, `tam.documents`
 ([36-documents.md](36-documents.md)), `tam.developer`, …), each shipping its operations, views,
 forms and grids. Every framework capability therefore exercises the plugin seams daily — the

@@ -342,6 +342,15 @@
         "id": "guid"
       }
     },
+    "reach.search": {
+      "permission": "reach.search",
+      "fields": [
+        "id",
+        "label",
+        "kind"
+      ],
+      "kinds": {}
+    },
     "roles.list": {
       "permission": "roles.manage",
       "fields": [

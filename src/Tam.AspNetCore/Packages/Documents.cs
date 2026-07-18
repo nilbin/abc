@@ -33,7 +33,8 @@ public sealed class TamDocumentsPackage : ITamPlugin
             .Form<ShareFolder.Input>("web.documents.folders.share", "documents.folders.share", form =>
             {
                 form.Field(x => x.FolderId).Renderer("hidden");
-                form.Field(x => x.Reach);
+                // The reach picker (docs/35 D-R5): search people-sets instead of typing refs.
+                form.Field(x => x.Reach).Renderer("reach");
             })
             .Form<UnshareFolder.Input>("web.documents.folders.unshare", "documents.folders.unshare", form =>
             {

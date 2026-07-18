@@ -1160,6 +1160,26 @@ export interface DocumentsListQuery {
   search?: string;
 }
 
+export interface DeveloperContractRow {
+  id: string;
+  contract: string;
+}
+
+export interface DeveloperContractQuery {
+
+}
+
+export interface ReachSearchRow {
+  id: string;
+  label: string;
+  kind: string;
+}
+
+export interface ReachSearchQuery {
+  kind?: string;
+  search?: string;
+}
+
 export interface InspectItemsListRow {
   id: string;
   checklistTitle: string;
@@ -1797,6 +1817,16 @@ export class TypedTamClient {
   /** view documents.list (requires documents.read) */
   documentsList(query?: DocumentsListQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsListRow[] }> {
     return this.client.view("documents.list", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: DocumentsListRow[] }>;
+  }
+
+  /** view developer.contract (requires developer.read) */
+  developerContract(query?: DeveloperContractQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: DeveloperContractRow[] }> {
+    return this.client.view("developer.contract", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: DeveloperContractRow[] }>;
+  }
+
+  /** view reach.search (requires reach.search) */
+  reachSearch(query?: ReachSearchQuery & { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc' }): Promise<Omit<ViewResponse, 'rows'> & { rows: ReachSearchRow[] }> {
+    return this.client.view("reach.search", query as unknown as Record<string, unknown>) as unknown as Promise<Omit<ViewResponse, 'rows'> & { rows: ReachSearchRow[] }>;
   }
 
   /** view inspect.items.list (requires inspect.checklists.read) */

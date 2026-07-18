@@ -115,3 +115,79 @@ public sealed class TenantReach(ITamDb tam) : IReachProvider
         return [new ReachOption(new ReachRef("tenant", null), name ?? context.TenantId.Value)];
     }
 }
+
+/// <summary>
+/// The reach seam's WIRE half (docs/35 D-R5): the picker view over the registered providers,
+/// so ACL editors search people-sets instead of typing raw refs. One view, all kinds — each
+/// provider's SearchAsync, activation-gated by the resolver, aggregated per request.
+/// </summary>
+[TamPackage("tam.reach", "reach")]
+public sealed class TamReachPackage : ITamPlugin
+{
+    public void Configure(PluginBuilder plugin)
+    {
+        plugin.AddViewType(typeof(ReachSearch));
+        plugin.LocaleDefaults("en", new Dictionary<string, string>
+        {
+            ["labels.kind"] = "Kind",
+            ["reach.kinds.user"] = "People",
+            ["reach.kinds.role"] = "Roles",
+            ["reach.kinds.tenant"] = "Everyone",
+        });
+        plugin.LocaleDefaults("sv", new Dictionary<string, string>
+        {
+            ["labels.kind"] = "Typ",
+            ["reach.kinds.user"] = "Personer",
+            ["reach.kinds.role"] = "Roller",
+            ["reach.kinds.tenant"] = "Alla",
+        });
+    }
+}
+
+/// <summary>Picker options across every registered reach kind (or one, when the query names
+/// it). Inactive-plugin kinds contribute nothing — the picker renders exactly the sets a
+/// stored ACL could resolve (D-R3's fail-closed property, surfaced).</summary>
+[View("reach.search")]
+[Authorize("reach.search")]
+public static class ReachSearch
+{
+    public sealed record Query(string? Kind = null, string? Search = null);
+
+    public sealed record Result
+    {
+        [LabelKey("labels.reach")]
+        public string Id { get; init; } = "";
+        [LabelKey("labels.name")]
+        public string Label { get; init; } = "";
+        [LabelKey("labels.kind")]
+        public string Kind { get; init; } = "";
+    }
+
+    public static async Task<IQueryable<Result>> Execute(
+        Query query, OperationContext context, ReachResolver resolver, TamModel model,
+        CancellationToken ct)
+    {
+        var kinds = query.Kind is { Length: > 0 } one
+            ? [one]
+            : model.Reaches.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
+        var rows = new List<Result>();
+        foreach (var kind in kinds)
+        {
+            foreach (var option in await resolver.SearchAsync(kind, query.Search, context, ct))
+            {
+                rows.Add(new Result
+                {
+                    Id = option.Ref.ToString(),
+                    Label = option.Label,
+                    Kind = kind,
+                });
+            }
+        }
+        return rows.AsQueryable();
+    }
+
+    public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
+        .Sortable(nameof(Result.Label), nameof(Result.Kind))
+        .Filterable(nameof(Result.Kind))
+        .DefaultSort(nameof(Result.Label));
+}

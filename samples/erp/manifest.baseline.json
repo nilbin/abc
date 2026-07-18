@@ -276,6 +276,9 @@
       "dev.hint.slots": "Host surfaces a plugin\u0027s panels can land in, with their context keys.",
       "dev.hint.entities": "Entities accepting packaged extension fields.",
       "dev.hint.operations": "Operation ids a plugin may gate or target with grid actions.",
+      "reach.kinds.user": "People",
+      "reach.kinds.role": "Roles",
+      "reach.kinds.tenant": "Everyone",
       "ext.inspect.requiresInspection": "Requires inspection",
       "inspect.checklist-incomplete": "The mandatory checklist \u0022{title}\u0022 has {open} open lines \u2014 the order cannot be completed.",
       "inspect.headings.template-items": "Template lines",
@@ -355,6 +358,7 @@
       "operations.approvals.rules.define.title": "New approval rule",
       "operations.approvals.rules.retire.title": "Retire rule",
       "plugins.approvals.title": "Approval flows",
+      "reach.kinds.approvals.group": "Approver groups",
       "enums.invoiced": "Invoiced",
       "enums.paid": "Paid",
       "ext.invoicing.invoiceStatus": "Invoice status",
@@ -786,6 +790,9 @@
       "dev.hint.slots": "V\u00E4rdytor d\u00E4r en plugins paneler kan landa, med sina kontextnycklar.",
       "dev.hint.entities": "Entiteter som tar emot paketerade ut\u00F6kningsf\u00E4lt.",
       "dev.hint.operations": "Operations-id:n en plugin kan grinda eller rikta rutn\u00E4ts\u00E5tg\u00E4rder mot.",
+      "reach.kinds.user": "Personer",
+      "reach.kinds.role": "Roller",
+      "reach.kinds.tenant": "Alla",
       "ext.inspect.requiresInspection": "Kr\u00E4ver besiktning",
       "inspect.checklist-incomplete": "Den obligatoriska checklistan \u0022{title}\u0022 har {open} \u00F6ppna rader \u2014 ordern kan inte slutf\u00F6ras.",
       "inspect.headings.template-items": "Mallrader",
@@ -865,6 +872,7 @@
       "operations.approvals.rules.define.title": "Ny godk\u00E4nnanderegel",
       "operations.approvals.rules.retire.title": "Avsluta regel",
       "plugins.approvals.title": "Godk\u00E4nnandefl\u00F6den",
+      "reach.kinds.approvals.group": "Attestgrupper",
       "enums.invoiced": "Fakturerad",
       "enums.paid": "Betald",
       "ext.invoicing.invoiceStatus": "Fakturastatus",
@@ -7653,6 +7661,73 @@
       "defaultSortDescending": false,
       "plugin": "tam.developer"
     },
+    "reach.search": {
+      "permission": "reach.search",
+      "queryFields": [
+        {
+          "name": "kind",
+          "labelKey": "labels.kind",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "search",
+          "labelKey": "labels.search",
+          "type": "text",
+          "wireKind": "string",
+          "required": false,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "resultFields": [
+        {
+          "name": "id",
+          "labelKey": "labels.reach",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "label",
+          "labelKey": "labels.name",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        },
+        {
+          "name": "kind",
+          "labelKey": "labels.kind",
+          "type": "text",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false
+        }
+      ],
+      "sortable": [
+        "label",
+        "kind"
+      ],
+      "filterable": [
+        "kind"
+      ],
+      "defaultSort": "label",
+      "defaultSortDescending": false,
+      "plugin": "tam.reach"
+    },
     "inspect.items.list": {
       "permission": "inspect.checklists.read",
       "queryFields": [
@@ -8946,6 +9021,7 @@
           "required": true,
           "changeSet": false,
           "extension": false,
+          "renderer": "reach",
           "readOnly": false
         }
       ],
@@ -10714,6 +10790,7 @@
     "projects.create",
     "projects.edit",
     "projects.read",
+    "reach.search",
     "roles.manage",
     "rules.manage",
     "secrets.manage",
@@ -10761,6 +10838,7 @@
     "tam.integrations",
     "tam.nav",
     "tam.plugins",
+    "tam.reach",
     "tam.roles",
     "tam.rules",
     "tam.subscriptions",

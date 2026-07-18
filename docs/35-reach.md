@@ -8,7 +8,12 @@ effective-ACL inheritance down the folder path-tree with own-rows OVERRIDE — a
 locked tighter than its parent — evaluated through the resolver on read and write via one
 predicate, `DocumentAccess.VisibleFolderIdsAsync`). Documents attach to records by EntityRef
 (`AttachedTo`, queryable per record). The consumer has its own doc:
-[36-documents.md](36-documents.md). Decisions D-R1..D-R5.
+[36-documents.md](36-documents.md). D-R5's picker exposure is BUILT: the `tam.reach`
+package's `reach.search` view (permission `reach.search`) aggregates every provider's
+SearchAsync — activation-gated, fail-closed — and the `reach` form renderer turns any
+ReachRef field into a grouped, server-searched picker (the documents share form is the
+first consumer; kind group labels via `reach.kinds.{kind}` keys shipped by each kind's
+owner). Decisions D-R1..D-R5.
 
 ## The question the capability axis cannot answer
 
