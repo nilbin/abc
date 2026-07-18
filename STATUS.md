@@ -1039,6 +1039,28 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   baseline (orders/work-orders records carry display "page", customers "modal"), Playwright —
   the order record renders as a full routed page (back button + tabs, no modal), Back returns
   to the grid, customers still opens the modal, field mode intact, zero page errors.
+- **Sol review round — 10 findings, all confirmed against real code, all fixed**: an external
+  technical review of the newest surfaces. Four verification agents confirmed every finding
+  before a line changed. Fixed top-down by severity: (1, Critical) INBOX ROLLBACK LEAK — one
+  failed integration row's transaction leaked onto sibling rows; each record now runs in its own
+  `PinnedScope` (fresh DI scope + DbContext, tenant-pinned). (2, High) CONDITIONAL REQUIREDNESS
+  was resolve/client-only — a form-bypassing caller (MCP/integration/forged) could omit a
+  `RequiredWhen` field; the SAME predicate is now authoritative at submit, coexisting with a
+  richer domain gate (rules.define RUL003) where one exists. (3, High) GATE FREEZE comments
+  overpromised isolation — corrected to state READ COMMITTED plainly and name the lease seam as
+  the follow-up. (4, High) every `DbUpdateException` read as a version conflict — narrowed to
+  `DbUpdateConcurrencyException` + a provider-aware `ITamDbErrorClassifier` for unique
+  violations; FK/check/not-null now propagate. (5, High) ORDER NUMBERS from `COUNT(*)+base`
+  (racy, recycled on delete) → a durable per-tenant counter bumped by one atomic UPDATE holding
+  the row lock to commit. (6, Medium) MCP semantics — permission-filtered discovery, `isError`
+  for every tool kind, spec JSON-RPC error objects. (7, Medium) unsupported extension filters
+  silently dropped → fail loudly. (8, Medium) sessionStorage-token XSS tradeoff spelled out in
+  docs/26. (9, Low) sample build swallowed TS type errors → `tsc --noEmit` gates it. (10,
+  Medium) STATUS reconciled to a capability matrix. Verified: suites 196 (Tam.Tests) + 39
+  (erp.Tests, incl. a new numbering test pinning sequential/unique/non-recycled numbers), the
+  full wire matrix GREEN on fresh SQLite AND fresh Postgres (field-service 16, rule-builder 18,
+  rules-gating 22, documents 31, plugin-on-plugin 7), `dotnet tam verify` artifacts current
+  (no wire-surface change).
 - **Review round 6 — three-agent audit of the arc 3-4 span (FE correctness, server-model
   correctness, design/beauty), then the fixes**: the span mostly held the bar (the reviewers
   singled out shipping the invalidation bus and deleting it for TanStack one commit later as
