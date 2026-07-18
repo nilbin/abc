@@ -474,6 +474,27 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Plugin-on-plugin: the `DependsOn` edge, both levels (docs/37 D-V4, BUILT)**: a plugin may
+  now declare `DependsOn(otherPlugin)`, and that declared edge is what lifts PLG010 to consume
+  the parent's contract. Landed in five verified slices on nilbin/abc main. (1) DependsOn
+  declaration + PLG011 (acyclic, registered-target, no self-edge, run before the PLG010 sites)
+  + the PLG010 relaxation over the transitive edge closure. (2) L1 activation guards — a plugin
+  activates only where its parents are active (`plugins.dependency-inactive`) and cannot be
+  deactivated under an active dependent (`plugins.dependent-active`), keeping the invariant true
+  continuously; cascade/suspend stays deferred. (3) Per-plugin contract export
+  (`contract --plugin <id>` → a slice of only that plugin's surface, stable against host
+  changes) + a CI freshness gate; invoicing.contract.json committed. (4) The source generator's
+  artifact filter widened to `*.contract.json` and its facade emitter merged across every
+  referenced artifact (ids globally namespaced, so no collision). (5) The proving consumer:
+  `fortnox` DependsOn `invoicing`, consuming its `invoice-finalized` event through the generated
+  `InvoicingInvoiceFinalizedEvent` facade and pushing the finalized invoice via a new outbound
+  integration — which also closed the outbound-trigger PLG010 ownership gap. The erp host now
+  composes a real cross-plugin edge (a build PLG010 would reject without the declaration).
+  Verified: Tam.Tests 196 (declared-edge-accepted on all three seams; cycle / unknown-target /
+  self-dependency each PLG011); a new verify/plugin-on-plugin.mjs drives the L1 guards on the
+  wire; full matrix 16+18+22+31+7 green on fresh SQLite; manifest/contract/types byte-stable
+  (the edge is model-only). `Provides`-one-of and `Conflicts` (mutual exclusion) remain
+  designed-not-built, as does the heavy lifecycle machinery.
 - **Variability design (docs/37, DESIGNED not built)**: the answer to "how do order surfaces,
   forms and flows differ by country, trade and company size" — written down before any code,
   closing the framework-finish arc. One compiled model; variation routes through three

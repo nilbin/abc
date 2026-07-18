@@ -1,6 +1,8 @@
 # 37 — Variability: it's just plugins
 
-**Status: designed, not built.** This doc answers the question the field-service domain forced:
+**Status: design; the plugin relationship model's `DependsOn` edge (both levels) is BUILT** —
+see docs/22 "Plugin-on-plugin" and D-V4 below; proven by `fortnox` depending on `invoicing`.
+`Provides`-one-of, `Conflicts`, and everything else here remain design. This doc answers the question the field-service domain forced:
 *how can the product differ by the company's country, by trade (electrician vs plumber), and by
 company size, without forking?* After three passes and a four-lens review round, the answer
 collapsed to something smaller than it started: **variability is plugins at the right
@@ -171,9 +173,12 @@ a real case ever demands sequencing the rules cannot express, that is a new desi
 - **D-V3 — the tenant-package tier (P3) is the onboarding bundle**, minted **retroactively**
   when a tenant-shape recurs. No matrix of pre-built variants.
 - **D-V4 — the plugin relationship model is the one new framework concept**: `DependsOn`
-  (L1 activation dependency now; L2 contract coupling when a hook lands), `Provides`-one-of
-  singleton slots for mutual exclusion, `Conflicts` as escape hatch. Acyclic at any depth
-  (declared edges, no cycles) — not a depth cap. Verified at activation/build.
+  (L1 activation dependency; L2 contract coupling), `Provides`-one-of singleton slots for mutual
+  exclusion, `Conflicts` as escape hatch. Acyclic at any depth (declared edges, no cycles) — not
+  a depth cap. Verified at activation/build. **`DependsOn` is BUILT at both levels** (PLG011 +
+  the PLG010 relaxation over event/view/subscribe/outbound-trigger seams; L1 activation guards;
+  per-plugin contract slices + generator facade merge), proven by `fortnox` → `invoicing`;
+  `Provides`/`Conflicts` stay designed.
 - **D-V5 — profile facts are onboarding hints only.** Read once to suggest a package; never
   authorization, never a runtime branch, never re-read by a gate.
 - **D-V6 — a plugin owns its own presentation and validation** (declares its forms, ships its

@@ -360,9 +360,14 @@ is well-formed (every `DependsOn` edge targets a registered plugin; no self-depe
 and runs before the PLG010 sites, so the acyclic-edge fact PLG010 trusts is already proven; PLG010
 then accepts a consumed contract whose owner is reachable through the declared `DependsOn` closure.
 The heavy lifecycle machinery (cascade/suspend, auto-activation, entitlement coupling) stays
-deferred until a real consumer needs it. **Built so far: `DependsOn` declaration + PLG011 + the
-build-time PLG010 relaxation; the activation-time edge guard, per-plugin contract export, generated
-facades follow; `Provides`/`Conflicts` remain designed-not-built.**
+deferred until a real consumer needs it. **BUILT — `DependsOn` at both levels:** the declaration +
+PLG011 (acyclic, registered-target, no self-edge) + the PLG010 relaxation along the transitive
+edge (event-require, view-require, subscribe AND outbound-trigger — the last closing an ownership
+gap); the L1 activation guards (a plugin activates only where its parents are active, and cannot be
+deactivated under an active dependent); per-plugin contract export (`contract --plugin <id>`) with a
+CI freshness gate; and the source generator merging a parent's slice into the dependent's
+`HostContract` facades. Proven end to end by `fortnox` depending on `invoicing` and consuming its
+`invoice-finalized` event. `Provides`-one-of and `Conflicts` remain designed-not-built.
 
 ## The marketplace: three tiers, one trust model
 
