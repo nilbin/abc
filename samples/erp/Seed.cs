@@ -253,7 +253,7 @@ public static class Seed
             {
                 var item = Inspect.ChecklistItem.Create(
                     Tenant, checklist.Id, order.Id.Value, line.Position, line.Text);
-                item.Done = line.Position <= doneLines;
+                if (line.Position <= doneLines) item.Check();
                 db.Add(item);
             }
         }

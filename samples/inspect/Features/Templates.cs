@@ -98,7 +98,7 @@ public static class RetireTemplate
             .SingleOrDefaultAsync(x => x.Id == input.TemplateId, ct);
         if (template is null) return PipelineFindings.NotFound.Create();
 
-        template.Retired = true;
+        template.Retire();
         return new Output(template.Id);
     }
 }

@@ -171,18 +171,10 @@ internal sealed class ApprovalsGate(ITamDb tam) : IOperationGate
         // Seam 2: keep the envelope, lose the attempt. ParkEnvelope is constructed in the
         // FRESH scope after the domain transaction rolled back — its ITamDb cannot be this
         // gate's rolled-back one, by construction.
-        gate.Park<ParkEnvelope, ApprovalRequest>(new ApprovalRequest
-        {
-            Id = Guid.NewGuid(),
-            TenantId = gate.Context.TenantId.Value,
-            RuleId = rule.Id,
-            OperationId = gate.OperationId,
-            BodyJson = gate.Input.GetRawText(),
-            PayloadHash = gate.PayloadHash,
-            InitiatorActorId = gate.Context.Actor.Id,
-            Culture = gate.Context.Culture,
-            CreatedAtIso = IsoTime.Now(),
-        });
+        gate.Park<ParkEnvelope, ApprovalRequest>(ApprovalRequest.Park(
+            gate.Context.TenantId.Value, rule.Id, gate.OperationId,
+            gate.Input.GetRawText(), gate.PayloadHash,
+            gate.Context.Actor.Id, gate.Context.Culture));
         return RequestFindings.Pending.With(("operation", gate.OperationId));
     }
 
@@ -234,10 +226,9 @@ internal sealed class ReleaseApproved(ITamDb tam, EnvelopeReplay replay) : IEffe
             request.TenantId, request.Id.ToString("N"), request.Culture), ct);
 
         var failed = response.Findings.Any(f => f.Severity == FindingSeverity.Error);
-        request.Status = failed ? ApprovalRequest.Failed : ApprovalRequest.Executed;
-        request.Outcome = failed
+        request.CloseOut(failed, failed
             ? response.Findings.First(f => f.Severity == FindingSeverity.Error).Code
-            : response.AuditReference;
+            : response.AuditReference);
         await tam.Db.SaveChangesAsync(ct);
     }
 }

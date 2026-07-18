@@ -42,9 +42,7 @@ public static class Approve
         if (!approvers.Contains(context.Actor.Id))
             return RequestFindings.NotApprover.Create();
 
-        request.Status = ApprovalRequest.Approved;
-        request.DecidedAtIso = IsoTime.Now();
-        request.DecidedByActorId = context.Actor.Id;
+        request.Approve(context.Actor.Id);
 
         // The replay itself runs POST-COMMIT via the outbox (docs/09): the approval decision
         // exists if and only if this operation committed, and a redelivered effect is harmless
@@ -81,10 +79,7 @@ public static class Reject
         if (!approvers.Contains(context.Actor.Id))
             return RequestFindings.NotApprover.Create();
 
-        request.Status = ApprovalRequest.Rejected;
-        request.DecidedAtIso = IsoTime.Now();
-        request.DecidedByActorId = context.Actor.Id;
-        request.Outcome = input.Note;
+        request.Reject(context.Actor.Id, input.Note);
         return new Result<Output> { Output = new Output(request.Id, request.Status) };
     }
 }

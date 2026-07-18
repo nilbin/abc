@@ -62,7 +62,7 @@ public static class PassChecklist
         if (open > 0)
             return ChecklistFindings.ItemsOpen.With(("open", open));
 
-        checklist.Passed = true;
+        checklist.Pass();
         return new Result<Output> { Output = new Output(checklist.Id) }
             .Effect(new EventPublished("inspect.checklist-passed", new { checklistId = checklist.Id }));
     }
@@ -87,7 +87,7 @@ public static class CheckItem
             x => x.Id == input.ItemId, ct);
         if (item is null) return PipelineFindings.NotFound.Create();
 
-        item.Done = true;
+        item.Check();
 
         var stillOpen = await tam.Db.Set<ChecklistItem>().AnyAsync(
             x => x.ChecklistId == item.ChecklistId && x.Id != item.Id && !x.Done, ct);
@@ -97,7 +97,7 @@ public static class CheckItem
             x => x.Id == item.ChecklistId, ct);
         if (checklist is null) return new Output(item.ChecklistId, ChecklistPassed: false);
 
-        checklist.Passed = true;
+        checklist.Pass();
         return new Result<Output> { Output = new Output(checklist.Id, ChecklistPassed: true) }
             .Effect(new EventPublished("inspect.checklist-passed", new { checklistId = checklist.Id }));
     }
@@ -122,10 +122,10 @@ public static class UncheckItem
             x => x.Id == input.ItemId, ct);
         if (item is null) return PipelineFindings.NotFound.Create();
 
-        item.Done = false;
+        item.Uncheck();
         var checklist = await tam.Db.Set<Checklist>().SingleOrDefaultAsync(
             x => x.Id == item.ChecklistId, ct);
-        if (checklist is not null) checklist.Passed = false;
+        checklist?.Reopen();
         return new Output(item.ChecklistId);
     }
 }

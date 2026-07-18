@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Tam;
 using Tam.EntityFrameworkCore;
 
 namespace Approvals;
@@ -19,19 +20,58 @@ public sealed class ApprovalRequest : ITenantScoped
     public const string Executed = "executed";
     public const string Failed = "failed";
 
-    public Guid Id { get; set; }
-    public string TenantId { get; set; } = "";
-    public Guid RuleId { get; set; }
-    public string OperationId { get; set; } = "";
-    public string BodyJson { get; set; } = "";
-    public string PayloadHash { get; set; } = "";
-    public string InitiatorActorId { get; set; } = "";
-    public string Culture { get; set; } = "";
-    public string Status { get; set; } = Pending;
-    public string CreatedAtIso { get; set; } = "";
-    public string? DecidedAtIso { get; set; }
-    public string? DecidedByActorId { get; set; }
+    public Guid Id { get; private set; }
+    public string TenantId { get; private set; } = "";
+    public Guid RuleId { get; private set; }
+    public string OperationId { get; private set; } = "";
+    public string BodyJson { get; private set; } = "";
+    public string PayloadHash { get; private set; } = "";
+    public string InitiatorActorId { get; private set; } = "";
+    public string Culture { get; private set; } = "";
+    public string Status { get; private set; } = Pending;
+    public string CreatedAtIso { get; private set; } = "";
+    public string? DecidedAtIso { get; private set; }
+    public string? DecidedByActorId { get; private set; }
     /// <summary>Replay outcome: the audit reference on success, the first error code on failure,
     /// or the reviewer's note on rejection.</summary>
-    public string? Outcome { get; set; }
+    public string? Outcome { get; private set; }
+
+    public static ApprovalRequest Park(
+        string tenantId, Guid ruleId, string operationId, string bodyJson,
+        string payloadHash, string initiatorActorId, string culture) => new()
+    {
+        Id = Guid.NewGuid(),
+        TenantId = tenantId,
+        RuleId = ruleId,
+        OperationId = operationId,
+        BodyJson = bodyJson,
+        PayloadHash = payloadHash,
+        InitiatorActorId = initiatorActorId,
+        Culture = culture,
+        CreatedAtIso = IsoTime.Now(),
+    };
+
+    // The DECISION fields move atomically — no half-decided request is representable (the
+    // invariant this entity owns). Whether the decider MAY decide (approver set, self-
+    // approval) needs the database and stays in the operations — the ERP idiom.
+    public void Approve(string decidedByActorId) => Decide(Approved, decidedByActorId, null);
+
+    public void Reject(string decidedByActorId, string? note) =>
+        Decide(Rejected, decidedByActorId, note);
+
+    /// <summary>Replay settlement: executed with the audit reference, or failed with the
+    /// first error code.</summary>
+    public void CloseOut(bool failed, string? outcome)
+    {
+        Status = failed ? Failed : Executed;
+        Outcome = outcome;
+    }
+
+    private void Decide(string status, string decidedByActorId, string? outcome)
+    {
+        Status = status;
+        DecidedAtIso = IsoTime.Now();
+        DecidedByActorId = decidedByActorId;
+        Outcome = outcome;
+    }
 }

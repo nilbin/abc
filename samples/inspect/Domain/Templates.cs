@@ -9,13 +9,13 @@ namespace Inspect;
 /// </summary>
 public sealed class ChecklistTemplate : ITenantScoped
 {
-    public Guid Id { get; set; }
-    public string TenantId { get; set; } = "";
-    public string Name { get; set; } = "";
+    public Guid Id { get; private set; }
+    public string TenantId { get; private set; } = "";
+    public string Name { get; private set; } = "";
     /// <summary>The host order type this template matches, as its wire value.</summary>
-    public string OrderType { get; set; } = "";
-    public bool Mandatory { get; set; }
-    public bool Retired { get; set; }
+    public string OrderType { get; private set; } = "";
+    public bool Mandatory { get; private set; }
+    public bool Retired { get; private set; }
 
     public static ChecklistTemplate Create(
         string tenantId, string name, string orderType, bool mandatory) => new()
@@ -26,16 +26,19 @@ public sealed class ChecklistTemplate : ITenantScoped
         OrderType = orderType.Trim().ToLowerInvariant(),
         Mandatory = mandatory,
     };
+
+    /// <summary>Retire, never delete: stops instantiating; existing checklists live on.</summary>
+    public void Retire() => Retired = true;
 }
 
 /// <summary>A line on a template, copied onto every checklist instantiated from it.</summary>
 public sealed class ChecklistTemplateItem : ITenantScoped
 {
-    public Guid Id { get; set; }
-    public string TenantId { get; set; } = "";
-    public Guid TemplateId { get; set; }
-    public int Position { get; set; }
-    public string Text { get; set; } = "";
+    public Guid Id { get; private set; }
+    public string TenantId { get; private set; } = "";
+    public Guid TemplateId { get; private set; }
+    public int Position { get; private set; }
+    public string Text { get; private set; } = "";
 
     public static ChecklistTemplateItem Create(
         string tenantId, Guid templateId, int position, string text) => new()
