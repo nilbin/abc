@@ -80,7 +80,7 @@ internal sealed class OrdersContract : IPluginPart
     {
         // P2 — a packaged field on the HOST's entity, key-prefixed, present only where the
         // plugin is active. Label lives in the plugin's locale files.
-        plugin.ExtensionField("order", "requiresInspection", "boolean");
+        plugin.ExtensionField(HostContract.Entities.Order, "requiresInspection", "boolean");
 
         // Event contracts (PLG009): payload shapes are declared, never folklore.
         // order-created is the v2 seam — matching templates instantiate onto the new order.
@@ -91,9 +91,9 @@ internal sealed class OrdersContract : IPluginPart
         // The order detail wears its checklists (docs/31 D-X4): two panels bound to the
         // slot's record context — the checklist headers, then the line items with the
         // check/uncheck row actions. The host opted the surface in once; it never names us.
-        plugin.Panel("web.orders.detail", grid: "inspect.web.checklists",
+        plugin.Panel(HostContract.Slots.WebOrdersDetail, grid: "inspect.web.checklists",
             bind => bind.Query("orderId", fromContext: "orderId"));
-        plugin.Panel("web.orders.detail", grid: "inspect.web.items",
+        plugin.Panel(HostContract.Slots.WebOrdersDetail, grid: "inspect.web.items",
             bind => bind.Query("orderId", fromContext: "orderId"));
     }
 }
@@ -183,7 +183,7 @@ internal sealed class ChecklistSurface : IPluginPart
 /// Mandatoriness is template data the checklist carries; non-mandatory checklists never
 /// block (docs/34 M6 — deliberately NOT a tenant automation rule: v1 rule conditions see
 /// only the input, and orders.complete carries just an id).</summary>
-[Gate("orders.complete")]
+[Gate(HostContract.Operations.OrdersComplete)]
 internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
 {
     public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
@@ -205,7 +205,7 @@ internal sealed class ChecklistGate(ITamDb tam) : IOperationGate
 /// template matching the order's type instantiates as a checklist (with its items) attached
 /// to that order — post-commit via the outbox, tenant-pinned, idempotent per
 /// (order, template) since delivery is at-least-once.</summary>
-[OnEffect("order-created")]
+[OnEffect(OrderCreatedEvent.EventType)]
 internal sealed class InstantiateTemplates(ITamDb tam) : IEffectHandler
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)
@@ -241,7 +241,7 @@ internal sealed class InstantiateTemplates(ITamDb tam) : IEffectHandler
 
 /// <summary>v1 behavior, kept: when the host commits an order completion, open a follow-up
 /// checklist — post-commit via the outbox, tenant-pinned, idempotent.</summary>
-[OnEffect("order-completed")]
+[OnEffect(OrderCompletedEvent.EventType)]
 internal sealed class OpenFollowUpChecklist(ITamDb tam) : IEffectHandler
 {
     public async Task HandleAsync(EffectEvent effect, CancellationToken ct)

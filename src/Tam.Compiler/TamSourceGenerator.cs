@@ -280,10 +280,71 @@ public sealed class TamSourceGenerator : IIncrementalGenerator
                 sb.AppendLine($"        public static readonly global::Tam.ViewContractRef {name} = "
                     + $"new(\"{id}\", new string[] {{ {string.Join(", ", fields.Select(f => $"\"{f}\""))} }});");
             sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    /// <summary>Operation ids as CONSTS — usable in attributes:");
+            sb.AppendLine("    /// <c>[Gate(HostContract.Operations.OrdersComplete)]</c>.</summary>");
+            sb.AppendLine("    internal static class Operations");
+            sb.AppendLine("    {");
+            foreach (var operation in StringListSection(root, "operations"))
+                sb.AppendLine($"        public const string {Pascal(operation)} = \"{operation}\";");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    internal static class Slots");
+            sb.AppendLine("    {");
+            foreach (var (slotId, keys) in SlotEntries(root))
+                sb.AppendLine($"        public static readonly global::Tam.SlotContractRef {Pascal(slotId)} = "
+                    + $"new(\"{slotId}\", new string[] {{ {string.Join(", ", keys.Select(k => $"\"{k}\""))} }});");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    internal static class Entities");
+            sb.AppendLine("    {");
+            foreach (var entity in StringListSection(root, "extensibleEntities"))
+                sb.AppendLine($"        public static readonly global::Tam.EntityContractRef {Pascal(entity)} = "
+                    + $"new(\"{entity}\");");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine("    internal static class Grids");
+            sb.AppendLine("    {");
+            foreach (var gridId in SectionKeys(root, "grids"))
+                sb.AppendLine($"        public static readonly global::Tam.GridContractRef {Pascal(gridId)} = "
+                    + $"new(\"{gridId}\");");
+            sb.AppendLine("    }");
             sb.AppendLine("}");
 
             spc.AddSource("TamHostContract.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
         });
+    }
+
+    private static System.Collections.Generic.IEnumerable<string> StringListSection(
+        System.Collections.Generic.Dictionary<string, object?> root, string section) =>
+        root.TryGetValue(section, out var value)
+            && value is System.Collections.Generic.List<object?> list
+        ? list.OfType<string>()
+        : [];
+
+    private static System.Collections.Generic.IEnumerable<string> SectionKeys(
+        System.Collections.Generic.Dictionary<string, object?> root, string section) =>
+        root.TryGetValue(section, out var value)
+            && value is System.Collections.Generic.Dictionary<string, object?> entries
+        ? entries.Keys.OrderBy(k => k, System.StringComparer.Ordinal)
+        : [];
+
+    private static System.Collections.Generic.IEnumerable<(string Id, string[] Keys)> SlotEntries(
+        System.Collections.Generic.Dictionary<string, object?> root)
+    {
+        if (root.TryGetValue("slots", out var value)
+            && value is System.Collections.Generic.Dictionary<string, object?> slots)
+        {
+            foreach (var entry in slots.OrderBy(e => e.Key, System.StringComparer.Ordinal))
+            {
+                var keys = entry.Value is System.Collections.Generic.Dictionary<string, object?> body
+                    && body.TryGetValue("keys", out var k)
+                    && k is System.Collections.Generic.List<object?> list
+                    ? list.OfType<string>().ToArray()
+                    : [];
+                yield return (entry.Key, keys);
+            }
+        }
     }
 
     /// <summary>Reads one contract section into (id, kinded field strings) — fields rejoin

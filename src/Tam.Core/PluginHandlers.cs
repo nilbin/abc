@@ -164,6 +164,18 @@ public sealed record EventContractRef(string EventType, IReadOnlyList<string> Fi
 /// bare field name against the artifact's field list.</summary>
 public sealed record ViewContractRef(string ViewId, IReadOnlyList<string> Fields);
 
+/// <summary>A host SLOT handle (docs/31 slice 3): the panel target and its context keys, from
+/// the artifact — <c>plugin.Panel(HostContract.Slots.WebOrdersDetail, …)</c>.</summary>
+public sealed record SlotContractRef(string SlotId, IReadOnlyList<string> Keys);
+
+/// <summary>A host EXTENSIBLE-ENTITY handle: the packaged-field target —
+/// <c>plugin.ExtensionField(HostContract.Entities.Order, …)</c>.</summary>
+public sealed record EntityContractRef(string EntityKey);
+
+/// <summary>A host GRID handle: the grid-action target —
+/// <c>plugin.GridAction(HostContract.Grids.WebOrdersList, …)</c>.</summary>
+public sealed record GridContractRef(string GridId);
+
 /// <summary>The contract-field grammar "name[:kind]" (docs/31), ONE parser for both sides of
 /// the seam: publishers (PublishesEvent) and consumers (RequiresEvent/RequiresView). The kind
 /// vocabulary matches the generated facades' accessors; a typo'd kind is an error, never a

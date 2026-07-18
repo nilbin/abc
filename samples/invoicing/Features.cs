@@ -182,7 +182,7 @@ public static class InvoiceList
 
 /// <summary>Blocks orders.complete while a draft invoice exists for the order — the gate
 /// reads the plugin's OWN table off the wire input, never host types (docs/22 P2).</summary>
-[Gate("orders.complete")]
+[Gate(HostContract.Operations.OrdersComplete)]
 internal sealed class DraftPendingGate(ITamDb tam) : IOperationGate
 {
     public async Task<Result> CheckAsync(GateContext gate, CancellationToken ct)
@@ -200,7 +200,7 @@ internal sealed class DraftPendingGate(ITamDb tam) : IOperationGate
 /// declared read (docs/31 D-X3) — no actor exists here, so the readable surface is exactly
 /// the RequiresView list. The status lands on the order via the writer (D-X2).
 /// </summary>
-[OnEffect("order-completed")]
+[OnEffect(OrderCompletedEvent.EventType)]
 internal sealed class DraftOnCompletion(
     ITamDb tam, IHostViewReader host, IPackagedFieldWriter fields) : IEffectHandler
 {
@@ -227,7 +227,7 @@ internal sealed class DraftOnCompletion(
 /// reads as the order path (docs/31 D-X3), filtered by the number the payload carries. The
 /// aggregates postdate this plugin's original design; only the CONTRACT grew.
 /// </summary>
-[OnEffect("work-order-completed")]
+[OnEffect(WorkOrderCompletedEvent.EventType)]
 internal sealed class DraftOnWorkOrderCompletion(
     ITamDb tam, IHostViewReader host) : IEffectHandler
 {

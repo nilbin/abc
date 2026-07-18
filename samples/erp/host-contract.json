@@ -583,6 +583,62 @@
       ]
     }
   },
+  "grids": {
+    "web.audit.list": {
+      "view": "audit.entries"
+    },
+    "web.customers.list": {
+      "view": "customers.list"
+    },
+    "web.documents.folders": {
+      "view": "documents.folders.list"
+    },
+    "web.documents.list": {
+      "view": "documents.list"
+    },
+    "web.extensions.fields": {
+      "view": "extensions.fields"
+    },
+    "web.materials.list": {
+      "view": "materials.list"
+    },
+    "web.nav": {
+      "view": "nav.overrides"
+    },
+    "web.orders.list": {
+      "view": "orders.list"
+    },
+    "web.packages": {
+      "view": "packages.list"
+    },
+    "web.plugins": {
+      "view": "plugins.list"
+    },
+    "web.projects.list": {
+      "view": "projects.list"
+    },
+    "web.roles": {
+      "view": "roles.list"
+    },
+    "web.rules": {
+      "view": "rules.list"
+    },
+    "web.stock.list": {
+      "view": "stock.list"
+    },
+    "web.tenants": {
+      "view": "tenants.list"
+    },
+    "web.time.list": {
+      "view": "time.list"
+    },
+    "web.users": {
+      "view": "users.list"
+    },
+    "web.work-orders.list": {
+      "view": "work-orders.list"
+    }
+  },
   "extensibleEntities": [
     "order",
     "work-order"

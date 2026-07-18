@@ -302,13 +302,17 @@ turns it into:
 plugin author know what events, pages, panels are available to extend?"*). The answer has
 one canonical form — the artifact file, browsable json — and one ergonomic form — the
 generated `HostContract.Events.*` / `HostContract.Views.*` symbols plus the facades, i.e.
-IntelliSense over the entire extension surface. Slots (panel targets), extensible entities
-(packaged-field targets) and gateable operations are listed in the artifact for the author
-even where v1 generates no symbols for them. CI keeps the committed artifact honest
+IntelliSense over the entire extension surface. EVERY section of the artifact now
+generates symbols: `HostContract.Operations.*` are CONSTS usable in attributes
+(`[Gate(HostContract.Operations.OrdersComplete)]`), `HostContract.Slots.*` carry their
+context keys (`Panel(HostContract.Slots.WebOrdersDetail, …)`), `HostContract.Entities.*`
+target packaged fields, `HostContract.Grids.*` target grid actions — and the event facades'
+`EventType` consts serve `[OnEffect(OrderCreatedEvent.EventType)]`. The only strings left
+in a plugin are its OWN ids — its vocabulary to name. CI keeps the committed artifact honest
 (re-export + compare, like the manifest baseline). PLG008/PLG009/PLG010 still verify every
 requirement against the REAL composed host at Build() — the artifact is compile-time
 convenience; Build() stays the truth. Deferred: RequiresView kind-compatibility checking
-against live wire kinds; artifact symbols for slots/entities/operations.
+against live wire kinds.
 
 **The end-state scorecard (what "as beautiful as it gets" means here).** ONE hand-written
 declaration — the host's event record / the view's Result record. Everything else is

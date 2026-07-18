@@ -43,6 +43,11 @@ public static class HostContractExport
             slots = model.Slots.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(
                 kv => kv.Key,
                 kv => new { keys = kv.Value.ContextKeys }),
+            grids = model.Grids
+                .Where(kv => Consumable(kv.Value.Plugin))
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(
+                    kv => kv.Key,
+                    kv => new { view = kv.Value.ViewId }),
             extensibleEntities = model.ExtensibleEntityKeys.Order(StringComparer.Ordinal).ToList(),
             operations = model.Operations
                 .Where(kv => Consumable(kv.Value.Plugin))

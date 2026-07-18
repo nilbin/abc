@@ -88,6 +88,14 @@ public sealed class PluginBuilder
         return this;
     }
 
+    /// <summary>The artifact-backed form: the entity handle from the generated HostContract
+    /// index (docs/31 slice 3) — <c>ExtensionField(HostContract.Entities.Order, …)</c>.</summary>
+    public PluginBuilder ExtensionField(
+        EntityContractRef entity, string key, string type,
+        bool required = false, int? maxLength = null, IReadOnlyList<string>? options = null,
+        bool readOnly = false) =>
+        ExtensionField(entity.EntityKey, key, type, required, maxLength, options, readOnly);
+
     /// <summary>
     /// Contributes navigation CONTENT (docs/30 D-N2): pages plus a suggested semantic section
     /// slug ("administration", "work"). Placement is the host's, then the tenant's — a plugin
@@ -115,6 +123,12 @@ public sealed class PluginBuilder
         Model.GridAction(gridId, operationId, builder.Binds);
         return this;
     }
+
+    /// <summary>The artifact-backed form: the grid handle from the generated HostContract
+    /// index — <c>GridAction(HostContract.Grids.WebOrdersList, …)</c>.</summary>
+    public PluginBuilder GridAction(GridContractRef grid, string operationId,
+        Action<GridActionBindBuilder> bind) =>
+        GridAction(grid.GridId, operationId, bind);
 
     /// <summary>
     /// Declares a read dependency on a host VIEW (docs/31 D-X3): the view and the result fields
@@ -146,6 +160,12 @@ public sealed class PluginBuilder
         Model.Panel(slotId, grid, heading, order, builder.Binds);
         return this;
     }
+
+    /// <summary>The artifact-backed form: the slot handle (with its context keys) from the
+    /// generated HostContract index — <c>Panel(HostContract.Slots.WebOrdersDetail, …)</c>.</summary>
+    public PluginBuilder Panel(SlotContractRef slot, string grid, Action<PanelBindBuilder> bind,
+        string? heading = null, int? order = null) =>
+        Panel(slot.SlotId, grid, bind, heading, order);
 
     /// <summary>Declares a dependency on an EVENT contract (docs/31 D-X5): PLG009 verifies the
     /// event is declared and carries the named payload fields — the payload shape this plugin's

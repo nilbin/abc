@@ -474,6 +474,19 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Generated symbols, completed (user-directed: "finish the generated symbols stuff")**:
+  every section of the host contract artifact now generates symbols, and the samples'
+  last host-vocabulary strings died. The artifact gained a grids section (the D-X1
+  grid-action targets, PLG010-filtered); the generator emits HostContract.Operations
+  (CONSTS — usable in attributes: [Gate(HostContract.Operations.OrdersComplete)]),
+  HostContract.Slots (SlotContractRef with context keys), HostContract.Entities
+  (EntityContractRef) and HostContract.Grids (GridContractRef); PluginBuilder gained the
+  matching Panel/ExtensionField/GridAction overloads; subscriber attributes ride the event
+  facades' consts ([OnEffect(OrderCreatedEvent.EventType)]). inspect + invoicing migrated:
+  gates, subscribers, packaged fields, panels and the grid action all reference symbols —
+  the ONLY strings left in a plugin are its own ids (its vocabulary to name). Verified:
+  suites 191+38, manifest deep-equal (authoring sugar only), artifact regenerated (CI
+  freshness gate covers it), wire 16+18+22+22 on fresh SQLite AND fresh Postgres.
 - **The developer portal + fully typed requirements (user-directed: "view it in the web
   app… its own mode tab" / "strings for view properties still smells")**: BOTH landed.
   (1) The last strings died: RequiresEvent<OrderCompletedEvent>() derives the event id,

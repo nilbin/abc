@@ -55,17 +55,17 @@ internal sealed class OrdersContract : IPluginPart
 
         // The order wears its invoice status (docs/22 P2). Read-only: only this plugin's
         // IPackagedFieldWriter sets it — the state machine stays the plugin's.
-        plugin.ExtensionField("order", "invoiceStatus", "selection",
+        plugin.ExtensionField(HostContract.Entities.Order, "invoiceStatus", "selection",
             options: ["draft", "invoiced", "paid"], readOnly: true);
 
         // "Create invoice" where the user lives — a row action on the HOST's orders grid,
         // with a declared input↔column bind. Entitlement+activation+permission gate it.
-        plugin.GridAction("web.orders.list", "invoicing.create-from-order",
+        plugin.GridAction(HostContract.Grids.WebOrdersList, "invoicing.create-from-order",
             bind => bind.Field("orderId", fromColumn: "id"));
 
         // The invoice panel on the order detail — the plugin's own grid bound to the slot's
         // record context. The host opted the surface in once; it never names us.
-        plugin.Panel("web.orders.detail", grid: "invoicing.web.invoices",
+        plugin.Panel(HostContract.Slots.WebOrdersDetail, grid: "invoicing.web.invoices",
             bind => bind.Query("orderId", fromContext: "orderId"));
 
         // Event contracts (docs/31 D-X5): payload shapes are declared, never folklore. The
