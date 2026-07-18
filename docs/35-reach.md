@@ -13,7 +13,12 @@ package's `reach.search` view (permission `reach.search`) aggregates every provi
 SearchAsync — activation-gated, fail-closed — and the `reach` form renderer turns any
 ReachRef field into a grouped, server-searched picker (the documents share form is the
 first consumer; kind group labels via `reach.kinds.{kind}` keys shipped by each kind's
-owner). Decisions D-R1..D-R5.
+owner). D-R6 is BUILT: `IReachProvider.DescribeAsync` (a DEFAULT interface method — null
+means "no label" and existing providers keep compiling) gives a stored ref its display
+label; `ReachResolver.DescribeAsync` is fail-SOFT (unknown kind, inactive plugin, or no
+answer → null, the caller shows the canonical string — a label is polish, never a gate).
+The documents shares view labels each grant server-side; all four providers (user, role,
+tenant, approvals.group) describe. Decisions D-R1..D-R6.
 
 ## The question the capability axis cannot answer
 
@@ -130,3 +135,7 @@ read filter and the write check share one predicate.
   first ACL editor needs pickers (the documents arc) — and then as a view over
   `SearchAsync`, activation-filtered per tenant like every plugin surface, not as a static
   manifest section.
+- **D-R6 — describing is opt-in polish, never a gate.** `DescribeAsync` is a default
+  interface method returning null; the resolver is fail-soft where containment is
+  fail-closed. A surface that cannot label a ref shows the canonical string — access
+  decisions never depend on a label resolving.

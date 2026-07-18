@@ -94,4 +94,11 @@ public sealed class GroupReach(Tam.EntityFrameworkCore.ITamDb tam) : Tam.IReachP
         return rows.Select(g => new Tam.ReachOption(
             new Tam.ReachRef("approvals.group", g.Id.ToString()), g.Name)).ToList();
     }
+
+    public async Task<string?> DescribeAsync(
+        Tam.ReachRef reach, Tam.OperationContext context, CancellationToken ct) =>
+        Guid.TryParse(reach.Id, out var groupId)
+            ? await tam.Db.Set<ApprovalGroup>().Where(g => g.Id == groupId)
+                .Select(g => g.Name).SingleOrDefaultAsync(ct)
+            : null;
 }

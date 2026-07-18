@@ -39,6 +39,20 @@ public sealed class ReachResolver(TamModel model, ITamDb tam, ITamActivator acti
         return await Provider(definition).SearchAsync(search, context, ct);
     }
 
+    /// <summary>Display label for a STORED ref (docs/35 D-R6), fail-SOFT: a malformed ref,
+    /// unknown kind, inactive plugin, or a provider without a label answer all yield null and
+    /// the caller shows the canonical string — a label is polish, never a gate.</summary>
+    public async Task<string?> DescribeAsync(
+        string reference, OperationContext context, CancellationToken ct)
+    {
+        if (!ReachRef.TryParse(reference, out var reach)) return null;
+        if (!model.Reaches.TryGetValue(reach.Kind, out var definition)) return null;
+        if (!await ActivationCache.ContributionExistsAsync(
+                context.Services, tam.Db, definition.PluginId, context.TenantId.Value, ct))
+            return null;
+        return await Provider(definition).DescribeAsync(reach, context, ct);
+    }
+
     private IReachProvider Provider(ReachDefinition definition) =>
         (IReachProvider)activator.Create(definition.ProviderType);
 }
@@ -67,6 +81,13 @@ public sealed class UserReach(ITamDb tam) : IReachProvider
         return rows.Select(x => new ReachOption(
             new ReachRef("user", x.Id.ToString()), x.DisplayName)).ToList();
     }
+
+    public async Task<string?> DescribeAsync(
+        ReachRef reach, OperationContext context, CancellationToken ct) =>
+        Guid.TryParse(reach.Id, out var accountId)
+            ? await tam.Db.Set<AccountEntity>().Where(a => a.Id == accountId)
+                .Select(a => a.DisplayName).SingleOrDefaultAsync(ct)
+            : null;
 }
 
 /// <summary>`role:{name}` — everyone holding the named role at the ACTING node. Node-local by
@@ -96,6 +117,10 @@ public sealed class RoleReach(ITamDb tam) : IReachProvider
         var names = await roles.OrderBy(r => r.Name).Select(r => r.Name).Take(50).ToListAsync(ct);
         return names.Select(n => new ReachOption(new ReachRef("role", n), n)).ToList();
     }
+
+    // A role's name IS its display (data, not a locale key) — echo it back.
+    public Task<string?> DescribeAsync(ReachRef reach, OperationContext context, CancellationToken ct) =>
+        Task.FromResult(reach.Id);
 }
 
 /// <summary>`tenant` — every member of the acting node: acting at all implies an active
@@ -114,6 +139,11 @@ public sealed class TenantReach(ITamDb tam) : IReachProvider
             .Select(t => t.DisplayName).SingleOrDefaultAsync(ct);
         return [new ReachOption(new ReachRef("tenant", null), name ?? context.TenantId.Value)];
     }
+
+    public async Task<string?> DescribeAsync(
+        ReachRef reach, OperationContext context, CancellationToken ct) =>
+        await tam.Db.Set<TenantEntity>().Where(t => t.Id == context.TenantId.Value)
+            .Select(t => t.DisplayName).SingleOrDefaultAsync(ct);
 }
 
 /// <summary>

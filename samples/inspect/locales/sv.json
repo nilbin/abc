@@ -33,6 +33,7 @@
   "nav.inspect.templates": "Checklistemallar",
   "operations.inspect.checklists.create.submit": "Skapa",
   "operations.inspect.checklists.create.title": "Ny checklista",
+  "operations.inspect.checklists.pass.name": "Godkänn checklista",
   "operations.inspect.checklists.pass.title": "Godkänn",
   "operations.inspect.items.check.title": "Bocka av",
   "operations.inspect.items.uncheck.title": "Bocka ur",

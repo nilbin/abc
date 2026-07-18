@@ -78,6 +78,13 @@ const teklaActor = users.find(u => (u.email ?? '').includes('tekla'))?.accountId
 const shareRef = teklaActor ? `user:${teklaActor}` : 'role:technician';
 const shared = await op(alva,'documents.folders.share',{folderId: projekt.body.output.folderId, reach: shareRef});
 check(`share /projekt (${shareRef.split(':')[0]} reach) succeeds`, shared.status === 200, `status=${shared.status} ${codeOf(shared)}`);
+// The share is DESCRIBED (docs/35 D-R6): the shares view labels the stored ref with the
+// person's name (or the role's own name when the user-id fallback was taken).
+const projShares = await view(alva,'documents.folders.shares',`?folderId=${projekt.body.output.folderId}`);
+check('shares view describes the grant with a display label',
+  (projShares.body?.rows ?? []).some(r => r.reach === shareRef
+    && (r.label === 'Tekla Nilsson' || r.label === 'technician')),
+  JSON.stringify(projShares.body?.rows ?? []));
 const teklaAfter = await view(tekla,'documents.folders.list');
 const teklaPathsAfter = (teklaAfter.body?.rows ?? []).map(r => r.path);
 check('ACL inheritance: /projekt/2026 visible via the parent share', teklaPathsAfter.includes('/projekt/2026'),

@@ -116,7 +116,8 @@
       "permission": "documents.manage",
       "fields": [
         "id",
-        "reach"
+        "reach",
+        "label"
       ],
       "kinds": {
         "id": "guid"

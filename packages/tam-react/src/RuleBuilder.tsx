@@ -79,10 +79,12 @@ const opLabel = (t: (key: string) => string, op: ClauseOp): string =>
 // with ResetOn — the pickers know nothing about their siblings.
 
 export function RuleTriggerOperation(p: FieldRendererProps): React.ReactNode {
-  const data = Object.keys(p.tam.manifest.operations).sort().map(id => ({
-    value: id, label: p.tam.t(`operations.${id}.title`) === `operations.${id}.title`
-      ? id : p.tam.t(`operations.${id}.title`),
-  }));
+  // Context-free titles collide across aggregates ("Inaktivera" x2) — the picker prefers
+  // the disambiguating `operations.{id}.name`, then the title, then the raw id.
+  const data = Object.keys(p.tam.manifest.operations).sort().map(id => {
+    const label = p.tam.tOr([`operations.${id}.name`, `operations.${id}.title`]);
+    return { value: id, label: label === `operations.${id}.title` ? id : label };
+  });
   return (
     <Select
       label={p.label} description={p.warning} error={p.error} searchable clearable

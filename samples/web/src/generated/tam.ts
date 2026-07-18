@@ -1074,6 +1074,7 @@ export interface DocumentsFoldersListQuery {
 export interface DocumentsFoldersSharesRow {
   id: string;
   reach: string;
+  label?: string;
 }
 
 export interface DocumentsFoldersSharesQuery {

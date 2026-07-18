@@ -55,7 +55,7 @@
   "grid.filters": "Filter",
   "grid.load-failed": "Kunde inte läsa in listan. Försök igen.",
   "grid.row-actions": "Åtgärder",
-  "grid.total": "{count} träffar",
+  "grid.total": "Antal träffar: {count}",
   "integrations.dead-letter-not-found": "Ingen stoppad post med det id:t.",
   "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
   "integrations.malformed-payload": "Integrationens data är inte giltig JSON.",

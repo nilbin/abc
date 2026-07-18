@@ -33,6 +33,7 @@
   "labels.retired": "Retired",
   "nav.approvals.admin": "Approval flows",
   "nav.approvals.requests": "Approval requests",
+  "operations.approvals.approve.name": "Approve request",
   "operations.approvals.approve.title": "Approve",
   "operations.approvals.groups.assign.title": "Add approver",
   "operations.approvals.groups.define.submit": "Create",
@@ -40,6 +41,7 @@
   "operations.approvals.reject.title": "Reject",
   "operations.approvals.rules.define.submit": "Create",
   "operations.approvals.rules.define.title": "New approval rule",
+  "operations.approvals.rules.retire.name": "Retire approval rule",
   "operations.approvals.rules.retire.title": "Retire rule",
   "plugins.approvals.title": "Approval flows",
   "reach.kinds.approvals.group": "Approver groups"

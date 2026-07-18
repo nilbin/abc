@@ -133,7 +133,7 @@ export function DocumentsBrowser() {
 function FolderShares({ folderId }: { folderId: string }) {
   const { t, client, invalidate } = useTam();
   const shares = useView('documents.folders.shares', { folderId });
-  const rows = (shares.data?.rows ?? []) as { id: string; reach: string }[];
+  const rows = (shares.data?.rows ?? []) as { id: string; reach: string; label?: string | null }[];
 
   const describe = (reach: string) => {
     const cut = reach.indexOf(':');
@@ -160,7 +160,9 @@ function FolderShares({ folderId }: { folderId: string }) {
               <Group key={row.id} justify="space-between" gap="xs">
                 <Group gap="xs">
                   <Badge variant="light">{kind}</Badge>
-                  {id && <Text size="sm">{id}</Text>}
+                  {/* Server-described label (docs/35 D-R6) first; the raw ref id is the
+                      fail-soft fallback. */}
+                  {(row.label ?? id) && <Text size="sm">{row.label ?? id}</Text>}
                 </Group>
                 <ActionIcon variant="subtle" color="red"
                   aria-label={t('operations.documents.folders.unshare.title')}

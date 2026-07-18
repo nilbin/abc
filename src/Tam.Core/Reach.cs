@@ -50,6 +50,13 @@ public interface IReachProvider
 
     Task<IReadOnlyList<ReachOption>> SearchAsync(
         string? search, OperationContext context, CancellationToken ct);
+
+    /// <summary>The display label for ONE stored ref (docs/35 D-R6) — how an ACL surface shows
+    /// "user:0d3f…" as a person's name. Null means "no label" and the caller falls back to the
+    /// canonical string; the default keeps every existing provider compiling — describing is
+    /// opt-in polish, containment stays the contract.</summary>
+    Task<string?> DescribeAsync(ReachRef reach, OperationContext context, CancellationToken ct)
+        => Task.FromResult<string?>(null);
 }
 
 /// <summary>A registered reach kind: the provider TYPE (ITamActivator-built per call) and the

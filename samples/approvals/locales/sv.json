@@ -33,6 +33,7 @@
   "labels.retired": "Avvecklad",
   "nav.approvals.admin": "Godkännandeflöden",
   "nav.approvals.requests": "Godkännandebegäranden",
+  "operations.approvals.approve.name": "Godkänn begäran",
   "operations.approvals.approve.title": "Godkänn",
   "operations.approvals.groups.assign.title": "Lägg till godkännare",
   "operations.approvals.groups.define.submit": "Skapa",
@@ -40,6 +41,7 @@
   "operations.approvals.reject.title": "Avslå",
   "operations.approvals.rules.define.submit": "Skapa",
   "operations.approvals.rules.define.title": "Ny godkännanderegel",
+  "operations.approvals.rules.retire.name": "Avveckla godkännanderegel",
   "operations.approvals.rules.retire.title": "Avveckla regel",
   "plugins.approvals.title": "Godkännandeflöden",
   "reach.kinds.approvals.group": "Godkännandegrupper"

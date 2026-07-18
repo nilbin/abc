@@ -33,6 +33,7 @@
   "nav.inspect.templates": "Checklist templates",
   "operations.inspect.checklists.create.submit": "Create",
   "operations.inspect.checklists.create.title": "New checklist",
+  "operations.inspect.checklists.pass.name": "Approve checklist",
   "operations.inspect.checklists.pass.title": "Pass",
   "operations.inspect.items.check.title": "Check off",
   "operations.inspect.items.uncheck.title": "Un-check",

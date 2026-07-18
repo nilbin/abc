@@ -425,9 +425,10 @@ public static class FolderList
 }
 
 /// <summary>One folder's OWN share entries — the share dialog's list (admin-only, like the
-/// share intent itself). Rows carry the canonical ref; the client renders the kind's label.
-/// Inherited reach is deliberately absent: this view answers "what is granted HERE", the
-/// effective-ACL question stays inside the one predicate.</summary>
+/// share intent itself). Rows carry the canonical ref plus a resolver-described display
+/// label (docs/35 D-R6, fail-soft: null label → the client shows the ref). Inherited reach
+/// is deliberately absent: this view answers "what is granted HERE", the effective-ACL
+/// question stays inside the one predicate.</summary>
 [View("documents.folders.shares")]
 [Authorize("documents.manage")]
 public static class FolderShares
@@ -439,12 +440,27 @@ public static class FolderShares
         public Guid Id { get; init; }
         [LabelKey("labels.reach")]
         public string Reach { get; init; } = "";
+        [LabelKey("labels.name")]
+        public string? Label { get; init; }
     }
 
-    public static IQueryable<Result> Execute(Query query, ITamDb tam) =>
-        tam.Db.Set<DocumentAclEntity>()
+    public static async Task<IQueryable<Result>> Execute(
+        Query query, ITamDb tam, ReachResolver reach, OperationContext context,
+        CancellationToken ct)
+    {
+        var entries = await tam.Db.Set<DocumentAclEntity>()
             .Where(a => a.FolderId == query.FolderId)
-            .Select(a => new Result { Id = a.Id, Reach = a.Reach });
+            .ToListAsync(ct);
+        var rows = new List<Result>();
+        foreach (var entry in entries)
+            rows.Add(new Result
+            {
+                Id = entry.Id,
+                Reach = entry.Reach,
+                Label = await reach.DescribeAsync(entry.Reach, context, ct),
+            });
+        return rows.AsQueryable();
+    }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) => caps
         .Sortable(nameof(Result.Reach))

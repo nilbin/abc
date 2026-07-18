@@ -474,6 +474,23 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Framework finish, batch 1 (user-directed: "finish the framework stuff before more
+  domain")**: three deferred items closed. D-R6 REACH DESCRIBE — `IReachProvider` gains
+  `DescribeAsync` as a DEFAULT interface method (null = no label; existing providers keep
+  compiling), `ReachResolver.DescribeAsync` is fail-SOFT where containment is fail-closed,
+  all four providers describe (user → account name, role → its own name, tenant → node
+  display name, approvals.group → group name), and the documents shares view labels each
+  grant server-side (additive `label` field) — the share dialog now shows "Tekla Nilsson"
+  instead of a guid. RULE-PICKER disambiguation — the trigger dropdown resolves
+  `operations.{id}.name` → title → id, and `.name` keys were added exactly where bare
+  titles collided (Godkänn ×2, Inaktivera ×2, Avveckla regel ×2; found by scripted title
+  audit across all six catalogs). GRID.TOTAL plural — "1 träffar" fixed by the
+  count-prefixed form ("Antal träffar: {count}"), sidestepping a plural engine.
+  Verified: suites 191+38, additive baseline (+types/contract), wire 16+18+22+26 on
+  fresh SQLite AND fresh Postgres (documents suite +1: the described-grant label),
+  share-dialog screenshot with a named grant. Remaining framework queue: streaming
+  uploads, RequiresView kind-compat, then the variability seams (tenant profile + form
+  overlays); domain arcs (participants/multi-day/address) deliberately parked behind them.
 - **Grid feature round (user-directed: "needs a better frontend overall to support many
   columns")**: ViewGrid reworked for wide grids. Row actions COLLAPSE into a per-row ⋯
   menu when there is more than one (the merged orders grid had seven inline buttons —
