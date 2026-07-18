@@ -102,12 +102,12 @@ export function NavProvider(props: { surface?: string; children: ReactNode }) {
   const state: NavState = {
     modes,
     activeMode,
-    setMode: id => { setModeId(id); setPageId(null); writeQuery({ mode: id, page: null, record: null }); },
+    setMode: id => { setModeId(id); setPageId(null); writeQuery({ mode: id, page: null, record: null, tab: null }); },
     active: active ?? null,
     activeSub,
     navigate: id => {
       setPageId(id);
-      writeQuery({ mode: activeMode?.id ?? modeId, page: id, record: null });
+      writeQuery({ mode: activeMode?.id ?? modeId, page: id, record: null, tab: null });
     },
   };
   return <NavStateContext.Provider value={state}>{props.children}</NavStateContext.Provider>;

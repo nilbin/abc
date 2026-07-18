@@ -474,6 +474,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   (wire-id grammar with grandfathered deviations, name shapes, label keys, findings, stamping).
   Verified: suites 162+38, wire 18+22 on fresh SQLite AND Postgres, additive baseline,
   labelKey-diff zero, docs check green.
+- **Tenant-in-URL deep links (autonomous, per the communicated order)**: the URL grammar
+  grew `?tenant=` (the ACTING node — written by the company picker, seeded into App state
+  on load after validation against the standable set; the server still validates the
+  act-as header on every request, so the URL is a wish, not a grant) and `?tab=` (the
+  active record tab). A cross-company subtree row now writes its tenant alongside
+  `?record=`, so the deep link re-establishes the scope the record LIVES in on reload —
+  previously the per-call actAs was lost and the record vanished. Subordination rules:
+  page clears record, record clears tab, closing a record restores tenant to the global
+  acting node; Back/forward drive all of it (App popstate for tenant, ModelPage for
+  record+tab). An order's documents tab is now a bookmarkable place — the order-grid docs
+  affordance can become a plain link when a RowLink-style model concept is wanted
+  (deferred, needs a model-surface decision). Playwright-verified 6/6: picker writes
+  tenant; record+tab+tenant compose; cold reload restores record page, documents tab and
+  acting company (Demo AB ▸ Nord); Back keeps scope. FE-only: manifest/baseline/contract
+  byte-identical, .NET suites unchanged since previous commit; wire 16+18+22+25 re-run
+  green on fresh SQLite AND fresh Postgres.
 - **Swedish copy pass (user-directed: "besiktning… not sure it's the right meaning";
   "the Save button… might need multiple labels")**: a native-register audit (focused
   subagent) applied across all six catalog families. The A-fix: the inspect capability is

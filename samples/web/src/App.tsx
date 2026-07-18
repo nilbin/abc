@@ -8,8 +8,8 @@ import {
 import { TamClient, type StandableInfo } from '@tam/core';
 import {
   NavModeSwitcher, NavPage, NavProvider, NavSidebar, NavTabs,
-  TamProvider, registerBadgeColors,
-  registerPage, useTam, useTamAuth,
+  TamProvider, readQuery, registerBadgeColors,
+  registerPage, useTam, useTamAuth, writeQuery,
 } from '@tam/react';
 
 const client = new TamClient(import.meta.env.VITE_API ?? '', 'sv');
@@ -118,15 +118,41 @@ export function App() {
   // live in the framework hook — the app just reacts to the session state.
   const auth = useTamAuth(client, { clientId: 'tam-spa' });
   const [standable, setStandable] = useState<StandableInfo | null>(null);
-  const [actAs, setActAs] = useState<string | null>(null);
+  // The acting company survives reload and travels in links: ?tenant seeds it (the server
+  // validates the act-as header on every request regardless — the URL is a wish, not a grant).
+  const [actAs, setActAs] = useState<string | null>(() => readQuery().tenant);
 
   // The account's standable companies (docs/26 D-H3): memberships + cascaded descendants.
+  // A ?tenant outside the standable set is dropped — a stale or foreign link degrades to the
+  // home node instead of a wall of failed requests.
   useEffect(() => {
     if (auth.status !== 'authenticated') { setStandable(null); setActAs(null); return; }
     client.standable()
-      .then(d => setStandable(d))
+      .then(d => {
+        setStandable(d);
+        setActAs(current => {
+          if (current && !d.nodes.some(n => n.id === current)) {
+            writeQuery({ tenant: null });
+            return null;
+          }
+          return current;
+        });
+      })
       .catch(() => setStandable(null));
   }, [auth.status]);
+
+  // Back/forward across acting-company changes: the URL's ?tenant drives the scope.
+  useEffect(() => {
+    const onPop = () => setActAs(readQuery().tenant);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const onActAs = (id: string | null) => {
+    setActAs(id);
+    // A record from the previous scope is meaningless in the new one.
+    writeQuery({ tenant: id, record: null, tab: null });
+  };
 
   // Acting company (docs/26 D-H4): the act-as header rebinds every request server-side after
   // validation — views, lookups and creates all land in the chosen node, no re-login.
@@ -143,7 +169,7 @@ export function App() {
     >
       {auth.status === 'authenticated'
         ? <Shell userName={auth.user!.name} onLogout={auth.signOut}
-            standable={standable} actAs={actAs} onActAs={setActAs} />
+            standable={standable} actAs={actAs} onActAs={onActAs} />
         : <LoginPage onSignIn={auth.signIn} />}
     </TamProvider>
   );

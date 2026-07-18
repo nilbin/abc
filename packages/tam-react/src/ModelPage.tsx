@@ -40,6 +40,9 @@ export function ModelPage(props: { page: string }) {
   const { manifest, client, t, can, invalidate } = tam;
   const page = manifest.pages?.[props.page];
   const [record, setRecord] = useState<OpenRecord | null>(null);
+  // The active record tab, URL-backed (?tab): a record's documents tab is a bookmarkable
+  // place. Null renders the first tab, exactly the old default.
+  const [tab, setTab] = useState<string | null>(() => readQuery().tab);
   // The URL-sync effect reads the CURRENT open record through this ref — state in a listener
   // closure would be stale (the popstate handler outlives renders).
   const recordRef = useRef<OpenRecord | null>(null);
@@ -51,6 +54,10 @@ export function ModelPage(props: { page: string }) {
   // Fetch the record for an id (row click passes the row's tenant for cross-company subtree
   // rows; a deep link opens in the acting node). A missing row or a failed fetch clears the
   // record AND the URL param — the URL must never claim a record the modal doesn't show.
+  // The URL's ?tenant restores to the GLOBAL acting node (client.actingAs); leaving a
+  // cross-company record must put it back, not blank it.
+  const globalTenant = () => client.actingAs ?? null;
+
   const openById = async (id: string, actAs?: string) => {
     if (!rec) return;
     try {
@@ -60,31 +67,41 @@ export function ModelPage(props: { page: string }) {
         setRecord({ row: detail.rows[0], key: id, actAs });
       } else {
         setRecord(null);
-        writeQuery({ record: null });
+        writeQuery({ record: null, tenant: globalTenant(), tab: null });
       }
     } catch {
       setRecord(null);
-      writeQuery({ record: null });
+      writeQuery({ record: null, tenant: globalTenant(), tab: null });
     }
   };
 
   const openRecord = async (row: Record<string, unknown>) => {
     if (!rec) return;
     const actAs = typeof row.tenantId === 'string' ? row.tenantId : undefined;
-    writeQuery({ record: String(row.id) });
+    // A cross-company subtree row carries its tenant into the URL: the deep link must
+    // re-establish the scope the record LIVES in, not the scope it was found from.
+    writeQuery({ record: String(row.id), tenant: actAs ?? globalTenant(), tab: null });
     await openById(String(row.id), actAs);
   };
 
-  const closeRecord = () => { setRecord(null); writeQuery({ record: null }); };
+  const closeRecord = () => {
+    setRecord(null);
+    writeQuery({ record: null, tenant: globalTenant(), tab: null });
+  };
 
-  // Deep-link + Back/forward: the URL's ?record drives what's open. NavPage keys this
-  // component by page, so a page switch remounts with fresh state and this effect re-syncs.
+  // Deep-link + Back/forward: the URL's ?record (+?tenant when it differs from the acting
+  // node, +?tab) drives what's open. NavPage keys this component by page, so a page switch
+  // remounts with fresh state and this effect re-syncs.
   useEffect(() => {
     if (!rec) return;
     const sync = () => {
-      const id = readQuery().record;
-      if (id === null) setRecord(null);
-      else if (recordRef.current?.key !== id) void openById(id);
+      const q = readQuery();
+      setTab(q.tab);
+      if (q.record === null) setRecord(null);
+      else if (recordRef.current?.key !== q.record) {
+        void openById(q.record,
+          q.tenant && q.tenant !== client.actingAs ? q.tenant : undefined);
+      }
     };
     sync();
     window.addEventListener('popstate', sync);
@@ -186,7 +203,10 @@ export function ModelPage(props: { page: string }) {
     return (
       <Stack gap="md">
         {readOnlyDetails()}
-        <Tabs defaultValue={resolvedTabs[0]?.id}>
+        <Tabs
+          value={resolvedTabs.some(tb => tb.id === tab) ? tab : resolvedTabs[0]?.id}
+          onChange={id => { setTab(id); writeQuery({ tab: id }); }}>
+
           <Tabs.List>
             {resolvedTabs.map(tb => (
               <Tabs.Tab key={tb.id} value={tb.id}>

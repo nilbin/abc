@@ -18,6 +18,8 @@ export { NavProvider, useNav, NavModeSwitcher, NavSidebar, NavTabs, NavPage, reg
 export type { NavState } from './nav';
 export type { LookupSelectProps } from './LookupSelect';
 export { useTamAuth } from './auth';
+export { readQuery, writeQuery } from './url';
+export type { UrlQuery } from './url';
 export type { TamAuthState, TamAuthStatus } from './auth';
 export { ModelPage } from './ModelPage';
 export { PluginSlot } from './PluginSlot';

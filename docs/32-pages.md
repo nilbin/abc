@@ -68,8 +68,14 @@ surface, extendable with new tabs (including plugin ones) without touching the o
 - Tab headings are locale KEYS, L10N001-gated like every label; tab ids are camelCased and
   must be unique (PAGE001).
 - The open record is **URL-routed** (`?record=<id>`, riding the nav's `?mode=&page=` grammar —
-  one url.ts module owns all three params, and navigation clears the page-scoped `record`):
-  a record view is deep-linkable and the browser Back button closes it.
+  one url.ts module owns all params, and navigation clears the page-scoped `record`):
+  a record view is deep-linkable and the browser Back button closes it. The grammar carries
+  two more params: `?tenant=` — the ACTING node, written by the company picker and by opening
+  a cross-company subtree row, so a deep link re-establishes the scope the record lives in
+  (validated against the standable set on load; the server re-validates every request, docs/26
+  D-H4 — the URL is a wish, not a grant) — and `?tab=`, the active record tab, which makes an
+  order's documents tab a bookmarkable place. `record` clears with the page, `tab` with the
+  record; closing a record restores `tenant` to the global acting node.
 - **The display SEMANTIC**: the record declares how substantial it is — a `modal` quick edit
   over the grid, or a `page` workspace (a routed full surface replacing the grid, with a back
   affordance). Undeclared, it DERIVES from structure: several tabs or any child grid make a
