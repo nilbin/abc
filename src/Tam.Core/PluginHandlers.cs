@@ -100,8 +100,10 @@ public sealed record GateContext(
 /// config whether to act (docs/28 tutorial Step 16: the set of gated operations is tenant data,
 /// not compile-time). A PURE gate declares itself pure-over-input and runs BEFORE the
 /// transaction — the cheap fail (tenant automation rules ride here); transactional gates run
-/// inside it, where the state they check cannot change underneath the handler. Visible in the
-/// manifest as GatedBy.</summary>
+/// inside it, so their reads and the handler's writes commit atomically. This is NOT frozen-read
+/// isolation (Sol review, Finding 3): at READ COMMITTED a gate's read of a row it does not also
+/// write can be stale by commit time — a gate needing a hard guarantee must lock/lease that row.
+/// Visible in the manifest as GatedBy.</summary>
 public sealed record GateDefinition(string OperationId, string PluginId, Type HandlerType, bool Pure = false)
 {
     public const string Wildcard = "*";

@@ -124,8 +124,14 @@ public sealed class OperationExecutor(
 
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-        // TRANSACTIONAL phase: the state a gate checks here cannot change underneath the
-        // handler it guards.
+        // TRANSACTIONAL phase: these gates run inside the operation's transaction, so their
+        // reads and the handler's writes commit atomically. NOTE (Sol review, Finding 3): this
+        // is NOT a frozen-read guarantee. The transaction opens at the provider default
+        // (READ COMMITTED on Npgsql) and takes no lock on a row a gate merely READ, so a
+        // concurrent commit to that row between the gate's read and this commit is invisible
+        // unless the handler also writes that row (whose IVersioned token then conflicts). A
+        // gate needing true freeze must take an explicit lock/version lease on the state it
+        // depends on — a declared-lease seam is the designed follow-up.
         foreach (var gate in orderedGates.Where(g => !g.Pure && activePlugins.Contains(g.PluginId)))
         {
             var gateContext = new GateContext(operationId, body, payloadHash, context);
