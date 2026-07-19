@@ -158,24 +158,10 @@ public sealed class OperationExecutor(
         // domain-specific finding preserved (e.g. orders.project-required). Advisory outputs
         // (suggestions, warnings, option ordering) are consumed by resolve and IGNORED here:
         // authority is a property of the output, not of the derivation method.
+        // Derivations run structurally read-only and self-contained (Sol re-review, Finding 3): the
+        // write-guard interceptor rejects any durable write and RunDerivationsAsync discards any
+        // unsaved tracked mutation, on every exit path — so submit never inherits derivation writes.
         var derived = await RunDerivationsAsync(operation, input, context, ct);
-
-        // Derivations are structurally READ-ONLY (Sol re-review, Finding 3). They run BEFORE the
-        // transaction on the operation's own writable context, so a derivation that added/modified/
-        // deleted a tracked entity would either (a) have those writes committed by the handler's later
-        // SaveChanges, bypassing the domain boundary, or (b) leave them tracked when a blocking
-        // derivation returns — the change-tracker leak, resurrected. Nothing legitimately mutates
-        // state before this point, so any write-state entry here was introduced by a derivation:
-        // discard it and fail closed. (Reads are fine — projections don't track, and a tracked read
-        // is Unchanged, not a write.) A dedicated read-scoped context is the longer-term hardening.
-        if (db.ChangeTracker.Entries().Any(e =>
-                e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
-        {
-            db.ChangeTracker.Clear();
-            throw new InvalidOperationException(
-                $"DER007: a derivation of '{operationId}' mutated tracked state. Derivations compute "
-                + "input admissibility and must be read-only — move any write into the operation handler.");
-        }
 
         var required = derived.Required
             .Where(r => r.When && FieldEmpty(operation, input, r.Field))
@@ -216,15 +202,17 @@ public sealed class OperationExecutor(
         // complete legal set — else it is rejected. AddOptions (advisory) stays unenforced.
         foreach (var closed in derived.ClosedOptions)
         {
-            var value = LookupKey(operation, input, closed.Field);
-            if (string.IsNullOrEmpty(value)) continue;
-            // Compare each option through the SAME unwrap the submitted value went through (Sol
-            // re-review, Finding 5): ValueWrapper.Unwrap so a semantic-wrapper option (new Option(
-            // project.Id, ...)) reduces to its scalar key, then ORDINAL — case-SENSITIVE, so a
-            // case-sensitive code/reference isn't silently accepted in the wrong casing. An enum
-            // option authored with the enum value matches because both sides ToString the CLR value.
-            if (!closed.Options.Any(o => string.Equals(
-                    ValueWrapper.Unwrap(o.Value)?.ToString(), value, StringComparison.Ordinal)))
+            var field = operation.InputFields.FirstOrDefault(f => f.WireName == closed.Field);
+            var submitted = EffectiveScalar(operation, input, closed.Field);
+            if (field is null || submitted is null) continue;
+            // Normalize BOTH the submitted value and each option through the FIELD's semantic model
+            // (Sol re-review, Finding 5) — not a global ToString — so decimal 1 / 1.0, an enum's wire
+            // token vs CLR value, and equivalent date/reference forms compare correctly, a
+            // case-sensitive code isn't accepted in the wrong casing, and a wrapper option reduces to
+            // its scalar. One place, too, to reject an option value incompatible with the field type.
+            var normalized = field.Semantic.Normalize(submitted);
+            if (!closed.Options.Any(o =>
+                    Equals(field.Semantic.Normalize(ValueWrapper.Unwrap(o.Value)), normalized)))
                 return Fail(context, closed.Invalid);
         }
 
@@ -569,28 +557,57 @@ public sealed class OperationExecutor(
     public async Task<DerivationResult> RunDerivationsAsync(
         OperationDefinition operation, object input, OperationContext context, CancellationToken ct)
     {
-        var merged = DerivationResult.Empty;
-        foreach (var derivation in model.DerivationsForOperation(operation.Id))
+        // Derivations are structurally READ-ONLY (Sol re-review, Finding 3) for the WHOLE evaluation,
+        // shared by resolve and submit. The scope flag makes the DbContext's write-guard interceptor
+        // reject any durable write (SaveChanges / ExecuteUpdate / raw SQL) a derivation attempts, on
+        // every exit path. The finally also discards any tracked-but-unsaved write and always restores
+        // the flag — so a throw mid-run (a write rejection, DER008) can't leave the shared context
+        // dirty or read-only.
+        var db = dbResolver(services);
+        var scope = services.GetService<TenantScope>();
+        var priorReadOnly = scope?.DerivationReadOnly ?? false;
+        if (scope is not null) scope.DerivationReadOnly = true;
+        try
         {
-            var args = BindParameters(derivation.Method, input, context, ct);
-            var invocation = derivation.Method.Invoke(null, args)!;
-            var result = invocation is Task<DerivationResult> task ? await task : (DerivationResult)invocation;
-            merged = merged.Merge(result);
+            var merged = DerivationResult.Empty;
+            foreach (var derivation in model.DerivationsForOperation(operation.Id))
+            {
+                var args = BindParameters(derivation.Method, input, context, ct);
+                var invocation = derivation.Method.Invoke(null, args)!;
+                var result = invocation is Task<DerivationResult> task ? await task : (DerivationResult)invocation;
+                merged = merged.Merge(result);
+            }
+
+            // A tracked-but-unsaved write (an Add the interceptor never saw) is not durable, but it is
+            // still a derivation touching write state — fail closed. The finally discards it so it
+            // can't flush on the shared context.
+            if (db.ChangeTracker.Entries().Any(e =>
+                    e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+                throw new InvalidOperationException(
+                    $"DER007: a derivation of '{operation.Id}' mutated tracked state. Derivations compute "
+                    + "input admissibility and must be read-only — move any write into the operation handler.");
+
+            // At most ONE active lookup binding per field (Sol re-review, Finding 6). Resolve surfaces
+            // only the first binding for a field, but submit enforces EVERY binding — so two active
+            // lookups on one field would show one candidate universe and secretly require membership in
+            // both. Fail closed here (shared by resolve and submit, so they cannot disagree) rather than
+            // let the UI misrepresent the enforced contract.
+            var conflicting = merged.Lookups.GroupBy(l => l.Field).FirstOrDefault(g => g.Count() > 1);
+            if (conflicting is not null)
+                throw new InvalidOperationException(
+                    $"DER008: operation '{operation.Id}' produced {conflicting.Count()} lookup bindings for "
+                    + $"field '{conflicting.Key}'. At most one active lookup binding per field is allowed — "
+                    + "resolve shows one candidate universe but submit would enforce all of them.");
+
+            return merged;
         }
-
-        // At most ONE active lookup binding per field (Sol re-review, Finding 6). Resolve surfaces
-        // only the first binding for a field, but submit enforces EVERY binding — so two active
-        // lookups on one field would show one candidate universe and secretly require membership in
-        // both. Fail closed here (shared by resolve and submit, so they cannot disagree) rather than
-        // let the UI misrepresent the enforced contract.
-        var conflicting = merged.Lookups.GroupBy(l => l.Field).FirstOrDefault(g => g.Count() > 1);
-        if (conflicting is not null)
-            throw new InvalidOperationException(
-                $"DER008: operation '{operation.Id}' produced {conflicting.Count()} lookup bindings for "
-                + $"field '{conflicting.Key}'. At most one active lookup binding per field is allowed — "
-                + "resolve shows one candidate universe but submit would enforce all of them.");
-
-        return merged;
+        finally
+        {
+            if (scope is not null) scope.DerivationReadOnly = priorReadOnly;
+            if (db.ChangeTracker.Entries().Any(e =>
+                    e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+                db.ChangeTracker.Clear();
+        }
     }
 
     /// <summary>Wire-name field emptiness, unwrapping a change set — the shared check behind form
@@ -606,11 +623,11 @@ public sealed class OperationExecutor(
         return IsEmpty(effective);
     }
 
-    /// <summary>The submitted lookup key as a wire string, read from the DESERIALIZED input (Sol
-    /// re-review, Finding 9): unwraps a Change&lt;T&gt; to its submitted value and the semantic
-    /// wrapper to its scalar, so an edit field ({original,value} on the wire) yields the actual key,
-    /// not the change object. Null/empty when the field is absent or unset — membership skips it.</summary>
-    private static string? LookupKey(OperationDefinition operation, object input, string wireName)
+    /// <summary>The submitted value's scalar, read from the DESERIALIZED input (Sol re-review,
+    /// Finding 9): unwraps a Change&lt;T&gt; to its submitted value and the semantic wrapper to its
+    /// scalar, so an edit field ({original,value} on the wire) yields the actual value, not the
+    /// change object. Null when the field is absent or unset.</summary>
+    private static object? EffectiveScalar(OperationDefinition operation, object input, string wireName)
     {
         var field = operation.InputFields.FirstOrDefault(f => f.WireName == wireName);
         if (field is null) return null;
@@ -618,15 +635,18 @@ public sealed class OperationExecutor(
         var effective = field.IsChangeSet && value is not null
             ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
             : value;
-        var scalar = ValueWrapper.Unwrap(effective);
-        return scalar switch
+        return ValueWrapper.Unwrap(effective);
+    }
+
+    /// <summary>The submitted lookup key as a wire string for the membership Exists.</summary>
+    private static string? LookupKey(OperationDefinition operation, object input, string wireName) =>
+        EffectiveScalar(operation, input, wireName) switch
         {
             null => null,
             Guid g => g == Guid.Empty ? null : g.ToString(),
             string s => s,
-            _ => scalar.ToString(),
+            var scalar => scalar.ToString(),
         };
-    }
 
     internal object?[] BindParameters(
         MethodInfo method, object? input, OperationContext context, CancellationToken ct)

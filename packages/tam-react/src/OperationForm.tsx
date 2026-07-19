@@ -68,15 +68,23 @@ export function OperationForm(props: OperationFormProps) {
     (name: string) => values[name] ?? values[`ext:${name}`] ?? null,
     [values]);
 
-  // The complete own-field input as the server wants it (changeSet fields are resolved elsewhere).
+  // The complete own-field input in the operation's WIRE shape — the one builder both resolve and
+  // submit agree on. A change-set field is only meaningful once touched, and it must carry its
+  // {original, value} object (Sol re-review, Finding 3): a raw scalar deserializes to
+  // pipeline.invalid-input and resolve silently returns stale derived state.
   const currentInput = useCallback(() => {
     const input: Record<string, unknown> = {};
     for (const f of formDef.fields) {
       const v = valuesRef.current[f.name];
-      if (v !== undefined && v !== null && !f.changeSet) input[f.name] = v;
+      if (f.changeSet) {
+        if (touchedRef.current.has(f.name))
+          input[f.name] = { original: initial[f.name] ?? null, value: v ?? null };
+      } else if (v !== undefined && v !== null) {
+        input[f.name] = v;
+      }
     }
     return input;
-  }, [formDef]);
+  }, [formDef, initial]);
 
   // Apply a resolve response: complete field state + untouched-only suggestions (docs/05).
   const applyResolved = useCallback((resolved: ResolveResponse) => {
@@ -100,30 +108,56 @@ export function OperationForm(props: OperationFormProps) {
     timer.current = setTimeout(async () => {
       const sent = ++seq.current;
       const input = currentInput();
-      for (const f of changedFields) input[f] = valuesRef.current[f] ?? null;
+      // A cleared NON-change-set field must reach the server as null; change-set fields are already
+      // shaped by currentInput (never overwrite them with a raw scalar).
+      for (const f of changedFields) {
+        if (formDef.fields.find(x => x.name === f)?.changeSet) continue;
+        input[f] = valuesRef.current[f] ?? null;
+      }
       try {
         const resolved = await client.resolve(
-          props.form, input, changedFields, manifest.revision);
+          props.form, input, changedFields, manifest.revision, { actAs: props.actAs });
         if (sent === seq.current) applyResolved(resolved);
       } catch { /* resolve is advisory; submit re-validates authoritatively */ }
     }, 350);
-  }, [client, formDef, props.form, manifest.revision, currentInput, applyResolved]);
+  }, [client, formDef, props.form, props.actAs, manifest.revision, currentInput, applyResolved]);
 
-  // FULL initial resolve on mount / form / acting-node change (Sol re-review, Finding 4): a prefilled
-  // form must show operation-derived requiredness, lookup descriptors and findings BEFORE any field
-  // is touched, and a context-only derivation (no field dependencies) is never reachable through the
-  // change-triggered path. Gated on hasServerDerivations so a derivation-free form pays nothing.
+  // Reset edit state when the form or record IDENTITY changes (Sol re-review, Finding 5). A
+  // remounted-per-record form is the common case, but the component enforces the contract itself:
+  // a new prefill (another record, async-loaded values) clears touched/response/resolve so stale
+  // derived state can't bleed across records. Keyed on identity, NOT actAs — switching acting node
+  // must not discard the user's in-progress edits.
+  useEffect(() => {
+    setValues(initial);
+    setTouched(new Set());
+    setResponse(null);
+    setResolveState(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.form, initial]);
+
+  // FULL initial resolve on mount / form / prefill / acting-node / manifest change (Sol re-review,
+  // Findings 4 + 2 + 5): a prefilled form must show operation-derived requiredness, lookup
+  // descriptors and findings BEFORE any field is touched — in the SAME acting tenant submit uses —
+  // and a context-only derivation (no field dependencies) is unreachable through the change path.
+  // Built from `initial` directly (not the just-reset values, whose state update is async), so a
+  // change-set field carries its {original, value} wire shape. Gated on hasServerDerivations.
   useEffect(() => {
     if (!formDef.hasServerDerivations) return;
     const sent = ++seq.current;
+    const input: Record<string, unknown> = {};
+    for (const f of formDef.fields) {
+      const v = initial[f.name];
+      if (v === undefined || v === null) continue;
+      input[f.name] = f.changeSet ? { original: v, value: v } : v;
+    }
     (async () => {
       try {
-        const resolved = await client.resolve(props.form, currentInput(), null, manifest.revision);
+        const resolved = await client.resolve(props.form, input, null, manifest.revision, { actAs: props.actAs });
         if (sent === seq.current) applyResolved(resolved);
       } catch { /* advisory */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.form, props.actAs]);
+  }, [props.form, props.actAs, initial, manifest.revision]);
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current.push(key);
@@ -236,6 +270,7 @@ export function OperationForm(props: OperationFormProps) {
               warning={warning ? findingMessage(manifest, culture, warning) : undefined}
               options={resolveState?.fields[field.name]?.options}
               lookup={resolveState?.fields[field.name]?.lookup}
+              actAs={props.actAs}
               tam={tam}
               form={values}
               setField={setField}

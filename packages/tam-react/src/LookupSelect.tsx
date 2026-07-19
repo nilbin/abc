@@ -22,6 +22,8 @@ export interface LookupSelectProps {
    *  the authoritative candidate universe (e.g. { customerId }). Sent on every request alongside the
    *  search text, so browsing and the submit-time membership check see the same rows. */
   baseFilters?: Record<string, string | null>;
+  /** The form's acting tenant (docs/26 D-H4): browse candidates in the node submit runs in. */
+  actAs?: string;
 }
 
 /**
@@ -51,7 +53,7 @@ export function LookupSelect(p: LookupSelectProps) {
     ...scoped,
     [p.searchParam ?? 'search']: debounced || undefined,
     pageSize: p.pageSize ?? 20,
-  });
+  }, p.actAs ? { actAs: p.actAs } : undefined);
   const loading = result.isFetching;
   const options = (result.data?.rows ?? []).map(row => ({
     value: String(row[p.idField ?? 'id']),

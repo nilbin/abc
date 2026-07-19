@@ -35,7 +35,7 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
             customerId = customer.Id.Value;
             return Task.CompletedTask;
         });
-        actor = host.Actor("demo", "orders.create");
+        actor = host.Actor("demo", "orders.create", "orders.edit");
     }
 
     public async Task DisposeAsync() => await host.DisposeAsync();
@@ -187,6 +187,46 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
             db.Customers.CountAsync(c => c.Name == new CustomerName("Smuggelkund")));
         Assert.Equal(0, smuggled);
     }
+
+    [Fact]
+    public async Task A_derivation_that_saves_is_rejected_and_commits_nothing()
+    {
+        // The durable escape: Add + SaveChanges. The write-guard interceptor rejects the SaveChanges
+        // itself (Sol re-review, Finding 3), so the smuggled row is never committed.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            workAddress = "Verkstadsgatan 13",
+            description = BlockingProbeDerivations.MutateSaveSentinel,
+        }));
+
+        var smuggled = await host.QueryDbAsync("demo", db =>
+            db.Customers.CountAsync(c => c.Name == new CustomerName("Sparsmuggel")));
+        Assert.Equal(0, smuggled);
+    }
+
+    [Fact]
+    public async Task Resolve_needs_the_change_wire_shape_for_edit_fields()
+    {
+        // A RAW scalar for a Change<T> field is invalid input — the exact malformed payload the old
+        // reactive resolve sent, which failed silently and left stale derived state (Sol re-review F3).
+        var raw = await actor.ResolveAsync("web.orders.edit",
+            new { orderId = Guid.NewGuid(), description = BlockingProbeDerivations.EditSentinel });
+        Assert.NotNull(raw.Error);
+
+        // The correct {original, value} shape resolves, and the derivation reading the Change value
+        // fires — resolve now sees exactly what submit will.
+        var shaped = await actor.ResolveAsync("web.orders.edit",
+            new
+            {
+                orderId = Guid.NewGuid(),
+                description = new { original = "old", value = BlockingProbeDerivations.EditSentinel },
+            },
+            changed: ["description"]);
+        Assert.Null(shaped.Error);
+        Assert.Contains(shaped.Response!.Fields["description"].Findings, f => f.Code == "test.probe-rejected");
+    }
 }
 
 /// <summary>Test-only derivation on orders.create: emits a blocking finding on a sentinel input the
@@ -200,6 +240,8 @@ public static class BlockingProbeDerivations
     public const string ClosedOptionsSentinel = "__closed_options__";
     public const string DoubleLookupSentinel = "__double_lookup__";
     public const string MutateSentinel = "__mutate__";
+    public const string MutateSaveSentinel = "__mutate_save__";
+    public const string EditSentinel = "__edit_probe__";
     public const string AllowedAddress = "Tillåtnagatan 1";
 
     public static readonly FindingFactory Rejected = Finding.Error("test.probe-rejected");
@@ -208,6 +250,14 @@ public static class BlockingProbeDerivations
     public static DerivationResult BlockOnSentinel(CreateOrder.Input input, DerivationContext context) =>
         input.Description.Value == Sentinel
             ? DerivationResult.FieldError(nameof(CreateOrder.Input.Description), Rejected)
+            : DerivationResult.Empty;
+
+    // A derivation on the EDIT operation that reads a Change<T> field (Sol re-review, Finding 3):
+    // resolve can only run this if the client sends Description in its {original, value} wire shape.
+    [ServerDerivation("test.orders.edit.change-probe")]
+    public static DerivationResult EditChangeProbe(EditOrderDetails.Input input, DerivationContext context) =>
+        input.Description?.Value?.Value == EditSentinel
+            ? DerivationResult.FieldError(nameof(EditOrderDetails.Input.Description), Rejected)
             : DerivationResult.Empty;
 
     // Binds ProjectId to a lookup whose base filter key is misspelled — only under the sentinel, so
@@ -258,12 +308,26 @@ public static class BlockingProbeDerivations
             : DerivationResult.Empty;
 
     // MUTATES the operation's writable context — the exact thing derivations must not do (Sol
-    // re-review, Finding 3). The pipeline must detect the tracked write and fail closed (DER007).
+    // re-review, Finding 3). An unsaved Add is detected as tracked write-state and fails closed (DER007).
     [ServerDerivation("test.orders.create.mutate-probe")]
     public static DerivationResult Mutate(CreateOrder.Input input, DerivationContext context, ErpDbContext db)
     {
         if (input.Description.Value == MutateSentinel)
             db.Customers.Add(Customer.Create("demo", new("Smuggelkund"), new("Smuggelgatan 1"), null, null));
+        return DerivationResult.Empty;
+    }
+
+    // The DURABLE variant: Add THEN SaveChanges — the escape a tracked-state check alone would miss.
+    // The write-guard interceptor rejects SaveChanges structurally, so nothing is ever committed.
+    [ServerDerivation("test.orders.create.mutate-save-probe")]
+    public static async Task<DerivationResult> MutateAndSave(
+        CreateOrder.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        if (input.Description.Value == MutateSaveSentinel)
+        {
+            db.Customers.Add(Customer.Create("demo", new("Sparsmuggel"), new("Smuggelgatan 2"), null, null));
+            await db.SaveChangesAsync(ct);
+        }
         return DerivationResult.Empty;
     }
 }

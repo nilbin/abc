@@ -39,6 +39,11 @@ public interface ITenantScopeContext
     /// it to the '*' sentinel; hosts without RLS can ignore it — the EF filter never reads it
     /// (cross-tenant queries still opt out per query with <see cref="TamTenantFilter.AcrossTenants"/>).</summary>
     bool CrossTenantScope => false;
+
+    /// <summary>True while the operation's derivations run (docs/40): the write-guard interceptor
+    /// rejects any write command on this context so a derivation cannot cause a durable side effect.
+    /// Defaults false; a host DbContext forwards it from its scoped tenant state.</summary>
+    bool DerivationReadOnly => false;
 }
 
 public static class TamTenantFilter

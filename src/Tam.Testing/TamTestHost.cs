@@ -161,6 +161,17 @@ public sealed class TamTestHost<TDb> : IAsyncDisposable where TDb : DbContext
             .ExecuteAsync(viewId, query, context, ct);
     }
 
+    internal async Task<(ResolveResponse? Response, Finding? Error)> ResolveAsync(
+        TestActor<TDb> actor, string formId, object input, string[]? changed, CancellationToken ct)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var context = BuildContext(scope.ServiceProvider, actor, idempotencyKey: null);
+        var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
+        var request = new ResolveExecutor.ResolveRequest(body, changed, 0);
+        return await scope.ServiceProvider.GetRequiredService<ResolveExecutor>()
+            .ResolveAsync(formId, request, context, ct);
+    }
+
     private OperationContext BuildContext(IServiceProvider scoped, TestActor<TDb> actor, string? idempotencyKey)
     {
         // The same pinning MapTamAuth does per request: context, actor and DbContext filter
@@ -221,4 +232,11 @@ public sealed class TestActor<TDb> where TDb : DbContext
     public Task<(ViewResponse? Response, Finding? Error)> QueryAsync(
         string viewId, IReadOnlyDictionary<string, string?>? query = null, CancellationToken ct = default) =>
         host.QueryAsync(this, viewId, query ?? new Dictionary<string, string?>(), ct);
+
+    /// <summary>Resolves a form (docs/05): runs the operation's derivations over the supplied input
+    /// and returns complete field state. Change-set fields must carry the wire <c>{original, value}</c>
+    /// shape, exactly as submit expects — a raw scalar is invalid input.</summary>
+    public Task<(ResolveResponse? Response, Finding? Error)> ResolveAsync(
+        string formId, object input, string[]? changed = null, CancellationToken ct = default) =>
+        host.ResolveAsync(this, formId, input, changed, ct);
 }

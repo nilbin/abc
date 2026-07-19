@@ -105,10 +105,17 @@ export class TamClient {
     input: Record<string, unknown>,
     changed: string[] | null,
     revision: number,
+    options?: { actAs?: string },
   ): Promise<ResolveResponse> {
     const response = await this.send(this.url(`/api/forms/${formId}/resolve`), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Resolve in the SAME acting node submit uses (docs/26 D-H4): a form opened from a parent
+        // subtree grid against a child company must derive requiredness/suggestions/lookup candidates
+        // in the child tenant, or resolve and submit run under different contracts.
+        ...(options?.actAs ? { 'X-Tam-Tenant': options.actAs } : {}),
+      },
       body: JSON.stringify({ input, changed, revision }),
     });
     if (!response.ok) throw new Error(`resolve ${formId}: ${response.status}`);

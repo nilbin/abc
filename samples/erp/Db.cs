@@ -24,6 +24,10 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
     // Sanctioned request-wide cross-tenant escalation (docs/33 D-R8) — the RLS backstop's '*'.
     public bool CrossTenantScope => tenantScope.AllTenants;
 
+    // Read-only while the operation's derivations run (docs/40): the write-guard interceptor blocks
+    // any write issued on this context, so a derivation cannot produce a durable side effect.
+    public bool DerivationReadOnly => tenantScope.DerivationReadOnly;
+
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Order> Orders => Set<Order>();

@@ -19,6 +19,9 @@ export interface FieldRendererProps {
   /** The derivation's runtime lookup binding (docs/40): a picker scopes its view by these base
    *  filters, so it browses exactly the candidate universe submit validates against. */
   lookup?: { viewId: string; baseFilters: Record<string, string | null> };
+  /** The form's acting tenant (docs/26 D-H4): a lookup picker must browse candidates in the SAME
+   *  node submit executes in, or it offers rows the child tenant rejects (Sol re-review, Finding 2). */
+  actAs?: string;
   tam: TamContextValue;
   /** Current wire values of the SIBLING fields on the same form (own fields keyed by wire name).
    *  A renderer that reacts to another field reads it here — e.g. the rule builder resolving its
@@ -367,6 +370,7 @@ export const DefaultRenderer: FieldRenderer = (p) => {
       <LookupSelect
         view={boundView}
         baseFilters={p.lookup?.baseFilters}
+        actAs={p.actAs}
         value={p.value}
         onChange={v => p.onChange(v)}
         label={p.label}

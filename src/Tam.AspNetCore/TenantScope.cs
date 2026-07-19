@@ -41,6 +41,13 @@ public sealed class TenantScope
     public bool AllTenants { get; private set; }
 
     public void EscalateCrossTenant() => AllTenants = true;
+
+    /// <summary>True while the operation's DERIVATIONS run (docs/40, Sol re-review Finding 3).
+    /// Derivations compute input admissibility from a read of current state — they must not write.
+    /// The DbContext surfaces this through <see cref="ITenantScopeContext.DerivationReadOnly"/>, and
+    /// the write-guard interceptor rejects any SaveChanges / ExecuteUpdate / ExecuteDelete / raw write
+    /// issued while it holds, so a derivation cannot produce a DURABLE side effect on any path.</summary>
+    public bool DerivationReadOnly { get; set; }
 }
 
 public static class TamTenant

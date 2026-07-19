@@ -153,8 +153,10 @@ renders the view; exposing the constraint field lets the picker be scoped too):
   drift. Resolve surfaces the binding as a `ResolvedLookup` (view + base filters) the picker scopes
   itself by, so the client browses exactly the candidate universe rather than materializing it.
 - The small-set twin is `RequireOneOf(field, options, invalid)` — authoritative closed inline options,
-  enforced at submit the same way. `AddOptions(...)` (no finding) stays advisory: offered at resolve,
-  never enforced.
+  enforced at submit by comparing the submitted value and each option **through the field's semantic
+  model** (so `1`/`1.0`, an enum's wire token vs CLR value, and equivalent date forms compare
+  correctly, and a case-sensitive code is not accepted in the wrong casing). `AddOptions(...)` (no
+  finding) stays advisory: offered at resolve, never enforced.
 
 ## The authority boundary: pipeline-rejects, not commit-stable
 
@@ -167,11 +169,13 @@ tokens (`IVersioned`), locks/leases, or database constraints — the derivation 
 front-door check, not the last line of defence. The create-order sample keeps its handler-side
 project check for exactly this reason; the derivation does not replace it.
 
-Derivations are also structurally **read-only** (DER007). They run on the operation's context before
-the transaction, so a derivation that mutated tracked state would either bypass the domain boundary
-(its writes riding the handler's commit) or resurrect the change-tracker leak (writes left tracked
-when a blocking derivation returns). The pipeline detects any tracked write a derivation introduced,
-discards it, and fails closed — a derivation computes admissibility; it never writes.
+Derivations are also structurally **read-only** (DER007), enforced not just detected. While the
+operation evaluates them, `TenantScope.DerivationReadOnly` is set and the DbContext's write-guard
+interceptor **rejects every durable write** — `SaveChanges`, `ExecuteUpdate`/`ExecuteDelete`, raw
+write SQL, DDL — so a derivation cannot produce a side effect whether it returns, blocks, or throws.
+The guard lives inside the shared `RunDerivationsAsync` (so resolve is covered too), and its `finally`
+also discards any tracked-but-unsaved mutation and restores the flag on every exit path. Reads pass
+untouched. A derivation computes admissibility; it never writes.
 
 ## The generated form submits through its binding
 
@@ -182,7 +186,17 @@ is actually applied in the generated UI — not merely reachable in principle. `
 a **full initial resolve on mount** (gated on the manifest's `hasServerDerivations`), so a prefilled
 form shows operation-derived requiredness, lookup descriptors and findings before any field is
 touched, and a context-only derivation (no field dependencies, unreachable through the change-triggered
-path) is resolved too.
+path) is resolved too. Three consistency rules keep resolve and submit under the *same* contract:
+
+- **Same acting node.** `resolve` (initial and reactive) and the lookup picker send the form's
+  `actAs` (as `X-Tam-Tenant`), exactly as submit does — a form opened from a parent subtree grid
+  against a child company derives requiredness/suggestions/candidates in the child tenant, not the
+  parent's.
+- **Same wire shape.** One input builder shapes both resolve and submit payloads, so a `Change<T>`
+  edit field carries its `{original, value}` object in resolve too — a raw scalar deserializes to
+  `invalid-input` and would leave stale derived state.
+- **Same lifecycle.** The form resets edit state on a new record identity and re-resolves on a
+  changed prefill, acting node, or manifest revision, so derived state never bleeds across records.
 
 ## Non-goals
 
