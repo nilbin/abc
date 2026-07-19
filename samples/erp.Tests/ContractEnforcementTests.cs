@@ -84,6 +84,27 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
         viaForm.ShouldSucceed();
         Assert.DoesNotContain(viaForm.Findings, f => f.Code == "pipeline.idempotent-replay");
     }
+
+    [Fact]
+    public async Task An_unknown_lookup_base_filter_fails_closed()
+    {
+        // The probe binds ProjectId to projects.lookup with a TYPO'd base filter ("custmerId"). A
+        // silently-ignored key would widen the candidate universe to "any project with this id" and
+        // admit an out-of-scope selection — so membership refuses to run and the contract bug is
+        // surfaced loudly (Sol re-review, Finding 5), rather than accepting the value.
+        // A SERVICE order, so the real AvailableProjects lookup (which would short-circuit on the
+        // unknown project first) does not fire — the probe's bad-filter lookup is the one exercised.
+        var input = new
+        {
+            customerId,
+            orderType = "service",
+            projectId = Guid.NewGuid(),
+            workAddress = "Verkstadsgatan 9",
+            description = BlockingProbeDerivations.BadFilterSentinel,
+        };
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => actor.ExecuteAsync("orders.create", input));
+    }
 }
 
 /// <summary>Test-only derivation on orders.create: emits a blocking finding on a sentinel input the
@@ -92,6 +113,7 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
 public static class BlockingProbeDerivations
 {
     public const string Sentinel = "__probe_block__";
+    public const string BadFilterSentinel = "__bad_filter__";
 
     public static readonly FindingFactory Rejected = Finding.Error("test.probe-rejected");
 
@@ -99,5 +121,16 @@ public static class BlockingProbeDerivations
     public static DerivationResult BlockOnSentinel(CreateOrder.Input input, DerivationContext context) =>
         input.Description.Value == Sentinel
             ? DerivationResult.FieldError(nameof(CreateOrder.Input.Description), Rejected)
+            : DerivationResult.Empty;
+
+    // Binds ProjectId to a lookup whose base filter key is misspelled — only under the sentinel, so
+    // ordinary orders in this host are untouched. Proves membership fails closed on a bogus filter.
+    [ServerDerivation("test.orders.create.bad-filter-probe")]
+    public static DerivationResult BadFilter(CreateOrder.Input input, DerivationContext context) =>
+        input.Description.Value == BadFilterSentinel
+            ? DerivationResult.Empty.Lookup(
+                nameof(CreateOrder.Input.ProjectId), "projects.lookup",
+                new Dictionary<string, string?> { ["custmerId"] = input.CustomerId.Value.ToString() },
+                OrderFindings.ProjectNotAvailable)
             : DerivationResult.Empty;
 }

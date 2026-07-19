@@ -48,6 +48,22 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
     {
         if (string.IsNullOrEmpty(key) || !model.Views.TryGetValue(viewId, out var view))
             return false;
+
+        // Fail closed on an unknown base filter (Sol re-review, Finding 5): the derivation's Lookup
+        // filters DEFINE the authoritative candidate universe, so a typo'd key (["custmerId"]) must
+        // NOT be silently ignored — that would widen the universe to "any row with this id" and
+        // accept an out-of-scope selection. Unlike a browsing param this is author code, fixed every
+        // request, so a bogus key is a contract bug surfaced loudly (and caught by the first test),
+        // not a per-request 400. Only the view's Query fields and declared Filterable fields (+ their
+        // range/contains twins) are legal base constraints — never sort/page/browsing keys.
+        var legalKeys = FilterKeys(view);
+        foreach (var filterKey in baseFilters.Keys)
+            if (!legalKeys.Contains(filterKey))
+                throw new InvalidOperationException(
+                    $"DER006: lookup on view '{viewId}' supplied an unknown base filter '{filterKey}'. "
+                    + "A derivation's Lookup(...) filters must be the view's Query fields or declared "
+                    + "Filterable fields — the authoritative candidate universe cannot be widened by a typo.");
+
         if (services.GetService(typeof(ITamDb)) is ITamDb tam
             && !await ActivationCache.ContributionExistsAsync(
                 services, tam.Db, view.Plugin, context.TenantId.Value, ct))
@@ -298,18 +314,10 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
 
         // (6) An unknown query parameter — a typo'd filter like ?statuz=done — must not return the
         // UNFILTERED set. Accept only the Query record's fields, declared filters (+ their
-        // .from/.to/.contains twins), ext.* fields, and the framework's own keys.
-        var allowedKeys = new HashSet<string>(StringComparer.Ordinal)
+        // .from/.to/.contains twins — the shared FilterKeys), ext.* fields, and the framework's own
+        // browsing keys. Membership (ContainsAsync) reuses FilterKeys but NOT the browsing keys.
+        var allowedKeys = new HashSet<string>(FilterKeys(view), StringComparer.Ordinal)
             { "sort", "dir", "page", "pageSize", "culture", "actAs" };
-        foreach (var parameter in view.QueryType.GetConstructors().MaxBy(c => c.GetParameters().Length)!.GetParameters())
-            allowedKeys.Add(Naming.Camel(parameter.Name!));
-        foreach (var field in view.Capabilities.Filterable)
-        {
-            allowedKeys.Add(field);
-            allowedKeys.Add($"{field}.from");
-            allowedKeys.Add($"{field}.to");
-            allowedKeys.Add($"{field}.contains");
-        }
         if (query.Keys.Any(k => !allowedKeys.Contains(k) && !k.StartsWith("ext.", StringComparison.Ordinal)))
             return (null, PipelineFindings.InvalidInput.Create());
 
@@ -350,6 +358,26 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
     internal sealed record FieldFilter(PropertyInfo Property, FilterOperator Op, object? Value);
 
     internal sealed record ExtensionFilter(string Key, string WireKind, FilterOperator Op, string Value);
+
+    /// <summary>The query keys a view legitimately CONSTRAINS on — the shared allow-list behind
+    /// both the read path's unknown-parameter guard and lookup membership's fail-closed base-filter
+    /// check (Sol re-review, Finding 5): the Query record's ctor members, and each declared Filterable
+    /// field with its .from/.to/.contains twins. Deliberately excludes browsing keys (sort/page/…):
+    /// those are not admissibility constraints, so they are never valid membership base filters.</summary>
+    private static HashSet<string> FilterKeys(ViewDefinition view)
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var parameter in view.QueryType.GetConstructors().MaxBy(c => c.GetParameters().Length)!.GetParameters())
+            keys.Add(Naming.Camel(parameter.Name!));
+        foreach (var field in view.Capabilities.Filterable)
+        {
+            keys.Add(field);
+            keys.Add($"{field}.from");
+            keys.Add($"{field}.to");
+            keys.Add($"{field}.contains");
+        }
+        return keys;
+    }
 
     /// <summary>
     /// Declared filterable fields → typed predicates. One declaration yields the operators the

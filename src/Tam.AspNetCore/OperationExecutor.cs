@@ -179,15 +179,16 @@ public sealed class OperationExecutor(
 
         // Lookup membership (docs/40): a submitted non-null value must EXIST in the derivation's
         // candidate universe (view + base filters), checked by an Exists — never by the client's
-        // browsed page. Authoritative for every caller. Uses the raw wire value from the body.
+        // browsed page. Authoritative for every caller. The key is read from the DESERIALIZED input,
+        // not the raw JSON (Sol re-review, Finding 9): a lookup-bound edit field arrives as a
+        // Change<T> object ({original,value}) on the wire, whose ToString() is the object, not the
+        // key — reading the bound value unwraps the change set and the semantic wrapper, and matches
+        // exactly the value the handler will act on.
         if (services.GetService<ViewExecutor>() is { } viewExecutor)
             foreach (var lookup in derived.Lookups)
             {
-                if (!body.TryGetProperty(lookup.Field, out var element)
-                    || element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-                    continue;
-                var value = element.ValueKind == JsonValueKind.String
-                    ? element.GetString() : element.ToString();
+                var value = LookupKey(operation, input, lookup.Field);
+                if (string.IsNullOrEmpty(value)) continue;
                 if (!await viewExecutor.ContainsAsync(lookup.ViewId, lookup.Filters, value, context, ct))
                     return Fail(context, lookup.Invalid);
             }
@@ -555,6 +556,28 @@ public sealed class OperationExecutor(
             ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
             : value;
         return IsEmpty(effective);
+    }
+
+    /// <summary>The submitted lookup key as a wire string, read from the DESERIALIZED input (Sol
+    /// re-review, Finding 9): unwraps a Change&lt;T&gt; to its submitted value and the semantic
+    /// wrapper to its scalar, so an edit field ({original,value} on the wire) yields the actual key,
+    /// not the change object. Null/empty when the field is absent or unset — membership skips it.</summary>
+    private static string? LookupKey(OperationDefinition operation, object input, string wireName)
+    {
+        var field = operation.InputFields.FirstOrDefault(f => f.WireName == wireName);
+        if (field is null) return null;
+        var value = ReflectionCache.Property(operation.InputType, field.MemberName).GetValue(input);
+        var effective = field.IsChangeSet && value is not null
+            ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
+            : value;
+        var scalar = ValueWrapper.Unwrap(effective);
+        return scalar switch
+        {
+            null => null,
+            Guid g => g == Guid.Empty ? null : g.ToString(),
+            string s => s,
+            _ => scalar.ToString(),
+        };
     }
 
     internal object?[] BindParameters(
