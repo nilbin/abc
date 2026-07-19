@@ -260,7 +260,7 @@ public static class ManifestBuilder
                     };
                 }).ToList();
 
-                var serverDeps = model.DerivationsFor(operation.InputType)
+                var serverDeps = model.DerivationsForOperation(kv.Value.OperationId)
                     .SelectMany(d => d.DependsOn).Distinct().ToList();
 
                 return new ManifestForm(kv.Value.OperationId, fields, kv.Value.IncludeExtensions, serverDeps)

@@ -54,6 +54,12 @@ public sealed class SensitiveAttribute(string permission) : Attribute
 public sealed class ServerDerivationAttribute(string id) : Attribute
 {
     public string Id { get; } = id;
+
+    /// <summary>The operation this derivation BELONGS to (docs/40 — operations own their input
+    /// contract, derivations included). Optional when the derivation's input type maps to exactly
+    /// one operation (the common case); REQUIRED to disambiguate when several operations share an
+    /// input type, so ownership is never inferred by coincidence.</summary>
+    public string? Operation { get; init; }
 }
 
 /// <summary>Input members (by name) whose changes invalidate this derivation.</summary>

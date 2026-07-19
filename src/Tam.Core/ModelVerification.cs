@@ -559,6 +559,64 @@ public sealed partial class TamModelBuilder
                 $"PLG001: plugin contributions outside their namespace: {string.Join("; ", violations)}.");
     }
 
+    /// <summary>Resolves each derivation to the OPERATION that owns it (docs/40) and validates the
+    /// ownership invariants, so derivations are found by operation id at runtime rather than by an
+    /// input type two operations might share. DER001 orphan (no operation uses the input type),
+    /// DER002 ambiguous (several do — the derivation must name its owner via
+    /// [ServerDerivation(Operation=...)]), DER003 the named owner is unknown or its Input doesn't
+    /// match, DER004 a DependsOn member isn't a field on the owner's input, DER005 duplicate
+    /// derivation id within one operation.</summary>
+    private static IReadOnlyDictionary<string, IReadOnlyList<DerivationDefinition>> ResolveDerivationOwnership(
+        IReadOnlyDictionary<string, OperationDefinition> operations,
+        IReadOnlyList<DerivationDefinition> derivations)
+    {
+        var byInputType = operations.Values
+            .GroupBy(o => o.InputType)
+            .ToDictionary(g => g.Key, g => g.Select(o => o.Id).ToList());
+
+        var result = new Dictionary<string, List<DerivationDefinition>>();
+        var violations = new List<string>();
+
+        foreach (var d in derivations)
+        {
+            string? ownerId;
+            if (d.DeclaredOperation is { } declared)
+            {
+                if (!operations.TryGetValue(declared, out var declaredOp))
+                { violations.Add($"DER003: derivation '{d.Id}' names unknown operation '{declared}'"); continue; }
+                if (declaredOp.InputType != d.InputType)
+                { violations.Add($"DER003: derivation '{d.Id}' is assigned to '{declared}' but its input type is not that operation's Input"); continue; }
+                ownerId = declared;
+            }
+            else if (byInputType.TryGetValue(d.InputType, out var owners))
+            {
+                if (owners.Count > 1)
+                { violations.Add($"DER002: derivation '{d.Id}' input type is shared by operations [{string.Join(", ", owners)}] — set [ServerDerivation(Operation=...)] to name its owner"); continue; }
+                ownerId = owners[0];
+            }
+            else
+            {
+                violations.Add($"DER001: derivation '{d.Id}' input type '{d.InputType.Name}' matches no operation");
+                continue;
+            }
+
+            var inputFields = operations[ownerId].InputFields.Select(f => f.WireName).ToHashSet();
+            foreach (var dep in d.DependsOn.Where(dep => !inputFields.Contains(dep)))
+                violations.Add($"DER004: derivation '{d.Id}' depends on '{dep}', not an input field of operation '{ownerId}'");
+
+            if (!result.TryGetValue(ownerId, out var list)) result[ownerId] = list = [];
+            if (list.Any(x => x.Id == d.Id))
+                violations.Add($"DER005: duplicate derivation id '{d.Id}' on operation '{ownerId}'");
+            list.Add(d);
+        }
+
+        if (violations.Count > 0)
+            throw new InvalidOperationException(
+                $"Derivation ownership errors (docs/40): {string.Join("; ", violations)}.");
+
+        return result.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<DerivationDefinition>)kv.Value);
+    }
+
     /// <summary>MCP001: every operation, form ".resolve" and view projects to a DISTINCT MCP tool
     /// name. Tool names collapse '.' and '-' to '_' (the reverse mapping is a lookup, not string
     /// surgery), so ids differing only in those separators — orders.create-special vs

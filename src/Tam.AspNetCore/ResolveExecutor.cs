@@ -39,7 +39,7 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
         }
 
         var merged = DerivationResult.Empty;
-        foreach (var derivation in model.DerivationsFor(operation.InputType))
+        foreach (var derivation in model.DerivationsForOperation(operation.Id))
         {
             if (request.Changed is { Length: > 0 } changed &&
                 derivation.DependsOn.Count > 0 &&

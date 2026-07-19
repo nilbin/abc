@@ -446,6 +446,7 @@ public sealed partial class TamModelBuilder
             Operations = operations,
             Views = views,
             Derivations = derivations,
+            DerivationsByOperation = ResolveDerivationOwnership(operations, derivations),
             Forms = formDefs,
             Grids = gridDefs,
             Plugins = plugins,

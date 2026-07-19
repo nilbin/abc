@@ -225,6 +225,11 @@ public sealed record DerivationDefinition(
     IReadOnlyList<string> DependsOn,
     MethodInfo Method)
 {
+    /// <summary>The operation this derivation was explicitly assigned to (docs/40), or null to let
+    /// the builder resolve it from the input type. The RESOLVED owner lives in
+    /// <see cref="TamModel.DerivationsByOperation"/>; this is only the authored intent.</summary>
+    public string? DeclaredOperation { get; init; }
+
     public static IEnumerable<DerivationDefinition> FromType(Type type)
     {
         foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
@@ -234,7 +239,10 @@ public sealed record DerivationDefinition(
                 ?? throw new InvalidOperationException($"Derivation {attr.Id} needs an input parameter.");
             var depends = method.GetCustomAttribute<DependsOnAttribute>()?.Members
                 .Select(Naming.Camel).ToArray() ?? [];
-            yield return new DerivationDefinition(attr.Id, input, depends, method);
+            yield return new DerivationDefinition(attr.Id, input, depends, method)
+            {
+                DeclaredOperation = attr.Operation,
+            };
         }
     }
 }

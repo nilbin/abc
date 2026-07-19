@@ -19,6 +19,13 @@ public sealed class TamModel
 
     public required IReadOnlyList<DerivationDefinition> Derivations { get; init; }
 
+    /// <summary>Derivations OWNED by each operation (docs/40), resolved and validated at build.
+    /// The canonical lookup for the resolve/submit/manifest paths — an operation owns its input
+    /// contract, so its derivations are found by operation id, never inferred from an input type
+    /// two operations might share.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<DerivationDefinition>> DerivationsByOperation { get; init; } =
+        new Dictionary<string, IReadOnlyList<DerivationDefinition>>();
+
     public required IReadOnlyDictionary<string, FormDefinition> Forms { get; init; }
 
     public required IReadOnlyDictionary<string, GridDefinition> Grids { get; init; }
@@ -122,8 +129,10 @@ public sealed class TamModel
                 .Select(w => w.Permission))
             .Distinct().Order().ToList();
 
-    public IEnumerable<DerivationDefinition> DerivationsFor(Type inputType) =>
-        Derivations.Where(d => d.InputType == inputType);
+    /// <summary>The canonical, operation-owned derivation lookup (docs/40). Replaces the old
+    /// by-input-type discovery, which made input-type identity silently carry operation semantics.</summary>
+    public IReadOnlyList<DerivationDefinition> DerivationsForOperation(string operationId) =>
+        DerivationsByOperation.TryGetValue(operationId, out var list) ? list : [];
 
     /// <summary>Stable key for an extensible entity CLR type: "orders.order" style from namespace-less name.</summary>
     public static string EntityKey(Type entity) => Naming.Kebab(entity.Name);
