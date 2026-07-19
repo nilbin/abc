@@ -38,9 +38,12 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
             return (null, PipelineFindings.InvalidInput.Create());
         }
 
-        // The SAME operation-owned derivation run submit uses (docs/40), so the requiredness the
-        // form shows and the requiredness submit enforces can never disagree.
-        var merged = await operations.RunDerivationsAsync(operation, input, context, request.Changed, ct);
+        // The SAME operation-owned derivation run submit uses (docs/40): ALL derivations, every time,
+        // so the complete field state resolve returns cannot report a requiredness or membership that
+        // submit (which always runs them all) then contradicts (Sol re-review, Finding 4). request.
+        // Changed is still accepted on the wire (a future delta protocol would use it to return only
+        // changed field states), but it no longer prunes the run.
+        var merged = await operations.RunDerivationsAsync(operation, input, context, ct);
 
         object? FieldValue(string wireName)
         {

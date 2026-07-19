@@ -81,15 +81,43 @@ public sealed class OperationExecutor(
             return Fail(context, [.. maskedWrites]);
 
         var db = dbResolver(services);
+
+        // Resolve the selected form binding BEFORE anything downstream (Sol re-review, Finding 3):
+        // once a caller supplies ?form=, it is "execute through EXACTLY this binding or reject" — a
+        // form is authoritative tightening, not a hint applied only when it happens to be valid. A
+        // supplied form must exist, be bound to THIS operation, and be contributed by a plugin active
+        // for the tenant — otherwise a typo'd or wrong-operation id would silently downgrade to the
+        // direct contract, or an inactive plugin's form would still tighten a host operation.
+        FormDefinition? selectedForm = null;
+        if (formId is not null)
+        {
+            if (!model.Forms.TryGetValue(formId, out selectedForm))
+                return Fail(context, PipelineFindings.UnknownForm.With(("form", formId)));
+            if (selectedForm.OperationId != operation.Id)
+                return Fail(context, PipelineFindings.InvalidInput
+                    .With(("form", formId), ("operation", operation.Id)));
+            if (!await ActivationCache.ContributionExistsAsync(
+                    services, db, selectedForm.Plugin, context.TenantId.Value, ct))
+                return Fail(context, PipelineFindings.UnknownForm.With(("form", formId)));
+        }
+
         var payloadHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(body.GetRawText())));
+
+        // The selected form is part of the effective request contract, so it is part of idempotency
+        // identity (Sol re-review, Finding 2): a direct call and a through-a-stricter-form call with
+        // the SAME body + key are DIFFERENT effective requests and must not replay each other's
+        // outcome. Folding the binding into the stored key makes them independent idempotency records
+        // (each still replays its own prior outcome, and a payload mismatch within one is still a
+        // client bug), rather than colliding into one row that replays the wrong contract's result.
+        var binding = selectedForm is null ? "op" : "form:" + selectedForm.Id;
 
         // Idempotency is scoped to the actor as well as tenant+operation: a replay must return the
         // caller's OWN prior outcome, never another actor's stored response (whose output/version
         // may reflect a different ownership scope). Different actor + same key = independent record.
         if (context.IdempotencyKey is { } key)
         {
-            var scopedKey = context.Actor.Id + ":" + key;
+            var scopedKey = context.Actor.Id + ":" + binding + ":" + key;
             var replay = await db.Set<IdempotencyRecord>().FindAsync(
                 [context.TenantId.Value, operationId, scopedKey], ct);
             if (replay is not null)
@@ -120,8 +148,8 @@ public sealed class OperationExecutor(
         var structural = ValidateStructural(operation, input);
         // Only the SELECTED form's requiredness tightening applies (docs/40) — a direct/MCP/
         // integration call (formId null) is bound by the operation contract alone, never by a
-        // union of every form's RequiredWhen (Sol re-review, Finding 2).
-        structural.AddRange(SelectedFormRequired(operation, input, formId));
+        // union of every form's RequiredWhen. The form is already validated + activation-checked.
+        structural.AddRange(SelectedFormRequired(operation, input, selectedForm));
         if (structural.Any(f => f.Severity == FindingSeverity.Error))
             return Fail(context, [.. structural]);
 
@@ -130,12 +158,24 @@ public sealed class OperationExecutor(
         // domain-specific finding preserved (e.g. orders.project-required). Advisory outputs
         // (suggestions, warnings, option ordering) are consumed by resolve and IGNORED here:
         // authority is a property of the output, not of the derivation method.
-        var derived = await RunDerivationsAsync(operation, input, context, changed: null, ct);
+        var derived = await RunDerivationsAsync(operation, input, context, ct);
         var required = derived.Required
             .Where(r => r.When && FieldEmpty(operation, input, r.Field))
             .Select(r => r.Finding).ToList();
         if (required.Count > 0)
             return Fail(context, [.. required]);
+
+        // Blocking derivation findings are AUTHORITATIVE at submit (docs/40, Sol re-review Finding 1):
+        // a derivation that emits an Error finding (AddFieldError / From / Add) admissibility-rejects
+        // the input for EVERY caller — direct HTTP, MCP, integration — not just the resolve preview.
+        // Advisory outputs (warnings, suggestions, option ordering) are non-blocking and pass through.
+        // Without this the contract's "blocking findings BLOCK at submit" row was unenforced, relying
+        // on a handler to independently repeat the check.
+        var blockingDerived = derived.Findings
+            .Where(f => f is { Severity: FindingSeverity.Error, BlocksSubmission: true })
+            .ToList();
+        if (blockingDerived.Count > 0)
+            return Fail(context, [.. blockingDerived]);
 
         // Lookup membership (docs/40): a submitted non-null value must EXIST in the derivation's
         // candidate universe (view + base filters), checked by an Exists — never by the client's
@@ -345,7 +385,7 @@ public sealed class OperationExecutor(
 
         if (context.IdempotencyKey is { } storeKey)
         {
-            var scopedStoreKey = context.Actor.Id + ":" + storeKey;
+            var scopedStoreKey = context.Actor.Id + ":" + binding + ":" + storeKey;
             db.Add(new IdempotencyRecord
             {
                 Key = scopedStoreKey,
@@ -397,15 +437,13 @@ public sealed class OperationExecutor(
     /// named form binding, that form's RequiredWhen predicates apply on top of the operation's own
     /// contract. Only the SELECTED form is consulted — never a union of every form bound to the
     /// operation, which was the round-1 fix's flaw: one presentation binding could tighten every
-    /// other caller's contract, including direct/MCP/integration callers (Sol re-review, Finding 2).
-    /// A direct operation call (no formId) applies none of this; the operation's own derivations and
-    /// domain handlers are the authoritative contract there.</summary>
-    private List<Finding> SelectedFormRequired(OperationDefinition operation, object input, string? formId)
+    /// other caller's contract, including direct/MCP/integration callers. The form arrives already
+    /// resolved, operation-matched and activation-checked (Sol re-review, Finding 3); a direct call
+    /// (no form) applies none of this — the operation's derivations and handlers govern there.</summary>
+    private static List<Finding> SelectedFormRequired(OperationDefinition operation, object input, FormDefinition? form)
     {
         var findings = new List<Finding>();
-        if (formId is null || !model.Forms.TryGetValue(formId, out var form)
-            || form.OperationId != operation.Id)
-            return findings;
+        if (form is null) return findings;
 
         object? FieldValue(string wireName) => operation.InputType.GetProperties()
             .FirstOrDefault(p => Naming.Camel(p.Name) == wireName)?.GetValue(input);
@@ -484,21 +522,20 @@ public sealed class OperationExecutor(
         return (Result)resultProperty.GetValue(task)!;
     }
 
-    /// <summary>Runs the OPERATION's derivations (docs/40) and merges their results — the ONE place
-    /// both resolve and submit evaluate derivations, so their authoritative outputs (requiredness,
-    /// blocking findings) can never disagree. <paramref name="changed"/> limits the run to
-    /// derivations whose dependencies were touched (resolve's incremental path); pass null to run
-    /// them all (submit, and a fresh resolve).</summary>
+    /// <summary>Runs ALL of the OPERATION's derivations (docs/40) and merges their results — the ONE
+    /// place both resolve and submit evaluate derivations, so their authoritative outputs
+    /// (requiredness, membership, blocking findings) can never disagree. Every derivation runs on
+    /// every call: resolve returns COMPLETE field state, so an incremental run over only the
+    /// dependencies of the just-changed field would let resolve report a stale requiredness that
+    /// submit (which always runs them all) then contradicts (Sol re-review, Finding 4). A delta
+    /// protocol — resolve returns only changed field states + the client merges — is the future
+    /// optimization; until then, correctness over the round-trip cost.</summary>
     public async Task<DerivationResult> RunDerivationsAsync(
-        OperationDefinition operation, object input, OperationContext context,
-        string[]? changed, CancellationToken ct)
+        OperationDefinition operation, object input, OperationContext context, CancellationToken ct)
     {
         var merged = DerivationResult.Empty;
         foreach (var derivation in model.DerivationsForOperation(operation.Id))
         {
-            if (changed is { Length: > 0 } && derivation.DependsOn.Count > 0
-                && !derivation.DependsOn.Intersect(changed).Any())
-                continue;
             var args = BindParameters(derivation.Method, input, context, ct);
             var invocation = derivation.Method.Invoke(null, args)!;
             var result = invocation is Task<DerivationResult> task ? await task : (DerivationResult)invocation;

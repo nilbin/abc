@@ -210,8 +210,9 @@ public sealed class TestActor<TDb> where TDb : DbContext
     /// top of the operation contract. The direct <see cref="ExecuteAsync(string, object, string?,
     /// CancellationToken)"/> overload omits it — that's the door MCP and integrations use.</summary>
     public Task<OperationResponse> ExecuteThroughFormAsync(
-        string formId, string operationId, object input, CancellationToken ct = default) =>
-        host.ExecuteAsync(this, operationId, input, idempotencyKey: null, ct, formId);
+        string formId, string operationId, object input,
+        string? idempotencyKey = null, CancellationToken ct = default) =>
+        host.ExecuteAsync(this, operationId, input, idempotencyKey, ct, formId);
 
     /// <summary>Executes a view with wire-shaped query parameters
     /// (<c>sort</c>/<c>dir</c>/<c>page</c>/<c>pageSize</c>, filters as <c>field</c>,

@@ -15,7 +15,12 @@ namespace Erp;
 /// </summary>
 public static partial class ErpModel
 {
-    public static TamModel Build() => new TamModelBuilder()
+    public static TamModel Build() => Builder().Build();
+
+    /// <summary>The composed model builder BEFORE <c>Build()</c> — the seam a test uses to add a
+    /// probe derivation/operation to the real model without re-declaring the whole chain (the
+    /// production <see cref="Build"/> just builds this as-is).</summary>
+    public static TamModelBuilder Builder() => new TamModelBuilder()
         .DefaultCulture("sv")
         .Locales(Path.Combine(AppContext.BaseDirectory, "locales"))
         .AddDiscovered()   // compile-time discovery from Tam.Compiler — no runtime assembly scan
@@ -66,7 +71,5 @@ public static partial class ErpModel
             // The DEVELOPER mode (docs/31 slice 3): the extension surface rendered in the
             // running app — the portal page over developer.contract, for developer.read.
             .Mode("developer", m => m
-                .Page("developer-portal", page: "developer-portal", permission: "developer.read", order: 10)))
-
-        .Build();
+                .Page("developer-portal", page: "developer-portal", permission: "developer.read", order: 10)));
 }

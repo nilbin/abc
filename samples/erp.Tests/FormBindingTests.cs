@@ -79,12 +79,22 @@ public sealed class FormBindingTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task An_unrelated_forms_tightening_does_not_leak()
+    public async Task A_form_bound_to_another_operation_is_rejected()
     {
-        // web.orders.schedule binds a DIFFERENT operation, so naming it here is inert: the
-        // orders.create submission is bound by orders.create's own contract, nothing unrelated
-        // leaks in.
+        // web.orders.schedule binds a DIFFERENT operation. Supplying it on an orders.create call is
+        // not "apply it if it happens to fit, otherwise pretend no form was named" — once a binding
+        // is supplied it is authoritative, so a mismatched one fails CLOSED (Sol re-review, Finding
+        // 3), rather than silently downgrading to the direct contract.
         (await actor.ExecuteThroughFormAsync("web.orders.schedule", "orders.create", ProjectOrderMissingProject()))
-            .ShouldFailWith("orders.project-required");
+            .ShouldFailWith("pipeline.invalid-input", onField: null);
+    }
+
+    [Fact]
+    public async Task An_unknown_form_id_is_rejected()
+    {
+        // A typo'd form id must not slip through as a direct call — the caller asked to submit
+        // through a specific binding that does not exist (Sol re-review, Finding 3).
+        (await actor.ExecuteThroughFormAsync("web.orders.creat", "orders.create", ProjectOrderMissingProject()))
+            .ShouldFailWith("pipeline.unknown-form");
     }
 }
