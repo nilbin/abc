@@ -122,6 +122,11 @@ public sealed record ManifestForm(
     IReadOnlyList<string> ServerDependencies)
 {
     public string? Plugin { get; init; }
+
+    /// <summary>Whether the operation has ANY server derivation (docs/40). When true the client does
+    /// a full initial resolve on mount — <see cref="ServerDependencies"/> being empty does not mean
+    /// there are none (a context-only derivation declares no field dependencies).</summary>
+    public bool HasServerDerivations { get; init; }
 }
 
 public sealed record ManifestGrid(
@@ -260,12 +265,18 @@ public static class ManifestBuilder
                     };
                 }).ToList();
 
-                var serverDeps = model.DerivationsForOperation(kv.Value.OperationId)
-                    .SelectMany(d => d.DependsOn).Distinct().ToList();
+                var derivations = model.DerivationsForOperation(kv.Value.OperationId);
+                var serverDeps = derivations.SelectMany(d => d.DependsOn).Distinct().ToList();
 
                 return new ManifestForm(kv.Value.OperationId, fields, kv.Value.IncludeExtensions, serverDeps)
                 {
                     Plugin = kv.Value.Plugin,
+                    // The form has ANY server derivation (Sol re-review, Finding 4). An empty
+                    // serverDependencies list does NOT mean none exist — a context-only derivation
+                    // (no DependsOn) contributes zero dependencies yet still governs submit, so the
+                    // client must do a full initial resolve when this is set, not wait for a field
+                    // whose dependency intersects the (possibly empty) list.
+                    HasServerDerivations = derivations.Count > 0,
                 };
             });
 

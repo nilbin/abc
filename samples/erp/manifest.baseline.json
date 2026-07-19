@@ -8178,7 +8178,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.extensions"
+      "plugin": "tam.extensions",
+      "hasServerDerivations": false
     },
     "web.roles.define": {
       "operation": "roles.define",
@@ -8218,7 +8219,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.roles"
+      "plugin": "tam.roles",
+      "hasServerDerivations": false
     },
     "web.packages.install": {
       "operation": "packages.install",
@@ -8247,7 +8249,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.tenantpackages"
+      "plugin": "tam.tenantpackages",
+      "hasServerDerivations": false
     },
     "web.rules.define": {
       "operation": "rules.define",
@@ -8481,7 +8484,8 @@
         "onOperation",
         "onEvent"
       ],
-      "plugin": "tam.rules"
+      "plugin": "tam.rules",
+      "hasServerDerivations": true
     },
     "web.tenants.create": {
       "operation": "tenants.create",
@@ -8509,7 +8513,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.tenancy"
+      "plugin": "tam.tenancy",
+      "hasServerDerivations": false
     },
     "web.tenants.move": {
       "operation": "tenants.move",
@@ -8537,7 +8542,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.tenancy"
+      "plugin": "tam.tenancy",
+      "hasServerDerivations": false
     },
     "web.tenants.rename": {
       "operation": "tenants.rename",
@@ -8565,7 +8571,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.tenancy"
+      "plugin": "tam.tenancy",
+      "hasServerDerivations": false
     },
     "web.users.invite": {
       "operation": "users.invite",
@@ -8604,7 +8611,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.users"
+      "plugin": "tam.users",
+      "hasServerDerivations": false
     },
     "web.nav.override": {
       "operation": "nav.override",
@@ -8663,7 +8671,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.nav"
+      "plugin": "tam.nav",
+      "hasServerDerivations": false
     },
     "web.documents.folders.define": {
       "operation": "documents.folders.define",
@@ -8681,7 +8690,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.documents"
+      "plugin": "tam.documents",
+      "hasServerDerivations": false
     },
     "web.documents.folders.share": {
       "operation": "documents.folders.share",
@@ -8711,7 +8721,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.documents"
+      "plugin": "tam.documents",
+      "hasServerDerivations": false
     },
     "web.documents.folders.unshare": {
       "operation": "documents.folders.unshare",
@@ -8740,7 +8751,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.documents"
+      "plugin": "tam.documents",
+      "hasServerDerivations": false
     },
     "web.documents.upload": {
       "operation": "documents.upload",
@@ -8813,7 +8825,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "tam.documents"
+      "plugin": "tam.documents",
+      "hasServerDerivations": false
     },
     "inspect.web.templates.define": {
       "operation": "inspect.templates.define",
@@ -8855,7 +8868,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "hasServerDerivations": false
     },
     "inspect.web.templates.add-item": {
       "operation": "inspect.templates.add-item",
@@ -8884,7 +8898,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "hasServerDerivations": false
     },
     "inspect.web.create": {
       "operation": "inspect.checklists.create",
@@ -8922,7 +8937,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "inspect"
+      "plugin": "inspect",
+      "hasServerDerivations": false
     },
     "approvals.web.groups.define": {
       "operation": "approvals.groups.define",
@@ -8950,7 +8966,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "approvals"
+      "plugin": "approvals",
+      "hasServerDerivations": false
     },
     "approvals.web.groups.assign": {
       "operation": "approvals.groups.assign",
@@ -8979,7 +8996,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "approvals"
+      "plugin": "approvals",
+      "hasServerDerivations": false
     },
     "approvals.web.rules.define": {
       "operation": "approvals.rules.define",
@@ -9028,7 +9046,8 @@
       ],
       "includeExtensions": false,
       "serverDependencies": [],
-      "plugin": "approvals"
+      "plugin": "approvals",
+      "hasServerDerivations": false
     },
     "web.orders.create": {
       "operation": "orders.create",
@@ -9147,7 +9166,8 @@
       "serverDependencies": [
         "customerId",
         "orderType"
-      ]
+      ],
+      "hasServerDerivations": true
     },
     "web.orders.edit": {
       "operation": "orders.edit-details",
@@ -9208,7 +9228,8 @@
         }
       ],
       "includeExtensions": true,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.orders.schedule": {
       "operation": "orders.schedule",
@@ -9247,7 +9268,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.orders.set-priority": {
       "operation": "orders.set-priority",
@@ -9280,7 +9302,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.customers.create": {
       "operation": "customers.create",
@@ -9331,7 +9354,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.customers.edit": {
       "operation": "customers.edit-contact",
@@ -9394,7 +9418,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.projects.create": {
       "operation": "projects.create",
@@ -9443,7 +9468,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.projects.edit": {
       "operation": "projects.edit-details",
@@ -9483,7 +9509,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.stock.create": {
       "operation": "stock.create",
@@ -9538,7 +9565,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.stock.edit": {
       "operation": "stock.edit",
@@ -9578,7 +9606,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     },
     "web.time.book": {
       "operation": "time.book",
@@ -9654,7 +9683,8 @@
         "orderId",
         "hours",
         "hourlyRate"
-      ]
+      ],
+      "hasServerDerivations": true
     },
     "web.materials.add": {
       "operation": "materials.add",
@@ -9693,7 +9723,8 @@
         }
       ],
       "includeExtensions": false,
-      "serverDependencies": []
+      "serverDependencies": [],
+      "hasServerDerivations": false
     }
   },
   "grids": {

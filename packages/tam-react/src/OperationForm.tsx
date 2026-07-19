@@ -57,14 +57,41 @@ export function OperationForm(props: OperationFormProps) {
   // see every one of them, not just the last.
   const lastChanged = useRef<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>();
-  // Read through a ref inside async continuations: the closure's `touched` may predate the
+  // Read through a ref inside async continuations: the closure's `touched`/`values` may predate the
   // user touching a field while a resolve was in flight — the ref never lies.
   const touchedRef = useRef(touched);
   touchedRef.current = touched;
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
 
   const getWire = useCallback(
     (name: string) => values[name] ?? values[`ext:${name}`] ?? null,
     [values]);
+
+  // The complete own-field input as the server wants it (changeSet fields are resolved elsewhere).
+  const currentInput = useCallback(() => {
+    const input: Record<string, unknown> = {};
+    for (const f of formDef.fields) {
+      const v = valuesRef.current[f.name];
+      if (v !== undefined && v !== null && !f.changeSet) input[f.name] = v;
+    }
+    return input;
+  }, [formDef]);
+
+  // Apply a resolve response: complete field state + untouched-only suggestions (docs/05).
+  const applyResolved = useCallback((resolved: ResolveResponse) => {
+    setResolveState(resolved);
+    for (const [name, state] of Object.entries(resolved.fields)) {
+      if (state.suggestedValue !== undefined && state.suggestedValue !== null
+          && !touchedRef.current.has(name)) {
+        // Skip identical values: an unconditional set re-triggers the resolve effect and would
+        // loop suggestion -> resolve -> suggestion forever.
+        setValues(prev => prev[name] === state.suggestedValue
+          ? prev
+          : { ...prev, [name]: state.suggestedValue });
+      }
+    }
+  }, []);
 
   // Batched, debounced, stale-rejecting server resolution (docs/05).
   const scheduleResolve = useCallback((changedFields: string[]) => {
@@ -72,32 +99,31 @@ export function OperationForm(props: OperationFormProps) {
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const sent = ++seq.current;
-      const input: Record<string, unknown> = {};
-      for (const f of formDef.fields) {
-        const v = values[f.name];
-        if (v !== undefined && v !== null && !f.changeSet) input[f.name] = v;
-      }
-      for (const f of changedFields) input[f] = values[f] ?? null;
+      const input = currentInput();
+      for (const f of changedFields) input[f] = valuesRef.current[f] ?? null;
       try {
         const resolved = await client.resolve(
           props.form, input, changedFields, manifest.revision);
-        if (sent === seq.current) {
-          setResolveState(resolved);
-          // Suggestions apply to untouched fields only: RecomputeIfUntouched (docs/05).
-          for (const [name, state] of Object.entries(resolved.fields)) {
-            if (state.suggestedValue !== undefined && state.suggestedValue !== null
-                && !touchedRef.current.has(name)) {
-              // Skip identical values: an unconditional set re-triggers the resolve effect
-              // and would loop suggestion -> resolve -> suggestion forever.
-              setValues(prev => prev[name] === state.suggestedValue
-                ? prev
-                : { ...prev, [name]: state.suggestedValue });
-            }
-          }
-        }
+        if (sent === seq.current) applyResolved(resolved);
       } catch { /* resolve is advisory; submit re-validates authoritatively */ }
     }, 350);
-  }, [client, formDef, props.form, values, manifest.revision]);
+  }, [client, formDef, props.form, manifest.revision, currentInput, applyResolved]);
+
+  // FULL initial resolve on mount / form / acting-node change (Sol re-review, Finding 4): a prefilled
+  // form must show operation-derived requiredness, lookup descriptors and findings BEFORE any field
+  // is touched, and a context-only derivation (no field dependencies) is never reachable through the
+  // change-triggered path. Gated on hasServerDerivations so a derivation-free form pays nothing.
+  useEffect(() => {
+    if (!formDef.hasServerDerivations) return;
+    const sent = ++seq.current;
+    (async () => {
+      try {
+        const resolved = await client.resolve(props.form, currentInput(), null, manifest.revision);
+        if (sent === seq.current) applyResolved(resolved);
+      } catch { /* advisory */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.form, props.actAs]);
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current.push(key);
@@ -151,8 +177,11 @@ export function OperationForm(props: OperationFormProps) {
       }
       if (Object.keys(extensions).length > 0) body.extensions = extensions;
 
+      // Submit THROUGH this form binding (docs/40): the server applies the form's tightening on top
+      // of the operation contract and folds it into idempotency identity. Omitting it would execute a
+      // direct call and silently skip form-specific validation.
       const result = await client.operation(formDef.operation, body,
-        props.actAs ? { actAs: props.actAs } : undefined);
+        { form: props.form, ...(props.actAs ? { actAs: props.actAs } : {}) });
       setResponse(result);
       if (!result.findings.some(f => f.severity === 'error') && !result.conflicts?.length) {
         props.onSuccess?.(result);

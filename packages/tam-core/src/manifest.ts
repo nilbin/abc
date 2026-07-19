@@ -87,6 +87,10 @@ export interface Manifest {
     fields: ManifestField[];
     includeExtensions: boolean;
     serverDependencies: string[];
+    /** The operation has at least one server derivation (docs/40). Drives a full initial resolve on
+     *  mount — an empty serverDependencies list does not mean there are none (a context-only
+     *  derivation declares no field dependencies yet still governs submit). */
+    hasServerDerivations?: boolean;
     plugin?: string;
   }>;
   grids: Record<string, {

@@ -1,5 +1,6 @@
 using Erp;
 using Erp.Features;
+using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.AspNetCore;
 using Tam.Testing;
@@ -118,7 +119,7 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
             description = BlockingProbeDerivations.ClosedOptionsSentinel,
         })).ShouldFailWith("orders.project-not-available", onField: "workAddress");
 
-        // ...and a value inside it goes through — proof the closed set is authority, not decoration.
+        // ...and a value inside it (matched through the option's semantic wrapper) goes through.
         (await actor.ExecuteAsync("orders.create", new
         {
             customerId,
@@ -126,6 +127,65 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
             workAddress = BlockingProbeDerivations.AllowedAddress,
             description = BlockingProbeDerivations.ClosedOptionsSentinel,
         })).ShouldSucceed();
+
+        // A case-variant is NOT accepted — the comparison is ordinal, not case-folding, so a
+        // case-sensitive code/reference can't slip through in the wrong casing (Sol re-review F5).
+        (await actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            workAddress = BlockingProbeDerivations.AllowedAddress.ToLowerInvariant(),
+            description = BlockingProbeDerivations.ClosedOptionsSentinel,
+        })).ShouldFailWith("orders.project-not-available", onField: "workAddress");
+    }
+
+    [Fact]
+    public async Task An_unsupported_lookup_filter_operator_fails_closed()
+    {
+        // customerId is a Guid, so `.contains` generates no predicate — accepting it would widen the
+        // universe just like an unknown key. Now rejected as a contract bug (Sol re-review, Finding 2).
+        await Assert.ThrowsAsync<InvalidOperationException>(() => actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            projectId = Guid.NewGuid(),
+            workAddress = "Verkstadsgatan 10",
+            description = BlockingProbeDerivations.BadOperatorSentinel,
+        }));
+    }
+
+    [Fact]
+    public async Task Two_lookup_bindings_for_one_field_fail_closed()
+    {
+        // Resolve would show one candidate universe while submit enforces both — the UI can't
+        // represent that, so the contract is refused (Sol re-review, Finding 6).
+        await Assert.ThrowsAsync<InvalidOperationException>(() => actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            projectId = Guid.NewGuid(),
+            workAddress = "Verkstadsgatan 11",
+            description = BlockingProbeDerivations.DoubleLookupSentinel,
+        }));
+    }
+
+    [Fact]
+    public async Task A_derivation_that_mutates_tracked_state_fails_closed()
+    {
+        // The probe adds an entity to the operation's writable context. Derivations must be read-only,
+        // so the pipeline detects the tracked write and refuses (Sol re-review, Finding 3) — the
+        // smuggled Customer is never committed.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            workAddress = "Verkstadsgatan 12",
+            description = BlockingProbeDerivations.MutateSentinel,
+        }));
+
+        var smuggled = await host.QueryDbAsync("demo", db =>
+            db.Customers.CountAsync(c => c.Name == new CustomerName("Smuggelkund")));
+        Assert.Equal(0, smuggled);
     }
 }
 
@@ -136,7 +196,10 @@ public static class BlockingProbeDerivations
 {
     public const string Sentinel = "__probe_block__";
     public const string BadFilterSentinel = "__bad_filter__";
+    public const string BadOperatorSentinel = "__bad_operator__";
     public const string ClosedOptionsSentinel = "__closed_options__";
+    public const string DoubleLookupSentinel = "__double_lookup__";
+    public const string MutateSentinel = "__mutate__";
     public const string AllowedAddress = "Tillåtnagatan 1";
 
     public static readonly FindingFactory Rejected = Finding.Error("test.probe-rejected");
@@ -158,14 +221,49 @@ public static class BlockingProbeDerivations
                 OrderFindings.ProjectNotAvailable)
             : DerivationResult.Empty;
 
+    // Binds ProjectId with an UNSUPPORTED operator for the field type: customerId on projects.lookup
+    // is a Guid, so `.contains` is not a legal predicate. A silently-dropped operator would widen the
+    // universe exactly like an unknown key (Sol re-review, Finding 2) — so it must fail closed too.
+    [ServerDerivation("test.orders.create.bad-operator-probe")]
+    public static DerivationResult BadOperator(CreateOrder.Input input, DerivationContext context) =>
+        input.Description.Value == BadOperatorSentinel
+            ? DerivationResult.Empty.Lookup(
+                nameof(CreateOrder.Input.ProjectId), "projects.lookup",
+                new Dictionary<string, string?> { ["customerId.contains"] = input.CustomerId.Value.ToString() },
+                OrderFindings.ProjectNotAvailable)
+            : DerivationResult.Empty;
+
     // Declares an authoritative CLOSED option set on WorkAddress — the complete legal set — under the
-    // sentinel. A submitted value outside it is rejected at submit; AddOptions would not be.
+    // sentinel. The option value is a SEMANTIC WRAPPER (Address), which membership must unwrap to its
+    // scalar to compare against the submitted key (Sol re-review, Finding 5).
     [ServerDerivation("test.orders.create.closed-options-probe")]
     public static DerivationResult ClosedOptions(CreateOrder.Input input, DerivationContext context) =>
         input.Description.Value == ClosedOptionsSentinel
             ? DerivationResult.Empty.RequireOneOf(
                 nameof(CreateOrder.Input.WorkAddress),
-                [new Option(AllowedAddress, AllowedAddress)],
+                [new Option(new Address(AllowedAddress), AllowedAddress)],
                 OrderFindings.ProjectNotAvailable)
             : DerivationResult.Empty;
+
+    // Emits TWO lookup bindings for the SAME field in one evaluation — resolve would show one and
+    // submit would enforce both (Sol re-review, Finding 6). Must fail closed (DER008).
+    [ServerDerivation("test.orders.create.double-lookup-probe")]
+    public static DerivationResult DoubleLookup(CreateOrder.Input input, DerivationContext context) =>
+        input.Description.Value == DoubleLookupSentinel
+            ? DerivationResult.Empty
+                .Lookup(nameof(CreateOrder.Input.ProjectId), "projects.lookup",
+                    new Dictionary<string, string?>(), OrderFindings.ProjectNotAvailable)
+                .Lookup(nameof(CreateOrder.Input.ProjectId), "projects.lookup",
+                    new Dictionary<string, string?>(), OrderFindings.ProjectNotAvailable)
+            : DerivationResult.Empty;
+
+    // MUTATES the operation's writable context — the exact thing derivations must not do (Sol
+    // re-review, Finding 3). The pipeline must detect the tracked write and fail closed (DER007).
+    [ServerDerivation("test.orders.create.mutate-probe")]
+    public static DerivationResult Mutate(CreateOrder.Input input, DerivationContext context, ErpDbContext db)
+    {
+        if (input.Description.Value == MutateSentinel)
+            db.Customers.Add(Customer.Create("demo", new("Smuggelkund"), new("Smuggelgatan 1"), null, null));
+        return DerivationResult.Empty;
+    }
 }

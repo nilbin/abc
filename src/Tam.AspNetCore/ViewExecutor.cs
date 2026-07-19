@@ -390,11 +390,14 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
 
     internal sealed record ExtensionFilter(string Key, string WireKind, FilterOperator Op, string Value);
 
-    /// <summary>The query keys a view legitimately CONSTRAINS on — the shared allow-list behind
-    /// both the read path's unknown-parameter guard and lookup membership's fail-closed base-filter
-    /// check (Sol re-review, Finding 5): the Query record's ctor members, and each declared Filterable
-    /// field with its .from/.to/.contains twins. Deliberately excludes browsing keys (sort/page/…):
-    /// those are not admissibility constraints, so they are never valid membership base filters.</summary>
+    /// <summary>The query keys a view legitimately CONSTRAINS on — the shared allow-list behind both
+    /// the read path's unknown-parameter guard and lookup membership's fail-closed base-filter check
+    /// (Sol re-review, Findings 5 + 2): the Query record's ctor members, and for each declared
+    /// Filterable field ONLY the operators <see cref="BindFilters"/> actually honors for that field's
+    /// type — equality for all, `.contains` for strings, `.from`/`.to` for range-comparable types.
+    /// A key the binder would silently ignore (e.g. `.contains` on a Guid) is NOT advertised, so it
+    /// cannot be declared legal and then drop out of the query — which would widen the universe.
+    /// Deliberately excludes browsing keys (sort/page/…): those are never admissibility constraints.</summary>
     private static HashSet<string> FilterKeys(ViewDefinition view)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
@@ -402,10 +405,17 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             keys.Add(Naming.Camel(parameter.Name!));
         foreach (var field in view.Capabilities.Filterable)
         {
-            keys.Add(field);
-            keys.Add($"{field}.from");
-            keys.Add($"{field}.to");
-            keys.Add($"{field}.contains");
+            keys.Add(field);   // equality: every filterable field
+            var property = view.ResultType.GetProperties().FirstOrDefault(p => Naming.Camel(p.Name) == field);
+            if (property is null) continue;
+            var comparable = ComparableType(property.PropertyType);
+            if (comparable == typeof(string))
+                keys.Add($"{field}.contains");
+            if (Rangeable.Contains(comparable))
+            {
+                keys.Add($"{field}.from");
+                keys.Add($"{field}.to");
+            }
         }
         return keys;
     }

@@ -159,6 +159,24 @@ public sealed class OperationExecutor(
         // (suggestions, warnings, option ordering) are consumed by resolve and IGNORED here:
         // authority is a property of the output, not of the derivation method.
         var derived = await RunDerivationsAsync(operation, input, context, ct);
+
+        // Derivations are structurally READ-ONLY (Sol re-review, Finding 3). They run BEFORE the
+        // transaction on the operation's own writable context, so a derivation that added/modified/
+        // deleted a tracked entity would either (a) have those writes committed by the handler's later
+        // SaveChanges, bypassing the domain boundary, or (b) leave them tracked when a blocking
+        // derivation returns — the change-tracker leak, resurrected. Nothing legitimately mutates
+        // state before this point, so any write-state entry here was introduced by a derivation:
+        // discard it and fail closed. (Reads are fine — projections don't track, and a tracked read
+        // is Unchanged, not a write.) A dedicated read-scoped context is the longer-term hardening.
+        if (db.ChangeTracker.Entries().Any(e =>
+                e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            db.ChangeTracker.Clear();
+            throw new InvalidOperationException(
+                $"DER007: a derivation of '{operationId}' mutated tracked state. Derivations compute "
+                + "input admissibility and must be read-only — move any write into the operation handler.");
+        }
+
         var required = derived.Required
             .Where(r => r.When && FieldEmpty(operation, input, r.Field))
             .Select(r => r.Finding).ToList();
@@ -200,9 +218,13 @@ public sealed class OperationExecutor(
         {
             var value = LookupKey(operation, input, closed.Field);
             if (string.IsNullOrEmpty(value)) continue;
-            // Case-insensitive so an enum field (wire "urgent" vs an option authored as "Urgent")
-            // matches; string/guid keys compare exactly regardless.
-            if (!closed.Options.Any(o => string.Equals(o.Value?.ToString(), value, StringComparison.OrdinalIgnoreCase)))
+            // Compare each option through the SAME unwrap the submitted value went through (Sol
+            // re-review, Finding 5): ValueWrapper.Unwrap so a semantic-wrapper option (new Option(
+            // project.Id, ...)) reduces to its scalar key, then ORDINAL — case-SENSITIVE, so a
+            // case-sensitive code/reference isn't silently accepted in the wrong casing. An enum
+            // option authored with the enum value matches because both sides ToString the CLR value.
+            if (!closed.Options.Any(o => string.Equals(
+                    ValueWrapper.Unwrap(o.Value)?.ToString(), value, StringComparison.Ordinal)))
                 return Fail(context, closed.Invalid);
         }
 
@@ -555,6 +577,19 @@ public sealed class OperationExecutor(
             var result = invocation is Task<DerivationResult> task ? await task : (DerivationResult)invocation;
             merged = merged.Merge(result);
         }
+
+        // At most ONE active lookup binding per field (Sol re-review, Finding 6). Resolve surfaces
+        // only the first binding for a field, but submit enforces EVERY binding — so two active
+        // lookups on one field would show one candidate universe and secretly require membership in
+        // both. Fail closed here (shared by resolve and submit, so they cannot disagree) rather than
+        // let the UI misrepresent the enforced contract.
+        var conflicting = merged.Lookups.GroupBy(l => l.Field).FirstOrDefault(g => g.Count() > 1);
+        if (conflicting is not null)
+            throw new InvalidOperationException(
+                $"DER008: operation '{operation.Id}' produced {conflicting.Count()} lookup bindings for "
+                + $"field '{conflicting.Key}'. At most one active lookup binding per field is allowed — "
+                + "resolve shows one candidate universe but submit would enforce all of them.");
+
         return merged;
     }
 

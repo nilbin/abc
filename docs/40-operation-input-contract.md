@@ -138,8 +138,14 @@ renders the view; exposing the constraint field lets the picker be scoped too):
   reuses the **same** view definition, permission checks (fail-closed: a caller who cannot read the
   candidate view cannot pass membership), tenant scope, plugin activation, SubtreeRead widening and
   the existing `BindFilters` path, then adds the key predicate. Base-filter keys are validated against
-  the view's Query + Filterable fields and fail closed on a typo — an unknown key cannot silently
-  widen the universe.
+  the view's Query + Filterable fields, **type-aware** (a `.contains` on a Guid or a `.from` on a
+  non-range field is not a legal key), and fail closed on anything else — neither an unknown key nor
+  an operator the binder would silently drop can widen the universe. One `FilterKeys` descriptor
+  drives both this check and the read path's unknown-parameter guard, so a key can't be declared
+  legal and then ignored by the binder.
+- **At most one lookup binding per field** (DER008): resolve surfaces one candidate universe, so two
+  active lookups on a field — resolve showing one while submit enforces both — is refused at model
+  evaluation, not silently mis-shown.
 - `DerivationResult.Lookup(...)` is recorded as a binding; submit runs `ContainsAsync` for each
   non-null lookup-bound field (the value read from the deserialized input, so a `Change<T>` edit field
   unwraps correctly) and blocks with the `invalid` finding when the value is outside the universe. The
@@ -160,6 +166,23 @@ and must stay explicit: race-sensitive invariants still need domain/handler reva
 tokens (`IVersioned`), locks/leases, or database constraints — the derivation is a fast, honest
 front-door check, not the last line of defence. The create-order sample keeps its handler-side
 project check for exactly this reason; the derivation does not replace it.
+
+Derivations are also structurally **read-only** (DER007). They run on the operation's context before
+the transaction, so a derivation that mutated tracked state would either bypass the domain boundary
+(its writes riding the handler's commit) or resurrect the change-tracker leak (writes left tracked
+when a blocking derivation returns). The pipeline detects any tracked write a derivation introduced,
+discards it, and fails closed — a derivation computes admissibility; it never writes.
+
+## The generated form submits through its binding
+
+The server treats a supplied `?form=` as part of the effective contract *and* idempotency identity,
+but that only bites if the caller sends it. The framework's `OperationForm` submits
+`client.operation(operationId, body, { form })`, which appends `?form=`, so form-specific tightening
+is actually applied in the generated UI — not merely reachable in principle. `OperationForm` also does
+a **full initial resolve on mount** (gated on the manifest's `hasServerDerivations`), so a prefilled
+form shows operation-derived requiredness, lookup descriptors and findings before any field is
+touched, and a context-only derivation (no field dependencies, unreachable through the change-triggered
+path) is resolved too.
 
 ## Non-goals
 

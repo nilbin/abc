@@ -63,9 +63,12 @@ export class TamClient {
   async operation(
     operationId: string,
     body: Record<string, unknown>,
-    options?: { idempotencyKey?: string; actAs?: string },
+    options?: { idempotencyKey?: string; actAs?: string; form?: string },
   ): Promise<OperationResponse> {
-    const response = await this.send(this.url(`/api/operations/${operationId}`), {
+    // The selected form binding rides as ?form= (docs/40): a submission made THROUGH a form applies
+    // that form's tightening on top of the operation contract, and is part of idempotency identity.
+    // Without it the server executes a DIRECT call and skips form-specific validation.
+    const response = await this.send(this.url(`/api/operations/${operationId}`, { form: options?.form }), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
