@@ -16,6 +16,9 @@ export interface FieldRendererProps {
   error?: string;
   warning?: string;
   options?: { value: unknown; label: string }[];
+  /** The derivation's runtime lookup binding (docs/40): a picker scopes its view by these base
+   *  filters, so it browses exactly the candidate universe submit validates against. */
+  lookup?: { viewId: string; baseFilters: Record<string, string | null> };
   tam: TamContextValue;
   /** Current wire values of the SIBLING fields on the same form (own fields keyed by wire name).
    *  A renderer that reacts to another field reads it here — e.g. the rule builder resolving its
@@ -350,15 +353,20 @@ export const DefaultRenderer: FieldRenderer = (p) => {
     return <TextInput label={p.label} value={shown} disabled description={p.warning} />;
   }
 
-  // A [Lookup]-carrying field renders a searchable picker over its view — no per-form
-  // renderer, no options derivation. Server-sent options (a derivation) still win: they
-  // carry request context a global lookup cannot (e.g. "projects OF THIS customer").
-  if (p.field.lookup && !(p.options && p.options.length > 0)) {
-    const view = p.tam.manifest.views[p.field.lookup];
+  // A [Lookup]-carrying field renders a searchable picker over its view — no per-form renderer, no
+  // options derivation. The derivation's runtime lookup binding (docs/40), when present, SCOPES the
+  // picker: its base filters (e.g. "projects OF THIS customer") narrow the view to the same
+  // authoritative candidate universe submit validates against, so the user browses only admissible
+  // rows instead of every customer's. A resolved binding may also point at a different view than the
+  // static [Lookup] default.
+  const boundView = p.lookup?.viewId ?? p.field.lookup;
+  if (boundView && !(p.options && p.options.length > 0)) {
+    const view = p.tam.manifest.views[boundView];
     const labelField = view?.resultFields.find(f => f.name !== 'id' && f.wireKind === 'string')?.name ?? 'name';
     return (
       <LookupSelect
-        view={p.field.lookup}
+        view={boundView}
+        baseFilters={p.lookup?.baseFilters}
         value={p.value}
         onChange={v => p.onChange(v)}
         label={p.label}

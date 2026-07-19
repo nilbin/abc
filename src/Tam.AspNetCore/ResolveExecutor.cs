@@ -63,12 +63,18 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
                 // Require() rule holds for it — the same authoritative rule submit enforces.
                 || merged.Required.Any(r => r.When && r.Field == config.WireName);
 
+            // The derivation's authoritative lookup binding (docs/40, Finding 6): the client opens
+            // this View scoped by the contextual base filters — browsing the SAME candidate universe
+            // submit validates against, so the derivation need not materialize it as inline options.
+            var lookup = merged.Lookups.FirstOrDefault(l => l.Field == config.WireName);
+
             fields[config.WireName] = new ResolvedFieldState(
                 visible,
                 Enabled: true,
                 required,
                 merged.Suggestions.GetValueOrDefault(config.WireName),
                 merged.Options.GetValueOrDefault(config.WireName),
+                lookup is null ? null : new ResolvedLookup(lookup.ViewId, lookup.Filters),
                 merged.Findings
                     .Where(f => f.Targets.Any(t => t.Value == config.WireName))
                     .Select(f => model.Locales.Resolve(f, context.Culture))

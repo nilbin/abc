@@ -74,9 +74,10 @@ context"*, and one `DerivationResult` carries all of it:
 | Output | At resolve | At submit |
 |---|---|---|
 | `Require(field, when, finding)` | shows the required indicator | **BLOCKS** if empty, with the domain finding |
-| blocking findings | shown on the field / globally | **BLOCK** |
-| closed inline options / lookup membership | offered as the candidate set | **enforced** (membership; see below) |
-| `Suggest`, non-blocking warnings, option ordering, lookup search/sort/page | consumed | **ignored** |
+| blocking findings (`AddFieldError`, `From`, `Add` with an error) | shown on the field / globally | **BLOCK** — for every caller |
+| `Lookup(field, view, filters, invalid)` — membership | opens the candidate View scoped by the filters | **enforced** by an Exists (see below) |
+| `RequireOneOf(field, options, invalid)` — closed inline set | offered as the complete legal set | **enforced** — value must be one of them |
+| `AddOptions`, `Suggest`, non-blocking warnings, option ordering, lookup search/sort/page | consumed | **ignored** (advisory) |
 
 `RunDerivationsAsync` is the ONE place resolve and submit evaluate an operation's derivations, so the
 requiredness a form shows and the requiredness submit enforces can never disagree. `Require()`
@@ -135,15 +136,30 @@ renders the view; exposing the constraint field lets the picker be scoped too):
   not yet needed).
 - `ViewExecutor.ContainsAsync(viewId, baseFilters, key, context, ct)` — an efficient `Exists` that
   reuses the **same** view definition, permission checks (fail-closed: a caller who cannot read the
-  candidate view cannot pass membership), tenant scope, plugin activation and the existing
-  `BindFilters` path, then adds the key predicate.
+  candidate view cannot pass membership), tenant scope, plugin activation, SubtreeRead widening and
+  the existing `BindFilters` path, then adds the key predicate. Base-filter keys are validated against
+  the view's Query + Filterable fields and fail closed on a typo — an unknown key cannot silently
+  widen the universe.
 - `DerivationResult.Lookup(...)` is recorded as a binding; submit runs `ContainsAsync` for each
-  non-null lookup-bound field and blocks with the `invalid` finding when the value is outside the
-  universe. The same `RunDerivationsAsync` feeds resolve (advisory options) and submit (authoritative
-  membership) — one code path, no drift.
-- Authoritative by default; the advisory case stays explicit. Small inline option sets follow the same
-  rule via `AddOptions(...)`, which the derivation supplies for browsing but does not treat as the
-  membership authority.
+  non-null lookup-bound field (the value read from the deserialized input, so a `Change<T>` edit field
+  unwraps correctly) and blocks with the `invalid` finding when the value is outside the universe. The
+  same `RunDerivationsAsync` — ALL derivations, every call — feeds resolve and submit, so they cannot
+  drift. Resolve surfaces the binding as a `ResolvedLookup` (view + base filters) the picker scopes
+  itself by, so the client browses exactly the candidate universe rather than materializing it.
+- The small-set twin is `RequireOneOf(field, options, invalid)` — authoritative closed inline options,
+  enforced at submit the same way. `AddOptions(...)` (no finding) stays advisory: offered at resolve,
+  never enforced.
+
+## The authority boundary: pipeline-rejects, not commit-stable
+
+Authoritative derivations and lookup membership run **before the transaction opens**. "Authoritative"
+here means *the operation pipeline rejects this request when it is evaluated* — NOT *the underlying
+database fact cannot change between validation and commit*. A project could be closed, or a candidate
+row deleted, in the window between the membership `Exists` and the handler's commit. That is by design
+and must stay explicit: race-sensitive invariants still need domain/handler revalidation, concurrency
+tokens (`IVersioned`), locks/leases, or database constraints — the derivation is a fast, honest
+front-door check, not the last line of defence. The create-order sample keeps its handler-side
+project check for exactly this reason; the derivation does not replace it.
 
 ## Non-goals
 

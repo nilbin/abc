@@ -141,8 +141,8 @@ public static class CreateOrderDerivations
 {
     [ServerDerivation("orders.create.available-projects")]
     [DependsOn(nameof(CreateOrder.Input.CustomerId), nameof(CreateOrder.Input.OrderType))]
-    public static async Task<DerivationResult> AvailableProjects(
-        CreateOrder.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
+    public static DerivationResult AvailableProjects(
+        CreateOrder.Input input, DerivationContext context)
     {
         // Operation-owned conditional requiredness (docs/40): a PROJECT order requires a project.
         // This is the canonical rule of the create-order operation, authoritative at submit for
@@ -156,21 +156,15 @@ public static class CreateOrderDerivations
             return result;
 
         // Authoritative membership (docs/40): the candidate universe is projects.lookup scoped to
-        // THIS customer — the same view the picker renders, filtered by customerId. Submit rejects a
-        // projectId outside it (another customer's project, a closed/forged one) with the domain
-        // finding, by an Exists — never by whichever page the client last loaded.
-        result = result.Lookup(
+        // THIS customer via the view's Filterable customerId. The client OPENS that view (paginated,
+        // searchable) scoped by the same base filter — the derivation does NOT materialize the whole
+        // candidate set as inline options (Sol re-review, Finding 6). Submit rejects a projectId
+        // outside the universe (another customer's, a closed/forged one) by an Exists against the
+        // base filter — never by whichever page the client last loaded.
+        return result.Lookup(
             nameof(CreateOrder.Input.ProjectId), "projects.lookup",
             new Dictionary<string, string?> { ["customerId"] = input.CustomerId.Value.ToString() },
             OrderFindings.ProjectNotAvailable);
-
-        var options = await db.Projects
-            .Where(x => x.CustomerId == input.CustomerId && x.Status == ProjectStatus.Open)
-            .OrderBy(x => x.Name)
-            .Select(x => new Option(x.Id.Value, x.Name))
-            .ToListAsync(ct);
-
-        return result.AddOptions(nameof(CreateOrder.Input.ProjectId), options);
     }
 
     [ServerDerivation("orders.create.customer-state")]

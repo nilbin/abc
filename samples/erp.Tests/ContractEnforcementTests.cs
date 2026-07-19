@@ -105,6 +105,28 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => actor.ExecuteAsync("orders.create", input));
     }
+
+    [Fact]
+    public async Task A_closed_inline_option_set_is_enforced_at_submit()
+    {
+        // The probe declares WorkAddress's complete legal set. A value outside it is rejected...
+        (await actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            workAddress = "Otillåtnagatan 99",
+            description = BlockingProbeDerivations.ClosedOptionsSentinel,
+        })).ShouldFailWith("orders.project-not-available", onField: "workAddress");
+
+        // ...and a value inside it goes through — proof the closed set is authority, not decoration.
+        (await actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            workAddress = BlockingProbeDerivations.AllowedAddress,
+            description = BlockingProbeDerivations.ClosedOptionsSentinel,
+        })).ShouldSucceed();
+    }
 }
 
 /// <summary>Test-only derivation on orders.create: emits a blocking finding on a sentinel input the
@@ -114,6 +136,8 @@ public static class BlockingProbeDerivations
 {
     public const string Sentinel = "__probe_block__";
     public const string BadFilterSentinel = "__bad_filter__";
+    public const string ClosedOptionsSentinel = "__closed_options__";
+    public const string AllowedAddress = "Tillåtnagatan 1";
 
     public static readonly FindingFactory Rejected = Finding.Error("test.probe-rejected");
 
@@ -131,6 +155,17 @@ public static class BlockingProbeDerivations
             ? DerivationResult.Empty.Lookup(
                 nameof(CreateOrder.Input.ProjectId), "projects.lookup",
                 new Dictionary<string, string?> { ["custmerId"] = input.CustomerId.Value.ToString() },
+                OrderFindings.ProjectNotAvailable)
+            : DerivationResult.Empty;
+
+    // Declares an authoritative CLOSED option set on WorkAddress — the complete legal set — under the
+    // sentinel. A submitted value outside it is rejected at submit; AddOptions would not be.
+    [ServerDerivation("test.orders.create.closed-options-probe")]
+    public static DerivationResult ClosedOptions(CreateOrder.Input input, DerivationContext context) =>
+        input.Description.Value == ClosedOptionsSentinel
+            ? DerivationResult.Empty.RequireOneOf(
+                nameof(CreateOrder.Input.WorkAddress),
+                [new Option(AllowedAddress, AllowedAddress)],
                 OrderFindings.ProjectNotAvailable)
             : DerivationResult.Empty;
 }

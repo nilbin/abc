@@ -193,6 +193,19 @@ public sealed class OperationExecutor(
                     return Fail(context, lookup.Invalid);
             }
 
+        // Closed inline options (docs/40, Sol re-review Finding 7): the small-set twin of lookup
+        // membership. A submitted value must be one of the derivation's authoritative options — the
+        // complete legal set — else it is rejected. AddOptions (advisory) stays unenforced.
+        foreach (var closed in derived.ClosedOptions)
+        {
+            var value = LookupKey(operation, input, closed.Field);
+            if (string.IsNullOrEmpty(value)) continue;
+            // Case-insensitive so an enum field (wire "urgent" vs an option authored as "Urgent")
+            // matches; string/guid keys compare exactly regardless.
+            if (!closed.Options.Any(o => string.Equals(o.Value?.ToString(), value, StringComparison.OrdinalIgnoreCase)))
+                return Fail(context, closed.Invalid);
+        }
+
         // Plugin gates (docs/22 P2): typed preconditions in TWO phases, run only for tenants
         // with the owning plugin active; within each phase, operation-specific gates run before
         // wildcard gates (docs/28 approvals seam 1 — a wildcard gate sees every operation and

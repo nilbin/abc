@@ -18,6 +18,10 @@ export interface LookupSelectProps {
   /** Query member the typed text binds to. */
   searchParam?: string;
   pageSize?: number;
+  /** Contextual base filters from a derivation's lookup binding (docs/40): they scope the view to
+   *  the authoritative candidate universe (e.g. { customerId }). Sent on every request alongside the
+   *  search text, so browsing and the submit-time membership check see the same rows. */
+  baseFilters?: Record<string, string | null>;
 }
 
 /**
@@ -37,7 +41,14 @@ export function LookupSelect(p: LookupSelectProps) {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Base filters scope the candidate universe (docs/40); nulls are dropped so an unset filter does
+  // not narrow. They ride every request with the search text — the picker browses exactly the rows
+  // submit will accept as members.
+  const scoped = Object.fromEntries(
+    Object.entries(p.baseFilters ?? {}).filter(([, v]) => v != null),
+  );
   const result = useView(p.view, {
+    ...scoped,
     [p.searchParam ?? 'search']: debounced || undefined,
     pageSize: p.pageSize ?? 20,
   });

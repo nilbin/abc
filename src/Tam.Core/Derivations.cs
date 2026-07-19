@@ -14,6 +14,12 @@ public sealed record RequiredRule(string Field, bool When, Finding Finding);
 public sealed record LookupBinding(
     string Field, string ViewId, IReadOnlyDictionary<string, string?> Filters, Finding Invalid);
 
+/// <summary>An AUTHORITATIVE closed inline option set (docs/40): the SMALL-set twin of a lookup
+/// binding. <see cref="Field"/>'s submitted value must be one of <see cref="Options"/> — the complete
+/// legal set, not a recommendation. Submit rejects a value outside it with <see cref="Invalid"/>.
+/// Use for a handful of context-computed admissible values; a large candidate set is a lookup View.</summary>
+public sealed record ClosedOptionSet(string Field, IReadOnlyList<Option> Options, Finding Invalid);
+
 /// <summary>
 /// Output of a server derivation (docs/05, docs/40): field-state deltas + findings. Immutable,
 /// combinable. Outputs carry their OWN authority: <see cref="Required"/> and blocking findings are
@@ -31,6 +37,9 @@ public sealed record DerivationResult(
 
     /// <summary>Authoritative lookup-membership bindings (docs/40) — see <see cref="Lookup"/>.</summary>
     public IReadOnlyList<LookupBinding> Lookups { get; init; } = [];
+
+    /// <summary>Authoritative closed inline option sets (docs/40) — see <see cref="Options"/>.</summary>
+    public IReadOnlyList<ClosedOptionSet> ClosedOptions { get; init; } = [];
 
     public static readonly DerivationResult Empty = new(
         [], new Dictionary<string, IReadOnlyList<Option>>(), new Dictionary<string, object?>());
@@ -58,6 +67,9 @@ public sealed record DerivationResult(
 
     public DerivationResult Add(Finding finding) => this with { Findings = [.. Findings, finding] };
 
+    /// <summary>ADVISORY options (docs/40): offered as the candidate set at resolve for display and
+    /// ordering, but NOT enforced at submit — a value outside them still passes. For an authoritative
+    /// closed set use <see cref="Options"/>; for a large candidate universe use <see cref="Lookup"/>.</summary>
     public DerivationResult AddOptions(string member, IReadOnlyList<Option> options) => this with
     {
         Options = new Dictionary<string, IReadOnlyList<Option>>(Options)
@@ -65,6 +77,17 @@ public sealed record DerivationResult(
             [Naming.Camel(member)] = options,
         },
     };
+
+    /// <summary>AUTHORITATIVE closed inline options (docs/40): <paramref name="options"/> are BOTH
+    /// offered at resolve AND the complete legal set at submit — a submitted value outside them is
+    /// rejected with <paramref name="invalid"/>, for every caller. The small-set twin of <see
+    /// cref="Lookup"/>; advisory recommendations use <see cref="AddOptions"/> instead.</summary>
+    public DerivationResult RequireOneOf(string member, IReadOnlyList<Option> options, FindingFactory invalid) =>
+        AddOptions(member, options) with
+        {
+            ClosedOptions = [.. ClosedOptions,
+                new ClosedOptionSet(Naming.Camel(member), options, invalid.At(Naming.Camel(member)))],
+        };
 
     public DerivationResult Suggest(string member, object? value) => this with
     {
@@ -102,8 +125,16 @@ public sealed record DerivationResult(
     {
         Required = [.. Required, .. other.Required],
         Lookups = [.. Lookups, .. other.Lookups],
+        ClosedOptions = [.. ClosedOptions, .. other.ClosedOptions],
     };
 }
+
+/// <summary>The runtime lookup binding a resolved field carries (docs/40, Sol re-review Finding 6):
+/// the candidate View plus the contextual base filters the derivation computed (e.g. the picked
+/// customer). The client opens the View scoped by these filters — so it browses (paginates, searches,
+/// sorts) exactly the authoritative candidate universe submit validates against, instead of the
+/// derivation materializing the whole set as inline options.</summary>
+public sealed record ResolvedLookup(string ViewId, IReadOnlyDictionary<string, string?> BaseFilters);
 
 /// <summary>Wire shape of one field's fully resolved interaction state.</summary>
 public sealed record ResolvedFieldState(
@@ -112,6 +143,7 @@ public sealed record ResolvedFieldState(
     bool Required,
     object? SuggestedValue,
     IReadOnlyList<Option>? Options,
+    ResolvedLookup? Lookup,
     IReadOnlyList<Finding> Findings);
 
 public sealed record ResolveResponse(

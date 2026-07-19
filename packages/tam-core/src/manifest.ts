@@ -159,12 +159,21 @@ export interface NavNode {
   children: NavNode[];
 }
 
+/** The runtime lookup binding a resolved field carries (docs/40): the candidate view plus the
+ *  contextual base filters the derivation computed. The picker opens the view scoped by these so it
+ *  browses exactly the candidate universe submit validates against. */
+export interface ResolvedLookup {
+  viewId: string;
+  baseFilters: Record<string, string | null>;
+}
+
 export interface ResolvedFieldState {
   visible: boolean;
   enabled: boolean;
   required: boolean;
   suggestedValue?: unknown;
   options?: { value: unknown; label: string }[];
+  lookup?: ResolvedLookup;
   findings: Finding[];
 }
 

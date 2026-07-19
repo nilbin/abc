@@ -38,11 +38,31 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
 
     /// <summary>Authoritative lookup membership (docs/40): does a row keyed <paramref name="key"/>
     /// EXIST in <paramref name="viewId"/> constrained by <paramref name="baseFilters"/>? Reuses the
-    /// view's activation gate, permission check, tenant scope and the same BindFilters path the read
-    /// uses, then an Exists — never a page load, and never the client's browsing params. A missing
-    /// view/key/filter or a parse failure is NOT a member (fail closed). The key defaults to the
-    /// result's `id` field.</summary>
+    /// view's activation gate, permission check, tenant scope, SubtreeRead widening and the same
+    /// BindFilters path the read uses, then an Exists — never a page load, and never the client's
+    /// browsing params. A missing view/key/filter or a parse failure is NOT a member (fail closed).
+    /// The key defaults to the result's `id` field. Like <see cref="ExecuteAsync"/>, the SubtreeRead
+    /// widening is EXECUTION-LOCAL — restored on the way out — so a membership check inside a write
+    /// operation never leaves the handler's later reads widened (Sol re-review, Finding 8: a
+    /// subtree-enabled lookup must accept at submit exactly the candidates the read would show).</summary>
     public async Task<bool> ContainsAsync(
+        string viewId, IReadOnlyDictionary<string, string?> baseFilters, string? key,
+        OperationContext context, CancellationToken ct)
+    {
+        var scope = services.GetService(typeof(TenantScope)) as TenantScope;
+        var priorReadSet = scope?.ReadSet ?? [];
+        var priorReadPath = scope?.ReadPath;
+        try
+        {
+            return await ContainsWidenedAsync(viewId, baseFilters, key, context, ct);
+        }
+        finally
+        {
+            scope?.WidenRead(priorReadSet, priorReadPath);
+        }
+    }
+
+    private async Task<bool> ContainsWidenedAsync(
         string viewId, IReadOnlyDictionary<string, string?> baseFilters, string? key,
         OperationContext context, CancellationToken ct)
     {
@@ -70,6 +90,10 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
             return false;
         if (!context.Actor.Can(view.Permission))
             return false;
+
+        // Same SubtreeRead widening the read path applies (Finding 8): a subtree-enabled lookup's
+        // candidate universe is the acting node's validated subtree, so membership must see it too.
+        await ApplySubtreeWideningAsync(view, context, ct);
 
         var keyProperty = view.ResultType.GetProperties().FirstOrDefault(p => Naming.Camel(p.Name) == "id");
         if (keyProperty is null) return false;
@@ -135,6 +159,27 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo> ContainsMethods = new();
 
+    /// <summary>SubtreeRead (docs/26 D-H1): widen the ambient READ scope to the acting node's
+    /// validated subtree for a view execution. The set derives server-side from the tenants table,
+    /// never from client input, and every ITenantScoped source in the view's query widens coherently
+    /// — no per-source IgnoreQueryFilters composition to get wrong. Shared by the read path and
+    /// lookup membership so both see the same candidate universe; callers restore the prior scope.</summary>
+    private async Task ApplySubtreeWideningAsync(ViewDefinition view, OperationContext context, CancellationToken ct)
+    {
+        if (view.Capabilities.SubtreeTenantField is not null
+            && services.GetService(typeof(TenantScope)) is TenantScope scope
+            && services.GetService(typeof(ITamDb)) is ITamDb subtreeDb)
+        {
+            var activePath = await subtreeDb.Db.Set<TenantEntity>()
+                .Where(t => t.Id == context.TenantId.Value)
+                .Select(t => t.Path).FirstOrDefaultAsync(ct) ?? context.TenantId.Value;
+            var prefix = activePath + ".";
+            scope.WidenRead(await subtreeDb.Db.Set<TenantEntity>()
+                .Where(t => t.Path == activePath || t.Path.StartsWith(prefix))
+                .Select(t => t.Id).ToListAsync(ct), path: activePath);
+        }
+    }
+
     private async Task<(ViewResponse? Response, Finding? Error)> ExecuteWidenedAsync(
         string viewId,
         IReadOnlyDictionary<string, string?> query,
@@ -153,23 +198,9 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         if (!context.Actor.Can(view.Permission))
             return (null, PipelineFindings.NotAuthorized.With(("permission", view.Permission)));
 
-        // SubtreeRead (docs/26 D-H1): widen the ambient READ scope to the acting node's
-        // validated subtree for this view execution. The set derives server-side from the
-        // tenants table, never from client input, and every ITenantScoped source in the view's
-        // query widens coherently — no per-source IgnoreQueryFilters composition to get wrong.
-        // Writes never see this: the operation pipeline and stamp interceptor use Current alone.
-        if (view.Capabilities.SubtreeTenantField is not null
-            && services.GetService(typeof(TenantScope)) is TenantScope scope
-            && services.GetService(typeof(ITamDb)) is ITamDb subtreeDb)
-        {
-            var activePath = await subtreeDb.Db.Set<TenantEntity>()
-                .Where(t => t.Id == context.TenantId.Value)
-                .Select(t => t.Path).FirstOrDefaultAsync(ct) ?? context.TenantId.Value;
-            var prefix = activePath + ".";
-            scope.WidenRead(await subtreeDb.Db.Set<TenantEntity>()
-                .Where(t => t.Path == activePath || t.Path.StartsWith(prefix))
-                .Select(t => t.Id).ToListAsync(ct), path: activePath);
-        }
+        // SubtreeRead (docs/26 D-H1): widen the ambient READ scope to the acting node's validated
+        // subtree for this view execution — the same widening membership reuses (Finding 8).
+        await ApplySubtreeWideningAsync(view, context, ct);
 
         object queryRecord;
         List<FieldFilter> fieldFilters;

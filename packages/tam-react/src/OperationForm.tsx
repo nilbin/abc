@@ -183,7 +183,10 @@ export function OperationForm(props: OperationFormProps) {
         const visible = field.visibleWhen ? evalPx(field.visibleWhen, getWire) === true : true;
         if (!visible || field.renderer === 'hidden') return null;
         const required = field.required
-          || (field.requiredWhen ? evalPx(field.requiredWhen, getWire) === true : false);
+          || (field.requiredWhen ? evalPx(field.requiredWhen, getWire) === true : false)
+          // Operation-owned requiredness (docs/40): a derivation's Require() rule surfaces here
+          // through resolve, so the indicator matches what submit will enforce for every caller.
+          || resolveState?.fields[field.name]?.required === true;
         const error = fieldError(field.extension ? `extensions.${field.name}` : field.name);
         const warning = resolveState?.fields[field.name]?.findings
           .find(f => f.severity === 'warning');
@@ -203,6 +206,7 @@ export function OperationForm(props: OperationFormProps) {
               error={error ? findingMessage(manifest, culture, error) : undefined}
               warning={warning ? findingMessage(manifest, culture, warning) : undefined}
               options={resolveState?.fields[field.name]?.options}
+              lookup={resolveState?.fields[field.name]?.lookup}
               tam={tam}
               form={values}
               setField={setField}
