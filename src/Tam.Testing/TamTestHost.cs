@@ -134,6 +134,23 @@ public sealed class TamTestHost<TDb> : IAsyncDisposable where TDb : DbContext
             .ExecuteAsync(operationId, body, context, ct);
     }
 
+    /// <summary>Runs an operation and then a caller assertion against the SAME scope and DbContext
+    /// the operation ran on — the shared-scope shape a non-request caller has. Lets a test observe
+    /// that a blocked operation left no tracked residue on its context (the Finding 1 regression):
+    /// a normal <see cref="TestActor{TDb}.ExecuteAsync"/> disposes its scope before the test can
+    /// look.</summary>
+    public async Task<T> ExecuteThenInspectAsync<T>(
+        TestActor<TDb> actor, string operationId, object input,
+        Func<OperationResponse, TDb, Task<T>> inspect, CancellationToken ct = default)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var context = BuildContext(scope.ServiceProvider, actor, idempotencyKey: null);
+        var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
+        var response = await scope.ServiceProvider.GetRequiredService<OperationExecutor>()
+            .ExecuteAsync(operationId, body, context, ct);
+        return await inspect(response, scope.ServiceProvider.GetRequiredService<TDb>());
+    }
+
     internal async Task<(ViewResponse? Response, Finding? Error)> QueryAsync(
         TestActor<TDb> actor, string viewId, IReadOnlyDictionary<string, string?> query, CancellationToken ct)
     {

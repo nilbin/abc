@@ -165,30 +165,29 @@ internal static class InboxProcessor
         var tenant = context.TenantId.Value;
         foreach (var record in retryable)
         {
-            // Unit-of-work isolation (Sol review, Finding 1): each row's mapping AND operation run
-            // in its OWN scope + DbContext. A rolled-back operation's tracked mutations die with the
-            // scope, so this processor's shared inbox context can never flush them on its later
-            // SaveChanges, and they cannot leak into the next record's extension-target selection.
-            // Mapping runs INSIDE the scope too (Sol re-review, boundary C): a plugin's map delegate
-            // gets the row scope's services, never the outer request's unrestricted provider. The
-            // inbox bookkeeping below stays on the outer `db`.
-            var response = await PinnedScope.RunAsync(context.Services, tenant, async (rowServices, rct) =>
-            {
-                var rowContext = new OperationContext
+            // Unit-of-work isolation (Sol review, Finding 1): each row runs through the sanctioned
+            // ExecuteIsolatedAsync path — its OWN scope + DbContext + transaction. A rolled-back
+            // operation's tracked mutations die with that scope, so this processor's shared inbox
+            // context can never flush them on its later SaveChanges, and they cannot leak into the
+            // next record's extension-target selection. Mapping runs INSIDE the scope too (Sol
+            // re-review, boundary C): a plugin's map delegate gets the row scope's services, never
+            // the outer request's unrestricted provider. The inbox bookkeeping below stays on `db`.
+            var response = await OperationExecutor.ExecuteIsolatedAsync(
+                context.Services, tenant, operationId, async (rowServices, rct) =>
                 {
-                    Actor = context.Actor,
-                    TenantId = context.TenantId,
-                    Source = InvocationSource.Integration,
-                    Culture = context.Culture,
-                    IdempotencyKey = record.Key,
-                    CorrelationId = context.CorrelationId,
-                    Services = rowServices,
-                };
-                var input = await map(record.PayloadJson, rowContext, rct);
-                var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
-                return await rowServices.GetRequiredService<OperationExecutor>()
-                    .ExecuteAsync(operationId, body, rowContext, rct);
-            }, ct);
+                    var rowContext = new OperationContext
+                    {
+                        Actor = context.Actor,
+                        TenantId = context.TenantId,
+                        Source = InvocationSource.Integration,
+                        Culture = context.Culture,
+                        IdempotencyKey = record.Key,
+                        CorrelationId = context.CorrelationId,
+                        Services = rowServices,
+                    };
+                    var input = await map(record.PayloadJson, rowContext, rct);
+                    return (JsonSerializer.SerializeToElement(input, TamJson.Options), rowContext);
+                }, ct);
             var failed = response.Findings.Any(f => f.Severity == FindingSeverity.Error);
             var replayed = response.Findings.Any(f => f.Code == PipelineFindings.IdempotentReplay.Code);
 

@@ -16,6 +16,35 @@ public sealed class OperationExecutor(
     IServiceProvider services,
     Func<IServiceProvider, DbContext> dbResolver)
 {
+    /// <summary>The sanctioned path for a NON-request caller — an integration, a job, internal
+    /// dispatch — to run ONE operation as its OWN unit of work: a fresh pinned scope + DbContext +
+    /// transaction (Sol re-review, Finding 1). Each invocation is isolated, so a blocked
+    /// operation's writes can never flush onto a caller's shared context or the next unit. The
+    /// instance <see cref="ExecuteAsync"/> runs on whatever DbContext its scope provides — correct
+    /// on the request path (one operation per request scope, disposed after) — but a caller that
+    /// runs SEVERAL operations, or saves unrelated state afterward, MUST come through here rather
+    /// than resolve one executor and reuse it. <paramref name="prepare"/> runs INSIDE the pinned
+    /// scope: build the scoped context (Services = the scope) and map the body there, so mapping
+    /// and execution share the isolated unit.</summary>
+    public static async Task<OperationResponse> ExecuteIsolatedAsync(
+        IServiceProvider rootServices, string tenant, string operationId,
+        Func<IServiceProvider, CancellationToken, Task<(JsonElement Body, OperationContext Context)>> prepare,
+        CancellationToken ct)
+    {
+        return await PinnedScope.RunAsync<OperationResponse>(rootServices, tenant,
+            async (IServiceProvider scoped, CancellationToken sct) =>
+            {
+                var prepared = await prepare(scoped, sct);
+                return await scoped.GetRequiredService<OperationExecutor>()
+                    .ExecuteAsync(operationId, prepared.Body, prepared.Context, sct);
+            }, ct);
+    }
+
+    /// <remarks>Runs on the DbContext of the scope that resolved this executor. On the request
+    /// path that scope holds exactly one operation and is disposed after, so its unit of work is
+    /// already isolated. A non-request caller that reuses one scope across operations must use
+    /// <see cref="ExecuteIsolatedAsync"/> instead — though a blocked attempt here now also clears
+    /// its own tracked writes, so a stray shared-context save cannot flush them (Finding 1).</remarks>
     public async Task<OperationResponse> ExecuteAsync(
         string operationId, JsonElement body, OperationContext context, CancellationToken ct)
     {
@@ -162,6 +191,7 @@ public sealed class OperationExecutor(
             // its commit is independent of the discarded attempt. A parking failure propagates:
             // answering "parked for approval" without a durable envelope would be a lie.
             await transaction.RollbackAsync(ct);
+            db.ChangeTracker.Clear();   // discard this attempt's tracked writes (Sol re-review, Finding 1)
             foreach (var work in gateContext.ParkedWork)
                 await PinnedScope.RunAsync(services, context.TenantId.Value, work, ct);
             return Fail(context, [.. gateResult.Findings]);
@@ -232,6 +262,7 @@ public sealed class OperationExecutor(
         if (blocked)
         {
             await transaction.RollbackAsync(ct);
+            db.ChangeTracker.Clear();   // discard this attempt's tracked writes (Sol re-review, Finding 1)
             return new OperationResponse(
                 null,
                 Resolve(findings, context),
@@ -255,6 +286,7 @@ public sealed class OperationExecutor(
         {
             // A genuine optimistic-concurrency conflict on a versioned row this operation wrote.
             await transaction.RollbackAsync(ct);
+            db.ChangeTracker.Clear();   // discard this attempt's tracked writes (Sol re-review, Finding 1)
             return Fail(context, ConcurrencyFindings.VersionConflict.Create());
         }
         catch (DbUpdateException ex) when (ct.IsCancellationRequested is false
@@ -267,6 +299,7 @@ public sealed class OperationExecutor(
             // is a real failure and propagates uncaught rather than masquerading as a retryable
             // version conflict (Sol review, Finding 4).
             await transaction.RollbackAsync(ct);
+            db.ChangeTracker.Clear();   // discard this attempt's tracked writes (Sol re-review, Finding 1)
             return Fail(context, ConcurrencyFindings.VersionConflict.Create());
         }
 
