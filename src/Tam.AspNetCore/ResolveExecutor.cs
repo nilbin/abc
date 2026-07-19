@@ -38,23 +38,9 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
             return (null, PipelineFindings.InvalidInput.Create());
         }
 
-        var merged = DerivationResult.Empty;
-        foreach (var derivation in model.DerivationsForOperation(operation.Id))
-        {
-            if (request.Changed is { Length: > 0 } changed &&
-                derivation.DependsOn.Count > 0 &&
-                !derivation.DependsOn.Intersect(changed).Any())
-            {
-                continue;
-            }
-
-            var args = operations.BindParameters(derivation.Method, input, context, ct);
-            var invocation = derivation.Method.Invoke(null, args)!;
-            var result = invocation is Task<DerivationResult> task
-                ? await task
-                : (DerivationResult)invocation;
-            merged = merged.Merge(result);
-        }
+        // The SAME operation-owned derivation run submit uses (docs/40), so the requiredness the
+        // form shows and the requiredness submit enforces can never disagree.
+        var merged = await operations.RunDerivationsAsync(operation, input, context, request.Changed, ct);
 
         object? FieldValue(string wireName)
         {
@@ -69,7 +55,10 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
             var fieldModel = operation.InputFields.First(f => f.WireName == config.WireName);
             var visible = config.VisibleWhen is null || PxBinary.Truthy(config.VisibleWhen.Evaluate(FieldValue));
             var required = fieldModel.Required
-                || (config.RequiredWhen is not null && PxBinary.Truthy(config.RequiredWhen.Evaluate(FieldValue)));
+                || (config.RequiredWhen is not null && PxBinary.Truthy(config.RequiredWhen.Evaluate(FieldValue)))
+                // Operation-owned requiredness (docs/40): the field is required if any derivation's
+                // Require() rule holds for it — the same authoritative rule submit enforces.
+                || merged.Required.Any(r => r.When && r.Field == config.WireName);
 
             fields[config.WireName] = new ResolvedFieldState(
                 visible,

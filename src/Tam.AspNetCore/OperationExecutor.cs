@@ -120,11 +120,22 @@ public sealed class OperationExecutor(
         var structural = ValidateStructural(operation, input);
         // Only the SELECTED form's requiredness tightening applies (docs/40) — a direct/MCP/
         // integration call (formId null) is bound by the operation contract alone, never by a
-        // union of every form's RequiredWhen (Sol re-review, Finding 2). Operation-owned
-        // authoritative requiredness rides the operation's derivations (enforced further below).
+        // union of every form's RequiredWhen (Sol re-review, Finding 2).
         structural.AddRange(SelectedFormRequired(operation, input, formId));
         if (structural.Any(f => f.Severity == FindingSeverity.Error))
             return Fail(context, [.. structural]);
+
+        // Operation-owned AUTHORITATIVE requiredness (docs/40): run the operation's derivations and
+        // enforce their Require() outputs for EVERY caller — the canonical contract, with the
+        // domain-specific finding preserved (e.g. orders.project-required). Advisory outputs
+        // (suggestions, warnings, option ordering) are consumed by resolve and IGNORED here:
+        // authority is a property of the output, not of the derivation method.
+        var derived = await RunDerivationsAsync(operation, input, context, changed: null, ct);
+        var required = derived.Required
+            .Where(r => r.When && FieldEmpty(operation, input, r.Field))
+            .Select(r => r.Finding).ToList();
+        if (required.Count > 0)
+            return Fail(context, [.. required]);
 
         // Plugin gates (docs/22 P2): typed preconditions in TWO phases, run only for tenants
         // with the owning plugin active; within each phase, operation-specific gates run before
@@ -388,13 +399,8 @@ public sealed class OperationExecutor(
         {
             if (config.RequiredWhen is not { } predicate
                 || !PxBinary.Truthy(predicate.Evaluate(FieldValue))) continue;
-            var field = operation.InputFields.FirstOrDefault(f => f.WireName == config.WireName);
-            if (field is null) continue;
-            var value = ReflectionCache.Property(operation.InputType, field.MemberName).GetValue(input);
-            var effective = field.IsChangeSet && value is not null
-                ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
-                : value;
-            if (IsEmpty(effective))
+            if (operation.InputFields.Any(f => f.WireName == config.WireName)
+                && FieldEmpty(operation, input, config.WireName))
                 findings.Add(ValidationFindings.Required.At(config.WireName));
         }
         return findings;
@@ -461,6 +467,42 @@ public sealed class OperationExecutor(
             ?? throw new InvalidOperationException(
                 $"TAM004: {operation.Id} Execute must return Task<Result> or Task<Result<T>>, not a plain Task.");
         return (Result)resultProperty.GetValue(task)!;
+    }
+
+    /// <summary>Runs the OPERATION's derivations (docs/40) and merges their results — the ONE place
+    /// both resolve and submit evaluate derivations, so their authoritative outputs (requiredness,
+    /// blocking findings) can never disagree. <paramref name="changed"/> limits the run to
+    /// derivations whose dependencies were touched (resolve's incremental path); pass null to run
+    /// them all (submit, and a fresh resolve).</summary>
+    public async Task<DerivationResult> RunDerivationsAsync(
+        OperationDefinition operation, object input, OperationContext context,
+        string[]? changed, CancellationToken ct)
+    {
+        var merged = DerivationResult.Empty;
+        foreach (var derivation in model.DerivationsForOperation(operation.Id))
+        {
+            if (changed is { Length: > 0 } && derivation.DependsOn.Count > 0
+                && !derivation.DependsOn.Intersect(changed).Any())
+                continue;
+            var args = BindParameters(derivation.Method, input, context, ct);
+            var invocation = derivation.Method.Invoke(null, args)!;
+            var result = invocation is Task<DerivationResult> task ? await task : (DerivationResult)invocation;
+            merged = merged.Merge(result);
+        }
+        return merged;
+    }
+
+    /// <summary>Wire-name field emptiness, unwrapping a change set — the shared check behind form
+    /// tightening (<see cref="SelectedFormRequired"/>) and operation-owned requiredness.</summary>
+    private static bool FieldEmpty(OperationDefinition operation, object input, string wireName)
+    {
+        var field = operation.InputFields.FirstOrDefault(f => f.WireName == wireName);
+        if (field is null) return false;
+        var value = ReflectionCache.Property(operation.InputType, field.MemberName).GetValue(input);
+        var effective = field.IsChangeSet && value is not null
+            ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
+            : value;
+        return IsEmpty(effective);
     }
 
     internal object?[] BindParameters(
