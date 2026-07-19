@@ -92,9 +92,13 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   framework projects dogfood it. Tenant assignment is likewise automatic — a `SaveChanges`
   interceptor stamps `TenantId` on inserted `ITenantScoped` rows from the ambient tenant, so
   operations never write it by hand (verified on the wire for framework and domain entities).
-- **Authorization (D1, first layer)**: role-based actors (admin/dispatcher/viewer via X-Demo-Role),
-  pipeline 403s with localized findings, actor permissions in the manifest overlay, and the UI
-  hides ungranted actions (verified: viewer sees no create/complete/custom-fields surfaces).
+- **Authorization (D1, first layer)**: role-based actors, pipeline 403s with localized findings,
+  actor permissions in the manifest overlay, and the UI hides ungranted actions (verified: viewer
+  sees no create/complete/custom-fields surfaces). NOTE: the `X-Demo-Role` header was the ORIGINAL
+  stand-in for identity in this layer; it has since been replaced by real authentication — the
+  embedded OpenIddict server (Auth Code + PKCE for humans, client credentials for agents) resolves
+  the actor and active-tenant membership (see the Auth section of the capability matrix). D1 is the
+  authorization layer that rides on top of whichever `IActorProvider` supplies the actor.
 - **Live refresh (D5), now cross-instance**: committed effects broadcast over `/api/events` SSE;
   grids subscribe and auto-refresh debounced (verified: subscriber received entity-modified during
   an edit). Fan-out is behind `IEffectBackplane` — in-process by default, a Postgres `LISTEN/NOTIFY`
@@ -1039,6 +1043,28 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   baseline (orders/work-orders records carry display "page", customers "modal"), Playwright —
   the order record renders as a full routed page (back button + tabs, no modal), Back returns
   to the grid, customers still opens the modal, field mode intact, zero page errors.
+- **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
+  re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
+  every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
+  a malformed operation body now answers an invalid-input envelope not a 500; the executor
+  normalizes an absent body for every caller; MCP guards non-object `params` and a missing
+  `arguments` (no 500 past the JSON-RPC catch); a non-array integration payload answers
+  `integrations.expected-array` (400) not an empty-results 200; the view executor fails closed on
+  in-memory extension filters/sorts and on unknown query params (a typo'd `?statuz=` no longer
+  returns the unfiltered set); a new MCP001 build gate rejects colliding tool names. (2) EF/PROVIDER
+  SEAMS — the idempotency-record save uses the unique-violation classifier (a connection/FK fault is
+  no longer misread as an idempotency race); the Postgres SQLSTATE classifier moved to a provider-
+  core `AddTamPostgres`, independent of the optional SSE backplane; `OrderNumberSequence` is now
+  `ITenantScoped`, so the global filter and RLS backstop cover it and the manual predicate is gone.
+  (3) UNIT-OF-WORK ISOLATION — every rollback path clears the change tracker (a blocked attempt
+  leaves no residue on its context), a sanctioned `ExecuteIsolatedAsync` is the named path for
+  non-request callers, the inbox routes through it (mapping now inside the row scope), and a
+  regression test pins that a blocked write-then-reject leaves nothing behind. Verified: suites 196
+  + 40, the full wire matrix GREEN on fresh SQLite AND Postgres (94 checks each), and a Postgres
+  concurrency probe (25 parallel creates → 25 unique, contiguous order numbers). OPEN: the deeper
+  Finding-2 architecture — moving authoritative conditional requiredness off form bindings onto the
+  operation/input model — is a framework-API decision left for an explicit call, since both existing
+  cases are already enforced by their domain handlers with better findings.
 - **Sol review round — 10 findings, all confirmed against real code, all fixed**: an external
   technical review of the newest surfaces. Four verification agents confirmed every finding
   before a line changed. Fixed top-down by severity: (1, Critical) INBOX ROLLBACK LEAK — one

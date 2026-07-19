@@ -188,10 +188,13 @@ The PKCE switch (docs: auth) must encode identity per the choice above, so it wa
 - Option 2/3: the token stays tenant-rooted (closer to today's `tam:tenant`), with guest tenants
   listed for Option 2.
 
-**Decision D-H2 — account ownership.** Pending (this doc's open question). Recommendation: **Option 1**,
-because requirement 2 (cross-hierarchy access) is a hard requirement and only Option 1 meets it
-without contortion, and it composes cleanly with the hierarchy in Part A (memberships attach at any
-node; roll-up is the Part-A inherited scope).
+**Decision D-H2 — account ownership. DECIDED: Option 1 — BUILT.** Chosen because requirement 2
+(cross-hierarchy access) is a hard requirement and only Option 1 meets it without contortion, and it
+composes cleanly with the hierarchy in Part A (memberships attach at any node; roll-up is the Part-A
+inherited scope). Now implemented and wire-verified: platform-global `Account` + `TenantMembership`,
+`ClaimsActorProvider` resolving account → active-tenant membership → roles, and account-subject
+tokens from the embedded OpenIddict server (Sol re-review, Finding 10 — this decision is no longer
+open; the migration below is the record of how it landed, not pending work).
 
 ## Migration & blast radius (Option 1)
 
