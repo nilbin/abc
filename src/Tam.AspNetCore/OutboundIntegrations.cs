@@ -13,6 +13,8 @@ public static class OutboundFindings
     public static readonly FindingFactory InvalidSpec = Finding.Error("integrations.invalid-spec");
     public static readonly FindingFactory NotFound = Finding.Error("integrations.dead-letter-not-found");
     public static readonly FindingFactory MalformedPayload = Finding.Error("integrations.malformed-payload");
+    // Well-formed JSON, wrong shape: an inbound integration expects a JSON array of source rows.
+    public static readonly FindingFactory ExpectedArray = Finding.Error("integrations.expected-array");
 }
 
 /// <summary>The concrete run context handed to an outbound handler (docs/25).</summary>

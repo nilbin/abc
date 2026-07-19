@@ -484,6 +484,7 @@ public sealed partial class TamModelBuilder
         VerifyPages(model);
         VerifyLookups(model);
         VerifyEnumOptions(model);
+        VerifyMcpToolNames(model);
         VerifyLocalization(model, catalogs);
         return model;
     }

@@ -22,6 +22,13 @@ public sealed class OperationExecutor(
         if (!model.Operations.TryGetValue(operationId, out var operation))
             return Fail(context, PipelineFindings.UnknownOperation.With(("operation", operationId)));
 
+        // An absent body (a default/Undefined JsonElement — e.g. an MCP tools/call with no
+        // "arguments") would throw at the first GetRawText below. Normalize it to an invalid-input
+        // finding here so EVERY caller — HTTP, MCP, integration, internal — fails closed, not with
+        // an unhandled exception (Sol re-review, boundary A/MCP-B).
+        if (body.ValueKind == JsonValueKind.Undefined)
+            return Fail(context, PipelineFindings.InvalidInput.Create());
+
         // Inactive plugin → the operation does not exist for this tenant (docs/22): checked
         // before authorization so the answer is indistinguishable from an unknown id.
         if (!await ActivationCache.ContributionExistsAsync(
@@ -292,10 +299,14 @@ public sealed class OperationExecutor(
             {
                 await db.SaveChangesAsync(ct);
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex) when (ct.IsCancellationRequested is false
+                && services.GetService<ITamDbErrorClassifier>()?.IsUniqueViolation(ex) == true)
             {
-                // Concurrent identical request won the unique-key race: this attempt rolls
-                // back entirely and the stored outcome is replayed (or rejected on mismatch).
+                // Concurrent identical request won the idempotency-key UNIQUE race: this attempt
+                // rolls back entirely and the stored outcome is replayed (or rejected on mismatch).
+                // Any OTHER DbUpdateException here — connection fault, FK, check, not-null — is a
+                // real failure and propagates rather than masquerading as an idempotency race
+                // (Sol re-review, boundary 4B: mirror the main save path's classifier guard).
                 await transaction.RollbackAsync(ct);
                 db.ChangeTracker.Clear();
                 var winner = await db.Set<IdempotencyRecord>().FindAsync(

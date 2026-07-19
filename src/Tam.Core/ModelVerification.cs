@@ -559,6 +559,33 @@ public sealed partial class TamModelBuilder
                 $"PLG001: plugin contributions outside their namespace: {string.Join("; ", violations)}.");
     }
 
+    /// <summary>MCP001: every operation, form ".resolve" and view projects to a DISTINCT MCP tool
+    /// name. Tool names collapse '.' and '-' to '_' (the reverse mapping is a lookup, not string
+    /// surgery), so ids differing only in those separators — orders.create-special vs
+    /// orders.create_special vs orders-create.special — would share one tool name; tools/list would
+    /// advertise duplicates and a call would route to whichever id enumerates first (Sol re-review,
+    /// MCP C). Caught at build so an ambiguous agent surface can never ship.</summary>
+    private static void VerifyMcpToolNames(TamModel model)
+    {
+        static string ToolName(string id) => id.Replace('.', '_').Replace('-', '_');
+        var byName = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        void Add(string toolName, string label)
+        {
+            if (!byName.TryGetValue(toolName, out var list)) byName[toolName] = list = [];
+            list.Add(label);
+        }
+        foreach (var o in model.Operations.Values) Add(ToolName(o.Id), $"operation '{o.Id}'");
+        foreach (var f in model.Forms.Values) Add(ToolName(f.Id) + "_resolve", $"form '{f.Id}'.resolve");
+        foreach (var v in model.Views.Values) Add(ToolName("views." + v.Id), $"view '{v.Id}'");
+
+        var collisions = byName.Where(kv => kv.Value.Count > 1)
+            .Select(kv => $"'{kv.Key}' ⇐ {string.Join(", ", kv.Value)}")
+            .ToList();
+        if (collisions.Count > 0)
+            throw new InvalidOperationException(
+                $"MCP001: MCP tool name collision(s): {string.Join("; ", collisions)}.");
+    }
+
     /// <summary>L10N001: every label key the model references must exist in the default culture.</summary>
     /// <summary>LOOKUP001: a [Lookup] view must exist — a picker over a missing view is a
     /// dead control on every form that uses the type (docs/34 M5).</summary>

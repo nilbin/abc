@@ -13,6 +13,9 @@ namespace Tam.AspNetCore;
 /// </summary>
 public static class McpEndpoint
 {
+    // A process-lifetime empty JSON object, the stand-in for an omitted tools/call "arguments".
+    private static readonly JsonElement EmptyObject = JsonDocument.Parse("{}").RootElement;
+
     public static async Task<IResult> Handle(HttpContext http, CancellationToken ct)
     {
         var model = http.RequestServices.GetRequiredService<TamModel>();
@@ -143,11 +146,19 @@ public static class McpEndpoint
     private static async Task<object> Call(
         HttpContext http, TamModel model, JsonElement request, CancellationToken ct)
     {
+        // params must be an object before any property lookup — a JSON null or array would make
+        // TryGetProperty throw InvalidOperationException, which escapes the JSON-RPC error path
+        // as a 500 (Sol re-review, MCP A).
         if (request.TryGetProperty("params", out var @params) is false
+            || @params.ValueKind != JsonValueKind.Object
             || @params.TryGetProperty("name", out var nameEl) is false
             || nameEl.GetString() is not { } name)
-            throw new JsonRpcException(-32602, "Invalid params: missing tool name");
-        var args = @params.TryGetProperty("arguments", out var a) ? a : default;
+            throw new JsonRpcException(-32602, "Invalid params: expected an object with a tool name");
+        // A missing/undefined "arguments" is a valid no-arg call — substitute an empty object, never
+        // a default (Undefined) JsonElement, which would throw at GetRawText downstream (MCP B).
+        var args = @params.TryGetProperty("arguments", out var a) && a.ValueKind != JsonValueKind.Undefined
+            ? a
+            : EmptyObject;
         var context = TamAspNetCore.BuildContext(http, model);
 
         object? payload;

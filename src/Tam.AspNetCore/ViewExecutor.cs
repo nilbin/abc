@@ -202,6 +202,34 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         var isNpgsql = (services.GetService(typeof(ITamDb)) as ITamDb)?
             .Db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
 
+        // Fail closed on requests this view cannot serve (Sol re-review, boundaries E + 6) — the
+        // same stance the bind-time ext.* validation already takes for unknown fields/operators.
+        //
+        // (E) Extension filters/sorts need SQL translation of the converted JSON column, so an
+        // in-memory-backed view (no EF async provider) cannot enforce them. Reject rather than
+        // silently drop them and answer an unfiltered/unsorted 200.
+        if ((extensionFilters.Count > 0 || extensionSort is not null)
+            && queryable is IQueryable typedSource
+            && typedSource.Provider is not Microsoft.EntityFrameworkCore.Query.IAsyncQueryProvider)
+            return (null, PipelineFindings.InvalidInput.Create());
+
+        // (6) An unknown query parameter — a typo'd filter like ?statuz=done — must not return the
+        // UNFILTERED set. Accept only the Query record's fields, declared filters (+ their
+        // .from/.to/.contains twins), ext.* fields, and the framework's own keys.
+        var allowedKeys = new HashSet<string>(StringComparer.Ordinal)
+            { "sort", "dir", "page", "pageSize", "culture", "actAs" };
+        foreach (var parameter in view.QueryType.GetConstructors().MaxBy(c => c.GetParameters().Length)!.GetParameters())
+            allowedKeys.Add(Naming.Camel(parameter.Name!));
+        foreach (var field in view.Capabilities.Filterable)
+        {
+            allowedKeys.Add(field);
+            allowedKeys.Add($"{field}.from");
+            allowedKeys.Add($"{field}.to");
+            allowedKeys.Add($"{field}.contains");
+        }
+        if (query.Keys.Any(k => !allowedKeys.Contains(k) && !k.StartsWith("ext.", StringComparison.Ordinal)))
+            return (null, PipelineFindings.InvalidInput.Create());
+
         // One closed generic per view result type — memoized, not built per request.
         var run = RunMethods.GetOrAdd(view.ResultType, t => RunMethod.MakeGenericMethod(t));
         var task = (Task<ViewResponse>)run.Invoke(

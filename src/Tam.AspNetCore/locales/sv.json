@@ -59,6 +59,7 @@
   "integrations.dead-letter-not-found": "Ingen stoppad post med det id:t.",
   "integrations.invalid-spec": "Ogiltigt schema (t.ex. every:15m eller daily:02:00).",
   "integrations.malformed-payload": "Integrationens data är inte giltig JSON.",
+  "integrations.expected-array": "Integrationen förväntar sig en JSON-lista med rader.",
   "integrations.not-schedulable": "Integrationen {integration} kan inte schemaläggas.",
   "integrations.unknown": "Okänd integration: {integration}.",
   "labels.action": "Åtgärd",

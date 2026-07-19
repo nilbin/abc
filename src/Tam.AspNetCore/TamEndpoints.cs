@@ -22,8 +22,20 @@ public static partial class TamAspNetCore
         app.MapPost("/api/operations/{operationId}", async (
             string operationId, HttpContext http, OperationExecutor executor, CancellationToken ct) =>
         {
-            var body = await JsonSerializer.DeserializeAsync<JsonElement>(http.Request.Body, TamJson.Options, ct);
             var context = BuildContext(http, model);
+            JsonElement body;
+            try
+            {
+                body = await JsonSerializer.DeserializeAsync<JsonElement>(http.Request.Body, TamJson.Options, ct);
+            }
+            catch (JsonException)
+            {
+                // A malformed or empty body is a client error — answer the same invalid-input
+                // findings envelope the resolve/integration/MCP endpoints give, never a 500
+                // (Sol re-review, boundary A).
+                return FindingsResult(model, context,
+                    PipelineFindings.InvalidInput.Create(), StatusCodes.Status400BadRequest);
+            }
             var response = await executor.ExecuteAsync(operationId, body, context, ct);
             return Results.Json(response, TamJson.Options, statusCode: StatusFor(response));
         });
@@ -139,6 +151,12 @@ public static partial class TamAspNetCore
                 // A partner posting malformed JSON is a client error, not a server fault.
                 return FindingsResult(model, context, OutboundFindings.MalformedPayload.Create());
             }
+            // Well-formed JSON but not an array of rows: tell the partner its payload SHAPE was
+            // wrong, rather than answering 200 with an empty result set that reads as "accepted,
+            // nothing to do" (Sol re-review, boundary B).
+            if (payload.ValueKind != JsonValueKind.Array)
+                return FindingsResult(model, context,
+                    OutboundFindings.ExpectedArray.Create(), StatusCodes.Status400BadRequest);
             var results = await PluginIntegrationRunner.RunAsync(integration, payload, context, tam.Db, ct);
             return Results.Json(new { results }, TamJson.Options);
         });

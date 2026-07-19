@@ -165,15 +165,14 @@ internal static class InboxProcessor
         var tenant = context.TenantId.Value;
         foreach (var record in retryable)
         {
-            var input = await map(record.PayloadJson, context, ct);
-            var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
-
-            // Unit-of-work isolation (Sol review, Finding 1): each operation runs in its OWN
-            // scope + DbContext. A rolled-back operation's tracked mutations die with the scope,
-            // so this processor's shared inbox context can never flush them on its later
-            // SaveChanges, and they cannot leak into the next record's extension-target
-            // selection either. The inbox bookkeeping below stays on the outer `db`.
-            var response = await PinnedScope.RunAsync(context.Services, tenant, (rowServices, rct) =>
+            // Unit-of-work isolation (Sol review, Finding 1): each row's mapping AND operation run
+            // in its OWN scope + DbContext. A rolled-back operation's tracked mutations die with the
+            // scope, so this processor's shared inbox context can never flush them on its later
+            // SaveChanges, and they cannot leak into the next record's extension-target selection.
+            // Mapping runs INSIDE the scope too (Sol re-review, boundary C): a plugin's map delegate
+            // gets the row scope's services, never the outer request's unrestricted provider. The
+            // inbox bookkeeping below stays on the outer `db`.
+            var response = await PinnedScope.RunAsync(context.Services, tenant, async (rowServices, rct) =>
             {
                 var rowContext = new OperationContext
                 {
@@ -185,7 +184,9 @@ internal static class InboxProcessor
                     CorrelationId = context.CorrelationId,
                     Services = rowServices,
                 };
-                return rowServices.GetRequiredService<OperationExecutor>()
+                var input = await map(record.PayloadJson, rowContext, rct);
+                var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
+                return await rowServices.GetRequiredService<OperationExecutor>()
                     .ExecuteAsync(operationId, body, rowContext, rct);
             }, ct);
             var failed = response.Findings.Any(f => f.Severity == FindingSeverity.Error);

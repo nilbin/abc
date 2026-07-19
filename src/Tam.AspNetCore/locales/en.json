@@ -59,6 +59,7 @@
   "integrations.dead-letter-not-found": "No dead-lettered item with that id.",
   "integrations.invalid-spec": "Invalid schedule (e.g. every:15m or daily:02:00).",
   "integrations.malformed-payload": "The integration payload is not valid JSON.",
+  "integrations.expected-array": "The integration expects a JSON array of rows.",
   "integrations.not-schedulable": "The integration {integration} cannot be scheduled.",
   "integrations.unknown": "Unknown integration: {integration}.",
   "labels.action": "Action",
