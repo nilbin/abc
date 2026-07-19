@@ -88,6 +88,7 @@ nav:
   - Process:
       - 19-decisions.md
       - 29-code-structure.md
+      - 40-operation-input-contract.md
       - 38-tooling.md
       - 34-field-service-domain.md
       - 16-packages-and-layout.md

@@ -59,6 +59,7 @@ https://raw.githubusercontent.com/nilbin/abc/main/docs/ (append the file name be
 
 ## Process
 
+- [Operation input contract](https://nilbin.github.io/abc/40-operation-input-contract/): operations own canonical input semantics (structural validation, owned derivations, authoritative conditional requiredness via Require()); forms are projections that may tighten but never weaken; candidate sets are Views with authoritative membership (designed) (40-operation-input-contract.md)
 - [Tooling](https://nilbin.github.io/abc/38-tooling/): `dotnet tam` — regenerate/verify the committed model artifacts (manifest, host contract, plugin slices, TS client) for any host; tam.json layout (38-tooling.md)
 - [Packages & layout](https://nilbin.github.io/abc/16-packages-and-layout/): the design-era NuGet packaging sketch (16-packages-and-layout.md)
 - [Implementation phases](https://nilbin.github.io/abc/17-implementation-phases/): the original build plan (17-implementation-phases.md)

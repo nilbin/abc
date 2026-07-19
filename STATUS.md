@@ -1043,6 +1043,24 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   baseline (orders/work-orders records carry display "page", customers "modal"), Playwright —
   the order record renders as a full routed page (back button + tabs, no modal), Back returns
   to the grid, customers still opens the modal, field mode intact, zero page errors.
+- **Operations own the input contract (docs/40) — Sol's canonicalization plan**: the architectural
+  fix behind Finding 2, run as a phased arc. (1) DERIVATIONS ARE OPERATION-OWNED: resolved to their
+  operation and validated at build (DER001–005), not discovered by an input type two operations
+  might share; resolve/manifest look them up by operation id. (2) FORMS ARE PROJECTIONS: the
+  every-form RequiredWhen scan is gone — a form's requiredness is TIGHTENING applied only when that
+  form is named (the single operation endpoint takes an optional `?form=`; no second submit door, so
+  MCP/integrations stay on the plain operation contract). (3) OUTPUTS CARRY THEIR OWN AUTHORITY:
+  DerivationResult.Require(field, when, finding) is authoritative conditional requiredness — resolve
+  shows the indicator, submit BLOCKS with the domain finding for EVERY caller; Suggest/warnings/
+  option ordering stay advisory. RunDerivationsAsync is the one place resolve and submit evaluate an
+  operation's derivations, so they can't disagree. (5a) SAMPLE MIGRATION: orders.create's
+  project-required moved off the create form onto the operation (a Require() derivation preserving
+  orders.project-required); rules.define's messages stays as genuine form tightening. Verified:
+  suites 196 + 43 (FormBindingTests pin that the operation rule governs a direct AND a
+  through-the-form call identically, while form tightening applies only through its own form), the
+  full wire matrix GREEN on fresh SQLite AND Postgres (94 checks each). DESIGNED next (docs/40 Phase
+  4): candidate sets as Views with authoritative submit-time membership (ViewExecutor.ContainsAsync
+  Exists over the base query, so the front end's rendered page is never proof of validity).
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
