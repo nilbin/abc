@@ -16,8 +16,11 @@ export interface OperationFormProps {
   initialExtensions?: Record<string, unknown>;
   /** The RECORD this form edits (Sol re-review round 4, Finding 5). Edit state resets and re-resolves
    *  when this changes — NOT when the initialValues OBJECT identity changes (a parent re-render mints a
-   *  new object for the same record, which would otherwise discard the user's edits). Pass the row id
-   *  for an edit form; omit for a create form (or remount with a React `key` per record instead). */
+   *  new object for the same record, which would otherwise discard the user's edits). The corollary
+   *  (round 6, F1): NEW prefill values for the SAME instanceKey are ignored until instanceKey changes —
+   *  the frozen baseline and the user's edits are kept. To adopt fresh server data as the baseline,
+   *  change the identity, e.g. instanceKey={`${id}:${version}`}. Pass the row id for an edit form; omit
+   *  for a create form (or remount with a React `key` per record instead). */
   instanceKey?: string | number;
   onSuccess?: (response: OperationResponse) => void;
   submitLabel?: string;
@@ -140,9 +143,14 @@ export function OperationForm(props: OperationFormProps) {
         if (formDef.fields.find(x => x.name === f)?.changeSet) continue;
         input[f] = valuesRef.current[f] ?? null;
       }
+      // The change-membership signal is the CUMULATIVE touched set (Sol re-review round 6, F3), not
+      // just this batch: a derivation reading DerivationContext.WasChanged needs every field the user
+      // has touched this session, the resolve-time analogue of submit's present-field set. The resolve
+      // DECISION still gates on the batch (the serverDependencies check + debounce above).
+      const touchedNonExt = [...touchedRef.current].filter(f => !f.startsWith('ext:'));
       try {
         const resolved = await client.resolve(
-          props.form, input, changedFields, manifest.revision, { actAs: props.actAs });
+          props.form, input, touchedNonExt, manifest.revision, { actAs: props.actAs });
         if (sent === seq.current) applyResolved(resolved);
       } catch { /* resolve is advisory; submit re-validates authoritatively */ }
     }, 350);
@@ -165,13 +173,14 @@ export function OperationForm(props: OperationFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.form, props.instanceKey]);
 
-  // FULL initial resolve on mount / form / record / acting-node / manifest change (Sol re-review,
-  // Findings 4 + 2 + 5): a prefilled form must show operation-derived requiredness, lookup descriptors
-  // and findings BEFORE any field is touched — in the SAME acting tenant submit uses — and a
-  // context-only derivation (no field dependencies) is unreachable through the change path. Built from
-  // `initialRef` directly (not the just-reset values, whose update is async, and not `initial`'s
-  // object identity), so a change-set field carries its {original, value} shape. Gated on
-  // hasServerDerivations.
+  // FULL baseline resolve on mount / form / record switch (Sol re-review, Findings 4 + 2 + 5): a
+  // prefilled form must show operation-derived requiredness, lookup descriptors and findings BEFORE
+  // any field is touched, and a context-only derivation (no field dependencies) is unreachable through
+  // the change path. Built from `initialRef` directly (the just-frozen baseline, not the async-updating
+  // values, not `initial`'s object identity), so a change-set field carries its {original, value}
+  // shape. Deps match the reset effect — the SAME record the reset just installed — and deliberately
+  // EXCLUDE actAs/revision: refreshing those must preserve edits (the effect below), not rebuild from
+  // the pristine baseline and discard them (Sol re-review round 6, F1). Gated on hasServerDerivations.
   useEffect(() => {
     if (!formDef.hasServerDerivations) return;
     const sent = ++seq.current;
@@ -189,7 +198,27 @@ export function OperationForm(props: OperationFormProps) {
       } catch { /* advisory */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.form, props.instanceKey, props.actAs, manifest.revision]);
+  }, [props.form, props.instanceKey]);
+
+  // RE-RESOLVE the current edit state when the acting node or manifest revision changes (Sol re-review
+  // round 6, F1) — WITHOUT discarding edits. The old single effect rebuilt from the frozen baseline on
+  // these deps too, so a background manifest refresh or an actAs switch mid-edit silently reverted every
+  // unsubmitted change. This effect skips the mount (the baseline effect already resolved) and sends
+  // currentInput() — the live {original,value} of every field — so edits survive the refresh.
+  const contextResolved = useRef(false);
+  useEffect(() => {
+    if (!formDef.hasServerDerivations) return;
+    if (!contextResolved.current) { contextResolved.current = true; return; }
+    const sent = ++seq.current;
+    const input = currentInput();
+    (async () => {
+      try {
+        const resolved = await client.resolve(props.form, input, [...touchedRef.current], manifest.revision, { actAs: props.actAs });
+        if (sent === seq.current) applyResolved(resolved);
+      } catch { /* advisory */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.actAs, manifest.revision]);
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current.push(key);

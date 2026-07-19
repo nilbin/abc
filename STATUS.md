@@ -1180,6 +1180,26 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   across the operation-owned contract, direct/form submission separation, resolve/submit parity, the
   lookup candidate architecture, edit partial-update with a frozen concurrency baseline, and the
   read-only derivation boundary sufficient for trusted application code.
+- **docs/40 re-review round 6 — edit-form effective state (3 findings, all confirmed against code,
+  then fixed)**: three gaps in how the EDIT form and its predicates saw effective state. (F1, HIGH)
+  the single full-resolve effect fired on `actAs`/`revision` too and rebuilt from the pristine
+  baseline snapshot, so a background manifest refresh or an `actAs` switch mid-edit silently discarded
+  every unsubmitted edit — split into a baseline effect (mount / `instanceKey`) and a context-refresh
+  effect (`actAs` / `revision`) that skips mount and re-resolves `currentInput()`, preserving edits;
+  docs/40's lifecycle bullet corrected (same-instance prefill changes are ignored until identity
+  changes). (F2, HIGH) portable form predicates read the raw property, so an edit field's `Change<T>`
+  object reached a `VisibleWhen`/`RequiredWhen` comparison instead of its value — added ONE shared
+  `EffectiveFieldValue` accessor (unwraps `Change<T>.Value`, leaves the semantic wrapper for
+  `PxBinary.Normalize`) used by both `ResolveExecutor` and `SelectedFormRequired`; and a new build gate
+  **FORM001** rejects a form `RequiredWhen` that references a change-set field (submit is sparse for
+  edit forms, so requiredness read from an untouched change field would flip on the wrong basis).
+  (F3, MEDIUM) a derivation could not tell a touched field from an untouched-but-initialized one —
+  added `DerivationContext.ChangedFields` + `WasChanged(field)`, threaded from the submit body's
+  present fields and the resolve request's touched set. Verified: suites 196 + 60 (a WasChanged probe
+  proving identical values differ only by change set; a FORM001 build-error test), structure + docs
+  gates pass, manifest additive-only (D4) and byte-unchanged, web typechecks, full wire matrix GREEN
+  on fresh SQLite AND Postgres (94 checks each). docs/40 stays COMPLETE — these harden the edit-form
+  projection of the same contract, they do not reopen it.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —

@@ -212,16 +212,32 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   partial-update semantics. **Consequence a derivation must respect** (Sol re-review round 5): a
   non-null `Change<T>` in a resolve evaluation does *not* mean the user changed that field — it may be
   the untouched current value. A derivation must read the **effective value** (the `.Value`), not
-  treat wrapper *presence* as "changed"; when change-membership actually matters, key off the
-  explicit `changed` field list, not `Change<T> != null`.
+  treat wrapper *presence* as "changed"; when change-membership actually matters, ask
+  `DerivationContext.WasChanged(field)` (Sol re-review round 6, F3) — the reliable signal, backed at
+  submit by the body's present fields and at resolve by the client's touched set, never by wrapper
+  presence. **Portable form predicates** (`VisibleWhen`/`RequiredWhen`) read through the same one
+  effective-value accessor, so an edit field's `{original, value}` is unwrapped to its value before a
+  predicate compares it — resolve and submit evaluate the identical scalar, and an edit form's
+  predicate behaves exactly as a create form's raw field does.
 - **Frozen concurrency baseline.** A `Change<T>`'s `original` is the value frozen when the form's
   `instanceKey` (its record identity) last changed, never the latest `initialValues` prop — a
   background refresh handing the same record a newer server value cannot silently rebase the
   concurrency baseline under an in-flight edit (which would let a stale edit overwrite a concurrent
   update without the intended field conflict). To adopt fresh server data as the baseline, the caller
   changes the identity, e.g. `instanceKey={`${id}:${version}`}`.
-- **Same lifecycle.** The form resets edit state on a new record identity and re-resolves on a
-  changed prefill, acting node, or manifest revision, so derived state never bleeds across records.
+- **Same lifecycle, edits preserved.** The form resets edit state and re-resolves the pristine
+  baseline only on a new record identity (`instanceKey`). A change of acting node or manifest revision
+  re-resolves the **current edit state** (`currentInput()`), not the baseline — so a background manifest
+  refresh or an `actAs` switch mid-edit refreshes derived state *without discarding unsubmitted edits*
+  (Sol re-review round 6, F1). The corollary: new prefill values for the *same* `instanceKey` are
+  ignored until the identity changes — the frozen baseline and the user's edits win. Derived state
+  never bleeds across records, and a refresh never silently reverts an edit.
+
+**A form's `RequiredWhen` may not reference a change-set field** (build error `FORM001`, Sol re-review
+round 6, F2). Submit is sparse — an untouched change field is omitted from the body — so requiredness
+read from one would evaluate against `null` at submit even when the record holds a value. Requiredness
+must key off a field the wire always carries; conditional logic over a change field's *value* belongs in
+a `[ServerDerivation]`, which sees the complete effective state.
 
 ## Non-goals
 

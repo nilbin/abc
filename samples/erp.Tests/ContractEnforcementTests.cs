@@ -278,4 +278,45 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
         Assert.Null(shaped.Error);
         Assert.Contains(shaped.Response!.Fields["description"].Findings, f => f.Code == "test.probe-rejected");
     }
+
+    [Fact]
+    public async Task WasChanged_reflects_the_change_set_not_wrapper_presence()
+    {
+        // IDENTICAL description value in both resolves — only the change set differs. A derivation
+        // reading DerivationContext.WasChanged must fire on the first and not the second (Sol re-review
+        // round 6, F3): resolve sends every initialized Change<T>, so wrapper presence is not the
+        // signal; the explicit touched list is.
+        var input = new
+        {
+            orderId = Guid.NewGuid(),
+            description = new { original = "old", value = BlockingProbeDerivations.WasChangedSentinel },
+        };
+
+        var changed = await actor.ResolveAsync("web.orders.edit", input, changed: ["description"]);
+        Assert.Null(changed.Error);
+        Assert.Contains(changed.Response!.Fields["description"].Findings, f => f.Code == "test.change-seen");
+
+        var untouched = await actor.ResolveAsync("web.orders.edit", input, changed: ["orderId"]);
+        Assert.Null(untouched.Error);
+        Assert.DoesNotContain(untouched.Response!.Fields["description"].Findings, f => f.Code == "test.change-seen");
+    }
+
+    [Fact]
+    public void A_form_requiredwhen_over_a_change_set_field_is_a_build_error()
+    {
+        // Submit is sparse for edit forms — an untouched change field is omitted — so a RequiredWhen
+        // keyed off one reads null at submit even when the record holds a value. FORM001 rejects it at
+        // build (Sol re-review round 6, F2) rather than shipping a requiredness that flips on the wrong
+        // basis. The real model is clean; only this deliberately-bad form trips it.
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            ErpModel.Builder()
+                .Form<EditOrderDetails.Input>("test.bad-edit-form", "orders.edit-details", form =>
+                {
+                    form.Field(x => x.OrderId).Renderer("hidden");
+                    form.Field(x => x.Description);
+                    form.Field(x => x.WorkAddress).RequiredWhen(x => x.Description != null);
+                })
+                .Build());
+        Assert.Contains("FORM001", ex.Message);
+    }
 }

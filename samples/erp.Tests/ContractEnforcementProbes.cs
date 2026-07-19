@@ -23,9 +23,11 @@ public static class BlockingProbeDerivations
     public const string MixedCandidateSentinel = "__mixed_candidate__";
     public const string OverwriteOptionsSentinel = "__overwrite_options__";
     public const string EditSentinel = "__edit_probe__";
+    public const string WasChangedSentinel = "__was_changed_probe__";
     public const string AllowedAddress = "Tillåtnagatan 1";
 
     public static readonly FindingFactory Rejected = Finding.Error("test.probe-rejected");
+    public static readonly FindingFactory ChangeSeen = Finding.Error("test.change-seen");
 
     [ServerDerivation("test.orders.create.block-probe")]
     public static DerivationResult BlockOnSentinel(CreateOrder.Input input, DerivationContext context) =>
@@ -39,6 +41,17 @@ public static class BlockingProbeDerivations
     public static DerivationResult EditChangeProbe(EditOrderDetails.Input input, DerivationContext context) =>
         input.Description?.Value?.Value == EditSentinel
             ? DerivationResult.FieldError(nameof(EditOrderDetails.Input.Description), Rejected)
+            : DerivationResult.Empty;
+
+    // The change-MEMBERSHIP signal (Sol re-review round 6, F3): the description value is identical in
+    // both resolves below, but the finding fires only when the caller's change set lists it. WasChanged
+    // — not wrapper presence — is the reliable "did the user touch this" signal, since resolve sends
+    // every initialized Change<T> whether touched or not.
+    [ServerDerivation("test.orders.edit.was-changed-probe")]
+    public static DerivationResult WasChangedProbe(EditOrderDetails.Input input, DerivationContext context) =>
+        input.Description?.Value?.Value == WasChangedSentinel
+            && context.WasChanged(nameof(EditOrderDetails.Input.Description))
+            ? DerivationResult.FieldError(nameof(EditOrderDetails.Input.Description), ChangeSeen)
             : DerivationResult.Empty;
 
     // Binds ProjectId to a lookup whose base filter key is misspelled — only under the sentinel, so

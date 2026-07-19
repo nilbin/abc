@@ -41,16 +41,19 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
         // The SAME operation-owned derivation run submit uses (docs/40): ALL derivations, every time,
         // so the complete field state resolve returns cannot report a requiredness or membership that
         // submit (which always runs them all) then contradicts (Sol re-review, Finding 4). request.
-        // Changed is still accepted on the wire (a future delta protocol would use it to return only
-        // changed field states), but it no longer prunes the run.
-        var merged = await operations.RunDerivationsAsync(operation, input, context, ct);
+        // Changed no longer prunes the run; it now carries the change-membership signal a derivation
+        // reads via DerivationContext.WasChanged (Sol re-review round 6, F3) — the fields the client
+        // has touched, the resolve-time analogue of submit's present-field set. (A future delta
+        // protocol would additionally use it to return only the changed field states.)
+        var touched = request.Changed is { } changed
+            ? changed.ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        var merged = await operations.RunDerivationsAsync(operation, input, context, ct, touched);
 
-        object? FieldValue(string wireName)
-        {
-            var property = operation.InputType.GetProperties()
-                .FirstOrDefault(p => Naming.Camel(p.Name) == wireName);
-            return property?.GetValue(input);
-        }
+        // The ONE effective-value accessor for portable predicates (Sol re-review round 6, F2):
+        // unwraps a Change<T> so an edit form's VisibleWhen/RequiredWhen sees the value, not the
+        // change wrapper — resolve evaluates the exact shape submit's SelectedFormRequired does.
+        object? FieldValue(string wireName) => OperationExecutor.EffectiveFieldValue(operation, input, wireName);
 
         var fields = new Dictionary<string, ResolvedFieldState>();
         foreach (var config in form.Fields)

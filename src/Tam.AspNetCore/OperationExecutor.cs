@@ -161,7 +161,13 @@ public sealed class OperationExecutor(
         // Derivations run structurally read-only and self-contained (Sol re-review, Finding 3): the
         // write-guard interceptor rejects any durable write and RunDerivationsAsync discards any
         // unsaved tracked mutation, on every exit path — so submit never inherits derivation writes.
-        var derived = await RunDerivationsAsync(operation, input, context, ct);
+        // The change set a derivation reads via DerivationContext.WasChanged (Sol re-review round 6,
+        // F3): at submit it is exactly the fields the body carries — a present field was submitted,
+        // an absent one was not (edit forms send only touched change fields).
+        var submittedFields = body.ValueKind == JsonValueKind.Object
+            ? body.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal)
+            : NoChangedFields;
+        var derived = await RunDerivationsAsync(operation, input, context, ct, submittedFields);
 
         var required = derived.Required
             .Where(r => r.When && FieldEmpty(operation, input, r.Field))
@@ -469,8 +475,7 @@ public sealed class OperationExecutor(
         var findings = new List<Finding>();
         if (form is null) return findings;
 
-        object? FieldValue(string wireName) => operation.InputType.GetProperties()
-            .FirstOrDefault(p => Naming.Camel(p.Name) == wireName)?.GetValue(input);
+        object? FieldValue(string wireName) => EffectiveFieldValue(operation, input, wireName);
 
         foreach (var config in form.Fields)
         {
@@ -555,7 +560,8 @@ public sealed class OperationExecutor(
     /// protocol — resolve returns only changed field states + the client merges — is the future
     /// optimization; until then, correctness over the round-trip cost.</summary>
     public async Task<DerivationResult> RunDerivationsAsync(
-        OperationDefinition operation, object input, OperationContext context, CancellationToken ct)
+        OperationDefinition operation, object input, OperationContext context, CancellationToken ct,
+        IReadOnlySet<string>? changedFields = null)
     {
         // Derivations are structurally READ-ONLY (Sol re-review, Finding 3) for the WHOLE evaluation,
         // shared by resolve and submit. The scope flag makes the DbContext's write-guard interceptor
@@ -572,7 +578,7 @@ public sealed class OperationExecutor(
             var merged = DerivationResult.Empty;
             foreach (var derivation in model.DerivationsForOperation(operation.Id))
             {
-                var args = BindParameters(derivation.Method, input, context, ct);
+                var args = BindParameters(derivation.Method, input, context, ct, changedFields);
                 var invocation = derivation.Method.Invoke(null, args)!;
                 var result = invocation is Task<DerivationResult> task ? await task : (DerivationResult)invocation;
                 merged = merged.Merge(result);
@@ -654,6 +660,24 @@ public sealed class OperationExecutor(
         return ValueWrapper.Unwrap(effective);
     }
 
+    /// <summary>The effective value of a field for PORTABLE PREDICATE evaluation (Sol re-review
+    /// round 6, F2): unwraps a Change&lt;T&gt; to its submitted .Value so an edit field — whose wire
+    /// shape is {original,value} and whose deserialized property is a Change&lt;T&gt; — feeds a
+    /// predicate the same scalar a create form's raw field would. The SEMANTIC wrapper is
+    /// deliberately left ON: <see cref="PxBinary"/>.Normalize unwraps it at evaluation, and a create
+    /// form passes the wrapper through unchanged, so edit and create forms evaluate the identical
+    /// shape. This is the ONE effective-value accessor every server portable predicate reads through
+    /// (resolve field state, selected-form requiredness). Null when the field is absent.</summary>
+    internal static object? EffectiveFieldValue(OperationDefinition operation, object input, string wireName)
+    {
+        var field = operation.InputFields.FirstOrDefault(f => f.WireName == wireName);
+        if (field is null) return null;
+        var value = ReflectionCache.Property(operation.InputType, field.MemberName).GetValue(input);
+        return field.IsChangeSet && value is not null
+            ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
+            : value;
+    }
+
     /// <summary>The submitted lookup key as a wire string for the membership Exists.</summary>
     private static string? LookupKey(OperationDefinition operation, object input, string wireName) =>
         EffectiveScalar(operation, input, wireName) switch
@@ -664,15 +688,19 @@ public sealed class OperationExecutor(
             var scalar => scalar.ToString(),
         };
 
+    private static readonly IReadOnlySet<string> NoChangedFields = new HashSet<string>(StringComparer.Ordinal);
+
     internal object?[] BindParameters(
-        MethodInfo method, object? input, OperationContext context, CancellationToken ct)
+        MethodInfo method, object? input, OperationContext context, CancellationToken ct,
+        IReadOnlySet<string>? changedFields = null)
     {
         return ReflectionCache.Parameters(method).Select(p =>
         {
             if (p.ParameterType == typeof(CancellationToken)) return (object?)ct;
             if (p.ParameterType == typeof(OperationContext)) return context;
             if (input is not null && p.ParameterType.IsInstanceOfType(input) && p.Position == 0) return input;
-            if (p.ParameterType == typeof(DerivationContext)) return new DerivationContext(context);
+            if (p.ParameterType == typeof(DerivationContext))
+                return new DerivationContext(context, changedFields ?? NoChangedFields);
             return services.GetService(p.ParameterType)
                 ?? throw new InvalidOperationException(
                     $"DI001: cannot bind parameter '{p.Name}' ({p.ParameterType.Name}) of {method.DeclaringType?.Name}.{method.Name}.");
@@ -694,5 +722,12 @@ public sealed class OperationExecutor(
 /// <summary>Context available to server derivations; services arrive via parameter injection. Note
 /// (docs/40): resolve sends every initialized Change&lt;T&gt; field — including untouched ones — so a
 /// non-null Change&lt;T&gt; here does NOT mean the user changed it. Read the effective value (.Value),
-/// not wrapper presence, and key off the explicit changed-field list when change-membership matters.</summary>
-public sealed record DerivationContext(OperationContext Operation);
+/// not wrapper presence, and key off <see cref="WasChanged"/> when change-membership matters.</summary>
+public sealed record DerivationContext(OperationContext Operation, IReadOnlySet<string> ChangedFields)
+{
+    /// <summary>Was this field part of the caller's change set (Sol re-review round 6, F3)? At
+    /// submit the set is the body's present fields; at resolve it is the fields the client has
+    /// touched. This is the RELIABLE change signal — wrapper presence is not, since resolve sends
+    /// every initialized Change&lt;T&gt;, touched or not. Matched by wire (camel) name.</summary>
+    public bool WasChanged(string field) => ChangedFields.Contains(Naming.Camel(field));
+}
