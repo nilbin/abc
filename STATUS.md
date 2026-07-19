@@ -1137,6 +1137,27 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   gained a resolve helper), web typechecks, manifest additive-only, full wire matrix GREEN on fresh
   SQLite AND Postgres (94 checks each — the guard lets RLS `SET` and read `SELECT`s through while
   blocking derivation writes). Derivation read-only is now structurally enforced, not just detected.
+- **docs/40 re-review round 4 — fail-closed write guard + full form parity (5 findings)**: round 3's
+  write guard classified by a first-token write-verb DENYLIST, which a leading comment, a WITH-CTE, a
+  second statement or CALL/EXEC/PRAGMA bypassed, and several edit/candidate paths still diverged from
+  submit. (F1) The guard now fails CLOSED — an allow-list: strip `--`/`/* */` comments, strip any
+  leading CTE, and require EVERY statement's verb to be SELECT/VALUES/TABLE, else reject; the RLS
+  session SET is a raw ADO command that bypasses the interceptor, so nothing framework-owned needs
+  whitelisting. docs/40 also narrows the guarantee honestly to "the ambient TAM DbContext is read-only
+  during derivations" (a derivation resolving a different service is outside it). (F2) Reactive resolve
+  keeps untouched Change<T> values — the resolve builder includes EVERY initialized change-set field
+  as {original, value:current}, so changing one field can't make derivations see the others as null and
+  drop a lookup/requiredness/finding; submit keeps its touched-only builder. (F3) Exactly ONE candidate
+  source per field (DER008 broadened): two lookups, two closed sets, a lookup + closed set, or advisory
+  options + a lookup fail model evaluation. (F4) actAs reaches the last server-backed renderers —
+  TamClient.upload and the reach picker's useView. (F5) record identity is an explicit `instanceKey`,
+  not the initialValues object reference (a parent re-render changed it and discarded edits); reset now
+  also cancels the pending debounce, stales in-flight resolves and clears lastChanged. Verified: suites
+  196 + 57 (comment-prefixed and CTE raw-write probes rejected with nothing committed; a two-candidate
+  probe rejected; plus the round-3 durable-save and Change<T> resolve probes), web typechecks, manifest
+  unchanged, full wire matrix GREEN on fresh SQLite AND Postgres (94 checks each — the fail-closed
+  classifier passes real derivation SELECTs, including RLS-scoped reads on Postgres, while blocking
+  writes). The write-guard is now fail-closed; the create/edit/cross-tenant form paths are consistent.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
