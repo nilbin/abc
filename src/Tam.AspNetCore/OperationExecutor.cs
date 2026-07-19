@@ -603,7 +603,9 @@ public sealed class OperationExecutor(
             {
                 var lookups = merged.Lookups.Count(l => l.Field == candidateField);
                 var closed = closedByField.GetValueOrDefault(candidateField);
-                var advisory = merged.Options.ContainsKey(candidateField) && closed == 0 ? 1 : 0;
+                // Options is now purely ADVISORY (RequireOneOf no longer writes it, Finding 2), so any
+                // entry is a distinct source: RequireOneOf(...).AddOptions(...) → closed 1 + advisory 1.
+                var advisory = merged.Options.ContainsKey(candidateField) ? 1 : 0;
                 if (lookups + closed + advisory > 1)
                     throw new InvalidOperationException(
                         $"DER008: operation '{operation.Id}' produced {lookups + closed + advisory} "
@@ -689,5 +691,8 @@ public sealed class OperationExecutor(
         findings.Select(f => model.Locales.Resolve(f, context.Culture)).ToList();
 }
 
-/// <summary>Context available to server derivations; services arrive via parameter injection.</summary>
+/// <summary>Context available to server derivations; services arrive via parameter injection. Note
+/// (docs/40): resolve sends every initialized Change&lt;T&gt; field — including untouched ones — so a
+/// non-null Change&lt;T&gt; here does NOT mean the user changed it. Read the effective value (.Value),
+/// not wrapper presence, and key off the explicit changed-field list when change-membership matters.</summary>
 public sealed record DerivationContext(OperationContext Operation);

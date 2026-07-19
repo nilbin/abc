@@ -182,6 +182,12 @@ interceptor pipeline, so nothing framework-owned needs whitelisting. **Scope of 
 covers the ambient TAM context a derivation reads through; a derivation that resolves a *different*
 service (an external API client, its own new DI scope) is outside it — the boundary is "the operation's
 DbContext is read-only during derivations," and a derivation computes admissibility, it does not write.
+This is the right proportion for *trusted application code* (Sol re-review round 5): the framework
+rejects `SaveChanges`, rejects ordinary EF write commands, and detects/clears tracked mutations — an
+**accidental-misuse boundary**, defence in depth, not a sandbox that makes intentionally-evasive code
+mathematically incapable of an external side effect. A provider-enforced read-only transaction or a
+separate read context is the layer to add *if* derivations ever become a less-trusted extension
+surface; it is not needed for the trusted-code model.
 
 ## The generated form submits through its binding
 
@@ -200,7 +206,20 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   parent's.
 - **Same wire shape.** One input builder shapes both resolve and submit payloads, so a `Change<T>`
   edit field carries its `{original, value}` object in resolve too — a raw scalar deserializes to
-  `invalid-input` and would leave stale derived state.
+  `invalid-input` and would leave stale derived state. Resolve sends every *initialized* change-set
+  field (including untouched ones, as a no-op `{original: current, value: current}`) so derivations
+  see complete effective state; submit stays sparse (omits untouched change fields) to preserve
+  partial-update semantics. **Consequence a derivation must respect** (Sol re-review round 5): a
+  non-null `Change<T>` in a resolve evaluation does *not* mean the user changed that field — it may be
+  the untouched current value. A derivation must read the **effective value** (the `.Value`), not
+  treat wrapper *presence* as "changed"; when change-membership actually matters, key off the
+  explicit `changed` field list, not `Change<T> != null`.
+- **Frozen concurrency baseline.** A `Change<T>`'s `original` is the value frozen when the form's
+  `instanceKey` (its record identity) last changed, never the latest `initialValues` prop — a
+  background refresh handing the same record a newer server value cannot silently rebase the
+  concurrency baseline under an in-flight edit (which would let a stale edit overwrite a concurrent
+  update without the intended field conflict). To adopt fresh server data as the baseline, the caller
+  changes the identity, e.g. `instanceKey={`${id}:${version}`}`.
 - **Same lifecycle.** The form resets edit state on a new record identity and re-resolves on a
   changed prefill, acting node, or manifest revision, so derived state never bleeds across records.
 

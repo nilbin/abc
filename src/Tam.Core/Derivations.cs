@@ -81,9 +81,13 @@ public sealed record DerivationResult(
     /// <summary>AUTHORITATIVE closed inline options (docs/40): <paramref name="options"/> are BOTH
     /// offered at resolve AND the complete legal set at submit — a submitted value outside them is
     /// rejected with <paramref name="invalid"/>, for every caller. The small-set twin of <see
-    /// cref="Lookup"/>; advisory recommendations use <see cref="AddOptions"/> instead.</summary>
+    /// cref="Lookup"/>; advisory recommendations use <see cref="AddOptions"/> instead. Writes ONLY the
+    /// closed set, never the advisory <see cref="Options"/> dict (Sol re-review round 5, Finding 2):
+    /// resolve renders the closed set's options directly, so a later <see cref="AddOptions"/> can't
+    /// overwrite the DISPLAYED options while leaving the enforced set unchanged — that discrepancy is
+    /// caught as two candidate sources on the field, independent of fluent call order.</summary>
     public DerivationResult RequireOneOf(string member, IReadOnlyList<Option> options, FindingFactory invalid) =>
-        AddOptions(member, options) with
+        this with
         {
             ClosedOptions = [.. ClosedOptions,
                 new ClosedOptionSet(Naming.Camel(member), options, invalid.At(Naming.Camel(member)))],

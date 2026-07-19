@@ -68,12 +68,18 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
             // submit validates against, so the derivation need not materialize it as inline options.
             var lookup = merged.Lookups.FirstOrDefault(l => l.Field == config.WireName);
 
+            // Render the AUTHORITATIVE closed set's own options when one exists (Sol re-review round 5,
+            // Finding 2), so the displayed set is exactly the enforced set — never an advisory
+            // AddOptions list that could differ. Advisory options apply only when there is no closed
+            // set (and DER008 forbids both on one field).
+            var closedHere = merged.ClosedOptions.FirstOrDefault(c => c.Field == config.WireName);
+
             fields[config.WireName] = new ResolvedFieldState(
                 visible,
                 Enabled: true,
                 required,
                 merged.Suggestions.GetValueOrDefault(config.WireName),
-                merged.Options.GetValueOrDefault(config.WireName),
+                closedHere?.Options ?? merged.Options.GetValueOrDefault(config.WireName),
                 lookup is null ? null : new ResolvedLookup(lookup.ViewId, lookup.Filters),
                 merged.Findings
                     .Where(f => f.Targets.Any(t => t.Value == config.WireName))

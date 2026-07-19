@@ -72,6 +72,14 @@ export function OperationForm(props: OperationFormProps) {
   // re-render mints a new initialValues object for the same record, which must not re-fire anything.
   const initialRef = useRef(initial);
   initialRef.current = initial;
+  // The FROZEN concurrency baseline for this form instance (Sol re-review round 5, Finding 1): the
+  // `original` of every Change<T> is read from here, NOT from the latest initialValues prop. A
+  // background refresh that hands the SAME record (instanceKey) a newer server value must not silently
+  // rebase `original` under the user's in-flight edit — that would let a stale edit overwrite the
+  // concurrent update without the intended field conflict. Re-frozen only when the reset effect runs
+  // (form / instanceKey change); to adopt fresh server data as the baseline, the caller changes the
+  // identity, e.g. instanceKey={`${id}:${version}`}.
+  const baselineRef = useRef(initial);
 
   const getWire = useCallback(
     (name: string) => values[name] ?? values[`ext:${name}`] ?? null,
@@ -86,22 +94,23 @@ export function OperationForm(props: OperationFormProps) {
   // is the edit when touched, else the current value (== original, "no change yet"). Submit keeps its
   // own touched-only builder to preserve partial-update semantics.
   const currentInput = useCallback(() => {
+    const base = baselineRef.current;
     const input: Record<string, unknown> = {};
     for (const f of formDef.fields) {
       const v = valuesRef.current[f.name];
       if (f.changeSet) {
-        const hasInitial = initial[f.name] !== undefined && initial[f.name] !== null;
-        if (touchedRef.current.has(f.name) || hasInitial)
+        const hasBaseline = base[f.name] !== undefined && base[f.name] !== null;
+        if (touchedRef.current.has(f.name) || hasBaseline)
           input[f.name] = {
-            original: initial[f.name] ?? null,
-            value: touchedRef.current.has(f.name) ? (v ?? null) : (initial[f.name] ?? null),
+            original: base[f.name] ?? null,
+            value: touchedRef.current.has(f.name) ? (v ?? null) : (base[f.name] ?? null),
           };
       } else if (v !== undefined && v !== null) {
         input[f.name] = v;
       }
     }
     return input;
-  }, [formDef, initial]);
+  }, [formDef]);
 
   // Apply a resolve response: complete field state + untouched-only suggestions (docs/05).
   const applyResolved = useCallback((resolved: ResolveResponse) => {
@@ -144,10 +153,12 @@ export function OperationForm(props: OperationFormProps) {
   // record and would wrongly discard edits. Also cancels any in-flight debounce and stales any
   // pending resolve, so a previous record's response can't land after the switch.
   useEffect(() => {
+    // Freeze the concurrency baseline for THIS instance (Finding 1) — the only place it changes.
+    baselineRef.current = initialRef.current;
     clearTimeout(timer.current);
     seq.current++;
     lastChanged.current = [];
-    setValues(initialRef.current);
+    setValues(baselineRef.current);
     setTouched(new Set());
     setResponse(null);
     setResolveState(null);
@@ -213,18 +224,22 @@ export function OperationForm(props: OperationFormProps) {
       const body: Record<string, unknown> = {};
       const extensions: Record<string, unknown> = {};
 
+      // `original` is the FROZEN per-instance baseline (Finding 1), never the latest prop, so a
+      // background refresh can't rebase the concurrency baseline under an in-flight edit. A conflict
+      // override (the user resolving a detected conflict) still wins.
+      const base = baselineRef.current;
       for (const { field, key } of fields) {
         const value = values[key] ?? null;
         if (field.extension) {
-          if (!touched.has(key) && initial[key] === undefined) continue;
+          if (!touched.has(key) && base[key] === undefined) continue;
           const original = overrides?.[`extensions.${field.name}`]?.currentValue
-            ?? initial[key] ?? null;
+            ?? base[key] ?? null;
           if (touched.has(key)) extensions[field.name] = { original, value };
           continue;
         }
         if (field.changeSet) {
           if (!touched.has(key)) continue;
-          const original = overrides?.[field.name]?.currentValue ?? initial[key] ?? null;
+          const original = overrides?.[field.name]?.currentValue ?? base[key] ?? null;
           body[field.name] = { original, value };
           continue;
         }
