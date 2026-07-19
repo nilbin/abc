@@ -1072,6 +1072,29 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   EventRuleTests actor gains `projects.read` since membership reuses the view permission), manifest
   additive-only (new filterable result field), full wire matrix GREEN on fresh SQLite AND Postgres
   (94 checks each). The docs/40 arc is now BUILT end to end.
+- **docs/40 re-review — Operation Input Contract (9 findings, all confirmed against code, then
+  fixed)**: Sol re-reviewed the canonicalization arc and found four correctness/security gaps plus
+  incomplete parts. Landed in the recommended priority order. GROUP 1 (correctness/security): form
+  binding fails CLOSED — a supplied `?form=` must exist, match the operation, and be from an active
+  plugin, else rejected (no silent downgrade); the form binding is part of idempotency identity, so a
+  direct call and a through-a-form call with the same body+key are independent records; blocking
+  derivation findings (`AddFieldError`/`From`/error `Add`) are ENFORCED at submit for every caller,
+  not just previewed at resolve. GROUP 2 (resolve/submit + lookup parity): `RunDerivationsAsync` runs
+  ALL derivations every call (the changed-field skip is gone), so resolve's complete field state can't
+  report a requiredness/membership submit contradicts; `ContainsAsync` validates every lookup
+  base-filter key against the view's Query+Filterable fields and throws DER006 on a typo rather than
+  silently widening the universe; lookup membership reads the key from the DESERIALIZED input (a
+  `Change<T>` edit field unwraps correctly). GROUP 3 (architecture completeness): resolve returns a
+  `ResolvedLookup` (view + base filters) the FE picker scopes itself by — the sample no longer
+  materializes the candidate set as inline options; `ContainsAsync` reuses the read path's SubtreeRead
+  widening (shared `ApplySubtreeWideningAsync`, execution-local restore); `RequireOneOf(field,
+  options, invalid)` gives authoritative closed inline options (advisory `AddOptions` unchanged), and
+  the docs/40 output table + a new "pipeline-rejects, not commit-stable" boundary section resolve the
+  self-contradiction. Verified: suites 196 + 50 (ContractEnforcementTests via a new `ErpModel.Builder()`
+  seam pins blocking-finding, idempotency-binding, bad-filter fail-closed, and closed-option
+  enforcement; FormBindingTests updated to "mismatched/unknown form is rejected"), web typechecks,
+  manifest unchanged (all runtime-additive), full wire matrix GREEN on fresh SQLite AND Postgres (94
+  checks each). docs/40 is genuinely closed, not merely moved into a better model.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
