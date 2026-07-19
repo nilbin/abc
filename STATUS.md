@@ -1158,6 +1158,28 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   unchanged, full wire matrix GREEN on fresh SQLite AND Postgres (94 checks each — the fail-closed
   classifier passes real derivation SELECTs, including RLS-scoped reads on Postgres, while blocking
   writes). The write-guard is now fail-closed; the create/edit/cross-tenant form paths are consistent.
+- **docs/40 re-review round 5 — frozen concurrency baseline + option-source cleanup (2 fixes + 2
+  docs; reviewer's verdict: docs/40 COMPLETE after these)**: (F1, HIGH) a form's concurrency baseline
+  is frozen per instance — every `Change<T>`'s `original` is read from a `baselineRef` captured only
+  when the form/`instanceKey` changes, never the latest `initialValues` prop, so a background refresh
+  handing the SAME record a newer server value can't silently rebase the baseline under an in-flight
+  edit (which would let a stale edit overwrite a concurrent update without the intended field
+  conflict); to adopt fresh data the caller changes identity (`instanceKey={`${id}:${version}`}`).
+  (F2, MEDIUM/HIGH) authoritative closed options no longer double-write the advisory dict —
+  `RequireOneOf` writes only `ClosedOptions`, `ResolveExecutor` renders the closed set's own options,
+  and the candidate-source check counts any `Options` entry as advisory, so `RequireOneOf().AddOptions()`
+  fails closed as two sources regardless of fluent order (the display can't diverge from the enforced
+  set). (F3, documented) a non-null `Change<T>` in resolve does NOT mean the user changed the field
+  (resolve sends untouched current values); derivations read the effective value and key off the
+  changed list — noted in docs/40 + DerivationContext. (F4) the write guard stays an accidental-misuse
+  boundary for trusted code, documented as defence-in-depth not a sandbox — deliberately not
+  over-engineered. Verified: suites 196 + 58 (RequireOneOf(legal).AddOptions(different) fails closed),
+  contract probes split to their own file (structure cap), web typechecks, manifest unchanged, full
+  wire matrix GREEN on fresh SQLite AND Postgres (94 checks each). Per Sol's round-5 verdict, the
+  operation input contract (docs/40) is COMPLETE — the original operation-validation problem is solved
+  across the operation-owned contract, direct/form submission separation, resolve/submit parity, the
+  lookup candidate architecture, edit partial-update with a frozen concurrency baseline, and the
+  read-only derivation boundary sufficient for trusted application code.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
