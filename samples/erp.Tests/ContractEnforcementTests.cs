@@ -207,6 +207,43 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_derivation_cannot_bypass_the_write_guard_with_comments_or_ctes()
+    {
+        // The two shapes the old first-token denylist let through: a write hidden behind a leading
+        // comment, and a write behind a leading WITH-CTE (Sol re-review round 4, Finding 1).
+        foreach (var sentinel in new[]
+                 { BlockingProbeDerivations.CommentWriteSentinel, BlockingProbeDerivations.CteWriteSentinel })
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => actor.ExecuteAsync("orders.create", new
+            {
+                customerId,
+                orderType = "service",
+                workAddress = "Verkstadsgatan 14",
+                description = sentinel,
+            }));
+        }
+
+        var hijacked = await host.QueryDbAsync("demo", db =>
+            db.Customers.CountAsync(c => c.Name == new CustomerName("Kapad")));
+        Assert.Equal(0, hijacked);
+    }
+
+    [Fact]
+    public async Task Two_candidate_sources_on_one_field_fail_closed()
+    {
+        // A Lookup AND a closed option set on ProjectId — resolve shows one, submit enforces both, so
+        // the model refuses it (Sol re-review round 4, Finding 3, broadening DER008).
+        await Assert.ThrowsAsync<InvalidOperationException>(() => actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            projectId = Guid.NewGuid(),
+            workAddress = "Verkstadsgatan 15",
+            description = BlockingProbeDerivations.MixedCandidateSentinel,
+        }));
+    }
+
+    [Fact]
     public async Task Resolve_needs_the_change_wire_shape_for_edit_fields()
     {
         // A RAW scalar for a Change<T> field is invalid input — the exact malformed payload the old
@@ -241,6 +278,9 @@ public static class BlockingProbeDerivations
     public const string DoubleLookupSentinel = "__double_lookup__";
     public const string MutateSentinel = "__mutate__";
     public const string MutateSaveSentinel = "__mutate_save__";
+    public const string CommentWriteSentinel = "__comment_write__";
+    public const string CteWriteSentinel = "__cte_write__";
+    public const string MixedCandidateSentinel = "__mixed_candidate__";
     public const string EditSentinel = "__edit_probe__";
     public const string AllowedAddress = "Tillåtnagatan 1";
 
@@ -330,4 +370,33 @@ public static class BlockingProbeDerivations
         }
         return DerivationResult.Empty;
     }
+
+    // The change-tracker-BYPASSING writes the old first-token denylist let through (Sol re-review
+    // round 4, Finding 1): a comment-prefixed raw UPDATE (verb hidden behind `--`) and a CTE UPDATE
+    // (leading token WITH). The fail-closed classifier strips comments + the CTE and rejects both.
+    [ServerDerivation("test.orders.create.raw-write-probe")]
+    public static async Task<DerivationResult> RawWrite(
+        CreateOrder.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
+    {
+        var sql = input.Description.Value switch
+        {
+            CommentWriteSentinel => "-- derivation helper\nUPDATE Customers SET Name = 'Kapad' WHERE 1 = 0",
+            CteWriteSentinel => "WITH t AS (SELECT 1 AS x) UPDATE Customers SET Name = 'Kapad' WHERE 1 = 0",
+            _ => null,
+        };
+        if (sql is not null) await db.Database.ExecuteSqlRawAsync(sql, ct);
+        return DerivationResult.Empty;
+    }
+
+    // Two candidate SOURCES on one field (Sol re-review round 4, Finding 3): a Lookup AND a closed
+    // option set on ProjectId. Resolve can render only one; submit would enforce both. Fail closed.
+    [ServerDerivation("test.orders.create.mixed-candidate-probe")]
+    public static DerivationResult MixedCandidate(CreateOrder.Input input, DerivationContext context) =>
+        input.Description.Value == MixedCandidateSentinel
+            ? DerivationResult.Empty
+                .Lookup(nameof(CreateOrder.Input.ProjectId), "projects.lookup",
+                    new Dictionary<string, string?>(), OrderFindings.ProjectNotAvailable)
+                .RequireOneOf(nameof(CreateOrder.Input.ProjectId),
+                    [new Option("x", "x")], OrderFindings.ProjectNotAvailable)
+            : DerivationResult.Empty;
 }

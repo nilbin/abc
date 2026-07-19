@@ -587,17 +587,31 @@ public sealed class OperationExecutor(
                     $"DER007: a derivation of '{operation.Id}' mutated tracked state. Derivations compute "
                     + "input admissibility and must be read-only — move any write into the operation handler.");
 
-            // At most ONE active lookup binding per field (Sol re-review, Finding 6). Resolve surfaces
-            // only the first binding for a field, but submit enforces EVERY binding — so two active
-            // lookups on one field would show one candidate universe and secretly require membership in
-            // both. Fail closed here (shared by resolve and submit, so they cannot disagree) rather than
-            // let the UI misrepresent the enforced contract.
-            var conflicting = merged.Lookups.GroupBy(l => l.Field).FirstOrDefault(g => g.Count() > 1);
-            if (conflicting is not null)
-                throw new InvalidOperationException(
-                    $"DER008: operation '{operation.Id}' produced {conflicting.Count()} lookup bindings for "
-                    + $"field '{conflicting.Key}'. At most one active lookup binding per field is allowed — "
-                    + "resolve shows one candidate universe but submit would enforce all of them.");
+            // Exactly ONE representable candidate contract per field (Sol re-review round 4, Finding
+            // 3, broadening the earlier lookup-only DER008). The client can render one candidate
+            // source per field, but submit enforces EVERY lookup AND every closed-option set — so two
+            // lookups, two closed sets, a lookup + closed set, or an advisory-option set + a lookup
+            // would show one thing and enforce another. Advisory options that BACK a RequireOneOf
+            // (which also writes the Options dict for display) are the same source, not a conflict.
+            var closedByField = merged.ClosedOptions.GroupBy(c => c.Field)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var candidateFields = merged.Lookups.Select(l => l.Field)
+                .Concat(merged.ClosedOptions.Select(c => c.Field))
+                .Concat(merged.Options.Keys)
+                .Distinct();
+            foreach (var candidateField in candidateFields)
+            {
+                var lookups = merged.Lookups.Count(l => l.Field == candidateField);
+                var closed = closedByField.GetValueOrDefault(candidateField);
+                var advisory = merged.Options.ContainsKey(candidateField) && closed == 0 ? 1 : 0;
+                if (lookups + closed + advisory > 1)
+                    throw new InvalidOperationException(
+                        $"DER008: operation '{operation.Id}' produced {lookups + closed + advisory} "
+                        + $"candidate sources for field '{candidateField}' (lookup / closed options / "
+                        + "advisory options). A resolved field must have exactly ONE representable "
+                        + "candidate contract — resolve shows one, but submit enforces every lookup and "
+                        + "closed set.");
+            }
 
             return merged;
         }

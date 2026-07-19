@@ -87,12 +87,16 @@ export class TamClient {
    *  travel raw — no base64 overhead — and the caller gets back the content hash the write
    *  intent references. Null on any failure so callers can fall back to inline base64. */
   async upload(
-    path: string, file: Blob, fileName?: string,
+    path: string, file: Blob, fileName?: string, options?: { actAs?: string },
   ): Promise<{ contentHash: string; size: number } | null> {
     const body = new FormData();
     body.append('file', file, fileName);
     try {
-      const response = await this.send(this.url(path), { method: 'POST', body });
+      // Stage in the SAME acting node the form submits in (Sol re-review round 4, Finding 4).
+      const response = await this.send(this.url(path), {
+        method: 'POST', body,
+        ...(options?.actAs ? { headers: { 'X-Tam-Tenant': options.actAs } } : {}),
+      });
       if (!response.ok) return null;
       return await response.json();
     } catch {

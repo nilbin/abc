@@ -14,6 +14,11 @@ export interface OperationFormProps {
   actAs?: string;
   initialValues?: Record<string, unknown>;
   initialExtensions?: Record<string, unknown>;
+  /** The RECORD this form edits (Sol re-review round 4, Finding 5). Edit state resets and re-resolves
+   *  when this changes — NOT when the initialValues OBJECT identity changes (a parent re-render mints a
+   *  new object for the same record, which would otherwise discard the user's edits). Pass the row id
+   *  for an edit form; omit for a create form (or remount with a React `key` per record instead). */
+  instanceKey?: string | number;
   onSuccess?: (response: OperationResponse) => void;
   submitLabel?: string;
 }
@@ -63,22 +68,34 @@ export function OperationForm(props: OperationFormProps) {
   touchedRef.current = touched;
   const valuesRef = useRef(values);
   valuesRef.current = values;
+  // Read `initial` at effect-fire time WITHOUT depending on its object identity (Finding 5): a parent
+  // re-render mints a new initialValues object for the same record, which must not re-fire anything.
+  const initialRef = useRef(initial);
+  initialRef.current = initial;
 
   const getWire = useCallback(
     (name: string) => values[name] ?? values[`ext:${name}`] ?? null,
     [values]);
 
-  // The complete own-field input in the operation's WIRE shape — the one builder both resolve and
-  // submit agree on. A change-set field is only meaningful once touched, and it must carry its
-  // {original, value} object (Sol re-review, Finding 3): a raw scalar deserializes to
-  // pipeline.invalid-input and resolve silently returns stale derived state.
+  // The complete own-field RESOLVE input in the operation's wire shape. A change-set field carries
+  // its {original, value} object, not a raw scalar (which deserializes to invalid-input, Finding 3),
+  // and — unlike submit — resolve includes EVERY INITIALIZED change-set field, not only touched ones
+  // (Sol re-review round 4, Finding 2): all derivations rerun on every resolve over COMPLETE state,
+  // so omitting an untouched current value (e.g. the current customer) makes derivations see it as
+  // null and a lookup/requiredness/finding based on it vanish when an unrelated field changes. Value
+  // is the edit when touched, else the current value (== original, "no change yet"). Submit keeps its
+  // own touched-only builder to preserve partial-update semantics.
   const currentInput = useCallback(() => {
     const input: Record<string, unknown> = {};
     for (const f of formDef.fields) {
       const v = valuesRef.current[f.name];
       if (f.changeSet) {
-        if (touchedRef.current.has(f.name))
-          input[f.name] = { original: initial[f.name] ?? null, value: v ?? null };
+        const hasInitial = initial[f.name] !== undefined && initial[f.name] !== null;
+        if (touchedRef.current.has(f.name) || hasInitial)
+          input[f.name] = {
+            original: initial[f.name] ?? null,
+            value: touchedRef.current.has(f.name) ? (v ?? null) : (initial[f.name] ?? null),
+          };
       } else if (v !== undefined && v !== null) {
         input[f.name] = v;
       }
@@ -122,31 +139,35 @@ export function OperationForm(props: OperationFormProps) {
     }, 350);
   }, [client, formDef, props.form, props.actAs, manifest.revision, currentInput, applyResolved]);
 
-  // Reset edit state when the form or record IDENTITY changes (Sol re-review, Finding 5). A
-  // remounted-per-record form is the common case, but the component enforces the contract itself:
-  // a new prefill (another record, async-loaded values) clears touched/response/resolve so stale
-  // derived state can't bleed across records. Keyed on identity, NOT actAs — switching acting node
-  // must not discard the user's in-progress edits.
+  // Reset edit state when the form or the RECORD (instanceKey) changes (Sol re-review round 4,
+  // Finding 5) — NOT on initialValues object identity, which a parent re-render changes for the same
+  // record and would wrongly discard edits. Also cancels any in-flight debounce and stales any
+  // pending resolve, so a previous record's response can't land after the switch.
   useEffect(() => {
-    setValues(initial);
+    clearTimeout(timer.current);
+    seq.current++;
+    lastChanged.current = [];
+    setValues(initialRef.current);
     setTouched(new Set());
     setResponse(null);
     setResolveState(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.form, initial]);
+  }, [props.form, props.instanceKey]);
 
-  // FULL initial resolve on mount / form / prefill / acting-node / manifest change (Sol re-review,
-  // Findings 4 + 2 + 5): a prefilled form must show operation-derived requiredness, lookup
-  // descriptors and findings BEFORE any field is touched — in the SAME acting tenant submit uses —
-  // and a context-only derivation (no field dependencies) is unreachable through the change path.
-  // Built from `initial` directly (not the just-reset values, whose state update is async), so a
-  // change-set field carries its {original, value} wire shape. Gated on hasServerDerivations.
+  // FULL initial resolve on mount / form / record / acting-node / manifest change (Sol re-review,
+  // Findings 4 + 2 + 5): a prefilled form must show operation-derived requiredness, lookup descriptors
+  // and findings BEFORE any field is touched — in the SAME acting tenant submit uses — and a
+  // context-only derivation (no field dependencies) is unreachable through the change path. Built from
+  // `initialRef` directly (not the just-reset values, whose update is async, and not `initial`'s
+  // object identity), so a change-set field carries its {original, value} shape. Gated on
+  // hasServerDerivations.
   useEffect(() => {
     if (!formDef.hasServerDerivations) return;
     const sent = ++seq.current;
+    const snapshot = initialRef.current;
     const input: Record<string, unknown> = {};
     for (const f of formDef.fields) {
-      const v = initial[f.name];
+      const v = snapshot[f.name];
       if (v === undefined || v === null) continue;
       input[f.name] = f.changeSet ? { original: v, value: v } : v;
     }
@@ -157,7 +178,7 @@ export function OperationForm(props: OperationFormProps) {
       } catch { /* advisory */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.form, props.actAs, initial, manifest.revision]);
+  }, [props.form, props.instanceKey, props.actAs, manifest.revision]);
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current.push(key);

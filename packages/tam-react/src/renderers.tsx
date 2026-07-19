@@ -229,7 +229,8 @@ registerRenderer('file-staged', function FileStaged(p: FieldRendererProps) {
         void (async () => {
           setBusy(true);
           try {
-            const staged = await p.tam.client.upload('/api/documents/staging', file, file.name);
+            const staged = await p.tam.client.upload('/api/documents/staging', file, file.name,
+              p.actAs ? { actAs: p.actAs } : undefined);
             if (staged) {
               p.onChange(staged.contentHash);
               p.setField?.('contentBase64', null);
@@ -268,7 +269,8 @@ registerRenderer('reach', function ReachPick(p: FieldRendererProps) {
     const timer = setTimeout(() => setDebounced(search), search ? 200 : 0);
     return () => clearTimeout(timer);
   }, [search]);
-  const result = useView('reach.search', { search: debounced || undefined, pageSize: 50 });
+  const result = useView('reach.search', { search: debounced || undefined, pageSize: 50 },
+    p.actAs ? { actAs: p.actAs } : undefined);
   const rows = (result.data?.rows ?? []) as { id: string; label: string; kind: string }[];
   const groups = new Map<string, { value: string; label: string }[]>();
   for (const row of rows) {

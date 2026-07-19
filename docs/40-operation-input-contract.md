@@ -169,13 +169,19 @@ tokens (`IVersioned`), locks/leases, or database constraints — the derivation 
 front-door check, not the last line of defence. The create-order sample keeps its handler-side
 project check for exactly this reason; the derivation does not replace it.
 
-Derivations are also structurally **read-only** (DER007), enforced not just detected. While the
-operation evaluates them, `TenantScope.DerivationReadOnly` is set and the DbContext's write-guard
-interceptor **rejects every durable write** — `SaveChanges`, `ExecuteUpdate`/`ExecuteDelete`, raw
-write SQL, DDL — so a derivation cannot produce a side effect whether it returns, blocks, or throws.
-The guard lives inside the shared `RunDerivationsAsync` (so resolve is covered too), and its `finally`
-also discards any tracked-but-unsaved mutation and restores the flag on every exit path. Reads pass
-untouched. A derivation computes admissibility; it never writes.
+Derivations are **read-only against the ambient TAM DbContext** (DER007), structurally enforced. While
+the operation evaluates them, `TenantScope.DerivationReadOnly` is set and the DbContext's write-guard
+interceptor **allows only proven-read-only commands** — every `SaveChanges`, `ExecuteUpdate`/
+`ExecuteDelete`, raw write, CTE-that-writes, comment-prefixed write, multi-statement write, CALL/EXEC/
+DDL is rejected; the classifier fails **closed** (allow-list of SELECT/VALUES after stripping comments
+and any leading CTE), not on a bypassable write-verb denylist. The guard lives inside the shared
+`RunDerivationsAsync` (so resolve is covered), and its `finally` discards any tracked-but-unsaved
+mutation and restores the flag on every exit path — so a write attempt fails whether the derivation
+returns, blocks, or throws. The RLS backstop's session `SET` is a raw ADO command that bypasses the
+interceptor pipeline, so nothing framework-owned needs whitelisting. **Scope of the guarantee:** it
+covers the ambient TAM context a derivation reads through; a derivation that resolves a *different*
+service (an external API client, its own new DI scope) is outside it — the boundary is "the operation's
+DbContext is read-only during derivations," and a derivation computes admissibility, it does not write.
 
 ## The generated form submits through its binding
 
