@@ -86,22 +86,19 @@ public sealed class RuleDefinitionTests : IAsyncLifetime
             action = """{"type":"publish-event"}""",
         })).ShouldSucceed();
 
-        // ...but a FINDING rule (no action) demands a message. Two layers now guard this,
-        // and the test exercises both (Sol review, Finding 2 — conditional requiredness is
-        // authoritative at submit, not merely a form/resolve affordance):
-        //
-        //   1. The form's RequiredWhen(Action == null) is enforced framework-side for EVERY
-        //      caller. An entirely-omitted map trips that generic gate before the handler runs.
+        // ...but a FINDING rule (no action) demands a message, and RUL003 is the AUTHORITATIVE
+        // guard (docs/40 — the operation's own domain rule, not a form scan). It is richer than
+        // mere presence: it wants the DEFAULT culture ("sv"). A direct operation call (no form
+        // binding) is bound by exactly this rule, so an entirely-omitted map...
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "silent-finding",
             onOperation = "orders.complete",
             condition = """{"t":"const","v":true}""",
-        })).ShouldFailWith("validation.required", onField: "messages");
+        })).ShouldFailWith("rules.missing-message", onField: "messages");
 
-        //   2. RUL003 is stricter than mere presence: it wants the DEFAULT culture ("sv"). A
-        //      non-empty map missing the default clears the generic gate, so the domain gate
-        //      still fires with its precise finding.
+        // ...and a non-empty map that still lacks the default culture both fail the SAME domain
+        // rule with the SAME precise finding — no generic validation.required from a form scan.
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "wrong-culture-finding",

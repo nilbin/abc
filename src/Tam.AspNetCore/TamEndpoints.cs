@@ -36,7 +36,12 @@ public static partial class TamAspNetCore
                 return FindingsResult(model, context,
                     PipelineFindings.InvalidInput.Create(), StatusCodes.Status400BadRequest);
             }
-            var response = await executor.ExecuteAsync(operationId, body, context, ct);
+            // Optional form binding (docs/40): a submission made THROUGH a named form applies that
+            // form's tightening on top of the operation contract. Absent → a direct operation call
+            // (the door MCP and integrations use), bound by the operation contract alone. One door,
+            // optional binding — no second submit endpoint.
+            var formId = http.Request.Query.TryGetValue("form", out var f) && f.Count > 0 ? f[0] : null;
+            var response = await executor.ExecuteAsync(operationId, body, context, ct, formId);
             return Results.Json(response, TamJson.Options, statusCode: StatusFor(response));
         });
 

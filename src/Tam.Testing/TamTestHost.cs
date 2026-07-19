@@ -125,13 +125,14 @@ public sealed class TamTestHost<TDb> : IAsyncDisposable where TDb : DbContext
     }
 
     internal async Task<OperationResponse> ExecuteAsync(
-        TestActor<TDb> actor, string operationId, object input, string? idempotencyKey, CancellationToken ct)
+        TestActor<TDb> actor, string operationId, object input, string? idempotencyKey,
+        CancellationToken ct, string? formId = null)
     {
         await using var scope = services.CreateAsyncScope();
         var context = BuildContext(scope.ServiceProvider, actor, idempotencyKey);
         var body = JsonSerializer.SerializeToElement(input, TamJson.Options);
         return await scope.ServiceProvider.GetRequiredService<OperationExecutor>()
-            .ExecuteAsync(operationId, body, context, ct);
+            .ExecuteAsync(operationId, body, context, ct, formId);
     }
 
     /// <summary>Runs an operation and then a caller assertion against the SAME scope and DbContext
@@ -204,6 +205,13 @@ public sealed class TestActor<TDb> where TDb : DbContext
     public Task<OperationResponse> ExecuteAsync(
         string operationId, object input, string? idempotencyKey = null, CancellationToken ct = default) =>
         host.ExecuteAsync(this, operationId, input, idempotencyKey, ct);
+
+    /// <summary>Submits THROUGH a named form binding (docs/40): the form's tightening applies on
+    /// top of the operation contract. The direct <see cref="ExecuteAsync(string, object, string?,
+    /// CancellationToken)"/> overload omits it — that's the door MCP and integrations use.</summary>
+    public Task<OperationResponse> ExecuteThroughFormAsync(
+        string formId, string operationId, object input, CancellationToken ct = default) =>
+        host.ExecuteAsync(this, operationId, input, idempotencyKey: null, ct, formId);
 
     /// <summary>Executes a view with wire-shaped query parameters
     /// (<c>sort</c>/<c>dir</c>/<c>page</c>/<c>pageSize</c>, filters as <c>field</c>,

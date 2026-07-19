@@ -46,7 +46,8 @@ public sealed class OperationExecutor(
     /// <see cref="ExecuteIsolatedAsync"/> instead — though a blocked attempt here now also clears
     /// its own tracked writes, so a stray shared-context save cannot flush them (Finding 1).</remarks>
     public async Task<OperationResponse> ExecuteAsync(
-        string operationId, JsonElement body, OperationContext context, CancellationToken ct)
+        string operationId, JsonElement body, OperationContext context, CancellationToken ct,
+        string? formId = null)
     {
         if (!model.Operations.TryGetValue(operationId, out var operation))
             return Fail(context, PipelineFindings.UnknownOperation.With(("operation", operationId)));
@@ -117,11 +118,11 @@ public sealed class OperationExecutor(
         }
 
         var structural = ValidateStructural(operation, input);
-        // Conditional requiredness (RequiredWhen) is now AUTHORITATIVE, not just a form/resolve
-        // affordance (Sol review, Finding 2): the SAME predicate the resolve preflight evaluates
-        // runs here, so a forged/stale/MCP/integration/mobile caller can't omit a conditionally
-        // required field just because the operation input type marks it nullable.
-        structural.AddRange(ConditionalRequired(operationId, operation, input));
+        // Only the SELECTED form's requiredness tightening applies (docs/40) — a direct/MCP/
+        // integration call (formId null) is bound by the operation contract alone, never by a
+        // union of every form's RequiredWhen (Sol re-review, Finding 2). Operation-owned
+        // authoritative requiredness rides the operation's derivations (enforced further below).
+        structural.AddRange(SelectedFormRequired(operation, input, formId));
         if (structural.Any(f => f.Severity == FindingSeverity.Error))
             return Fail(context, [.. structural]);
 
@@ -366,31 +367,36 @@ public sealed class OperationExecutor(
         return response;
     }
 
-    /// <summary>Evaluates each form field's RequiredWhen predicate (the portable AST the resolve
-    /// preflight uses) against the submitted input and requires the field when the predicate is
-    /// truthy but the value is empty — the authoritative, every-caller enforcement of conditional
-    /// requiredness (Sol review, Finding 2). Reuses the exact FieldValue/Truthy evaluation of the
-    /// resolve path so preflight and submit can never disagree.</summary>
-    private List<Finding> ConditionalRequired(string operationId, OperationDefinition operation, object input)
+    /// <summary>Form-specific validation TIGHTENING (docs/40): when a submission comes THROUGH a
+    /// named form binding, that form's RequiredWhen predicates apply on top of the operation's own
+    /// contract. Only the SELECTED form is consulted — never a union of every form bound to the
+    /// operation, which was the round-1 fix's flaw: one presentation binding could tighten every
+    /// other caller's contract, including direct/MCP/integration callers (Sol re-review, Finding 2).
+    /// A direct operation call (no formId) applies none of this; the operation's own derivations and
+    /// domain handlers are the authoritative contract there.</summary>
+    private List<Finding> SelectedFormRequired(OperationDefinition operation, object input, string? formId)
     {
         var findings = new List<Finding>();
+        if (formId is null || !model.Forms.TryGetValue(formId, out var form)
+            || form.OperationId != operation.Id)
+            return findings;
+
         object? FieldValue(string wireName) => operation.InputType.GetProperties()
             .FirstOrDefault(p => Naming.Camel(p.Name) == wireName)?.GetValue(input);
 
-        foreach (var form in model.Forms.Values.Where(f => f.OperationId == operationId))
-            foreach (var config in form.Fields)
-            {
-                if (config.RequiredWhen is not { } predicate
-                    || !PxBinary.Truthy(predicate.Evaluate(FieldValue))) continue;
-                var field = operation.InputFields.FirstOrDefault(f => f.WireName == config.WireName);
-                if (field is null) continue;
-                var value = ReflectionCache.Property(operation.InputType, field.MemberName).GetValue(input);
-                var effective = field.IsChangeSet && value is not null
-                    ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
-                    : value;
-                if (IsEmpty(effective))
-                    findings.Add(ValidationFindings.Required.At(config.WireName));
-            }
+        foreach (var config in form.Fields)
+        {
+            if (config.RequiredWhen is not { } predicate
+                || !PxBinary.Truthy(predicate.Evaluate(FieldValue))) continue;
+            var field = operation.InputFields.FirstOrDefault(f => f.WireName == config.WireName);
+            if (field is null) continue;
+            var value = ReflectionCache.Property(operation.InputType, field.MemberName).GetValue(input);
+            var effective = field.IsChangeSet && value is not null
+                ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
+                : value;
+            if (IsEmpty(effective))
+                findings.Add(ValidationFindings.Required.At(config.WireName));
+        }
         return findings;
     }
 
