@@ -1119,6 +1119,24 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   complete; the generated form path now goes through the binding and resolves on mount; the
   derivation write-isolation is a fail-closed guard (a dedicated read-scoped context is the noted
   longer-term hardening).
+- **docs/40 re-review round 3 — structural read-only + cross-tenant/Change<T> parity (5 findings)**:
+  round 2's write-isolation was detection-only and the edit/cross-tenant form paths still diverged
+  from submit. (F1) Derivations are now STRUCTURALLY read-only: `TenantScope.DerivationReadOnly` is
+  set for the whole shared `RunDerivationsAsync`, and a new `DerivationWriteGuardInterceptor` rejects
+  every durable write on the context — SaveChanges, ExecuteUpdate/ExecuteDelete, raw write SQL, DDL —
+  so a derivation can't cause a side effect whether it returns, blocks, or throws; the finally also
+  discards any unsaved tracked mutation and restores the flag on every path. (F2) `actAs` reaches
+  resolve (X-Tam-Tenant) and the lookup picker, so a form opened from a parent subtree grid derives
+  and browses in the CHILD tenant submit runs in. (F3) `Change<T>` edit fields keep their
+  `{original, value}` wire shape in resolve — one shared input builder for resolve + submit — instead
+  of a raw scalar that deserialized to invalid-input and left stale state. (F4) closed-option
+  membership normalizes both sides through the field's semantic model. (F5) the form resets edit
+  state on a new record identity and re-resolves on changed prefill / acting node / manifest revision.
+  Verified: suites 196 + 55 (a durable-save mutating probe rejected + committing nothing; a Change<T>
+  resolve probe — raw scalar rejected, {original,value} resolves and the derivation fires; TamTestHost
+  gained a resolve helper), web typechecks, manifest additive-only, full wire matrix GREEN on fresh
+  SQLite AND Postgres (94 checks each — the guard lets RLS `SET` and read `SELECT`s through while
+  blocking derivation writes). Derivation read-only is now structurally enforced, not just detected.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
