@@ -137,6 +137,21 @@ public sealed class OperationExecutor(
         if (required.Count > 0)
             return Fail(context, [.. required]);
 
+        // Lookup membership (docs/40): a submitted non-null value must EXIST in the derivation's
+        // candidate universe (view + base filters), checked by an Exists — never by the client's
+        // browsed page. Authoritative for every caller. Uses the raw wire value from the body.
+        if (services.GetService<ViewExecutor>() is { } viewExecutor)
+            foreach (var lookup in derived.Lookups)
+            {
+                if (!body.TryGetProperty(lookup.Field, out var element)
+                    || element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                    continue;
+                var value = element.ValueKind == JsonValueKind.String
+                    ? element.GetString() : element.ToString();
+                if (!await viewExecutor.ContainsAsync(lookup.ViewId, lookup.Filters, value, context, ct))
+                    return Fail(context, lookup.Invalid);
+            }
+
         // Plugin gates (docs/22 P2): typed preconditions in TWO phases, run only for tenants
         // with the owning plugin active; within each phase, operation-specific gates run before
         // wildcard gates (docs/28 approvals seam 1 — a wildcard gate sees every operation and

@@ -44,6 +44,9 @@ public static class OrderFindings
     public static readonly FindingFactory InvalidCustomer = Finding.Error("orders.invalid-customer");
     public static readonly FindingFactory ProjectRequired = Finding.Error("orders.project-required");
     public static readonly FindingFactory ProjectNotForCustomer = Finding.Error("orders.project-not-for-customer");
+    // The submitted project is outside the candidate universe (docs/40 lookup membership): not one
+    // of this customer's open projects — a stale, forged, or wrong-customer selection.
+    public static readonly FindingFactory ProjectNotAvailable = Finding.Error("orders.project-not-available");
     public static readonly FindingFactory NotFound = Finding.Error("orders.not-found");
     public static readonly FindingFactory NotEditable = Finding.Error("orders.not-editable");
     public static readonly FindingFactory InvalidTransition = Finding.Error("orders.invalid-transition");

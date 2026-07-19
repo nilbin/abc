@@ -134,6 +134,7 @@
   "orders.invalid-transition": "Invalid status transition for the order.",
   "orders.not-editable": "The order can no longer be edited.",
   "orders.not-found": "The order does not exist.",
+  "orders.project-not-available": "The selected project is not available for this customer.",
   "orders.project-not-for-customer": "The project does not belong to the selected customer.",
   "orders.project-required": "Select a project for project orders.",
   "orders.schedule-needs-assignee": "Pick a valid assignee.",

@@ -134,6 +134,7 @@
   "orders.invalid-transition": "Ogiltig statusövergång för ordern.",
   "orders.not-editable": "Ordern kan inte längre ändras.",
   "orders.not-found": "Ordern finns inte.",
+  "orders.project-not-available": "Det valda projektet är inte tillgängligt för kunden.",
   "orders.project-not-for-customer": "Projektet tillhör inte den valda kunden.",
   "orders.project-required": "Välj ett projekt för projektordrar.",
   "orders.schedule-needs-assignee": "Välj en giltig utförare.",

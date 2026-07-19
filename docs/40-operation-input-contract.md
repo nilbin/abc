@@ -1,6 +1,6 @@
 # 40 — Operations own the input contract
 
-**Status: BUILT (canonical requiredness) + designed (lookup-View membership).** An operation owns
+**Status: BUILT.** An operation owns
 its canonical input semantics — structural validation, derivations, and conditional requiredness.
 Forms are *projections* of that contract: they choose fields, lay them out, pick renderers, and may
 *tighten* validation, but they never reconstruct operation semantics and never weaken them. This doc
@@ -102,37 +102,48 @@ depth. `rules.define`'s `messages` `RequiredWhen` stays on its form as genuine p
 tightening — a direct call falls to the operation's own domain rule (RUL003, which is richer: it
 wants the default culture).
 
-## Candidate sets are Views, membership is authoritative (DESIGNED — Phase 4)
+## Candidate sets are Views, membership is authoritative (BUILT — Phase 4)
 
 Large candidate sets are not materialized inside derivations; they are ordinary Views (pagination,
 filtering, permissions, tenant isolation, MCP exposure — for free, and reusable). A derivation binds
-an operation field to a View plus a contextual base query:
+an operation field to a View plus a contextual base query — and the base query is expressed as the
+view's **existing `Filterable` fields**, not a bespoke query parameter, so one mechanism serves both
+browsing and the authoritative constraint:
 
 ```csharp
 return DerivationResult.Empty.Lookup(
-    field: x => x.ProjectId,
-    view:  ProjectViews.Lookup,
-    query: new ProjectLookup.Query(CustomerId: input.CustomerId, OpenOnly: true),
+    field:   x => x.ProjectId,
+    view:    "projects.lookup",
+    filters: new() { ["customerId"] = input.CustomerId.Value.ToString() },
     invalid: OrderFindings.ProjectNotAvailable);
 ```
 
-The base query defines the **authoritative candidate universe**. The user browses it with transient
-parameters (`search`, `sort`, `page`) that do **not** define validity. On submit, a selected key is
-validated by **existence against the base query** — never by whether it appeared on the last loaded
-page, matched the last search, or is cached in the client. This is a real authorization boundary: the
-front end's rendered subset is not proof of validity.
+The base filters define the **authoritative candidate universe** (open projects of *this* customer).
+The user browses it with transient parameters (`search`, `sort`, `page`) that do **not** define
+validity. On submit, a selected key is validated by **existence against the base filters** — never by
+whether it appeared on the last loaded page, matched the last search, or is cached in the client. The
+authority comes from the derivation supplying the base filters; the front end's browsing params are
+ignored. This is a real authorization boundary: the rendered subset is not proof of validity.
 
-The mechanism to build (server core first — no FE change required, since the existing `[Lookup]`
-picker already renders the view):
+The mechanism (server core only — no FE change required, since the existing `[Lookup]` picker already
+renders the view; exposing the constraint field lets the picker be scoped too):
 
-- `view.Key(x => x.Id)` — the selectable key (defaults to the `id` field).
-- `ViewExecutor.ContainsAsync(viewId, baseQuery, key, context, ct)` — an efficient `Exists` over the
-  base query, reusing the **same** view definition, permission checks, tenant scope, plugin activation
-  and query restrictions the read path uses.
-- `DerivationResult.Lookup(...)` recorded as a binding; submit runs `ContainsAsync` for each non-null
-  lookup-bound field and blocks with the `invalid` finding when the value is outside the universe.
-- Authoritative by default; the advisory case is explicit (`SuggestionsFrom(...)` /
-  `allowOtherValues`). Small inline options follow the same rule via `Options(...)`.
+- The constraint is an ordinary **filterable result field**: `projects.lookup` now projects
+  `CustomerId` and declares it `Filterable`. Before, `customerId` was neither — the picker returned
+  every customer's open projects; scoping it closed that latent gap.
+- The selectable key defaults to the view's `id` field (a `.Key(...)` override is a future affordance,
+  not yet needed).
+- `ViewExecutor.ContainsAsync(viewId, baseFilters, key, context, ct)` — an efficient `Exists` that
+  reuses the **same** view definition, permission checks (fail-closed: a caller who cannot read the
+  candidate view cannot pass membership), tenant scope, plugin activation and the existing
+  `BindFilters` path, then adds the key predicate.
+- `DerivationResult.Lookup(...)` is recorded as a binding; submit runs `ContainsAsync` for each
+  non-null lookup-bound field and blocks with the `invalid` finding when the value is outside the
+  universe. The same `RunDerivationsAsync` feeds resolve (advisory options) and submit (authoritative
+  membership) — one code path, no drift.
+- Authoritative by default; the advisory case stays explicit. Small inline option sets follow the same
+  rule via `AddOptions(...)`, which the derivation supplies for browsing but does not treat as the
+  membership authority.
 
 ## Non-goals
 

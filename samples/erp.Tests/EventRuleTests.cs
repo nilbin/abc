@@ -21,7 +21,10 @@ public sealed class EventRuleTests : IAsyncLifetime
     {
         host = await TamTestHost<ErpDbContext>.CreateSqliteAsync(ErpModel.Build());
         admin = host.Actor("demo",
-            "rules.manage", "extensions.manage", "orders.create", "orders.read", "orders.read-all");
+            "rules.manage", "extensions.manage", "orders.create", "orders.read", "orders.read-all",
+            // Creating a project order validates the picked project against the projects.lookup
+            // candidate universe (docs/40 membership), which reuses that View's read permission.
+            "projects.read");
         await host.SeedAsync("demo", db =>
         {
             var customer = Customer.Create("demo", new("Acme"), new("Road 1"), null, null);

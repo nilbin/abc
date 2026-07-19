@@ -344,10 +344,12 @@
       "fields": [
         "id",
         "name",
-        "number"
+        "number",
+        "customerId"
       ],
       "kinds": {
-        "id": "guid"
+        "id": "guid",
+        "customerId": "guid"
       }
     },
     "reach.search": {

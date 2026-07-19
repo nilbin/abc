@@ -155,6 +155,15 @@ public static class CreateOrderDerivations
         if (!isProject || input.CustomerId.Value == Guid.Empty)
             return result;
 
+        // Authoritative membership (docs/40): the candidate universe is projects.lookup scoped to
+        // THIS customer — the same view the picker renders, filtered by customerId. Submit rejects a
+        // projectId outside it (another customer's project, a closed/forged one) with the domain
+        // finding, by an Exists — never by whichever page the client last loaded.
+        result = result.Lookup(
+            nameof(CreateOrder.Input.ProjectId), "projects.lookup",
+            new Dictionary<string, string?> { ["customerId"] = input.CustomerId.Value.ToString() },
+            OrderFindings.ProjectNotAvailable);
+
         var options = await db.Projects
             .Where(x => x.CustomerId == input.CustomerId && x.Status == ProjectStatus.Open)
             .OrderBy(x => x.Name)

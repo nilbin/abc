@@ -795,6 +795,7 @@ export interface ProjectsLookupRow {
   id: string;
   name: string;
   number: string;
+  customerId: string;
 }
 
 export interface ProjectsLookupQuery {

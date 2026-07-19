@@ -36,6 +36,89 @@ public sealed class ViewExecutor(TamModel model, IServiceProvider services)
         }
     }
 
+    /// <summary>Authoritative lookup membership (docs/40): does a row keyed <paramref name="key"/>
+    /// EXIST in <paramref name="viewId"/> constrained by <paramref name="baseFilters"/>? Reuses the
+    /// view's activation gate, permission check, tenant scope and the same BindFilters path the read
+    /// uses, then an Exists — never a page load, and never the client's browsing params. A missing
+    /// view/key/filter or a parse failure is NOT a member (fail closed). The key defaults to the
+    /// result's `id` field.</summary>
+    public async Task<bool> ContainsAsync(
+        string viewId, IReadOnlyDictionary<string, string?> baseFilters, string? key,
+        OperationContext context, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(key) || !model.Views.TryGetValue(viewId, out var view))
+            return false;
+        if (services.GetService(typeof(ITamDb)) is ITamDb tam
+            && !await ActivationCache.ContributionExistsAsync(
+                services, tam.Db, view.Plugin, context.TenantId.Value, ct))
+            return false;
+        if (!context.Actor.Can(view.Permission))
+            return false;
+
+        var keyProperty = view.ResultType.GetProperties().FirstOrDefault(p => Naming.Camel(p.Name) == "id");
+        if (keyProperty is null) return false;
+
+        object queryRecord;
+        List<FieldFilter> baseFieldFilters;
+        object? keyValue;
+        try
+        {
+            queryRecord = BindQuery(view, baseFilters);
+            baseFieldFilters = BindFilters(view, baseFilters);
+            keyValue = ParseValue(keyProperty.PropertyType, key);
+        }
+        catch (Exception e) when (e is FormatException or ArgumentException or NotSupportedException or OverflowException)
+        {
+            return false;
+        }
+
+        var args = view.Execute.GetParameters().Select(p =>
+        {
+            if (p.Position == 0) return queryRecord;
+            if (p.ParameterType == typeof(OperationContext)) return context;
+            if (p.ParameterType == typeof(CancellationToken)) return (object?)ct;
+            return services.GetService(p.ParameterType)
+                ?? throw new InvalidOperationException($"DI001: cannot bind view parameter '{p.Name}'.");
+        }).ToArray();
+        var queryable = view.Execute.Invoke(null, args)!;
+        if (queryable is Task pending)
+        {
+            await pending;
+            queryable = pending.GetType().GetProperty(nameof(Task<int>.Result))!.GetValue(pending)!;
+        }
+
+        var contains = ContainsMethods.GetOrAdd(view.ResultType, t => ContainsMethod.MakeGenericMethod(t));
+        return await (Task<bool>)contains.Invoke(
+            null, [queryable, baseFieldFilters, keyProperty, keyValue, ct])!;
+    }
+
+    private static async Task<bool> ContainsCore<T>(
+        object queryable, List<FieldFilter> fieldFilters, PropertyInfo keyProperty, object? keyValue,
+        CancellationToken ct)
+    {
+        var source = (IQueryable<T>)queryable;
+        foreach (var filter in fieldFilters)
+            source = filter.Op switch
+            {
+                FilterOperator.Contains =>
+                    TamExpressions.WhereContains(source, filter.Property, (string)filter.Value!),
+                FilterOperator.From =>
+                    TamExpressions.WhereCompare(source, filter.Property, filter.Value, greaterOrEqual: true),
+                FilterOperator.To =>
+                    TamExpressions.WhereCompare(source, filter.Property, filter.Value, greaterOrEqual: false),
+                _ => TamExpressions.WhereEqual(source, filter.Property, filter.Value),
+            };
+        source = TamExpressions.WhereEqual(source, keyProperty, keyValue);
+        return source.Provider is Microsoft.EntityFrameworkCore.Query.IAsyncQueryProvider
+            ? await source.AnyAsync(ct)
+            : source.Any();
+    }
+
+    private static readonly MethodInfo ContainsMethod =
+        typeof(ViewExecutor).GetMethod(nameof(ContainsCore), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo> ContainsMethods = new();
+
     private async Task<(ViewResponse? Response, Finding? Error)> ExecuteWidenedAsync(
         string viewId,
         IReadOnlyDictionary<string, string?> query,

@@ -167,6 +167,11 @@ public static class ProjectLookup
         public ProjectId Id { get; init; }
         public string Name { get; init; } = "";
         public ProjectNumber Number { get; init; }
+        // The owning customer — a FILTERABLE field so the candidate universe can be scoped to one
+        // customer (docs/40): the create-order derivation supplies customerId as a base filter, and
+        // submit checks project membership against it (open projects OF this customer). One
+        // mechanism — the view's own filter — serves both the picker and the authoritative check.
+        public CustomerId CustomerId { get; init; }
     }
 
     public static IQueryable<Result> Execute(Query query, ErpDbContext db, OperationContext context)
@@ -176,11 +181,15 @@ public static class ProjectLookup
             projects = projects.Where(x =>
                 x.Name.Contains(query.Search!) ||
                 ((string)(object)x.Number).Contains(query.Search!));
-        return projects.Select(x => new Result { Id = x.Id, Name = x.Name, Number = x.Number });
+        return projects.Select(x => new Result
+        {
+            Id = x.Id, Name = x.Name, Number = x.Number, CustomerId = x.CustomerId,
+        });
     }
 
     public static void Capabilities(ViewCapabilitiesBuilder caps) =>
-        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name));
+        caps.Sortable(nameof(Result.Name)).DefaultSort(nameof(Result.Name))
+            .Filterable(nameof(Result.CustomerId));
 }
 
 /// <summary>The record surface behind the declared projects page (docs/32): fields named to

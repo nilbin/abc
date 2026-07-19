@@ -7,6 +7,13 @@ public sealed record Option(object Value, string Label);
 /// submit BLOCKS with <see cref="Finding"/> if the field is empty, for every caller.</summary>
 public sealed record RequiredRule(string Field, bool When, Finding Finding);
 
+/// <summary>An AUTHORITATIVE lookup binding a derivation produced (docs/40): <see cref="Field"/>'s
+/// submitted value must EXIST in the view <see cref="ViewId"/> constrained by <see cref="Filters"/>
+/// — the candidate universe. Submit validates membership by an Exists against that base query (never
+/// the front end's browsed page); a value outside it is rejected with <see cref="Invalid"/>.</summary>
+public sealed record LookupBinding(
+    string Field, string ViewId, IReadOnlyDictionary<string, string?> Filters, Finding Invalid);
+
 /// <summary>
 /// Output of a server derivation (docs/05, docs/40): field-state deltas + findings. Immutable,
 /// combinable. Outputs carry their OWN authority: <see cref="Required"/> and blocking findings are
@@ -21,6 +28,9 @@ public sealed record DerivationResult(
 {
     /// <summary>Authoritative conditional requiredness (docs/40) — see <see cref="Require"/>.</summary>
     public IReadOnlyList<RequiredRule> Required { get; init; } = [];
+
+    /// <summary>Authoritative lookup-membership bindings (docs/40) — see <see cref="Lookup"/>.</summary>
+    public IReadOnlyList<LookupBinding> Lookups { get; init; } = [];
 
     public static readonly DerivationResult Empty = new(
         [], new Dictionary<string, IReadOnlyList<Option>>(), new Dictionary<string, object?>());
@@ -72,12 +82,26 @@ public sealed record DerivationResult(
         Required = [.. Required, new RequiredRule(Naming.Camel(member), when, finding.At(Naming.Camel(member)))],
     };
 
+    /// <summary>AUTHORITATIVE lookup membership (docs/40): the submitted value of <paramref
+    /// name="member"/> must EXIST in view <paramref name="viewId"/> constrained by <paramref
+    /// name="filters"/> (the candidate universe — e.g. open projects of the picked customer). Submit
+    /// validates by an Exists against those base filters, ignoring the client's browsing params, and
+    /// rejects a value outside the universe with <paramref name="invalid"/>. The base filters are the
+    /// view's own Filterable fields — one mechanism for browsing and the authoritative constraint.</summary>
+    public DerivationResult Lookup(
+        string member, string viewId, IReadOnlyDictionary<string, string?> filters, FindingFactory invalid) => this with
+    {
+        Lookups = [.. Lookups,
+            new LookupBinding(Naming.Camel(member), viewId, filters, invalid.At(Naming.Camel(member)))],
+    };
+
     public DerivationResult Merge(DerivationResult other) => new(
         [.. Findings, .. other.Findings],
         Options.Concat(other.Options).ToDictionary(kv => kv.Key, kv => kv.Value),
         Suggestions.Concat(other.Suggestions).ToDictionary(kv => kv.Key, kv => kv.Value))
     {
         Required = [.. Required, .. other.Required],
+        Lookups = [.. Lookups, .. other.Lookups],
     };
 }
 

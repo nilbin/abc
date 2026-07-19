@@ -523,6 +523,7 @@
       "orders.invalid-transition": "Invalid status transition for the order.",
       "orders.not-editable": "The order can no longer be edited.",
       "orders.not-found": "The order does not exist.",
+      "orders.project-not-available": "The selected project is not available for this customer.",
       "orders.project-not-for-customer": "The project does not belong to the selected customer.",
       "orders.project-required": "Select a project for project orders.",
       "orders.schedule-needs-assignee": "Pick a valid assignee.",
@@ -1060,6 +1061,7 @@
       "orders.invalid-transition": "Ogiltig status\u00F6verg\u00E5ng f\u00F6r ordern.",
       "orders.not-editable": "Ordern kan inte l\u00E4ngre \u00E4ndras.",
       "orders.not-found": "Ordern finns inte.",
+      "orders.project-not-available": "Det valda projektet \u00E4r inte tillg\u00E4ngligt f\u00F6r kunden.",
       "orders.project-not-for-customer": "Projektet tillh\u00F6r inte den valda kunden.",
       "orders.project-required": "V\u00E4lj ett projekt f\u00F6r projektordrar.",
       "orders.schedule-needs-assignee": "V\u00E4lj en giltig utf\u00F6rare.",
@@ -5398,12 +5400,25 @@
           "changeSet": false,
           "extension": false,
           "readOnly": false
+        },
+        {
+          "name": "customerId",
+          "labelKey": "labels.customer",
+          "type": "reference",
+          "wireKind": "string",
+          "required": true,
+          "changeSet": false,
+          "extension": false,
+          "readOnly": false,
+          "lookup": "customers.lookup"
         }
       ],
       "sortable": [
         "name"
       ],
-      "filterable": [],
+      "filterable": [
+        "customerId"
+      ],
       "defaultSort": "name",
       "defaultSortDescending": false
     },
