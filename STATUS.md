@@ -1058,9 +1058,20 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   orders.project-required); rules.define's messages stays as genuine form tightening. Verified:
   suites 196 + 43 (FormBindingTests pin that the operation rule governs a direct AND a
   through-the-form call identically, while form tightening applies only through its own form), the
-  full wire matrix GREEN on fresh SQLite AND Postgres (94 checks each). DESIGNED next (docs/40 Phase
-  4): candidate sets as Views with authoritative submit-time membership (ViewExecutor.ContainsAsync
-  Exists over the base query, so the front end's rendered page is never proof of validity).
+  full wire matrix GREEN on fresh SQLite AND Postgres (94 checks each). (4) CANDIDATE SETS ARE VIEWS,
+  MEMBERSHIP IS AUTHORITATIVE: a derivation binds an operation field to a candidate View plus a base
+  filter (`DerivationResult.Lookup(field, viewId, filters, invalid)`); on submit the picked key is
+  validated by `ViewExecutor.ContainsAsync` — an `Exists` that reuses the view's activation,
+  permission (fail-closed), tenant scope and existing `BindFilters` path, then adds the key predicate
+  — so the rendered page is never proof of validity. The base filter reuses the view's EXISTING
+  `Filterable` fields, not a bespoke query param (per the design correction): `projects.lookup` now
+  projects a filterable `CustomerId`, closing the latent gap where the picker returned every
+  customer's open projects. orders.create binds `ProjectId` to `projects.lookup` scoped to the picked
+  customer, so a real-but-wrong-customer project is rejected at submit (`orders.project-not-available`).
+  Verified: suites 196 + 45 (LookupMembershipTests pins cross-customer reject / same-customer accept;
+  EventRuleTests actor gains `projects.read` since membership reuses the view permission), manifest
+  additive-only (new filterable result field), full wire matrix GREEN on fresh SQLite AND Postgres
+  (94 checks each). The docs/40 arc is now BUILT end to end.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
