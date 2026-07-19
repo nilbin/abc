@@ -166,7 +166,11 @@ public sealed class Order : IExtensible, Tam.EntityFrameworkCore.IVersioned, Tam
 // via an atomic SQL UPDATE (OrderNumbering.NextAsync) that holds the row's write-lock to the
 // operation's commit, so concurrent creates serialize on it. Immutable properties keep it clear
 // of TAM008 without a pragma: identity is fixed, and the count is a fact the database owns.
-public sealed class OrderNumberSequence
+//
+// ITenantScoped (Sol re-review, Finding 5A): this tenant-owned infrastructure row sits UNDER the
+// same isolation as domain state — the global query filter and the Postgres RLS backstop both
+// cover it now, instead of relying on every caller to remember a manual TenantId predicate.
+public sealed class OrderNumberSequence : Tam.EntityFrameworkCore.ITenantScoped
 {
     public required string TenantId { get; init; }
     public int Next { get; init; }

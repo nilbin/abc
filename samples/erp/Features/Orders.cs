@@ -60,19 +60,21 @@ public static class OrderNumbering
     /// number is unique, monotonic, and never recycled by a delete.</summary>
     public static async Task<int> NextAsync(ErpDbContext db, string tenant, CancellationToken ct)
     {
+        // No manual TenantId predicate: OrderNumberSequence is ITenantScoped, so the global query
+        // filter already scopes this to the current tenant's single counter row (Sol re-review,
+        // Finding 5A — and a manual filter would be TAM004). The UPDATE takes that row's write-lock.
         var bumped = await db.Set<OrderNumberSequence>()
-            .Where(x => x.TenantId == tenant)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Next, x => x.Next + 1), ct);
         if (bumped == 0)
         {
             // No counter for this tenant yet (created after seed). Claim the first number; a
             // concurrent first-create loses the PK race, surfaces as a version conflict, and
-            // retries into the UPDATE path above — so no duplicate is ever committed.
+            // retries into the UPDATE path above — so no duplicate is ever committed. TenantId is
+            // set here and re-stamped by the SaveChanges interceptor; both agree on the tenant.
             db.Set<OrderNumberSequence>().Add(new OrderNumberSequence { TenantId = tenant, Next = FirstNumber });
             return FirstNumber;
         }
         return await db.Set<OrderNumberSequence>()
-            .Where(x => x.TenantId == tenant)
             .Select(x => x.Next)
             .SingleAsync(ct);
     }

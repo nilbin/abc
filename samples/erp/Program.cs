@@ -45,9 +45,14 @@ builder.Services.AddTam<ErpDbContext>(model, integrations =>
 // ClaimsActorProvider instead; a custom IActorProvider replaces the whole seam. The fallback tenant
 // scopes requests that carry no active-tenant claim yet.
 builder.Services.AddTamOpenIddict<ErpDbContext>(fallbackTenant: Seed.Tenant);
-// On Postgres, cross-instance SSE via LISTEN/NOTIFY (docs/12); SQLite dev keeps the in-process default.
+// On Postgres, register provider-core semantics (error classification) up front — independent of
+// the optional SSE backplane (Finding 4A) — then the cross-instance SSE via LISTEN/NOTIFY (docs/12);
+// SQLite dev keeps the in-process default and the framework's heuristic classifier.
 if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddTamPostgres();
     builder.Services.AddTamPostgresBackplane(connectionString);
+}
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 

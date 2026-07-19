@@ -89,6 +89,18 @@ public static class PostgresBackplaneExtensions
             connectionString, sp.GetRequiredService<EffectBroadcaster>()));
         services.AddSingleton<IEffectBackplane>(sp => sp.GetRequiredService<PostgresEffectBackplane>());
         services.AddHostedService(sp => sp.GetRequiredService<PostgresEffectBackplane>());
+        return services;
+    }
+}
+
+public static class PostgresProviderExtensions
+{
+    /// <summary>Provider-core Postgres registration: the database semantics a Tam app on Postgres
+    /// needs REGARDLESS of transport. Decoupled from the optional SSE backplane (Sol re-review,
+    /// Finding 4A) — error classification is a property of the provider, not of whether
+    /// LISTEN/NOTIFY live-refresh is installed. Call after AddTam so it wins.</summary>
+    public static IServiceCollection AddTamPostgres(this IServiceCollection services)
+    {
         // Precise unique-violation classification (Sol review, Finding 4): SQLSTATE 23505,
         // overriding the framework's message heuristic (last registration wins).
         services.AddSingleton<ITamDbErrorClassifier, PostgresDbErrorClassifier>();

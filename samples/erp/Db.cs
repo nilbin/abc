@@ -77,7 +77,8 @@ public sealed class ErpDbContext(DbContextOptions<ErpDbContext> options, TenantS
         });
         // The durable order-number sequence (Finding 5): one row per tenant, keyed by TenantId so
         // a concurrent first-create loses the PK race and retries instead of duplicating a number.
-        // Addressed by explicit TenantId in OrderNumbering — no global tenant filter needed.
+        // It is ITenantScoped (Finding 5A), so ApplyTenantFilter below scopes it and the Postgres
+        // RLS backstop covers it — the same isolation as domain state, no manual predicate.
         modelBuilder.Entity<OrderNumberSequence>().HasKey(x => x.TenantId);
 
         // Plugin storage opts in here: the plugin's tables live in the host database and
