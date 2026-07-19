@@ -34,7 +34,9 @@ public static partial class ErpModel
             form.Field(x => x.OrderType);
             form.Field(x => x.ProjectId)
                 .VisibleWhen(x => x.OrderType == OrderType.Project)
-                .RequiredWhen(x => x.OrderType == OrderType.Project)
+                // Requiredness is the OPERATION's rule now (docs/40 — CreateOrderDerivations
+                // .Require), authoritative for every caller; the form derives its indicator from
+                // resolve, so no duplicate RequiredWhen here.
                 // A project belongs to the picked customer — the previous customer's project
                 // must not survive a customer change (docs/05 ResetOn).
                 .ResetOn(x => x.CustomerId);

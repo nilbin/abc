@@ -9063,18 +9063,6 @@
               "v": "Project"
             }
           },
-          "requiredWhen": {
-            "t": "bin",
-            "op": "eq",
-            "l": {
-              "t": "field",
-              "f": "orderType"
-            },
-            "r": {
-              "t": "const",
-              "v": "Project"
-            }
-          },
           "readOnly": false,
           "lookup": "projects.lookup",
           "resetOn": [

@@ -144,8 +144,16 @@ public static class CreateOrderDerivations
     public static async Task<DerivationResult> AvailableProjects(
         CreateOrder.Input input, DerivationContext context, ErpDbContext db, CancellationToken ct)
     {
-        if (input.OrderType != OrderType.Project || input.CustomerId.Value == Guid.Empty)
-            return DerivationResult.Empty;
+        // Operation-owned conditional requiredness (docs/40): a PROJECT order requires a project.
+        // This is the canonical rule of the create-order operation, authoritative at submit for
+        // EVERY caller (direct, MCP, integration) with the domain finding orders.project-required —
+        // and the indicator forms derive via resolve. It is no longer a form's RequiredWhen (which
+        // only tightened whoever happened to submit through that one form).
+        var isProject = input.OrderType == OrderType.Project;
+        var result = DerivationResult.Empty
+            .Require(nameof(CreateOrder.Input.ProjectId), isProject, OrderFindings.ProjectRequired);
+        if (!isProject || input.CustomerId.Value == Guid.Empty)
+            return result;
 
         var options = await db.Projects
             .Where(x => x.CustomerId == input.CustomerId && x.Status == ProjectStatus.Open)
@@ -153,7 +161,7 @@ public static class CreateOrderDerivations
             .Select(x => new Option(x.Id.Value, x.Name))
             .ToListAsync(ct);
 
-        return DerivationResult.Empty.AddOptions(nameof(CreateOrder.Input.ProjectId), options);
+        return result.AddOptions(nameof(CreateOrder.Input.ProjectId), options);
     }
 
     [ServerDerivation("orders.create.customer-state")]

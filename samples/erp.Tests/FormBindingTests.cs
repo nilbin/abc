@@ -5,16 +5,19 @@ using Tam.Testing;
 namespace Erp.Tests;
 
 /// <summary>
-/// Forms are projections of an operation contract (docs/40): a form's RequiredWhen tightening
-/// applies ONLY when the submission is made through that named form — never as a union scanned
-/// across every form bound to the operation (Sol re-review, Finding 2). A direct operation call
-/// (the door MCP and integrations use) is governed by the operation's own contract alone.
+/// Operations own their input contract; forms are projections that may TIGHTEN but never weaken it
+/// (docs/40, Sol re-review Finding 2). Two rules make the distinction concrete:
+///   • project-required is the create-order OPERATION's rule (a Require() derivation) — enforced for
+///     every caller, whether or not a form is named;
+///   • the rules.define form marks messages required when there's no action — a presentation
+///     TIGHTENING that applies ONLY when that form is the one submitted; a direct call falls to the
+///     operation's own domain rule (RUL003).
 /// </summary>
 public sealed class FormBindingTests : IAsyncLifetime
 {
     private TamTestHost<ErpDbContext> host = null!;
     private Guid customerId;
-    private TestActor<ErpDbContext> clerk = null!;
+    private TestActor<ErpDbContext> actor = null!;
 
     public async Task InitializeAsync()
     {
@@ -26,7 +29,7 @@ public sealed class FormBindingTests : IAsyncLifetime
             customerId = customer.Id.Value;
             return Task.CompletedTask;
         });
-        clerk = host.Actor("demo", "orders.create");
+        actor = host.Actor("demo", "orders.create", "rules.manage");
     }
 
     public async Task DisposeAsync() => await host.DisposeAsync();
@@ -39,33 +42,49 @@ public sealed class FormBindingTests : IAsyncLifetime
         description = "project order, no project chosen",
     };
 
-    [Fact]
-    public async Task Direct_operation_call_is_bound_by_the_operation_contract_only()
+    private static object FindingRuleMissingMessage() => new
     {
-        // No form binding: the create form's RequiredWhen(OrderType == Project) does NOT run. The
-        // operation's OWN domain rule catches the missing project, with its precise finding — not a
-        // generic validation.required scanned off some form.
-        (await clerk.ExecuteAsync("orders.create", ProjectOrderMissingProject()))
+        name = "silent-finding",
+        onOperation = "orders.complete",
+        condition = """{"t":"const","v":true}""",
+    };
+
+    [Fact]
+    public async Task Operation_owned_requiredness_governs_every_caller()
+    {
+        // Direct: no form binding, yet the operation's own Require() rule catches the missing
+        // project with the precise domain finding.
+        (await actor.ExecuteAsync("orders.create", ProjectOrderMissingProject()))
+            .ShouldFailWith("orders.project-required");
+
+        // Through the create form: SAME finding — the requiredness belongs to the operation, so the
+        // form does not (and need not) restate it. It is not a generic validation.required.
+        (await actor.ExecuteThroughFormAsync("web.orders.create", "orders.create", ProjectOrderMissingProject()))
             .ShouldFailWith("orders.project-required");
     }
 
     [Fact]
-    public async Task Submitting_through_the_form_applies_that_forms_tightening()
+    public async Task Form_specific_tightening_applies_only_through_that_form()
     {
-        // Through web.orders.create, the form's RequiredWhen(OrderType == Project) fires first as
-        // validation.required on projectId — the form-specific tightening, applied because THIS
-        // form was named.
-        (await clerk.ExecuteThroughFormAsync("web.orders.create", "orders.create", ProjectOrderMissingProject()))
-            .ShouldFailWith("validation.required", onField: "projectId");
+        // Through web.rules.define, the form's RequiredWhen(Action == null) tightening fires first,
+        // as validation.required on messages — the form-specific rule, applied because THIS form
+        // was named.
+        (await actor.ExecuteThroughFormAsync("web.rules.define", "rules.define", FindingRuleMissingMessage()))
+            .ShouldFailWith("validation.required", onField: "messages");
+
+        // A direct call (MCP, integration, a script) is NOT bound by that form rule — it falls to
+        // the operation's OWN domain rule (RUL003), which is richer (it wants the default culture).
+        (await actor.ExecuteAsync("rules.define", FindingRuleMissingMessage()))
+            .ShouldFailWith("rules.missing-message", onField: "messages");
     }
 
     [Fact]
-    public async Task Another_forms_tightening_is_not_applied()
+    public async Task An_unrelated_forms_tightening_does_not_leak()
     {
-        // web.orders.schedule binds to a DIFFERENT operation, so naming it here is inert: the
-        // orders.create submission is bound by orders.create's own contract, and only its domain
-        // rule fires. No unrelated form's rules leak in.
-        (await clerk.ExecuteThroughFormAsync("web.orders.schedule", "orders.create", ProjectOrderMissingProject()))
+        // web.orders.schedule binds a DIFFERENT operation, so naming it here is inert: the
+        // orders.create submission is bound by orders.create's own contract, nothing unrelated
+        // leaks in.
+        (await actor.ExecuteThroughFormAsync("web.orders.schedule", "orders.create", ProjectOrderMissingProject()))
             .ShouldFailWith("orders.project-required");
     }
 }
