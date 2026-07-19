@@ -1094,7 +1094,31 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   seam pins blocking-finding, idempotency-binding, bad-filter fail-closed, and closed-option
   enforcement; FormBindingTests updated to "mismatched/unknown form is rejected"), web typechecks,
   manifest unchanged (all runtime-additive), full wire matrix GREEN on fresh SQLite AND Postgres (94
-  checks each). docs/40 is genuinely closed, not merely moved into a better model.
+  checks each). The server contract model was substantially complete — but the NEXT re-review caught
+  that the generated UI still bypassed it end to end, so this round's "genuinely closed" claim was
+  premature.
+- **docs/40 re-review round 2 — the end-to-end gaps (6 findings, confirmed then fixed)**: the server
+  model held up, but the framework's own frontend and two edge cases undercut it. IMMEDIATE: (F1) the
+  generated `OperationForm` now SUBMITS THROUGH its form binding — `TamClient.operation` gained a
+  `form` option that appends `?form=`, so form-specific tightening actually applies in the UI instead
+  of every form executing as a direct call; (F2) lookup filter operators are TYPE-AWARE and fail
+  closed — `FilterKeys` advertises only the operators `BindFilters` honors for a field's type (no
+  `.contains` on a Guid), so an unsupported operator can't be declared legal then silently dropped to
+  widen the universe; (F3) derivations are structurally READ-ONLY (DER007) — the pipeline detects any
+  tracked write a derivation introduced, discards it, and fails closed, so no derivation write rides
+  the handler's commit or leaks when a blocking derivation returns. NEXT: (F4) `OperationForm` does a
+  full INITIAL RESOLVE on mount (manifest gains `hasServerDerivations`), so prefilled forms show
+  operation-derived requiredness/lookup descriptors immediately and a context-only (zero-DependsOn)
+  derivation is resolved at all; (F5) closed-option membership compares through `ValueWrapper.Unwrap`
+  + ORDINAL, so a semantic-wrapper option matches and a case-variant of a case-sensitive code is
+  rejected; (F6) at most ONE lookup binding per field (DER008) — two active lookups (resolve shows
+  one, submit enforces both) is refused in the shared `RunDerivationsAsync`. Verified: suites 196 + 53
+  (ContractEnforcementTests adds unsupported-operator, double-lookup, and mutating-derivation probes +
+  a case-variant closed option), web typechecks, manifest additive-only (new form flag), full wire
+  matrix GREEN on fresh SQLite AND Postgres (94 checks each). Honest status: server contract model
+  complete; the generated form path now goes through the binding and resolves on mount; the
+  derivation write-isolation is a fail-closed guard (a dedicated read-scoped context is the noted
+  longer-term hardening).
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —
