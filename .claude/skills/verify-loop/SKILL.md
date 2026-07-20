@@ -62,8 +62,9 @@ node scripts/generate-types.mjs samples/erp/manifest.baseline.json samples/web/s
   `scripts/check_docs.py` and `scripts/check_structure.py` (the ~420-line file cap and
   wire-prefix conventions — run BOTH locally; a file that grew past the cap fails CI even
   when everything else is green).
-- FE changes: `cd samples/web && npx tsc --noEmit && npx vite build` (build output is the
-  served wwwroot — commit it).
+- FE changes: `npm test -w @tam/react` (the package owns its Vitest suite), then
+  `cd samples/web && npx tsc --noEmit && npx vite build` (build output is the served wwwroot — commit
+  it). Package logic worth unit-testing goes in `packages/tam-react/src/*.test.ts`, not the sample app.
 
 ## 4. The wire matrix — fresh DB on BOTH engines
 

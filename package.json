@@ -1,9 +1,10 @@
 {
   "name": "tam-workspace",
   "private": true,
-  "workspaces": ["samples/web"],
+  "workspaces": ["packages/tam-react", "samples/web"],
   "scripts": {
     "build:web": "npm run build -w erp-web",
-    "dev:web": "npm run dev -w erp-web"
+    "dev:web": "npm run dev -w erp-web",
+    "test:react": "npm test -w @tam/react"
   }
 }

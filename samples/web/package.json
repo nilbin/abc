@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
     "build": "tsc --noEmit && vite build",
     "build:fast": "vite build",
     "preview": "vite preview"
@@ -24,10 +23,8 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "jsdom": "^25.0.1",
     "playwright": "^1.61.1",
     "typescript": "^5.7.2",
-    "vite": "^6.0.7",
-    "vitest": "^2.1.9"
+    "vite": "^6.0.7"
   }
 }

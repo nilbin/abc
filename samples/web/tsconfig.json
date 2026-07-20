@@ -14,5 +14,8 @@
       "@tam/react": ["../../packages/tam-react/src/index.tsx"]
     }
   },
-  "include": ["src", "../../packages/tam-core/src", "../../packages/tam-react/src"]
+  "include": ["src", "../../packages/tam-core/src", "../../packages/tam-react/src"],
+  // The app consumes the package SOURCES but not their tests — those own their toolchain (vitest) in
+  // packages/tam-react and are type-checked there, not against the app's dependency set.
+  "exclude": ["../../packages/**/*.test.ts", "../../packages/**/*.test.tsx"]
 }
