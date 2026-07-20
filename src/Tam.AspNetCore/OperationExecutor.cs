@@ -145,6 +145,33 @@ public sealed class OperationExecutor(
             return Fail(context, PipelineFindings.InvalidInput.Create());
         }
 
+        // Parse + validate the tenant extension channel at the REQUEST BOUNDARY (Sol re-review round 13,
+        // F3), alongside compiled input — NOT after the handler has already run inside the transaction.
+        // One contract: the channel is rejected as invalid-input when it is present on a non-extensible
+        // operation, is not a JSON object, cannot deserialize to typed changes, or carries a null entry.
+        // A well-formed (or absent) channel yields the dictionary the post-handler apply stage consumes,
+        // so a malformed payload can never escape as a 500 after the handler wrote, nor be silently
+        // ignored on an operation that does not accept extensions.
+        var extensionChanges = new Dictionary<string, ExtensionChange>();
+        if (body.TryGetProperty("extensions", out var extensionsElement))
+        {
+            if (operation.ExtensibleEntity is null || extensionsElement.ValueKind != JsonValueKind.Object)
+                return Fail(context, PipelineFindings.InvalidInput.Create());
+            try
+            {
+                extensionChanges = extensionsElement.Deserialize<Dictionary<string, ExtensionChange>>(TamJson.Options)
+                    ?? throw new JsonException("null extensions");
+            }
+            catch (JsonException)
+            {
+                return Fail(context, PipelineFindings.InvalidInput.Create());
+            }
+            // A null entry ({"note": null}) deserializes to a null ExtensionChange — an unusable, malformed
+            // entry; reject at the boundary rather than NRE in the applier.
+            if (extensionChanges.Values.Any(v => v is null))
+                return Fail(context, PipelineFindings.InvalidInput.Create());
+        }
+
         var structural = ValidateStructural(operation, input);
         // Only the SELECTED form's requiredness tightening applies (docs/40) — a direct/MCP/
         // integration call (formId null) is bound by the operation contract alone, never by a
@@ -320,16 +347,11 @@ public sealed class OperationExecutor(
         findings.AddRange(result.Findings);
         var conflicts = new List<FieldConflict>(result.Conflicts ?? []);
 
-        // Tenant extension channel: validate + apply against the tracked extensible aggregate.
+        // Tenant extension channel: validate + apply against the tracked extensible aggregate. `changes`
+        // was parsed + validated at the request boundary above (round 13, F3), so it is well-formed here.
         if (operation.ExtensibleEntity is { } extensibleType)
         {
-            // The submitted extension changes — or none, if the caller omitted the channel entirely. A
-            // create must still be checked for required extension fields when nothing was sent (round 11,
-            // F2), so we do NOT gate the whole block on the property being present.
-            var changes = body.TryGetProperty("extensions", out var extensionsElement)
-                          && extensionsElement.ValueKind == JsonValueKind.Object
-                ? extensionsElement.Deserialize<Dictionary<string, ExtensionChange>>(TamJson.Options)!
-                : new Dictionary<string, ExtensionChange>();
+            var changes = extensionChanges;
 
             // The registered registry, not a bare EF one: plugin-packaged fields (docs/22 P2) must
             // validate exactly like tenant-defined fields. Specs are fetched by entity key — no target
@@ -338,15 +360,13 @@ public sealed class OperationExecutor(
                 ?? new EfExtensionRegistry(db);
             var specs = await registry.For(context.TenantId, TamModel.EntityKey(extensibleType), ct);
 
-            // Deterministic target, never a guess: with ONE tracked instance of the extensible type it is
-            // the target; with several (a handler that also loaded sibling rows) the single Added/Modified
-            // one is; anything else fails CLOSED — silently writing onto whichever row happened to be
-            // tracked first would be cross-record corruption. Create and edit have DIFFERENT extension
-            // semantics (Sol re-review round 12, F2): for a CREATE the submitted Value IS the initial
-            // state, so a new target applies the COMPLETE submitted dictionary — the edit-style
-            // EffectivePatch would wrongly drop a prefilled {original: X, value: X} as a no-op. Required
-            // validation on a new row must not hinge on selecting the single write target (round 12, F3);
-            // PlanWrite folds all of this into one pure, unit-tested decision.
+            // Deterministic target, never a guess. Create and edit have DIFFERENT extension semantics (Sol
+            // re-review round 12, F2): for a CREATE the submitted Value IS the initial state, so a new
+            // target applies the COMPLETE submitted dictionary — the edit-style EffectivePatch would
+            // wrongly drop a prefilled {original: X, value: X} as a no-op. Whenever extension work exists
+            // it MUST resolve to exactly one target or fail closed — several competing targets are
+            // ambiguous, zero tracked targets is target-not-found (round 13, F1/F2). PlanWrite folds all
+            // of this into one pure, unit-tested, TOTAL decision.
             var candidates = db.ChangeTracker.Entries()
                 .Where(e => extensibleType.IsInstanceOfType(e.Entity))
                 .ToList();
@@ -355,19 +375,21 @@ public sealed class OperationExecutor(
             var plan = ExtensionApplier.PlanWrite(
                 candidates.Select(e => e.State).ToList(), hasRequiredActive, changes.Count, effective.Count);
 
-            if (plan.Run)
+            switch (plan.Kind)
             {
-                if (plan.Ambiguous)
-                {
+                case ExtensionApplier.ExtensionPlanKind.Ambiguous:
                     findings.Add(PipelineFindings.AmbiguousExtensionTarget.Create());
-                }
-                else if (plan.TargetIndex >= 0 && candidates[plan.TargetIndex].Entity is IExtensible extensible)
-                {
+                    break;
+                case ExtensionApplier.ExtensionPlanKind.TargetNotFound:
+                    findings.Add(PipelineFindings.ExtensionTargetNotFound.Create());
+                    break;
+                case ExtensionApplier.ExtensionPlanKind.Apply
+                    when candidates[plan.TargetIndex].Entity is IExtensible extensible:
                     var toApply = plan.IsNewTarget ? changes : effective;
                     var applied = ExtensionApplier.Apply(extensible, plan.IsNewTarget, toApply, specs);
                     findings.AddRange(applied.Findings);
                     conflicts.AddRange(applied.Conflicts);
-                }
+                    break;
             }
         }
 

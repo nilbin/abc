@@ -265,12 +265,23 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   applied, not dropped as an edit no-op. The server owns this: a NEW extension target applies the
   COMPLETE submitted dictionary (not the edit-only effective patch), and the applier's no-op skip is
   edit-only. Forcing `original: null` in the form would not fix direct HTTP / MCP / integration callers.
-- **Extension write target + required validation fail closed together** (Sol re-review round 12, F3). The
-  single extension write target is the sole tracked extensible instance, else the sole Added/Modified one.
-  Required-create validation must NOT hinge on that selection succeeding: when several NEW extensible rows
-  are tracked (or one new plus a modified sibling) the operation cannot attribute the patch or guarantee
-  each row's required fields, so it raises `pipeline.ambiguous-extension-target` rather than let required
-  validation silently disappear. The decision is a pure, unit-tested function over the tracked EF states.
+- **The extension planner is total and fail closed** (Sol re-review rounds 12-13, F3/F1/F2). The single
+  extension write target is the sole tracked extensible instance, else the sole Added/Modified one. Whether
+  extension work EXISTS is decided from the tracked candidates, never from having already selected a target
+  (round 13, F2 — that was circular): a create has work when a new row is tracked and the complete
+  submitted set is non-empty (or a required-active spec must be checked), an edit when the effective
+  patch is non-empty. Then the invariant: **whenever extension work exists the plan must name exactly one
+  target or return a blocking finding** — several competing targets are `pipeline.ambiguous-extension-
+  target`, zero tracked targets is `pipeline.extension-target-not-found` (round 13, F1). A real patch is
+  never silently dropped, and required-create validation never disappears merely because target selection
+  failed. The decision is a pure, unit-tested function over the tracked EF states.
+- **The extension channel is validated at the request boundary** (Sol re-review round 13, F3), alongside
+  compiled input — not read from the raw body after the handler has run inside the transaction. One
+  contract: the `extensions` channel present on a **non-extensible** operation, a **non-object** channel,
+  an entry that is **not a `Change` object**, or a **null** entry all answer a structured
+  `pipeline.invalid-input`, and the handler never runs. A well-formed (or absent) channel flows to the
+  post-handler apply stage. This closes the gaps where extensions on the wrong operation were ignored,
+  malformed input was silently treated as empty, or a bad entry escaped as a 500 after the handler wrote.
 - **Frozen concurrency baseline.** A `Change<T>`'s `original` is the value frozen when the form's
   `instanceKey` (its record identity) last changed, never the latest `initialValues` prop — a
   background refresh handing the same record a newer server value cannot silently rebase the

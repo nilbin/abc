@@ -252,8 +252,7 @@ public class ExtensionWritePlanTests
     public void Single_new_target_with_a_required_field_and_no_patch_still_validates()
     {
         var plan = ExtensionApplier.PlanWrite([EntityState.Added], hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
-        Assert.True(plan.Run);
-        Assert.False(plan.Ambiguous);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.Apply, plan.Kind);
         Assert.Equal(0, plan.TargetIndex);
         Assert.True(plan.IsNewTarget);
     }
@@ -265,8 +264,7 @@ public class ExtensionWritePlanTests
         // no target, no ambiguity and NO required validation — a silent bypass. Now it fails closed.
         var plan = ExtensionApplier.PlanWrite(
             [EntityState.Added, EntityState.Added], hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
-        Assert.True(plan.Run);
-        Assert.True(plan.Ambiguous);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.Ambiguous, plan.Kind);
     }
 
     [Fact]
@@ -274,17 +272,17 @@ public class ExtensionWritePlanTests
     {
         var plan = ExtensionApplier.PlanWrite(
             [EntityState.Added, EntityState.Modified], hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
-        Assert.True(plan.Run);
-        Assert.True(plan.Ambiguous);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.Ambiguous, plan.Kind);
     }
 
     [Fact]
     public void An_edit_with_no_effective_patch_does_no_target_lookup()
     {
         // A lone Modified row carrying only unchanged extensions (effective empty), no required-create
-        // concern — the pipeline must skip entirely (round 10, F2 preserved).
+        // concern — the pipeline must skip entirely (round 10, F2 preserved). A stray changeCount does not
+        // count as edit work — only the effective patch does.
         var plan = ExtensionApplier.PlanWrite([EntityState.Modified], hasRequiredActive: false, changeCount: 3, effectiveCount: 0);
-        Assert.False(plan.Run);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.None, plan.Kind);
     }
 
     [Fact]
@@ -293,8 +291,7 @@ public class ExtensionWritePlanTests
         // effectiveCount 0 (all {X,X}) but changeCount 1: a create must still run so the prefilled value
         // is applied (round 12, F2). Work for a new target is the COMPLETE submitted count.
         var plan = ExtensionApplier.PlanWrite([EntityState.Added], hasRequiredActive: false, changeCount: 1, effectiveCount: 0);
-        Assert.True(plan.Run);
-        Assert.False(plan.Ambiguous);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.Apply, plan.Kind);
         Assert.True(plan.IsNewTarget);
         Assert.Equal(0, plan.TargetIndex);
     }
@@ -307,9 +304,39 @@ public class ExtensionWritePlanTests
         var plan = ExtensionApplier.PlanWrite(
             [EntityState.Unchanged, EntityState.Added, EntityState.Unchanged],
             hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
-        Assert.True(plan.Run);
-        Assert.False(plan.Ambiguous);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.Apply, plan.Kind);
         Assert.Equal(1, plan.TargetIndex);
         Assert.True(plan.IsNewTarget);
+    }
+
+    [Fact]
+    public void A_real_edit_patch_with_no_tracked_target_fails_closed_as_not_found()
+    {
+        // Round 13, F1: a real effective patch (effectiveCount 1) but ZERO tracked extensible rows — an
+        // untracked/direct-update handler, or an operation wrongly declared extensible. Previously the
+        // planner said "run, not ambiguous, no target" and the executor silently dropped the patch. Now it
+        // fails closed as target-not-found.
+        var plan = ExtensionApplier.PlanWrite([], hasRequiredActive: false, changeCount: 1, effectiveCount: 1);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.TargetNotFound, plan.Kind);
+    }
+
+    [Fact]
+    public void Two_new_targets_carrying_only_optional_prefill_fail_closed()
+    {
+        // Round 13, F2: two Added rows, no required spec, an OPTIONAL prefilled {X,X} (changeCount 1,
+        // effectiveCount 0). Deciding work from a selected target was circular — no unique target meant
+        // work read from effectiveCount (0) and the prefill silently vanished. Create work now comes from
+        // the new candidates, so this is ambiguous, not a no-op.
+        var plan = ExtensionApplier.PlanWrite(
+            [EntityState.Added, EntityState.Added], hasRequiredActive: false, changeCount: 1, effectiveCount: 0);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.Ambiguous, plan.Kind);
+    }
+
+    [Fact]
+    public void One_new_plus_a_modified_sibling_carrying_only_optional_prefill_fails_closed()
+    {
+        var plan = ExtensionApplier.PlanWrite(
+            [EntityState.Added, EntityState.Modified], hasRequiredActive: false, changeCount: 1, effectiveCount: 0);
+        Assert.Equal(ExtensionApplier.ExtensionPlanKind.Ambiguous, plan.Kind);
     }
 }

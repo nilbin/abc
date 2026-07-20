@@ -213,6 +213,7 @@
   "packages.older-version": "Version {offered} är äldre än den installerade ({installed}).",
   "packages.role-conflict": "Rollen {role} finns redan med andra behörigheter.",
   "pipeline.ambiguous-extension-target": "Operationen hanterade flera poster av denna typ; ändringarna av anpassade fält kunde inte knytas till en.",
+  "pipeline.extension-target-not-found": "Operationen skapade eller laddade ingen post av denna typ, så ändringarna av anpassade fält kunde inte tillämpas.",
   "pipeline.field-not-authorized": "Du saknar behörighet att ange fältet {field} ({permission}).",
   "pipeline.idempotency-mismatch": "Idempotensnyckeln har redan använts med en annan begäran.",
   "pipeline.idempotent-replay": "Svaret återanvändes från en tidigare identisk begäran.",

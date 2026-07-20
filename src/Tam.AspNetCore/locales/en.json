@@ -213,6 +213,7 @@
   "packages.older-version": "Version {offered} is older than the installed version ({installed}).",
   "packages.role-conflict": "The role {role} already exists with different permissions.",
   "pipeline.ambiguous-extension-target": "The operation tracked several records of this type; the custom-field changes could not be attributed to one.",
+  "pipeline.extension-target-not-found": "The operation did not create or load a record of this type, so the custom-field changes could not be applied.",
   "pipeline.field-not-authorized": "You lack permission to set the field {field} ({permission}).",
   "pipeline.idempotency-mismatch": "The idempotency key was already used with a different request.",
   "pipeline.idempotent-replay": "The response was replayed from an earlier identical request.",

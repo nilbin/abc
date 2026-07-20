@@ -159,21 +159,33 @@ public static class ExtensionApplier
     private static object? FromElement(JsonElement? element) =>
         element is { } e ? ExtensionData.FromElement(e) : null;
 
+    /// <summary>How the pipeline must treat the tracked extensible instances for one operation.
+    /// <see cref="None"/>: no extension work. <see cref="Apply"/>: write to exactly one named target.
+    /// <see cref="Ambiguous"/>: several competing targets — fail closed with
+    /// <c>pipeline.ambiguous-extension-target</c>. <see cref="TargetNotFound"/>: extension work but NO
+    /// tracked target — fail closed with <c>pipeline.extension-target-not-found</c>.</summary>
+    public enum ExtensionPlanKind { None, Apply, Ambiguous, TargetNotFound }
+
     /// <summary>The chosen extension write plan over the tracked extensible instances (Sol re-review
-    /// round 12, F3). <see cref="Run"/> is false when there is nothing to do. <see cref="Ambiguous"/>
-    /// means fail closed with <c>pipeline.ambiguous-extension-target</c>. Otherwise
-    /// <see cref="TargetIndex"/> (into the caller's candidate list) receives the patch, applied with
-    /// <see cref="IsNewTarget"/> semantics.</summary>
-    public readonly record struct ExtensionWritePlan(bool Run, bool Ambiguous, int TargetIndex, bool IsNewTarget);
+    /// rounds 12-13, F3/F1/F2). TOTAL and fail-closed: whenever extension work exists the plan either
+    /// names exactly one target (<see cref="Kind"/> == Apply, <see cref="TargetIndex"/> valid) or is a
+    /// blocking Ambiguous / TargetNotFound — the invalid "run with no target" combination is never
+    /// produced.</summary>
+    public readonly record struct ExtensionWritePlan(ExtensionPlanKind Kind, int TargetIndex, bool IsNewTarget)
+    {
+        public static readonly ExtensionWritePlan None = new(ExtensionPlanKind.None, -1, false);
+    }
 
     /// <summary>Decide which tracked extensible instance receives the submitted extension patch, and
     /// whether the run must fail closed — pure over EF <see cref="EntityState"/>s so it is unit-testable
-    /// (Sol re-review round 12, F3). Target: the sole tracked instance, else the sole Added/Modified one,
-    /// else none. Required-create validation must NOT hinge on selecting that single target: when several
-    /// NEW extensible rows are tracked (or one new plus a modified sibling) we can neither attribute the
-    /// patch nor guarantee each row's required fields, so we fail CLOSED rather than let required
-    /// validation silently disappear. The write "work" is the COMPLETE submitted set for a new target
-    /// (its Value is initial state — round 12, F2) or the effective patch for an existing one.</summary>
+    /// (Sol re-review rounds 12-13). Target: the sole tracked instance, else the sole Added/Modified one,
+    /// else none. Whether extension work EXISTS is decided from the tracked candidates, NOT from having
+    /// already selected a target (round 13, F2 — that was circular): a create has work when a new row is
+    /// tracked and the COMPLETE submitted set is non-empty (its Value is initial state, round 12 F2) or a
+    /// required-active spec must be checked; an edit has work when the effective (Original != Value) patch
+    /// is non-empty. When work exists but there is no single target — several new rows, a new plus a
+    /// modified sibling (Ambiguous), or none at all (TargetNotFound, round 13 F1) — fail CLOSED rather
+    /// than silently drop the patch or skip required validation.</summary>
     public static ExtensionWritePlan PlanWrite(
         IReadOnlyList<EntityState> states, bool hasRequiredActive, int changeCount, int effectiveCount)
     {
@@ -188,12 +200,16 @@ public static class ExtensionApplier
         var targetIndex = states.Count == 1 ? 0 : writtenCount == 1 ? writtenIndex : -1;
         var isNewTarget = targetIndex >= 0 && states[targetIndex] == EntityState.Added;
 
-        var requiredCreateNeedsCheck = hasRequiredActive && addedCount > 0;
-        var work = isNewTarget ? changeCount : effectiveCount;
-        if (work <= 0 && !requiredCreateNeedsCheck) return new(false, false, -1, isNewTarget);
+        // Does extension work exist? Decided from the candidates, not from target selection.
+        var hasNewCandidate = addedCount > 0;
+        var createWork = hasNewCandidate && changeCount > 0;
+        var editWork = !hasNewCandidate && effectiveCount > 0;
+        var requiredCreateWork = hasNewCandidate && hasRequiredActive;
+        if (!(createWork || editWork || requiredCreateWork)) return ExtensionWritePlan.None;
 
-        var ambiguous = (requiredCreateNeedsCheck && addedCount > 1)
-            || (targetIndex < 0 && states.Count > 1);
-        return new(true, ambiguous, ambiguous ? -1 : targetIndex, isNewTarget);
+        // Work exists — it MUST have exactly one target or fail closed.
+        if (targetIndex < 0)
+            return new(states.Count == 0 ? ExtensionPlanKind.TargetNotFound : ExtensionPlanKind.Ambiguous, -1, false);
+        return new(ExtensionPlanKind.Apply, targetIndex, isNewTarget);
     }
 }
