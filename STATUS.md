@@ -1299,12 +1299,20 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   was silently treated as empty, and a malformed entry could escape as an exception past the structured
   boundary. It is now parsed + validated at the REQUEST BOUNDARY alongside compiled input: present on a
   non-extensible operation, a non-object channel, an entry that is not a Change object, or a null entry
-  all answer a structured `pipeline.invalid-input`, and the handler never runs. Verified: suites **210 +
-  73** C# (3 new planner cases — zero-target not-found + two ambiguous optional-prefill creates — and a
-  new ExtensionChannelBoundaryTests: 5 malformed-channel pipeline cases, each asserting the handler did
-  not run), **16 Vitest**, structure + docs gates, manifest additive-only (D4, +2 locale keys) & otherwise
+  all answer a structured `pipeline.invalid-input`, and the handler never runs. Verified: suites **221 +
+  62** C# (3 new planner cases — zero-target not-found + two ambiguous optional-prefill creates — plus the
+  required-on-create and 5 malformed-channel boundary cases, each asserting the handler did not run),
+  **16 Vitest**, structure + docs gates, manifest additive-only (D4, +2 locale keys) & otherwise
   byte-unchanged, `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres (94 each). The
   extension planner is now total and fail-closed; the channel is validated before any handler runs.
+  Follow-up (test placement): the extension-pipeline behavior these last rounds verified is FRAMEWORK
+  behavior, so its integration tests were moved out of `samples/erp.Tests` into a framework-owned fixture
+  (`tests/Tam.Tests/Framework`) — a minimal extensible `Widget` entity + `WidgetDbContext` + three
+  operations stood up via `TamTestHost` — so the framework is verified independently of the ERP sample's
+  operation choices, not riding on `orders.create` being `[AcceptsExtensions]`. Operations register
+  through the public `TamModelBuilder.AddOperationType` (no source generator in the test project). The
+  pure decision logic (`PlanWrite`, `ExtensionApplier.Apply`) stays in the framework unit tests where it
+  already lived.
 - **docs/40 re-review round 12 — edit-workflow contract holes (2 HIGH + 1 MEDIUM/HIGH + 1 LOW, all
   confirmed then fixed)**: round 11 was affirmed correct; three holes remained, each verified against real
   code first. (F1, HIGH) submit + conflict state was scoped to `form`/`instanceKey` but NOT to `actAs`. An
