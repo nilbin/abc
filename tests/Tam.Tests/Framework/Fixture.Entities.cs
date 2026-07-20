@@ -55,15 +55,20 @@ public sealed class Bin : IExtensible, ITenantScoped
     public string TenantId { get; set; } = "";
     public Guid GroupId { get; set; }
     public string Name { get; set; } = "";
+    public WidgetCategory Category { get; set; }
     public BinStatus Status { get; set; }
     public decimal? Budget { get; set; }
     public ExtensionData Extensions { get; set; } = new();
 }
 
-// ---- Domain event (the "order-created" analog) ----
+// ---- Domain events (the "order-created" analog). BinCreated references a value-object-keyed row, so a
+// rule's set-field action can resolve and write the payload's Bin. ----
 
 [DomainEvent("widget-created")]
 public sealed record WidgetCreated(Guid WidgetId, string Name, WidgetCategory Category);
+
+[DomainEvent("bin-created")]
+public sealed record BinCreated(BinId BinId, string Name, WidgetCategory Category);
 
 // ---- DbContext ----
 

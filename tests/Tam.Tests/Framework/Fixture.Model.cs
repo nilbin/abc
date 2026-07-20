@@ -18,9 +18,12 @@ public static class WidgetModel
         .AddOperationType(typeof(SetWidgetPriority))
         .AddOperationType(typeof(CompleteWidget))
         .AddOperationType(typeof(CloseBin))
+        .AddOperationType(typeof(CreateBin))
+        .AddOperationType(typeof(SetBinStatus))
         .AddViewType(typeof(BinLookup))
         .AddDerivationHost(typeof(WidgetDerivations))
         .AddEventType(typeof(WidgetCreated))
+        .AddEventType(typeof(BinCreated))
         .Form<CreateWidget.Input>("web.widgets.create", "widgets.create", form =>
         {
             form.Field(x => x.Name);
@@ -54,6 +57,8 @@ public static class WidgetModel
             ["operations.widgets.set-priority.title"] = "Set widget priority",
             ["operations.widgets.complete.title"] = "Complete widget",
             ["operations.bins.close.title"] = "Close bin",
+            ["operations.bins.create.title"] = "Create bin",
+            ["operations.bins.set-status.title"] = "Set bin status",
         });
 
     public static TamModel Build() => Builder().Build();

@@ -144,6 +144,55 @@ public static class CloseBin
     }
 }
 
+/// <summary>Creating a Bin — publishes bin-created (an EventRule trigger whose payload references the Bin
+/// row a set-field action writes).</summary>
+[Operation("bins.create")]
+[Authorize("bins.manage")]
+[AcceptsExtensions(typeof(Bin))]
+public static class CreateBin
+{
+    public sealed record Input(Guid GroupId, string Name, WidgetCategory Category = WidgetCategory.Standard, decimal? Budget = null);
+    public sealed record Output(BinId BinId);
+
+    public static Task<Result<Output>> Execute(
+        Input input, OperationContext context, WidgetDbContext db, CancellationToken ct)
+    {
+        var bin = new Bin
+        {
+            Id = new BinId(Guid.NewGuid()),
+            TenantId = context.TenantId.Value,
+            GroupId = input.GroupId,
+            Name = input.Name,
+            Category = input.Category,
+            Status = BinStatus.Open,
+            Budget = input.Budget,
+        };
+        db.Bins.Add(bin);
+        return Task.FromResult<Result<Output>>(new Result<Output> { Output = new Output(bin.Id) }
+            .Effect(new EventPublished(new BinCreated(bin.Id, bin.Name, bin.Category))));
+    }
+}
+
+/// <summary>Setting a Bin's status — a RuleAction trigger carrying a rule-condition input field (status),
+/// whose target row is the Bin (a set-field action can flag its extension).</summary>
+[Operation("bins.set-status")]
+[Authorize("bins.manage")]
+[AcceptsExtensions(typeof(Bin))]
+public static class SetBinStatus
+{
+    public sealed record Input(BinId BinId, BinStatus Status);
+    public sealed record Output(BinId BinId);
+
+    public static async Task<Result<Output>> Execute(
+        Input input, OperationContext context, WidgetDbContext db, CancellationToken ct)
+    {
+        var bin = await db.Bins.SingleOrDefaultAsync(x => x.Id == input.BinId, ct);
+        if (bin is null) return WidgetFindings.NotFound.Create();
+        bin.Status = input.Status;
+        return new Output(input.BinId);
+    }
+}
+
 /// <summary>The Bin picker + membership universe: open bins, scopable to one Group (the filterable
 /// GroupId) — one mechanism serves both the picker and the authoritative membership check.</summary>
 [View("bins.lookup")]

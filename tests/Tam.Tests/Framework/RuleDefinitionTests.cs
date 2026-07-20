@@ -1,19 +1,20 @@
-using Erp;
 using Tam.Testing;
 
-namespace Erp.Tests;
+namespace Tam.Tests.Framework;
 
-/// <summary>RTFM #3 regressions: a hand-authored condition that gets the Px wire shape wrong
-/// must come back as a FINDING naming the problem — never a 500 — and an unsupported operator
-/// must be named, not left to trial and error.</summary>
+/// <summary>
+/// The tam.rules package's define-time validation is FRAMEWORK behavior: a hand-authored condition that
+/// gets the Px wire shape wrong must come back as a FINDING naming the problem — never a 500 — and an
+/// unsupported operator must be named. Exercised through the framework-owned bins.close trigger.
+/// </summary>
 public sealed class RuleDefinitionTests : IAsyncLifetime
 {
-    private TamTestHost<ErpDbContext> host = null!;
-    private TestActor<ErpDbContext> admin = null!;
+    private TamTestHost<WidgetDbContext> host = null!;
+    private TestActor<WidgetDbContext> admin = null!;
 
     public async Task InitializeAsync()
     {
-        host = await TamTestHost<ErpDbContext>.CreateSqliteAsync(ErpModel.Build());
+        host = await TamTestHost<WidgetDbContext>.CreateSqliteAsync(WidgetModel.Build());
         admin = host.Actor("demo", "rules.manage");
     }
 
@@ -22,12 +23,10 @@ public sealed class RuleDefinitionTests : IAsyncLifetime
     [Fact]
     public async Task Wrong_wire_shape_is_a_finding_not_an_exception()
     {
-        // The docs' old sketch shape — no "t" discriminator. STJ throws NotSupportedException;
-        // the operation must translate that to rules.invalid-condition.
         var response = await admin.ExecuteAsync("rules.define", new
         {
             name = "bad-shape",
-            onOperation = "orders.complete",
+            onOperation = "bins.close",
             condition = """{"bin":"and","l":{"field":"x"},"r":{"const":1}}""",
             messages = new Dictionary<string, string> { ["sv"] = "x", ["en"] = "x" },
         });
@@ -40,8 +39,8 @@ public sealed class RuleDefinitionTests : IAsyncLifetime
         var response = await admin.ExecuteAsync("rules.define", new
         {
             name = "bad-op",
-            onOperation = "orders.complete",
-            condition = """{"t":"bin","op":"gte","l":{"t":"field","f":"orderId"},"r":{"t":"const","v":1}}""",
+            onOperation = "bins.close",
+            condition = """{"t":"bin","op":"gte","l":{"t":"field","f":"binId"},"r":{"t":"const","v":1}}""",
             messages = new Dictionary<string, string> { ["sv"] = "x", ["en"] = "x" },
         });
         response.ShouldFailWith("rules.invalid-condition");
@@ -52,24 +51,20 @@ public sealed class RuleDefinitionTests : IAsyncLifetime
     [Fact]
     public async Task Comparing_against_the_null_constant_is_refused_toward_isNull()
     {
-        // The builder's unfinished-clause shape: eq(field, null) means "field is empty", which
-        // is almost never what the author intended — isNull/isNotNull exist for that. Refuse
-        // at define rather than store a rule that silently means something else.
         var response = await admin.ExecuteAsync("rules.define", new
         {
             name = "null-compare",
-            onOperation = "orders.complete",
-            condition = """{"t":"bin","op":"eq","l":{"t":"field","f":"orderId"},"r":{"t":"const","v":null}}""",
+            onOperation = "bins.close",
+            condition = """{"t":"bin","op":"eq","l":{"t":"field","f":"binId"},"r":{"t":"const","v":null}}""",
             messages = new Dictionary<string, string> { ["sv"] = "x", ["en"] = "x" },
         });
         response.ShouldFailWith("rules.invalid-condition", onField: "condition");
 
-        // The explicit presence operators remain the sanctioned spelling.
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "is-null-ok",
-            onOperation = "orders.complete",
-            condition = """{"t":"un","op":"isNull","x":{"t":"field","f":"orderId"}}""",
+            onOperation = "bins.close",
+            condition = """{"t":"un","op":"isNull","x":{"t":"field","f":"binId"}}""",
             messages = new Dictionary<string, string> { ["sv"] = "x", ["en"] = "x" },
         })).ShouldSucceed();
     }
@@ -81,30 +76,27 @@ public sealed class RuleDefinitionTests : IAsyncLifetime
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "quiet-action",
-            onOperation = "orders.complete",
+            onOperation = "bins.close",
             condition = """{"t":"const","v":true}""",
             action = """{"type":"publish-event"}""",
         })).ShouldSucceed();
 
-        // ...but a FINDING rule (no action) demands a message, and RUL003 is the AUTHORITATIVE
-        // guard (docs/40 — the operation's own domain rule, not a form scan). It is richer than
-        // mere presence: it wants the DEFAULT culture ("sv"). A direct operation call (no form
-        // binding) is bound by exactly this rule, so an entirely-omitted map...
+        // ...but a FINDING rule (no action) demands a message, and RUL003 is the AUTHORITATIVE guard: it
+        // wants the DEFAULT culture ("en"). An entirely-omitted map fails...
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "silent-finding",
-            onOperation = "orders.complete",
+            onOperation = "bins.close",
             condition = """{"t":"const","v":true}""",
         })).ShouldFailWith("rules.missing-message", onField: "messages");
 
-        // ...and a non-empty map that still lacks the default culture both fail the SAME domain
-        // rule with the SAME precise finding — no generic validation.required from a form scan.
+        // ...and a non-empty map that still lacks the default culture fails the SAME domain rule.
         (await admin.ExecuteAsync("rules.define", new
         {
             name = "wrong-culture-finding",
-            onOperation = "orders.complete",
+            onOperation = "bins.close",
             condition = """{"t":"const","v":true}""",
-            messages = new Dictionary<string, string> { ["en"] = "x" },
+            messages = new Dictionary<string, string> { ["sv"] = "x" },
         })).ShouldFailWith("rules.missing-message", onField: "messages");
     }
 }
