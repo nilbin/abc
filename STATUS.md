@@ -1305,14 +1305,22 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   **16 Vitest**, structure + docs gates, manifest additive-only (D4, +2 locale keys) & otherwise
   byte-unchanged, `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres (94 each). The
   extension planner is now total and fail-closed; the channel is validated before any handler runs.
-  Follow-up (test placement): the extension-pipeline behavior these last rounds verified is FRAMEWORK
-  behavior, so its integration tests were moved out of `samples/erp.Tests` into a framework-owned fixture
-  (`tests/Tam.Tests/Framework`) — a minimal extensible `Widget` entity + `WidgetDbContext` + three
-  operations stood up via `TamTestHost` — so the framework is verified independently of the ERP sample's
-  operation choices, not riding on `orders.create` being `[AcceptsExtensions]`. Operations register
-  through the public `TamModelBuilder.AddOperationType` (no source generator in the test project). The
-  pure decision logic (`PlanWrite`, `ExtensionApplier.Apply`) stays in the framework unit tests where it
-  already lived.
+  Follow-up (test placement) — COMPLETED full build-out: the guiding principle is "if a test asserts
+  FRAMEWORK code, it does not belong in the sample app tests." Every framework-behavior integration test
+  was moved out of `samples/erp.Tests` into a framework-owned fixture (`tests/Tam.Tests/Framework`): a
+  self-contained `Widget`/`Bin` domain (value-object keys `WidgetId`/`BinId`, a `bins.lookup` membership
+  view, a `WidgetDerivations` derivation host + `WidgetProbes` rollback/isolation probes, `web.widgets.*`
+  forms, `widget-created`/`bin-created` events, and rule-target ops) stood up via `TamTestHost`, so the
+  framework is verified independently of the ERP sample's operation choices, not riding on `orders.create`
+  being `[AcceptsExtensions]`. Eleven test files relocated — extension channel boundary, required
+  extensions, merge conflict, rollback isolation, lookup membership, contract enforcement, form binding,
+  and all four `tam.rules` suites (definition, schema, action, event) — plus the three merge cases pulled
+  out of `PipelineTests`. Operations register through the public `TamModelBuilder.AddOperationType` (no
+  source generator in the test project); the pure decision logic (`PlanWrite`, `ExtensionApplier.Apply`)
+  stays in the framework unit tests where it already lived. `CapabilitySweepTests` was deliberately KEPT
+  in `samples/erp.Tests`: it uses a framework tool to protect the ERP sample's OWN views, so it is a
+  sample-contract test, not framework behavior. Final counts: **Tam.Tests 262 / Erp.Tests 21**, both
+  green. Test relocation only — no production code changed, so the wire matrix did not need re-running.
 - **docs/40 re-review round 12 — edit-workflow contract holes (2 HIGH + 1 MEDIUM/HIGH + 1 LOW, all
   confirmed then fixed)**: round 11 was affirmed correct; three holes remained, each verified against real
   code first. (F1, HIGH) submit + conflict state was scoped to `form`/`instanceKey` but NOT to `actAs`. An
