@@ -321,50 +321,62 @@ public sealed class OperationExecutor(
         var conflicts = new List<FieldConflict>(result.Conflicts ?? []);
 
         // Tenant extension channel: validate + apply against the tracked extensible aggregate.
-        if (operation.ExtensibleEntity is { } extensibleType &&
-            body.TryGetProperty("extensions", out var extensionsElement) &&
-            extensionsElement.ValueKind == JsonValueKind.Object)
+        if (operation.ExtensibleEntity is { } extensibleType)
         {
-            var changes = extensionsElement.Deserialize<Dictionary<string, ExtensionChange>>(TamJson.Options)!;
-            if (changes.Count > 0)
-            {
-                // The registered registry, not a bare EF one: plugin-packaged fields (docs/22 P2) must
-                // validate exactly like tenant-defined fields. Specs are fetched by entity key — no
-                // target needed — so we can reduce to the EFFECTIVE patch BEFORE touching targets.
-                var registry = services.GetService(typeof(IExtensionRegistry)) as IExtensionRegistry
-                    ?? new EfExtensionRegistry(db);
-                var specs = await registry.For(context.TenantId, TamModel.EntityKey(extensibleType), ct);
+            // The submitted extension changes — or none, if the caller omitted the channel entirely. A
+            // create must still be checked for required extension fields when nothing was sent (round 11,
+            // F2), so we do NOT gate the whole block on the property being present.
+            var changes = body.TryGetProperty("extensions", out var extensionsElement)
+                          && extensionsElement.ValueKind == JsonValueKind.Object
+                ? extensionsElement.Deserialize<Dictionary<string, ExtensionChange>>(TamJson.Options)!
+                : new Dictionary<string, ExtensionChange>();
 
-                // Complete-state submission sends every initialized extension field, so an edit carries
-                // unchanged ones. Reduce to the real patch first (Sol re-review round 10, F2): with no
-                // effective extension change there is NO target lookup and NO ambiguity check — an
-                // unrelated edit isn't blocked by ambiguous-extension-target just because complete state
-                // carried unchanged extension values.
-                var effective = ExtensionApplier.EffectivePatch(changes, specs);
-                if (effective.Count > 0)
+            // The registered registry, not a bare EF one: plugin-packaged fields (docs/22 P2) must
+            // validate exactly like tenant-defined fields. Specs are fetched by entity key — no target
+            // needed — so we can reduce to the EFFECTIVE patch BEFORE touching targets.
+            var registry = services.GetService(typeof(IExtensionRegistry)) as IExtensionRegistry
+                ?? new EfExtensionRegistry(db);
+            var specs = await registry.For(context.TenantId, TamModel.EntityKey(extensibleType), ct);
+
+            // Complete-state submission sends every initialized extension field, so an edit carries
+            // unchanged ones. Reduce to the real patch first (Sol re-review round 10, F2): with no
+            // effective extension change there is normally NO target lookup and NO ambiguity check — an
+            // unrelated edit isn't blocked by ambiguous-extension-target just because complete state
+            // carried unchanged extension values.
+            var effective = ExtensionApplier.EffectivePatch(changes, specs);
+
+            // Deterministic target, never a guess: with ONE tracked instance of the extensible type it is
+            // the target; with several (a handler that also loaded sibling rows) the single Added/Modified
+            // one is; anything else fails CLOSED — silently writing onto whichever row happened to be
+            // tracked first would be cross-record corruption.
+            var candidates = db.ChangeTracker.Entries()
+                .Where(e => extensibleType.IsInstanceOfType(e.Entity))
+                .ToList();
+            var written = candidates
+                .Where(e => e.State is EntityState.Added or EntityState.Modified)
+                .ToList();
+            var tracked = candidates.Count == 1 ? candidates[0]
+                : written.Count == 1 ? written[0]
+                : null;
+
+            // A newly created extensible row must satisfy its required extension fields even when the
+            // client sent no effective patch — an omitted extensions channel, or {original:null,
+            // value:null} for the required field, both reduce to an empty effective patch (round 11, F2).
+            // Apply's entityIsNew branch is the single place that enforcement lives; run it for a create
+            // with any required active spec so the check can't be skipped by simply omitting the field.
+            var mustValidateNew = tracked is { State: EntityState.Added }
+                && specs.Any(s => s is { Required: true, State: ExtensionFieldState.Active });
+
+            if (effective.Count > 0 || mustValidateNew)
+            {
+                if (tracked is null && candidates.Count > 1)
+                    findings.Add(PipelineFindings.AmbiguousExtensionTarget.Create());
+                if (tracked?.Entity is IExtensible extensible)
                 {
-                    // Deterministic target, never a guess: with ONE tracked instance of the extensible
-                    // type it is the target; with several (a handler that also loaded sibling rows) the
-                    // single Added/Modified one is; anything else fails CLOSED — silently writing onto
-                    // whichever row happened to be tracked first would be cross-record corruption.
-                    var candidates = db.ChangeTracker.Entries()
-                        .Where(e => extensibleType.IsInstanceOfType(e.Entity))
-                        .ToList();
-                    var written = candidates
-                        .Where(e => e.State is EntityState.Added or EntityState.Modified)
-                        .ToList();
-                    var tracked = candidates.Count == 1 ? candidates[0]
-                        : written.Count == 1 ? written[0]
-                        : null;
-                    if (tracked is null && candidates.Count > 1)
-                        findings.Add(PipelineFindings.AmbiguousExtensionTarget.Create());
-                    if (tracked?.Entity is IExtensible extensible)
-                    {
-                        var applied = ExtensionApplier.Apply(
-                            extensible, tracked.State == EntityState.Added, effective, specs);
-                        findings.AddRange(applied.Findings);
-                        conflicts.AddRange(applied.Conflicts);
-                    }
+                    var applied = ExtensionApplier.Apply(
+                        extensible, tracked.State == EntityState.Added, effective, specs);
+                    findings.AddRange(applied.Findings);
+                    conflicts.AddRange(applied.Conflicts);
                 }
             }
         }

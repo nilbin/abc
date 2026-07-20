@@ -63,6 +63,10 @@ export function OperationForm(props: OperationFormProps) {
   const conflictOverrides = useRef<Record<string, FieldConflict>>({});
   const resubmitAfterResolve = useRef(false);
   const seq = useRef(0);                       // local request sequence: stale-response rejection
+  // Submit identity (Sol re-review round 11, F3): a submit in flight when the form/instanceKey changes
+  // must not land its response, conflicts or onSuccess on the NEXT record. Bumped by the reset effect and
+  // by each submit; a stale attempt (attempt !== current) drops its result and leaves `submitting` alone.
+  const submitSeq = useRef(0);
   // ALL keys set since the last effect run — a renderer may set several fields in one batch
   // (the rule-builder's trigger picker clears its dependents), and the resolve trigger must
   // see every one of them, not just the last.
@@ -165,6 +169,15 @@ export function OperationForm(props: OperationFormProps) {
     setTouched(new Set());
     setResponse(null);
     setResolveState(null);
+    // Conflict + submit state is per-record (round 11, F3): a pending conflict round, its accumulated
+    // overrides, a queued auto-resubmit and the submitting flag all belong to the OLD instanceKey. Bump
+    // submitSeq so any in-flight submit drops its response, and clear the UI so the new record starts
+    // clean instead of inheriting the previous record's conflict banner or spinner.
+    submitSeq.current++;
+    conflictOverrides.current = {};
+    resubmitAfterResolve.current = false;
+    setPendingConflicts([]);
+    setSubmitting(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.form, props.instanceKey]);
 
@@ -263,6 +276,10 @@ export function OperationForm(props: OperationFormProps) {
   useEffect(() => () => clearTimeout(timer.current), []);
 
   const submit = useCallback(async (overrides?: Record<string, FieldConflict>) => {
+    // Claim this submit's identity (round 11, F3). If the form/instanceKey changes while the request is
+    // in flight — the reset effect bumps submitSeq — this attempt is stale: it drops its result below and
+    // leaves the new record's `submitting` flag untouched.
+    const attempt = ++submitSeq.current;
     setSubmitting(true);
     try {
       // The SAME complete input builder resolve uses (docs/40, Sol re-review round 8): every
@@ -278,6 +295,9 @@ export function OperationForm(props: OperationFormProps) {
       // direct call and silently skip form-specific validation.
       const result = await client.operation(formDef.operation, body,
         { form: props.form, ...(props.actAs ? { actAs: props.actAs } : {}) });
+      // The record switched under us — this response belongs to a form instance that no longer exists.
+      // Drop it rather than paint a stale conflict / fire onSuccess for the previous record (round 11, F3).
+      if (attempt !== submitSeq.current) return;
       setResponse(result);
       if (result.conflicts?.length) {
         // Open a fresh per-field resolution round: the retry (below) carries only the overrides the
@@ -290,7 +310,9 @@ export function OperationForm(props: OperationFormProps) {
         if (!result.findings.some(f => f.severity === 'error')) props.onSuccess?.(result);
       }
     } finally {
-      setSubmitting(false);
+      // Only the current attempt owns the spinner — a stale submit returning after a record switch must
+      // not clear the new record's `submitting` (round 11, F3).
+      if (attempt === submitSeq.current) setSubmitting(false);
     }
   }, [client, formDef.operation, props, buildOperationInput]);
 
@@ -306,16 +328,18 @@ export function OperationForm(props: OperationFormProps) {
   }, [pendingConflicts]);
 
   const resolveConflict = useCallback((conflict: FieldConflict, choice: 'mine' | 'current') => {
+    // The override is the fresh merge base for EITHER choice (Sol re-review round 11, F1): it rebases
+    // this field's `original` to the server's CURRENT value, so the retry is a true three-way decision
+    // against reality — never against the stale form baseline.
+    conflictOverrides.current[conflict.field] = conflict;
     if (choice === 'current') {
-      // Adopt the server's current value: the merge then sees Value == Current and treats it resolved,
-      // no override needed. This changes ONLY this field.
+      // Adopt the server value too → Original == Value == current. A genuine no-op: WasChanged is false,
+      // no field-local validation, no derivation guarded on "did this change" fires for a change the
+      // user explicitly rejected. ("use mine" leaves the user's value → Original != Value, applied.)
       const key = conflict.field.startsWith('extensions.')
         ? `ext:${conflict.field.slice('extensions.'.length)}`
         : conflict.field;
       setField(key, conflict.currentValue);
-    } else {
-      // Keep my value; rebase this field's `original` to the server current so the merge applies it.
-      conflictOverrides.current[conflict.field] = conflict;
     }
     resubmitAfterResolve.current = true;
     setPendingConflicts(prev => prev.filter(c => c.field !== conflict.field));
@@ -406,11 +430,14 @@ export function OperationForm(props: OperationFormProps) {
                   <b>{conflict.field}</b>: «{String(conflict.currentValue ?? '—')}» ↔ «{String(conflict.submittedValue ?? '—')}»
                 </Text>
                 <Group gap="xs">
-                  <Button size="compact-xs" variant="light"
+                  {/* The retry is in flight (round 11, F4): freeze the choices so a second click can't
+                      queue a duplicate resubmit or mutate overrides under the running request. */}
+                  <Button size="compact-xs" variant="light" disabled={submitting}
                     onClick={() => resolveConflict(conflict, 'current')}>
                     {tam.t('concurrency.keep-current')}
                   </Button>
-                  <Button size="compact-xs" onClick={() => resolveConflict(conflict, 'mine')}>
+                  <Button size="compact-xs" disabled={submitting}
+                    onClick={() => resolveConflict(conflict, 'mine')}>
                     {tam.t('concurrency.use-mine')}
                   </Button>
                 </Group>
@@ -421,7 +448,11 @@ export function OperationForm(props: OperationFormProps) {
       )}
 
       <Group justify="flex-end" mt="xs">
-        <Button loading={submitting} onClick={() => void submit()}>
+        {/* An unresolved conflict round owns the form (round 11, F4): the ordinary Save is disabled so
+            the only way forward is to decide each field. Re-enabled once every conflict is resolved (the
+            auto-resubmit fires) or the round is cleared by a record switch. */}
+        <Button loading={submitting} disabled={pendingConflicts.length > 0}
+          onClick={() => void submit()}>
           {/* A button wants an imperative, a dialog title a noun phrase — one key can't be
               both. `.submit` overrides; an EDIT form (any changeSet field) defaults to the
               generic save verb; only then the operation title. */}

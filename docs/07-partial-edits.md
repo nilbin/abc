@@ -14,8 +14,13 @@ public sealed record Change<T>(
     T? Value);
 ```
 
-- `Original == Value` (semantically) means **untouched** — a no-op that is neither validated, written,
-  nor concurrency-checked.
+- `Original == Value` (semantically) means **untouched** — it contributes **no effective patch**: no
+  write, no field-level dirty validation, and no concurrency check for that field. It is *not* invisible
+  to the rest of the operation: because the form submits the complete state, an untouched field's value
+  is still part of the proposed record that **derivations** read, that **form predicates**
+  (`VisibleWhen` / `RequiredWhen`) evaluate, and that **candidate-membership** admissibility checks every
+  submitted lookup / closed-option value against (docs/40 conservative policy). "No-op" is about the
+  *patch*, not about whether the value participates in evaluating the operation.
 - `Original != Value` is the **effective patch** for that field.
 - `Value == null` with a non-null `Original` means **explicitly clear** the value.
 - A **missing** `Change<T>` means the caller did not project/initialize that field at all (e.g. a direct

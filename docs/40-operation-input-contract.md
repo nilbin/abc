@@ -231,6 +231,27 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   ordinary `stale` conflict. A conflict override likewise carries the persisted current value *even when
   it is null* (testing the override's presence, not its truthiness), so a "use mine" retry against a
   null current sends `original: null` rather than resurrecting the stale baseline.
+- **Per-field conflict resolution rebases the base for BOTH choices** (Sol re-review round 11, F1). When
+  the merge returns field conflicts the form resolves each on its own row: the override records the
+  server's *current* value as that field's fresh `original`, whichever the user picks. "Use mine" keeps
+  the user's value, so the retry is `{original: current, value: mine}` — a genuine apply against reality.
+  "Keep current" additionally sets the field to the current value, so the retry is
+  `{original: current, value: current}` — `Original == Value`, a true no-op: no write, no re-conflict, and
+  `WasChanged` false for a field the user explicitly conceded. Adopting the value but leaving `original`
+  at the stale baseline (the earlier behaviour) would have re-submitted a *change* to a field the user
+  gave up. The accumulated per-field decisions apply together in ONE retry when the last conflict is
+  resolved. The ordinary Save is disabled while a conflict round is open (round 11, F4).
+- **Conflict + submit state is scoped to the record** (Sol re-review round 11, F3). A pending conflict
+  round, its overrides, a queued auto-resubmit and the `submitting` flag all belong to the current
+  `form`/`instanceKey`; the reset effect clears them and a monotonic submit sequence drops any in-flight
+  submit whose record switched under it — so a stale response can neither paint a conflict banner nor fire
+  `onSuccess` on the *next* record, and the new record never inherits the previous one's spinner or banner.
+- **A create satisfies required extension fields even with no effective extension patch** (Sol re-review
+  round 11, F2). Complete-state submission carries unchanged extension fields (and a caller may omit the
+  channel entirely), so a required custom field can reduce to an empty effective patch on a create. The
+  pipeline enforces requiredness on a newly created extensible row whenever any required-active spec
+  exists — the omitted-field path cannot bypass the check — while an unrelated *edit* that merely carries
+  unchanged extensions still skips target selection (round-10 F2 preserved).
 - **Frozen concurrency baseline.** A `Change<T>`'s `original` is the value frozen when the form's
   `instanceKey` (its record identity) last changed, never the latest `initialValues` prop — a
   background refresh handing the same record a newer server value cannot silently rebase the

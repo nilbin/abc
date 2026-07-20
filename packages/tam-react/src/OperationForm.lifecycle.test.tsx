@@ -26,6 +26,11 @@ beforeAll(() => {
 afterEach(cleanup);
 
 const descField = { name: 'description', changeSet: true, extension: false, labelKey: 'description', renderer: 'hidden' };
+// VISIBLE text inputs for the conflict test (round 11, F6): a conflict can only arise on a field the
+// user actually edited (Original != Value), so the test must type new values through real inputs rather
+// than fabricate a conflict on an untouched field.
+const descInput = { name: 'description', changeSet: true, extension: false, labelKey: 'description', wireKind: 'string' };
+const budgetInput = { name: 'budget', changeSet: true, extension: false, labelKey: 'budget', wireKind: 'string' };
 
 // Two forms sharing the change field `description`: one WITHOUT server derivations, one WITH. The
 // shared field name is what would expose a mixed-record request — the old record's `description`
@@ -45,7 +50,7 @@ const manifest = {
     },
     'form.twofield': {
       operation: 'op.twofield',
-      fields: [descField, { name: 'budget', changeSet: true, extension: false, labelKey: 'budget', renderer: 'hidden' }],
+      fields: [descInput, budgetInput],
       includeExtensions: false, serverDependencies: [], hasServerDerivations: false,
     },
   },
@@ -157,8 +162,8 @@ describe('OperationForm resolve lifecycle', () => {
     client.operation
       .mockResolvedValueOnce({
         findings: [], effects: [], conflicts: [
-          { field: 'description', currentValue: 'srvDesc', submittedValue: 'myDesc' },
-          { field: 'budget', currentValue: 'srvBudget', submittedValue: 'myBudget' },
+          { field: 'description', originalValue: 'myDesc', currentValue: 'srvDesc', submittedValue: 'myDesc2' },
+          { field: 'budget', originalValue: 'myBudget', currentValue: 'srvBudget', submittedValue: 'myBudget2' },
         ],
       })
       .mockResolvedValueOnce({ findings: [], effects: [], conflicts: [] });
@@ -167,12 +172,25 @@ describe('OperationForm resolve lifecycle', () => {
       form: 'form.twofield', instanceKey: 'x',
       initialValues: { description: 'myDesc', budget: 'myBudget' },
     });
+    // Edit BOTH fields through their real inputs so each carries Original != Value — the only state in
+    // which a field conflict is semantically possible (round 11, F6).
+    const inputs = () => Array.from(document.querySelectorAll('input')) as HTMLInputElement[];
+    await waitFor(() => expect(inputs()).toHaveLength(2));
+    fireEvent.change(inputs()[0], { target: { value: 'myDesc2' } });
+    fireEvent.change(inputs()[1], { target: { value: 'myBudget2' } });
+
     const conflictButtons = () => Array.from(document.querySelectorAll('button'))
       .filter(b => b.textContent === 'concurrency.use-mine' || b.textContent === 'concurrency.keep-current');
 
-    // Submit via the form's own save button (only button on screen before conflicts appear).
+    // Submit via the form's own save button (the only non-input button before conflicts appear).
     fireEvent.click(document.querySelector('button')!);
     await waitFor(() => expect(client.operation).toHaveBeenCalledTimes(1));
+    // The first submit sent the genuine edits — Original != Value on both fields.
+    const first = client.operation.mock.calls[0][1] as {
+      description: { original: unknown; value: unknown }; budget: { original: unknown; value: unknown };
+    };
+    expect(first.description).toEqual({ original: 'myDesc', value: 'myDesc2' });
+    expect(first.budget).toEqual({ original: 'myBudget', value: 'myBudget2' });
 
     // Two rows → four buttons, ordered [desc keep, desc mine, budget keep, budget mine].
     await waitFor(() => expect(conflictButtons()).toHaveLength(4));
@@ -182,16 +200,80 @@ describe('OperationForm resolve lifecycle', () => {
     await waitFor(() => expect(conflictButtons()).toHaveLength(2));
     fireEvent.click(conflictButtons()[0]);   // budget → "keep current"
 
-    // Resolving the last conflict fires exactly one retry, carrying only description's override.
+    // Resolving the last conflict fires exactly one retry carrying both per-field decisions.
     await waitFor(() => expect(client.operation).toHaveBeenCalledTimes(2));
     const body = client.operation.mock.calls[1][1] as {
       description: { original: unknown; value: unknown }; budget: { original: unknown; value: unknown };
     };
-    // "use mine" for description → original rebased to the server current; my value kept.
-    expect(body.description).toEqual({ original: 'srvDesc', value: 'myDesc' });
-    // "keep current" for budget → the field's value became the server current; NO override (original
-    // stays the baseline), so the merge sees Value == Current and resolves it.
-    expect(body.budget.value).toBe('srvBudget');
-    expect(body.budget.original).toBe('myBudget');
+    // "use mine" for description → original rebased to the server current; my edited value kept.
+    expect(body.description).toEqual({ original: 'srvDesc', value: 'myDesc2' });
+    // "keep current" for budget → BOTH original and value become the server current (round 11, F1), so
+    // the retry is a true no-op: Original == Value, no write, no re-conflict on a field the user gave up.
+    expect(body.budget).toEqual({ original: 'srvBudget', value: 'srvBudget' });
+  });
+
+  it('scopes a pending conflict to the record: switching instanceKey clears it (F3)', async () => {
+    const client = makeClient();
+    client.operation.mockResolvedValueOnce({
+      findings: [], effects: [], conflicts: [
+        { field: 'description', originalValue: 'A', currentValue: 'srvA', submittedValue: 'A2' },
+      ],
+    });
+    const view = renderForm(client, {
+      form: 'form.twofield', instanceKey: 'x', initialValues: { description: 'A', budget: 'b' },
+    });
+    const inputs = () => Array.from(document.querySelectorAll('input')) as HTMLInputElement[];
+    await waitFor(() => expect(inputs()).toHaveLength(2));
+    fireEvent.change(inputs()[0], { target: { value: 'A2' } });
+
+    const conflictButtons = () => Array.from(document.querySelectorAll('button'))
+      .filter(b => b.textContent === 'concurrency.use-mine' || b.textContent === 'concurrency.keep-current');
+    fireEvent.click(document.querySelector('button')!);
+    await waitFor(() => expect(conflictButtons()).toHaveLength(2));   // conflict round is open
+
+    // Switch to a different record: the conflict banner belongs to the OLD instanceKey and must vanish.
+    view.rerender(
+      <MantineProvider>
+        <TamContext.Provider value={ctxFor(client)}>
+          <OperationForm form="form.twofield" instanceKey="y" initialValues={{ description: 'C', budget: 'd' }} />
+        </TamContext.Provider>
+      </MantineProvider>,
+    );
+    await waitFor(() => expect(conflictButtons()).toHaveLength(0));
+    // The Save button is live again (not stuck disabled from the previous record's open conflict).
+    const save = document.querySelector('button') as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+  });
+
+  it('a submit that resolves after a record switch neither fires onSuccess nor paints on the new record (F3)', async () => {
+    const client = makeClient();
+    let resolveFirst: (v: unknown) => void = () => {};
+    // The first submit hangs until we release it — long enough to switch records underneath it.
+    client.operation.mockImplementationOnce(() => new Promise(res => { resolveFirst = res; }));
+    const onSuccess = vi.fn();
+
+    const view = renderForm(client, {
+      form: 'form.twofield', instanceKey: 'x', initialValues: { description: 'A', budget: 'b' }, onSuccess,
+    });
+    const inputs = () => Array.from(document.querySelectorAll('input')) as HTMLInputElement[];
+    await waitFor(() => expect(inputs()).toHaveLength(2));
+    fireEvent.change(inputs()[0], { target: { value: 'A2' } });
+    fireEvent.click(document.querySelector('button')!);
+    await waitFor(() => expect(client.operation).toHaveBeenCalledTimes(1));
+
+    // Switch records while the submit is still in flight.
+    view.rerender(
+      <MantineProvider>
+        <TamContext.Provider value={ctxFor(client)}>
+          <OperationForm form="form.twofield" instanceKey="y" initialValues={{ description: 'C', budget: 'd' }} onSuccess={onSuccess} />
+        </TamContext.Provider>
+      </MantineProvider>,
+    );
+    // The stale submit now resolves successfully — but it belongs to record x, which is gone.
+    resolveFirst({ findings: [], effects: [], conflicts: [] });
+    await Promise.resolve();
+    await waitFor(() => expect(inputs()).toHaveLength(2));
+    // Its onSuccess must NOT fire for the record the user has moved on from.
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 });

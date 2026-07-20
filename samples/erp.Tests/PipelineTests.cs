@@ -1,5 +1,6 @@
 using Erp;
 using Erp.Features;
+using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.Testing;
 
@@ -149,6 +150,33 @@ public sealed class PipelineTests : IAsyncLifetime
             { projectId = id, name = new { original = "Original", value = "Mine" } });
         stale.ShouldConflictOn("name");
         Assert.Equal("stale", stale.Conflicts!.Single(c => c.Field == "name").Reason);
+    }
+
+    [Fact]
+    public async Task Keep_current_rebases_the_base_to_the_server_value_so_the_retry_is_a_no_op()
+    {
+        // The client's "keep current" resolution (Sol re-review round 11, F1) rebases the field's base to
+        // the server's CURRENT value AND sets the submitted value to it — {original: theirs, value:
+        // theirs}. That is Original == Value, so the retry is a true no-op: no conflict (even though the
+        // base moved out from under the form) and no write. The stale shape below is the contrast — same
+        // field, but a real edit off the old base, which conflicts.
+        var actor = host.Actor("demo", "projects.create", "projects.edit");
+        var created = await actor.ExecuteAsync("projects.create", new
+            { customerId, number = "P-TEST-004", name = "Original" });
+        var id = created.Output<CreateProject.Output>().ProjectId.Value;
+
+        // A concurrent writer moves Name to "Theirs".
+        (await actor.ExecuteAsync("projects.edit-details", new
+            { projectId = id, name = new { original = "Original", value = "Theirs" } })).ShouldSucceed();
+
+        // "Keep current" — original rebased to the server value, value equal to it: a no-op, no conflict.
+        (await actor.ExecuteAsync("projects.edit-details", new
+            { projectId = id, name = new { original = "Theirs", value = "Theirs" } })).ShouldSucceed();
+
+        // The value the concurrent writer set is what remains — keep-current wrote nothing over it.
+        var name = await host.QueryDbAsync("demo", db =>
+            db.Projects.Where(p => p.Id == new ProjectId(id)).Select(p => p.Name).SingleAsync());
+        Assert.Equal("Theirs", name);
     }
 
     [Fact]

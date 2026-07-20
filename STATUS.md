@@ -1282,6 +1282,36 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   byte-unchanged, web typecheck + `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres (94
   each). The complete-state contract is now consistent across compiled + extension fields, the null
   cases are correct, and the React state machine is covered by mounted-component tests.
+- **docs/40 re-review round 11 — edit-workflow closure (3 HIGH + 2 MEDIUM + 1 test-quality, all
+  confirmed then fixed)**: the round-10 surfaces were re-examined against real code before any change.
+  (F1, HIGH) "keep current" was NOT a true no-op — it adopted the server value but left `original` at the
+  stale form baseline, so the retry sent `{original: mine-base, value: current}`, a semantic CHANGE that
+  re-wrote (and could re-conflict on) a field the user had explicitly conceded. `resolveConflict` now
+  rebases `original` to the server current value for BOTH choices; "keep current" additionally sets the
+  field to that value, so it submits `Original == Value` — no write, no re-conflict, `WasChanged` false.
+  (F2, HIGH) a required tenant extension field was NOT enforced on a create when the client sent an empty
+  effective patch — an omitted `extensions` channel, or `{original:null,value:null}` for the required
+  field, both bypassed `ExtensionApplier.Apply` (whose `entityIsNew` branch is the only place the check
+  lives). The pipeline now fetches specs whenever the operation is extensible and runs `Apply` when there
+  is a real patch OR a newly created row carries any required-active spec; an unrelated edit with only
+  unchanged extensions still skips target selection (round-10 F2 preserved). (F3, HIGH) submit + conflict
+  state leaked across `form`/`instanceKey`: a pending conflict banner, its overrides, a queued
+  auto-resubmit and the `submitting` spinner all survived a record switch, and an in-flight submit could
+  land its response/onSuccess on the NEXT record. A `submitSeq` ref now stamps each submit; the reset
+  effect bumps it and clears the conflict/submit state, so a stale result is dropped and the new record
+  starts clean. (F4, MEDIUM) the ordinary Save button is disabled while a conflict round is open, and the
+  per-field choice buttons are disabled while the retry is in flight. (F5, MEDIUM) docs/07's "neither
+  validated, written, nor concurrency-checked" overstated the no-op — narrowed to say an untouched
+  field's value is still visible to derivations, form predicates and candidate-membership checks (it is a
+  no-op for the PATCH, not for evaluating the operation). (F6, test-quality) the mounted two-conflict test
+  fabricated conflicts on untouched fields (`Original == Value`, impossible server-side); it now edits
+  both fields through real inputs so the conflict is semantically possible, and asserts keep-current's
+  rebased `{original: current, value: current}` shape. Verified: suites **199 + 66** C# (a new
+  RequiredExtensionTests: 4 create/edit pipeline cases; a keep-current-no-op pipeline case), **14 Vitest**
+  (the corrected two-conflict test + two record-switch F3 tests), structure + docs gates, manifest
+  additive-only (D4) & byte-unchanged, web `vite build`, full wire matrix GREEN on fresh SQLite AND
+  Postgres (94 each). The edit workflow — conflict resolution, required-extension creates, per-record
+  isolation — is now consistent end to end.
 - **docs/40 re-review round 10 — edit-workflow completeness (1 HIGH + 3 MEDIUM + 2 cleanups, all
   confirmed then fixed)**: the compiled/merge/null/lifecycle core was affirmed correct; the remaining
   work was in the surfaces around it. (F1, HIGH) the concurrency-conflict UI's "use mine" (and "keep
