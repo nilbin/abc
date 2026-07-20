@@ -1282,6 +1282,32 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   byte-unchanged, web typecheck + `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres (94
   each). The complete-state contract is now consistent across compiled + extension fields, the null
   cases are correct, and the React state machine is covered by mounted-component tests.
+- **docs/40 re-review round 10 — edit-workflow completeness (1 HIGH + 3 MEDIUM + 2 cleanups, all
+  confirmed then fixed)**: the compiled/merge/null/lifecycle core was affirmed correct; the remaining
+  work was in the surfaces around it. (F1, HIGH) the concurrency-conflict UI's "use mine" (and "keep
+  current") acted GLOBALLY from a button attached to one field — "use mine" on Description silently
+  chose the user's value for Budget too, able to clobber another writer's change. Now each row resolves
+  its OWN field: "use mine" records a per-field override, "keep current" adopts the server value, and
+  the accumulated decisions apply together in ONE retry when the last conflict is resolved (via an
+  effect, so a "keep current" setField has flushed before the retry reads it). (F2, MEDIUM/HIGH)
+  complete-state submission carries unchanged extension fields, and the pipeline treated any non-empty
+  `extensions` object as work — running target selection and tripping `ambiguous-extension-target` on an
+  unrelated edit that merely carried unchanged custom values. New `ExtensionApplier.EffectivePatch`
+  reduces the channel to `Original != Value` BEFORE target selection; an all-no-op extension payload now
+  does no target lookup at all (and an unchanged-but-retired field no longer blocks, matching the
+  compiled-field rule). (F3, MEDIUM) candidate membership (lookup + closed options) is now DOCUMENTED as
+  a deliberate CONSERVATIVE full-state policy — every submitted non-null candidate is admissibility-
+  checked, changed or not (a fail-closed boundary; the finer impacted-field policy needs per-lookup
+  dependency provenance the merged result doesn't yet retain — noted as future work, not a silent gap).
+  (F4, MEDIUM) docs/07 + docs/15 rewritten off the obsolete sparse/nested-`changes` model to the flat,
+  complete-state contract; stale OperationForm comments corrected. (F5, cleanup) the misleading
+  `Change<T>.To(value)` helper (`To(null)` silently meant no-op; a non-null value implicitly claimed a
+  null base) is removed — it had zero usages. Verified: suites 199 + 61 C# (a new EffectivePatch no-op
+  test), **12 Vitest** including a mounted two-conflict test (use-mine on one field, keep-current on the
+  other → retry carries only the first's override), structure + docs gates, manifest additive-only (D4)
+  & byte-unchanged, web typecheck + `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres
+  (94 each). The edit workflow — conflict UI, extension no-ops, candidate policy, docs — is now
+  consistent end to end.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —

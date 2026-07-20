@@ -10,10 +10,7 @@ namespace Tam;
 /// initialized-null field is <c>Original == Value == null</c> (a no-op). A null Original is a valid merge
 /// base, not "missing" — JSON cannot distinguish an explicit null from an omitted property.
 /// </summary>
-public sealed record Change<T>(T? Original, T? Value)
-{
-    public static Change<T> To(T? value) => new(default, value);
-}
+public sealed record Change<T>(T? Original, T? Value);
 
 /// <summary>A structured field conflict from the three-way merge (Original / Current / Value all
 /// differ). <see cref="Reason"/> is "stale" — a genuine concurrent edit. (The former "original-missing"

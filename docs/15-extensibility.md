@@ -174,12 +174,17 @@ public static partial class EditOrderDetails
 }
 ```
 
-Wire format adds one channel with **identical `Change<T>` semantics**:
+Wire format adds one channel with **identical `Change<T>` semantics** (docs/07): compiled fields are
+flat operation properties; extension changes ride under `extensions`. Complete-state submission sends
+every initialized field on both — so an untouched extension arrives as `original == value` (a no-op).
+The pipeline reduces the extension channel to its **effective patch** (`original != value`) *before*
+selecting a write target, so an operation with no real extension change never runs target selection
+(round 10):
 
 ```json
 {
   "orderId": "order-123",
-  "changes": { "description": { "original": "Repair pump", "value": "Replace pump" } },
+  "description": { "original": "Repair pump", "value": "Replace pump" },
   "extensions": {
     "machineSerialNumber": { "original": null, "value": "MX-55012" }
   }

@@ -127,6 +127,32 @@ public static class ExtensionApplier
         return new ExtensionApplyResult(findings, conflicts, applied);
     }
 
+    /// <summary>The subset of submitted extension changes that are a REAL patch — Original != Value
+    /// (Sol re-review round 10, F2). Complete-state submission sends every INITIALIZED extension field,
+    /// so an edit form carries unchanged ones (Original == Value); filtering them here lets the pipeline
+    /// skip extension-target selection and application entirely when nothing actually changed, so an
+    /// operation with no extension change never trips ambiguous-extension-target merely because complete
+    /// state carried unchanged values. A known field compares by its semantic; an unknown key is a no-op
+    /// only if its raw Original == Value (otherwise retained, so <see cref="Apply"/> reports
+    /// unknown-field). An unchanged retired/read-only field is likewise dropped as a no-op — matching the
+    /// compiled-field rule that unchanged historical values do not block an unrelated edit.</summary>
+    public static IReadOnlyDictionary<string, ExtensionChange> EffectivePatch(
+        IReadOnlyDictionary<string, ExtensionChange> changes, IReadOnlyList<ExtensionFieldSpec> specs)
+    {
+        var byKey = specs.ToDictionary(s => s.Key, StringComparer.Ordinal);
+        var effective = new Dictionary<string, ExtensionChange>(StringComparer.Ordinal);
+        foreach (var (key, change) in changes)
+        {
+            var original = FromElement(change.Original);
+            var value = FromElement(change.Value);
+            var unchanged = byKey.TryGetValue(key, out var spec)
+                ? TamMerge.SemanticallyEqual(spec.Semantic, original, value)
+                : Equals(original, value);
+            if (!unchanged) effective[key] = change;
+        }
+        return effective;
+    }
+
     private static object? FromElement(JsonElement? element) =>
         element is { } e ? ExtensionData.FromElement(e) : null;
 }

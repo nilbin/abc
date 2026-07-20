@@ -1,6 +1,10 @@
 # 07 — Partial and Conflict-Safe Edits
 
-Edit forms must not submit the entire model. They should submit only values actually changed by the user.
+Generated edit forms submit **every initialized `Change<T>` field** — not a sparse subset (docs/40,
+round 8). The *effective patch* is derived from the values, not from which fields are present: a field
+whose `Original == Value` is a **no-op** the merge ignores. This removes any resolve-vs-submit
+divergence; partial persistence and field-level concurrency fall out of the three-way merge, not out of
+a hand-pruned payload.
 
 ## Typed change sets
 
@@ -10,8 +14,13 @@ public sealed record Change<T>(
     T? Value);
 ```
 
-- A missing `Change<T>` means **untouched**.
-- A present change with `Value = null` means **explicitly clear the value**.
+- `Original == Value` (semantically) means **untouched** — a no-op that is neither validated, written,
+  nor concurrency-checked.
+- `Original != Value` is the **effective patch** for that field.
+- `Value == null` with a non-null `Original` means **explicitly clear** the value.
+- A **missing** `Change<T>` means the caller did not project/initialize that field at all (e.g. a direct
+  API call that omits it) — *not* the general definition of "untouched", which is `Original == Value`.
+- A null `Original` is a **valid merge base** (the field loaded null), never inferred to be "missing".
 
 Example:
 
@@ -29,20 +38,20 @@ public static partial class EditOrderDetails
 }
 ```
 
-Wire format:
+Wire format — **flat operation fields**, each `Change<T>` an `{original, value}` object (there is no
+nested `changes` envelope). Every initialized change field is present, including untouched ones (here
+`requestedDate`, whose `original == value`):
 
 ```json
 {
   "orderId": "order-123",
-  "changes": {
-    "description": {
-      "original": "Repair pump",
-      "value": "Replace pump"
-    },
-    "requestedDate": {
-      "original": "2026-07-20",
-      "value": null
-    }
+  "description": {
+    "original": "Repair pump",
+    "value": "Replace pump"
+  },
+  "requestedDate": {
+    "original": "2026-07-20",
+    "value": "2026-07-20"
   }
 }
 ```
@@ -52,21 +61,26 @@ Wire format:
 For every submitted field:
 
 ```
-Base value      = value when the form loaded
+Base value      = Original (value when the form loaded)
 Current value   = value currently persisted
-Submitted value = new value from the user
+Submitted value = Value (new value from the user)
 ```
 
-Rules:
+Rules (evaluated in order):
 
 ```
-If current equals base:
-    apply submitted
+If base equals submitted (Original == Value):
+    no effective change — no write, no concurrency check (the FIRST branch)
 If current equals submitted:
     treat as already resolved
-If current differs from base and submitted:
+If current equals base:
+    apply submitted
+Otherwise (current differs from both):
     return a real field conflict
 ```
+
+The `Original == Value` branch is what makes complete-state submission safe: an untouched field a
+concurrent writer changed does not surface as a conflict, because the user never touched it.
 
 This allows non-overlapping concurrent edits to merge automatically.
 

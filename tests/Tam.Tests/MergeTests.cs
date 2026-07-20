@@ -161,6 +161,30 @@ public class ExtensionApplierTests
     }
 
     [Fact]
+    public void EffectivePatch_drops_unchanged_extension_fields_before_target_selection()
+    {
+        // Complete-state submission sends every initialized extension field, including unchanged ones
+        // on an edit (Sol re-review round 10, F2). EffectivePatch reduces to the real patch so the
+        // pipeline skips extension-target selection entirely when nothing changed — no
+        // ambiguous-extension-target from carrying unchanged values.
+        var specs = new[] { Spec("machineSerialNumber") };
+        var changes = new Dictionary<string, ExtensionChange>
+        {
+            ["machineSerialNumber"] = Changes("machineSerialNumber", "S1", "S1")["machineSerialNumber"],   // no-op
+            ["other"] = Changes("other", "S2", "S3")["other"],                                             // changed (unknown key)
+        };
+        var effective = ExtensionApplier.EffectivePatch(changes, specs);
+
+        Assert.False(effective.ContainsKey("machineSerialNumber"));   // Original == Value → dropped
+        Assert.True(effective.ContainsKey("other"));                  // changed → retained (Apply reports unknown-field)
+
+        // The all-unchanged case reduces to an empty patch — the pipeline then does no target lookup.
+        var allNoOp = ExtensionApplier.EffectivePatch(
+            Changes("machineSerialNumber", "S1", "S1"), specs);
+        Assert.Empty(allNoOp);
+    }
+
+    [Fact]
     public void Unchanged_extension_with_a_concurrent_change_is_a_no_op()
     {
         var thing = new Thing();

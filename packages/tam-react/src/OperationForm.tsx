@@ -55,6 +55,13 @@ export function OperationForm(props: OperationFormProps) {
   const [resolveState, setResolveState] = useState<ResolveResponse | null>(null);
   const [response, setResponse] = useState<OperationResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Per-field concurrency resolution (Sol re-review round 10, F1). Each conflict is decided on its OWN
+  // row: "use mine" records an override here; "keep current" adopts the server value and records none.
+  // The decisions apply together in ONE retry when the last conflict is resolved — never a global "use
+  // mine" (or a global dismiss) fired from a button visually attached to a single field.
+  const [pendingConflicts, setPendingConflicts] = useState<FieldConflict[]>([]);
+  const conflictOverrides = useRef<Record<string, FieldConflict>>({});
+  const resubmitAfterResolve = useRef(false);
   const seq = useRef(0);                       // local request sequence: stale-response rejection
   // ALL keys set since the last effect run — a renderer may set several fields in one batch
   // (the rule-builder's trigger picker clears its dependents), and the resolve trigger must
@@ -102,12 +109,12 @@ export function OperationForm(props: OperationFormProps) {
     setResolveState(resolved);
     for (const [name, state] of Object.entries(resolved.fields)) {
       // Auto-adopt a suggestion into the actual value ONLY for a CREATE (non-change-set) field (Sol
-      // re-review round 7, F4). An edit change-set field's submit is sparse — writing a suggestion into
-      // `values` WITHOUT marking it touched would show the user the suggested value while submit omits
-      // the field, so the displayed value silently never persists. For edit fields the suggestion stays
-      // in resolveState (surfaced to the renderer as `suggestion`); adopting it goes through setField,
-      // which marks it touched, so display and submit agree. A create field is always in the body, so
-      // auto-adopt is safe and keeps prefill behaviour.
+      // re-review round 7, F4). Writing a suggestion into an edit change-set field's `values` WITHOUT
+      // marking it touched would leave Original == Value — a no-op the merge ignores — so the displayed
+      // suggestion would silently never persist. For edit fields the suggestion stays in resolveState
+      // (surfaced to the renderer as `suggestion`); adopting it goes through setField, which makes it a
+      // real change (Original != Value), so display and submit agree. A create field is always written,
+      // so auto-adopt is safe and keeps prefill behaviour.
       if (formDef.fields.find(f => f.name === name)?.changeSet) continue;
       if (state.suggestedValue !== undefined && state.suggestedValue !== null
           && !touchedRef.current.has(name)
@@ -272,13 +279,47 @@ export function OperationForm(props: OperationFormProps) {
       const result = await client.operation(formDef.operation, body,
         { form: props.form, ...(props.actAs ? { actAs: props.actAs } : {}) });
       setResponse(result);
-      if (!result.findings.some(f => f.severity === 'error') && !result.conflicts?.length) {
-        props.onSuccess?.(result);
+      if (result.conflicts?.length) {
+        // Open a fresh per-field resolution round: the retry (below) carries only the overrides the
+        // user explicitly chose, so a later conflict from a third writer starts clean.
+        conflictOverrides.current = {};
+        resubmitAfterResolve.current = false;
+        setPendingConflicts(result.conflicts);
+      } else {
+        setPendingConflicts([]);
+        if (!result.findings.some(f => f.severity === 'error')) props.onSuccess?.(result);
       }
     } finally {
       setSubmitting(false);
     }
   }, [client, formDef.operation, props, buildOperationInput]);
+
+  // When the LAST conflict has been decided, retry once with the accumulated per-field overrides (F1).
+  // Runs from an effect — not inline in the click handler — so a "keep current" setField has flushed to
+  // valuesRef before buildOperationInput reads it.
+  useEffect(() => {
+    if (resubmitAfterResolve.current && pendingConflicts.length === 0) {
+      resubmitAfterResolve.current = false;
+      void submit(conflictOverrides.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingConflicts]);
+
+  const resolveConflict = useCallback((conflict: FieldConflict, choice: 'mine' | 'current') => {
+    if (choice === 'current') {
+      // Adopt the server's current value: the merge then sees Value == Current and treats it resolved,
+      // no override needed. This changes ONLY this field.
+      const key = conflict.field.startsWith('extensions.')
+        ? `ext:${conflict.field.slice('extensions.'.length)}`
+        : conflict.field;
+      setField(key, conflict.currentValue);
+    } else {
+      // Keep my value; rebase this field's `original` to the server current so the merge applies it.
+      conflictOverrides.current[conflict.field] = conflict;
+    }
+    resubmitAfterResolve.current = true;
+    setPendingConflicts(prev => prev.filter(c => c.field !== conflict.field));
+  }, [setField]);
 
   const fieldError = (name: string): Finding | undefined => {
     const fromResolve = resolveState?.fields[name]?.findings
@@ -293,7 +334,6 @@ export function OperationForm(props: OperationFormProps) {
     ...(response?.findings.filter(f => f.targets.length === 0) ?? []),
   ];
 
-  const conflicts = response?.conflicts ?? [];
 
   return (
     <Stack gap="sm">
@@ -357,26 +397,20 @@ export function OperationForm(props: OperationFormProps) {
         </Alert>
       ))}
 
-      {conflicts.length > 0 && (
+      {pendingConflicts.length > 0 && (
         <Alert color="orange" title={t('concurrency.field-conflict')}>
           <Stack gap="xs">
-            {conflicts.map(conflict => (
+            {pendingConflicts.map(conflict => (
               <Group key={conflict.field} justify="space-between">
                 <Text size="sm">
                   <b>{conflict.field}</b>: «{String(conflict.currentValue ?? '—')}» ↔ «{String(conflict.submittedValue ?? '—')}»
                 </Text>
                 <Group gap="xs">
-                  <Button size="compact-xs" variant="light" onClick={() => {
-                    const key = conflict.field.startsWith('extensions.')
-                      ? `ext:${conflict.field.slice('extensions.'.length)}`
-                      : conflict.field;
-                    setField(key, conflict.currentValue);
-                    setResponse(null);
-                  }}>
+                  <Button size="compact-xs" variant="light"
+                    onClick={() => resolveConflict(conflict, 'current')}>
                     {tam.t('concurrency.keep-current')}
                   </Button>
-                  <Button size="compact-xs" onClick={() =>
-                    void submit(Object.fromEntries(conflicts.map(c => [c.field, c])))}>
+                  <Button size="compact-xs" onClick={() => resolveConflict(conflict, 'mine')}>
                     {tam.t('concurrency.use-mine')}
                   </Button>
                 </Group>
