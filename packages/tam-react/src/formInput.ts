@@ -25,16 +25,22 @@ export function buildFormInput(
 ): Record<string, unknown> {
   const input: Record<string, unknown> = {};
   const extensions: Record<string, unknown> = {};
+  // A conflict override's fresh `original` is the persisted CURRENT value — which may legitimately be
+  // null (Sol re-review round 9, F4). Test whether the override ENTRY exists, not whether its value is
+  // truthy: `?? baseline` would fall back to the stale baseline when Current is null, so a "use mine"
+  // retry against a null Current would resend the old base and reproduce the conflict.
+  const originalFor = (conflictKey: string, key: string): unknown => {
+    const conflict = overrides?.[conflictKey];
+    return conflict !== undefined ? conflict.currentValue ?? null : baseline[key] ?? null;
+  };
   for (const { field, key } of fields) {
     const value = values[key];
     if (field.extension) {
       if (baseline[key] === undefined && value === undefined) continue;
-      const original = overrides?.[`extensions.${field.name}`]?.currentValue ?? baseline[key] ?? null;
-      extensions[field.name] = { original, value: value ?? null };
+      extensions[field.name] = { original: originalFor(`extensions.${field.name}`, key), value: value ?? null };
     } else if (field.changeSet) {
       if (baseline[key] === undefined && value === undefined) continue;
-      const original = overrides?.[field.name]?.currentValue ?? baseline[key] ?? null;
-      input[field.name] = { original, value: value ?? null };
+      input[field.name] = { original: originalFor(field.name, key), value: value ?? null };
     } else if (value !== undefined && value !== null) {
       input[field.name] = value;
     }

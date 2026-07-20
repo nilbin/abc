@@ -32,7 +32,9 @@ export interface TamContextValue {
   invalidate: (effects?: ReadonlyArray<Record<string, unknown>>) => void;
 }
 
-const TamContext = createContext<TamContextValue | null>(null);
+// Exported so a host (or a test harness) can supply the context value directly, without the
+// manifest-fetching TamProvider. OperationForm and friends read it through useTam.
+export const TamContext = createContext<TamContextValue | null>(null);
 
 export function useTam(): TamContextValue {
   const context = useContext(TamContext);

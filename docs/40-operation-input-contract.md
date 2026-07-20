@@ -221,7 +221,16 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   (`VisibleWhen`/`RequiredWhen`) read through the one effective-value accessor that unwraps
   `Change<T>.Value`, so an edit field's predicate evaluates its value — resolve and submit evaluate the
   identical scalar, and a `RequiredWhen` may safely reference a change-set field (the complete input
-  carries its value at submit).
+  carries its value at submit). **Validation follows the same effective-patch rule** (Sol re-review
+  round 9, F3): structural validation skips a change field whose `Original == Value`, exactly as the
+  merge and the extension channel do — so an unchanged historical value a later, stricter rule would now
+  reject cannot block an *unrelated* partial edit; only a genuinely patched field's submitted value is
+  validated. **A null `Original` is a valid merge base**, not a mistake (round 9, F4): the field simply
+  loaded null. The former "original-missing" conflict reason is removed — JSON cannot distinguish an
+  explicit `{"original": null}` from an omitted property once both are CLR null, so a mismatch is an
+  ordinary `stale` conflict. A conflict override likewise carries the persisted current value *even when
+  it is null* (testing the override's presence, not its truthiness), so a "use mine" retry against a
+  null current sends `original: null` rather than resurrecting the stale baseline.
 - **Frozen concurrency baseline.** A `Change<T>`'s `original` is the value frozen when the form's
   `instanceKey` (its record identity) last changed, never the latest `initialValues` prop — a
   background refresh handing the same record a newer server value cannot silently rebase the
@@ -234,11 +243,15 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   refresh or an `actAs` switch mid-edit refreshes derived state *without discarding unsubmitted edits*
   (Sol re-review round 6, F1). That context refresh first **cancels any in-flight reactive resolve**
   and is **identity-aware** (Sol re-review round 7, F2): a stale, old-context debounced resolve can no
-  longer fire and win after a tenant switch (restoring the previous tenant's candidates/requiredness),
-  and when record identity *and* context change in the same render the baseline effect — not a
-  current-edit resolve over the old values — owns the request. The corollary: new prefill values for
-  the *same* `instanceKey` are ignored until the identity changes — the frozen baseline and the user's
-  edits win. Derived state never bleeds across records, and a refresh never silently reverts an edit.
+  longer fire and win after a tenant switch (restoring the previous tenant's candidates/requiredness).
+  The hard invariant (round 9, F1): an **identity change is ALWAYS owned by the reset + baseline
+  effects** — the context-refresh effect resolves the current edit state *only* when the identity is
+  unchanged (a same-record context change, or the form gaining its first derivation for that record).
+  This holds even when record identity *and* derivation-activation land in the same render — otherwise
+  the current-edit resolve would read the previous record's not-yet-rendered values under the freshly
+  frozen baseline (a mixed-record request that also wins the seq race). The corollary: new prefill
+  values for the *same* `instanceKey` are ignored until the identity changes — the frozen baseline and
+  the user's edits win. Derived state never bleeds across records, and a refresh never reverts an edit.
 - **Edit suggestions are surfaced, not silently written.** A server `Suggest()` is auto-adopted into
   the value only for a **create** (non-change-set) field. For an **edit** change-set field the
   suggestion is exposed to the renderer (as `suggestion`) with a generic accept affordance beside the

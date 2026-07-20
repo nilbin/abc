@@ -82,9 +82,12 @@ public static class TamMerge
                 ValueWrapper.Unwrap(original),
                 ValueWrapper.Unwrap(current),
                 ValueWrapper.Unwrap(submitted),
-                // A null base against a non-null current means the caller never SENT the
-                // original — the raw-wire mistake — not that someone edited concurrently.
-                Reason: original is null && current is not null ? "original-missing" : "stale"));
+                // A genuine three-way conflict (Original / Current / Value differ). Not inferred from
+                // `original is null` (Sol re-review round 9, F4): under the complete-state contract a
+                // null Original is a valid, common merge base — the field simply loaded null — and JSON
+                // cannot distinguish {"original": null} from an omitted property once both are CLR null.
+                // So a stale conflict is a stale conflict; do not misreport it as a raw-wire mistake.
+                Reason: "stale"));
         }
 
         return new MergeResult(applied, conflicts);

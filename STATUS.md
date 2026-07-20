@@ -1257,6 +1257,31 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   suggestion locale keys), web typechecks + `vite build`, full wire matrix GREEN on fresh SQLite AND
   Postgres (94 checks each). Net: FORM001, the client changed-field contract, and the resolve/submit
   edit-state divergence are all GONE — the model now rests on the three values `Change<T>` already had.
+- **docs/40 re-review round 9 — completing the complete-state contract (1 HIGH + 3 MEDIUM + a test
+  gap, all confirmed against code then fixed)**: the round-8 architecture was affirmed correct; four
+  remaining gaps closed. (F1, HIGH — React lifecycle) the context-refresh effect made an exception
+  `identityChanged && !gainedDerivations`, so a form/record switch that ALSO gained derivations resolved
+  `buildOperationInput()` — reading the previous record's not-yet-rendered values under the freshly
+  frozen baseline (a mixed-record request that then won the seq race). Fixed to the simple invariant: an
+  identity change is ALWAYS owned by the reset + baseline effects; the context effect resolves only when
+  identity is unchanged. (F2, MEDIUM) the baseline resolve still hand-built a subtly different payload
+  (omitted initialized-null change fields; omitted extensions) — now uses the one shared `buildFormInput`
+  with the frozen baseline as both original and value, so there really is ONE builder across mount /
+  reactive / context / submit. (F3, MEDIUM) structural validation revalidated the Value of every present
+  `Change<T>` — so an unchanged historical value a later stricter rule now rejects could block an
+  unrelated partial edit; now it skips a change field whose `Original == Value`, matching TamMerge and
+  the extension channel. (F4, MEDIUM — null semantics) a conflict override with a null persisted Current
+  fell back through `??` to the stale baseline (a "use mine" retry re-conflicted) — now tests the
+  override's PRESENCE, not truthiness; and the unsound `original-missing` conflict reason is removed (a
+  null `Original` is a valid merge base — JSON can't tell explicit-null from omitted), so a mismatch is
+  an ordinary `stale` conflict. `Change<T>`'s doc corrected: presence ≠ touched. (F5, TEST GAP) the
+  package harness now MOUNTS `OperationForm` via React Testing Library (jsdom) and asserts the resolve
+  lifecycle — the F1 mixed-record regression, record-switch-resolves-new-baseline, and same-record
+  context refresh — plus the null-override builder case. Verified: suites 198 + 61 C#, **11 Vitest**
+  (7 pure builder + 4 mounted-component), structure + docs gates, manifest additive-only (D4) &
+  byte-unchanged, web typecheck + `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres (94
+  each). The complete-state contract is now consistent across compiled + extension fields, the null
+  cases are correct, and the React state machine is covered by mounted-component tests.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —

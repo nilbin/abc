@@ -127,7 +127,7 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
       `[Lookup]` + LOOKUP001 + framework `users.lookup` directory view (the M2 actor-render
       gap becomes a picker, and erp's assignee/stock-item ServerDerivations + bespoke
       CustomerPicker wiring were DELETED), `.ReadOnly()` display seat for computed values,
-      `FieldConflict.Reason` ("original-missing" vs "stale") on the wire, resolve endpoint
+      `FieldConflict.Reason` ("stale"; the "original-missing" inference was later removed, round 9) on the wire, resolve endpoint
       400s with the expected shape instead of 500, `approvals.rules.retire`, and page-placed
       slots auto-declare (standalone `model.Slot` remains only for external slots). Verified:
       149 framework + 8 harness tests, full 15-suite matrix (210 checks) on SQLite AND
@@ -247,7 +247,8 @@ StockItem      the small catalog MaterialLine references: sku, name, unit, price
   (an undeclared `decimal` is now honestly a plain number); label collisions → type-level
   `[LabelKey]` names the concept once, and Build() warns (advisory L10N005) when two
   different wrapper types share one convention key; `{original, value}` guessing → the
-  conflict finding now carries `reason: original-missing | stale`; actor rendering and the
+  conflict finding carries `reason: stale` (the `original-missing` variant was later removed
+  in round 9 — a null merge base is valid, not a mistake); actor rendering and the
   "SOMETHING must fire" derivation pattern → type-level `[Lookup("view.id")]` + a
   framework `users.lookup` directory view (own low-sensitivity atom): assignee, project,
   customer and stock-item fields all render searchable pickers from the manifest alone —

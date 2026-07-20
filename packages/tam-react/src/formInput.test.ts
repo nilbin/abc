@@ -48,6 +48,17 @@ describe('buildFormInput — the one resolve/submit input builder (round 8)', ()
     expect(input.description).toEqual({ original: 'Theirs', value: 'Mine' });
   });
 
+  it('a conflict override with a null current value sends original: null, not the stale baseline', () => {
+    // Round 9, F4: the persisted Current is legitimately null. The override entry EXISTS, so its null
+    // must win over the baseline — a `?? baseline` fallback would resend the old base and re-conflict.
+    const input = buildFormInput(
+      [change('description')],
+      { description: 'A' },
+      { description: 'Mine' },
+      { description: { field: 'description', currentValue: null, submittedValue: 'Mine' } as any });
+    expect(input.description).toEqual({ original: null, value: 'Mine' });
+  });
+
   it('bundles initialized extension changes under extensions, complete', () => {
     const fields: FieldRuntime[] = [change('description'), ext('serial')];
     const baseline = { description: 'A', 'ext:serial': 'S1' };

@@ -172,13 +172,13 @@ export function OperationForm(props: OperationFormProps) {
   useEffect(() => {
     if (!formDef.hasServerDerivations) return;
     const sent = ++seq.current;
-    const snapshot = initialRef.current;
-    const input: Record<string, unknown> = {};
-    for (const f of formDef.fields) {
-      const v = snapshot[f.name];
-      if (v === undefined || v === null) continue;
-      input[f.name] = f.changeSet ? { original: v, value: v } : v;
-    }
+    // The SAME shared builder resolve/submit use (Sol re-review round 9, F2): the frozen baseline is
+    // both `original` and `value` (nothing edited yet), so the baseline request has exactly the shape
+    // every later resolve/submit does — initialized null change fields included as {null, null},
+    // extensions bundled — not a second, subtly-different payload. baselineRef is frozen synchronously
+    // by the reset effect (declared above, so it runs first on this same [form, instanceKey] change).
+    const snapshot = baselineRef.current;
+    const input = buildFormInput(fields, snapshot, snapshot);
     (async () => {
       try {
         const resolved = await client.resolve(props.form, input, null, manifest.revision, { actAs: props.actAs });
@@ -188,33 +188,24 @@ export function OperationForm(props: OperationFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.form, props.instanceKey]);
 
-  // RE-RESOLVE the current edit state when the acting node or manifest revision changes (Sol re-review
-  // round 6, F1) — WITHOUT discarding edits. Two refs disambiguate (Sol re-review round 7, F2 + round 8):
-  //   • IDENTITY change (or mount) — the reset + baseline effects own the resolve; this effect records
-  //     the new identity and returns, so it never builds a mixed-record request from the old values
-  //     under a newly frozen baseline when record and context change in the same render.
-  //   • CONTEXT change for the SAME identity — cancel any in-flight reactive resolve FIRST (a stale
-  //     old-context debounced timer would otherwise fire later, bump seq past this request, and win —
-  //     restoring the previous tenant's candidates/requiredness), then re-resolve buildOperationInput().
-  //   • A form that just GAINED its first derivation post-mount (hasServerDerivations flips false→true
-  //     via a manifest revision) — the baseline effect's deps ([form, instanceKey]) didn't change, so
-  //     it never resolved; resolve the current edit state here so derived UI appears (round 8, P3).
+  // RE-RESOLVE the current edit state on a CONTEXT change (acting node / manifest revision) or when the
+  // form gains its first derivation for the SAME record — WITHOUT discarding edits (Sol re-review rounds
+  // 6-9). One ref tracks the (form, instanceKey) IDENTITY, updated on EVERY run (even with no
+  // derivations) so a later derivation-activation still sees the right prior identity. The invariant
+  // (round 9, F1): an IDENTITY change is ALWAYS owned by the reset + baseline effects — never resolve
+  // current edits here on one, or buildOperationInput() would read the previous record's not-yet-
+  // rendered values under the freshly frozen baseline (a mixed-record request that also wins the seq
+  // race). So this resolves ONLY when the identity is unchanged: a same-record context change, or a
+  // same-record derivation activation (whose [form, instanceKey]-keyed baseline effect did not re-run).
+  // Cancelling the pending debounce first stops a stale old-context timer from landing after us.
   const resolvedIdentity = useRef<{ form: string; instanceKey?: string | number } | null>(null);
-  const mountedRef = useRef(false);
-  const hadDerivations = useRef(false);
   useEffect(() => {
-    const firstRun = !mountedRef.current;
-    mountedRef.current = true;
-    if (!formDef.hasServerDerivations) { hadDerivations.current = false; return; }
     const prev = resolvedIdentity.current;
-    const gainedDerivations = !hadDerivations.current;
-    hadDerivations.current = true;
+    const identityChanged = prev === null
+      || prev.form !== props.form || prev.instanceKey !== props.instanceKey;
     resolvedIdentity.current = { form: props.form, instanceKey: props.instanceKey };
-    const identityChanged = prev === null || prev.form !== props.form || prev.instanceKey !== props.instanceKey;
-    // Mount is owned by the baseline effect. An identity change is too — UNLESS this is also the moment
-    // the form gained derivations (then the baseline effect, keyed only on identity, may not have run).
-    if (firstRun) return;
-    if (identityChanged && !gainedDerivations) return;
+    if (!formDef.hasServerDerivations) return;
+    if (identityChanged) return;
     clearTimeout(timer.current);
     const sent = ++seq.current;
     const input = buildOperationInput();

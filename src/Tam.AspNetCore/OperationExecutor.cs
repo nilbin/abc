@@ -491,18 +491,33 @@ public sealed class OperationExecutor(
             var property = ReflectionCache.Property(operation.InputType, field.MemberName);
             var value = property.GetValue(input);
 
+            if (field.IsChangeSet && value is not null)
+            {
+                // Effective-patch semantics (docs/40, Sol re-review round 9, F3): the form sends
+                // complete Change<T>, so an UNTOUCHED field arrives as Original == Value. It is a no-op
+                // TamMerge will ignore — so validating it here would let an unchanged historical value a
+                // later, stricter rule now rejects block an unrelated partial edit. Skip it, exactly as
+                // TamMerge and the extension merge do. Only the SUBMITTED value of a genuinely patched
+                // field is validated.
+                var changeType = value.GetType();
+                var original = ReflectionCache.Property(changeType, "Original").GetValue(value);
+                var submitted = ReflectionCache.Property(changeType, "Value").GetValue(value);
+                if (TamMerge.SemanticallyEqual(field.Semantic, original, submitted)) continue;
+                if (submitted is null) continue;
+                var normalizedChange = field.Semantic.Normalize(ValueWrapper.Unwrap(submitted));
+                if (field.Semantic.Validate(normalizedChange) is { } invalidChange)
+                    findings.Add(invalidChange.At(field.WireName));
+                continue;
+            }
+
             if (field.Required && IsEmpty(value))
             {
                 findings.Add(ValidationFindings.Required.At(field.WireName));
                 continue;
             }
+            if (value is null) continue;
 
-            var toValidate = field.IsChangeSet && value is not null
-                ? ReflectionCache.Property(value.GetType(), "Value").GetValue(value)
-                : value;
-            if (toValidate is null) continue;
-
-            var normalized = field.Semantic.Normalize(ValueWrapper.Unwrap(toValidate));
+            var normalized = field.Semantic.Normalize(ValueWrapper.Unwrap(value));
             if (field.Semantic.Validate(normalized) is { } invalid)
                 findings.Add(invalid.At(field.WireName));
         }
