@@ -280,25 +280,30 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task WasChanged_reflects_the_change_set_not_wrapper_presence()
+    public async Task WasChanged_is_derived_from_Original_differing_from_Value()
     {
-        // IDENTICAL description value in both resolves — only the change set differs. A derivation
-        // reading DerivationContext.WasChanged must fire on the first and not the second (Sol re-review
-        // round 6, F3): resolve sends every initialized Change<T>, so wrapper presence is not the
-        // signal; the explicit touched list is.
-        var input = new
+        // WasChanged is now Original != Value, derived from the input itself (Sol re-review round 8) —
+        // no wire-sent `changed` list. Value is the SENTINEL in both resolves; only Original differs, so
+        // the finding fires only when the field was actually patched. This reads identically at submit.
+        var patched = await actor.ResolveAsync("web.orders.edit", new
         {
             orderId = Guid.NewGuid(),
             description = new { original = "old", value = BlockingProbeDerivations.WasChangedSentinel },
-        };
+        });
+        Assert.Null(patched.Error);
+        Assert.Contains(patched.Response!.Fields["description"].Findings, f => f.Code == "test.change-seen");
 
-        var changed = await actor.ResolveAsync("web.orders.edit", input, changed: ["description"]);
-        Assert.Null(changed.Error);
-        Assert.Contains(changed.Response!.Fields["description"].Findings, f => f.Code == "test.change-seen");
-
-        var untouched = await actor.ResolveAsync("web.orders.edit", input, changed: ["orderId"]);
-        Assert.Null(untouched.Error);
-        Assert.DoesNotContain(untouched.Response!.Fields["description"].Findings, f => f.Code == "test.change-seen");
+        var unchanged = await actor.ResolveAsync("web.orders.edit", new
+        {
+            orderId = Guid.NewGuid(),
+            description = new
+            {
+                original = BlockingProbeDerivations.WasChangedSentinel,
+                value = BlockingProbeDerivations.WasChangedSentinel,
+            },
+        });
+        Assert.Null(unchanged.Error);
+        Assert.DoesNotContain(unchanged.Response!.Fields["description"].Findings, f => f.Code == "test.change-seen");
     }
 
     [Fact]
@@ -317,21 +322,41 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
     }
 
     [Fact]
-    public void A_form_requiredwhen_over_a_change_set_field_is_a_build_error()
+    public async Task A_form_requiredwhen_over_a_change_field_now_works_at_submit()
     {
-        // Submit is sparse for edit forms — an untouched change field is omitted — so a RequiredWhen
-        // keyed off one reads null at submit even when the record holds a value. FORM001 rejects it at
-        // build (Sol re-review round 6, F2) rather than shipping a requiredness that flips on the wrong
-        // basis. The real model is clean; only this deliberately-bad form trips it.
-        var ex = Assert.Throws<InvalidOperationException>(() =>
+        // The round-6 build gate forbidding a RequiredWhen over a change field is REMOVED (Sol re-review
+        // round 8): the form submits complete Change<T> state, so the predicate reads the field's actual
+        // Value at submit — no longer null from a sparse body. This test-only form
+        // demands WorkAddress whenever Description has a value; submitting through it with a described
+        // order but a cleared WorkAddress must fail requiredness — proof the predicate sees the value.
+        var probeHost = await TamTestHost<ErpDbContext>.CreateSqliteAsync(
             ErpModel.Builder()
-                .Form<EditOrderDetails.Input>("test.bad-edit-form", "orders.edit-details", form =>
+                .Form<EditOrderDetails.Input>("test.edit-required", "orders.edit-details", form =>
                 {
                     form.Field(x => x.OrderId).Renderer("hidden");
                     form.Field(x => x.Description);
                     form.Field(x => x.WorkAddress).RequiredWhen(x => x.Description != null);
                 })
                 .Build());
-        Assert.Contains("FORM001", ex.Message);
+        try
+        {
+            await probeHost.SeedAsync("demo", db =>
+            {
+                db.Customers.Add(Customer.Create("demo", new("K"), new("G 1"), null, null));
+                return Task.CompletedTask;
+            });
+            var probeActor = probeHost.Actor("demo", "orders.edit");
+            var result = await probeActor.ExecuteThroughFormAsync("test.edit-required", "orders.edit-details", new
+            {
+                orderId = Guid.NewGuid(),
+                description = new { original = "old", value = "described" },
+                workAddress = new { original = "somewhere", value = (string?)null },
+            });
+            result.ShouldFailWith("validation.required", onField: "workAddress");
+        }
+        finally
+        {
+            await probeHost.DisposeAsync();
+        }
     }
 }

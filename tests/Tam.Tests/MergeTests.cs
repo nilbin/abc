@@ -72,6 +72,24 @@ public class MergeTests
         Assert.False(merge.HasConflicts);
         Assert.Null(doc.RequestedDate);
     }
+
+    [Fact]
+    public void Unchanged_field_with_a_concurrent_database_change_is_a_no_op()
+    {
+        var doc = new Doc();   // Description = "Repair pump"
+        // User B moves Description on (current now differs from the merge base):
+        TamMerge.Apply(doc, new EditInput(Description: new("Repair pump", "Replace pump")));
+
+        // User A, holding the OLD base, submits Description UNCHANGED (Original == Value) — the
+        // complete-submission shape for a field never touched (docs/40, round 8). No write, no conflict,
+        // and B's concurrent value stands: an untouched field takes no concurrency check. Before the
+        // Original == Value branch this would have raised a spurious conflict.
+        var merge = TamMerge.Apply(doc, new EditInput(Description: new("Repair pump", "Repair pump")));
+
+        Assert.False(merge.HasConflicts);
+        Assert.Empty(merge.AppliedFields);
+        Assert.Equal("Replace pump", doc.Description);
+    }
 }
 
 public class ExtensionApplierTests
@@ -140,6 +158,23 @@ public class ExtensionApplierTests
         var conflict = Assert.Single(stale.Conflicts);
         Assert.Equal("extensions.machineSerialNumber", conflict.Field);
         Assert.Equal("CURRENT", conflict.CurrentValue);
+    }
+
+    [Fact]
+    public void Unchanged_extension_with_a_concurrent_change_is_a_no_op()
+    {
+        var thing = new Thing();
+        ExtensionApplier.Apply(thing, true, Changes("machineSerialNumber", null, "CURRENT"), [Spec()]);
+
+        // Extensions share the main-field concurrency model (round 8): an untouched extension change
+        // (Original == Value) submitted alongside the rest is a no-op, never a conflict, even though the
+        // DB moved on.
+        var merge = ExtensionApplier.Apply(thing, false,
+            Changes("machineSerialNumber", "OLD-BASE", "OLD-BASE"), [Spec()]);
+
+        Assert.Empty(merge.Conflicts);
+        Assert.Empty(merge.Findings);
+        Assert.Equal("CURRENT", thing.Extensions.Get<string>("machineSerialNumber"));
     }
 
     [Fact]

@@ -78,6 +78,13 @@ public static class ExtensionApplier
             var current = entity.Extensions.Raw(key);
             var semantic = spec.Semantic;
 
+            // No effective change (docs/40): the form submits every INITIALIZED extension change, so an
+            // untouched one arrives with Original == Value — same as a main-entity change field. It
+            // contributes no patch and takes no concurrency check, so extension and main fields share
+            // one concurrency model. FIRST branch, before validation: an untouched persisted value is
+            // already valid and need not be re-checked.
+            if (TamMerge.SemanticallyEqual(semantic, original, submitted)) continue;
+
             if (submitted is not null)
             {
                 if (semantic.Validate(semantic.Normalize(submitted)) is { } invalid)

@@ -73,7 +73,7 @@ jobs:
           PGPASSWORD=tam psql -h localhost -U tam -d erp -tAc             "SELECT count(*) FROM pg_policies WHERE policyname='tam_tenant_isolation'" | grep -vq '^0$'
           kill %1
 
-      - name: Frontend type-check and build
+      - name: Frontend type-check, test and build
         run: |
           npm ci
-          cd samples/web && npx tsc --noEmit && npx vite build
+          cd samples/web && npx tsc --noEmit && npx vitest run && npx vite build

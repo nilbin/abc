@@ -687,38 +687,6 @@ public sealed partial class TamModelBuilder
                         $"'{key}' but the model has no such enum. Known: {string.Join(", ", model.Enums.Keys.OrderBy(k => k))}.");
     }
 
-    /// <summary>FORM001 (docs/40, Sol re-review round 6, F2): a form's RequiredWhen may not depend
-    /// on a CHANGE-SET field. Submit is sparse for edit forms — an untouched Change&lt;T&gt; field is
-    /// omitted from the body entirely — so a requiredness predicate keyed off one would read null at
-    /// submit even when the record holds a value, quietly demanding (or waiving) a field on the
-    /// wrong basis. Requiredness must key off fields the wire always carries. Caught at build so the
-    /// contract can never ship this mismatch.</summary>
-    private static void VerifyFormPredicates(TamModel model)
-    {
-        foreach (var form in model.Forms.Values)
-        {
-            if (!model.Operations.TryGetValue(form.OperationId, out var operation)) continue;
-            var changeFields = operation.InputFields
-                .Where(f => f.IsChangeSet).Select(f => f.WireName)
-                .ToHashSet(StringComparer.Ordinal);
-            if (changeFields.Count == 0) continue;
-            foreach (var config in form.Fields)
-            {
-                if (config.RequiredWhen is not { } predicate) continue;
-                var offending = predicate.Fields().FirstOrDefault(changeFields.Contains);
-                if (offending is not null)
-                    throw new InvalidOperationException(
-                        $"FORM001: form '{form.Id}' field '{config.WireName}' has a RequiredWhen that "
-                        + $"references change-set field '{offending}'. Submit omits untouched change "
-                        + "fields, so requiredness read from one is unreliable — key RequiredWhen off "
-                        + "a field the wire always carries, or move the rule into a [ServerDerivation]. "
-                        + "A derivation that depends on an untouched field must load the current aggregate "
-                        + "and overlay the sparse patch (docs/40) — the deserialized submit input alone is "
-                        + "not complete effective state.");
-            }
-        }
-    }
-
     /// <summary>L10N005 (WARNING, docs/34 M5): DIFFERENT semantic wrapper types claiming the
     /// same convention-derived label key — the exact trap where Project.Number silently wore
     /// orders' "Order number" text. Plain string/enum members sharing generic keys ("Name",

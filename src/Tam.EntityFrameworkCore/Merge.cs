@@ -55,6 +55,16 @@ public static class TamMerge
             var semantic = SemanticTypes.For(
                 Nullable.GetUnderlyingType(target.PropertyType) ?? target.PropertyType);
 
+            // No EFFECTIVE user change (docs/40): the form always submits complete Change<T> state,
+            // so an untouched field arrives with Original == Value. It contributes no patch and takes
+            // NO concurrency check — a concurrent writer's change to a field the user never touched
+            // must not surface as a conflict (that would block every unrelated edit). This branch is
+            // FIRST so complete submission stays as quiet as the old sparse omission.
+            if (SemanticallyEqual(semantic, original, submitted))
+            {
+                continue;
+            }
+
             if (SemanticallyEqual(semantic, current, submitted))
             {
                 continue;   // already resolved
@@ -80,7 +90,11 @@ public static class TamMerge
         return new MergeResult(applied, conflicts);
     }
 
-    internal static bool SemanticallyEqual(SemanticType semantic, object? a, object? b)
+    /// <summary>Semantic equality for two values of one field's type — the ONE change-detection
+    /// primitive (docs/40): TamMerge's no-op/apply/conflict decisions, the extension merge, and
+    /// <c>DerivationContext.WasChanged</c> (Original != Value) all key off it, so "changed" means the
+    /// same thing everywhere. Unwraps the semantic wrapper and normalizes before comparing.</summary>
+    public static bool SemanticallyEqual(SemanticType semantic, object? a, object? b)
     {
         var ua = semantic.Normalize(ValueWrapper.Unwrap(a));
         var ub = semantic.Normalize(ValueWrapper.Unwrap(b));

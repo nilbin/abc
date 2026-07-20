@@ -40,15 +40,11 @@ public sealed class ResolveExecutor(TamModel model, OperationExecutor operations
 
         // The SAME operation-owned derivation run submit uses (docs/40): ALL derivations, every time,
         // so the complete field state resolve returns cannot report a requiredness or membership that
-        // submit (which always runs them all) then contradicts (Sol re-review, Finding 4). request.
-        // Changed no longer prunes the run; it now carries the change-membership signal a derivation
-        // reads via DerivationContext.WasChanged (Sol re-review round 6, F3) — the fields the client
-        // has touched, the resolve-time analogue of submit's present-field set. (A future delta
-        // protocol would additionally use it to return only the changed field states.)
-        var touched = request.Changed is { } changed
-            ? changed.ToHashSet(StringComparer.Ordinal)
-            : new HashSet<string>(StringComparer.Ordinal);
-        var merged = await operations.RunDerivationsAsync(operation, input, context, ct, touched);
+        // submit (which always runs them all) then contradicts (Sol re-review, Finding 4). Because both
+        // paths send COMPLETE Change<T> state, DerivationContext.WasChanged (Original != Value) reads
+        // the same here as at submit — no wire-sent `changed` list is consulted (it remains on the
+        // request only for a future delta protocol).
+        var merged = await operations.RunDerivationsAsync(operation, input, context, ct);
 
         // The ONE effective-value accessor for portable predicates (Sol re-review round 6, F2):
         // unwraps a Change<T> so an edit form's VisibleWhen/RequiredWhen sees the value, not the

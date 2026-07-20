@@ -161,13 +161,7 @@ public sealed class OperationExecutor(
         // Derivations run structurally read-only and self-contained (Sol re-review, Finding 3): the
         // write-guard interceptor rejects any durable write and RunDerivationsAsync discards any
         // unsaved tracked mutation, on every exit path — so submit never inherits derivation writes.
-        // The change set a derivation reads via DerivationContext.WasChanged (Sol re-review round 6,
-        // F3): at submit it is exactly the fields the body carries — a present field was submitted,
-        // an absent one was not (edit forms send only touched change fields).
-        var submittedFields = body.ValueKind == JsonValueKind.Object
-            ? body.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal)
-            : NoChangedFields;
-        var derived = await RunDerivationsAsync(operation, input, context, ct, submittedFields);
+        var derived = await RunDerivationsAsync(operation, input, context, ct);
 
         var required = derived.Required
             .Where(r => r.When && FieldEmpty(operation, input, r.Field))
@@ -560,8 +554,7 @@ public sealed class OperationExecutor(
     /// protocol — resolve returns only changed field states + the client merges — is the future
     /// optimization; until then, correctness over the round-trip cost.</summary>
     public async Task<DerivationResult> RunDerivationsAsync(
-        OperationDefinition operation, object input, OperationContext context, CancellationToken ct,
-        IReadOnlySet<string>? changedFields = null)
+        OperationDefinition operation, object input, OperationContext context, CancellationToken ct)
     {
         // Derivations are structurally READ-ONLY (Sol re-review, Finding 3) for the WHOLE evaluation,
         // shared by resolve and submit. The scope flag makes the DbContext's write-guard interceptor
@@ -569,18 +562,12 @@ public sealed class OperationExecutor(
         // every exit path. The finally also discards any tracked-but-unsaved write and always restores
         // the flag — so a throw mid-run (a write rejection, DER008) can't leave the shared context
         // dirty or read-only.
-        // WasChanged means exactly ONE thing (Sol re-review round 7, F3): "this Change<T> field is in
-        // the caller's pending patch". Narrow the raw candidate set (submit passes the body's present
-        // fields; resolve passes the touched set) to the operation's change-set wire names, in the ONE
-        // place both paths meet — so a non-change-set field, which submit always sends but resolve never
-        // marks touched, can never read as changed on one path and unchanged on the other. A non-change
-        // field is never "changed" (partial-update is a change-set concept); WasChanged returns false.
-        var changeSetWire = operation.InputFields
-            .Where(f => f.IsChangeSet).Select(f => f.WireName)
-            .ToHashSet(StringComparer.Ordinal);
-        var patched = changedFields is null
-            ? NoChangedFields
-            : (IReadOnlySet<string>)changedFields.Where(changeSetWire.Contains).ToHashSet(StringComparer.Ordinal);
+        // WasChanged is DERIVED from the input itself (docs/40, Sol re-review round 8): a change-set
+        // field is "changed" iff its Original differs semantically from its Value. Because resolve and
+        // submit both send COMPLETE Change<T> state, this is identical on both paths — no wire-sent
+        // touched list, no submit-vs-resolve narrowing. A non-change field is not a Change<T> and never
+        // appears here (WasChanged returns false — read its value instead).
+        var patched = ChangedFields(operation, input);
 
         var db = dbResolver(services);
         var scope = services.GetService<TenantScope>();
@@ -691,6 +678,27 @@ public sealed class OperationExecutor(
             : value;
     }
 
+    /// <summary>The change-set fields the caller actually PATCHED (docs/40, Sol re-review round 8):
+    /// a <c>Change&lt;T&gt;</c> whose Original differs semantically from its Value. Derived from the
+    /// input alone — since resolve and submit both send complete Change&lt;T&gt; state, this yields the
+    /// identical set on both paths, no wire metadata required. Non-change fields never qualify.</summary>
+    private static IReadOnlySet<string> ChangedFields(OperationDefinition operation, object input)
+    {
+        HashSet<string>? changed = null;
+        foreach (var field in operation.InputFields)
+        {
+            if (!field.IsChangeSet) continue;
+            var change = ReflectionCache.Property(operation.InputType, field.MemberName).GetValue(input);
+            if (change is null) continue;
+            var changeType = change.GetType();
+            var original = ReflectionCache.Property(changeType, "Original").GetValue(change);
+            var value = ReflectionCache.Property(changeType, "Value").GetValue(change);
+            if (!TamMerge.SemanticallyEqual(field.Semantic, original, value))
+                (changed ??= new HashSet<string>(StringComparer.Ordinal)).Add(field.WireName);
+        }
+        return changed ?? NoChangedFields;
+    }
+
     /// <summary>The submitted lookup key as a wire string for the membership Exists.</summary>
     private static string? LookupKey(OperationDefinition operation, object input, string wireName) =>
         EffectiveScalar(operation, input, wireName) switch
@@ -738,13 +746,11 @@ public sealed class OperationExecutor(
 /// not wrapper presence, and key off <see cref="WasChanged"/> when change-membership matters.</summary>
 public sealed record DerivationContext(OperationContext Operation, IReadOnlySet<string> ChangedFields)
 {
-    /// <summary>Is this <c>Change&lt;T&gt;</c> field in the caller's pending patch (Sol re-review round
-    /// 6, F3; narrowed round 7, F3)? The set is restricted to the operation's CHANGE-SET fields before
-    /// it reaches here — at submit, the change fields present in the sparse body; at resolve, the change
-    /// fields the client has touched — so the answer means the same thing on both paths. A NON-change
-    /// field (which submit always sends but resolve never marks touched) is not a partial-update concept
-    /// and always returns false — read its value, not WasChanged. This is the RELIABLE change signal;
-    /// wrapper presence is not, since resolve sends every initialized <c>Change&lt;T&gt;</c>, touched or
-    /// not. Matched by wire (camel) name.</summary>
+    /// <summary>Did the caller PATCH this <c>Change&lt;T&gt;</c> field — its Original differs
+    /// semantically from its Value (docs/40, Sol re-review round 8)? Derived from the submitted input,
+    /// not from any wire-sent list, so it reads identically at resolve and submit (both send complete
+    /// Change&lt;T&gt; state). Wrapper *presence* is NOT the signal — resolve sends every initialized
+    /// change field, and an untouched one carries <c>Original == Value</c>. A non-change field is not a
+    /// <c>Change&lt;T&gt;</c> and always returns false — read its value instead. Matched by wire name.</summary>
     public bool WasChanged(string field) => ChangedFields.Contains(Naming.Camel(field));
 }

@@ -1230,6 +1230,33 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   are React state-machine corrections; the repo has no JS component-test harness, so they are verified by
   typecheck + reasoning + the wire matrix (which exercises the API, not the form), NOT by a component
   test. docs/40's SERVER architecture is complete; the edit-form runtime now matches it.
+- **docs/40 re-review round 8 — the complete edit-state contract (architectural simplification, not a
+  bug list)**: the reviewer's insight was that rounds 6–7 had layered compensations on a needlessly
+  SPARSE submit model, when TAM already had the cleaner abstraction: `Change<T>(Original, Value)` plus
+  the persisted `Current` is a full three-way merge. The fix REMOVES sparsity instead of adding guards.
+  **Phase 1 — one complete contract.** `TamMerge` (and the extension merge) gained an `Original == Value`
+  → no-op FIRST branch: the form now submits EVERY initialized `Change<T>` (own + extension, via one
+  `buildFormInput` shared by resolve and submit), and an untouched field (Original == Value) is a no-op
+  that takes NO concurrency check — so a concurrent writer's change to a field the user never touched no
+  longer false-conflicts. Partial persistence and field-level concurrency fall out of the merge over the
+  three values, not out of a sparse payload. **Phase 2 — delete the compensations.** `WasChanged` is now
+  `Original != Value`, derived from the input in one place (`RunDerivationsAsync`) — identical at resolve
+  and submit, no wire-sent `changed` list, no submit-vs-resolve narrowing; the `changedFields` threading
+  is gone. The round-6 build gate forbidding a `RequiredWhen` over a change field is REMOVED (submit
+  carries the value now), returning the `FORM001` number to its originally-designed meaning (docs/12).
+  docs/40 corrected: submit is no longer sparse, and a derivation gets the complete form-projected
+  proposed state (it still loads the aggregate only when authoritative *current* truth matters). **Phase
+  3 — UI.** A generic accept affordance renders edit suggestions (previously passed to renderers that
+  ignored them); auto-adopting a create suggestion now enqueues a reactive resolve so dependents
+  recompute; the no-derivation→derivation manifest transition triggers a resolve. **Phase 4 — the React
+  test harness the last two rounds lacked**: added Vitest to `samples/web`, extracted the request-shape
+  builder to a pure `buildFormInput`, and unit-tested resolve/submit parity, complete-state emission,
+  clears, overrides and extensions (6 tests, wired into CI). Verified: suites 198 + 61 (new TamMerge
+  no-op-with-concurrent-change cases for main + extension fields; the RequiredWhen-over-change-field now
+  passes at submit) + 6 Vitest, structure + docs gates, manifest additive-only (D4, only the two new
+  suggestion locale keys), web typechecks + `vite build`, full wire matrix GREEN on fresh SQLite AND
+  Postgres (94 checks each). Net: FORM001, the client changed-field contract, and the resolve/submit
+  edit-state divergence are all GONE — the model now rests on the three values `Change<T>` already had.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —

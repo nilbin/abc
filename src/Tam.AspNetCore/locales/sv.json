@@ -49,6 +49,8 @@
   "extensions.unknown-type": "Okänd fälttyp.",
   "filters.from": "från",
   "filters.to": "till",
+  "forms.suggested-value": "Förslag",
+  "forms.use-suggestion": "Använd förslag",
   "grid.action-failed": "Åtgärden kunde inte genomföras. Försök igen.",
   "grid.columns": "Kolumner",
   "grid.empty": "Inga rader.",

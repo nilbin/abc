@@ -7,6 +7,7 @@ import {
 import { useTam } from './context';
 import { rendererFor } from './renderers';
 import type { FieldRendererProps } from './renderers';
+import { buildFormInput, FieldRuntime } from './formInput';
 
 export interface OperationFormProps {
   form: string;
@@ -24,11 +25,6 @@ export interface OperationFormProps {
   instanceKey?: string | number;
   onSuccess?: (response: OperationResponse) => void;
   submitLabel?: string;
-}
-
-interface FieldRuntime {
-  field: ManifestField;
-  key: string;              // values map key; extensions use "ext:{name}"
 }
 
 export function OperationForm(props: OperationFormProps) {
@@ -88,32 +84,18 @@ export function OperationForm(props: OperationFormProps) {
     (name: string) => values[name] ?? values[`ext:${name}`] ?? null,
     [values]);
 
-  // The complete own-field RESOLVE input in the operation's wire shape. A change-set field carries
-  // its {original, value} object, not a raw scalar (which deserializes to invalid-input, Finding 3),
-  // and — unlike submit — resolve includes EVERY INITIALIZED change-set field, not only touched ones
-  // (Sol re-review round 4, Finding 2): all derivations rerun on every resolve over COMPLETE state,
-  // so omitting an untouched current value (e.g. the current customer) makes derivations see it as
-  // null and a lookup/requiredness/finding based on it vanish when an unrelated field changes. Value
-  // is the edit when touched, else the current value (== original, "no change yet"). Submit keeps its
-  // own touched-only builder to preserve partial-update semantics.
-  const currentInput = useCallback(() => {
-    const base = baselineRef.current;
-    const input: Record<string, unknown> = {};
-    for (const f of formDef.fields) {
-      const v = valuesRef.current[f.name];
-      if (f.changeSet) {
-        const hasBaseline = base[f.name] !== undefined && base[f.name] !== null;
-        if (touchedRef.current.has(f.name) || hasBaseline)
-          input[f.name] = {
-            original: base[f.name] ?? null,
-            value: touchedRef.current.has(f.name) ? (v ?? null) : (base[f.name] ?? null),
-          };
-      } else if (v !== undefined && v !== null) {
-        input[f.name] = v;
-      }
-    }
-    return input;
-  }, [formDef]);
+  // The ONE operation-input builder for BOTH resolve and submit (docs/40, Sol re-review round 8):
+  // there is no sparse/complete divergence to drift. Every INITIALIZED change-set field (own and
+  // extension) carries its complete {original, value} object — `original` from the frozen baseline,
+  // `value` the current edit — so a derivation sees the complete proposed state and TamMerge derives
+  // the actual patch from `original != value` (an untouched field, original == value, is a no-op that
+  // takes no concurrency check). Non-change-set (create) fields send their raw value. A conflict
+  // override (the user resolving a detected conflict) supplies the fresh `original`. Reads live refs
+  // so an in-flight async caller never sees a stale snapshot.
+  const buildOperationInput = useCallback(
+    (overrides?: Record<string, FieldConflict>) =>
+      buildFormInput(fields, baselineRef.current, valuesRef.current, overrides),
+    [fields]);
 
   // Apply a resolve response: complete field state + untouched-only suggestions (docs/05).
   const applyResolved = useCallback((resolved: ResolveResponse) => {
@@ -128,41 +110,39 @@ export function OperationForm(props: OperationFormProps) {
       // auto-adopt is safe and keeps prefill behaviour.
       if (formDef.fields.find(f => f.name === name)?.changeSet) continue;
       if (state.suggestedValue !== undefined && state.suggestedValue !== null
-          && !touchedRef.current.has(name)) {
-        // Skip identical values: an unconditional set re-triggers the resolve effect and would
-        // loop suggestion -> resolve -> suggestion forever.
-        setValues(prev => prev[name] === state.suggestedValue
-          ? prev
-          : { ...prev, [name]: state.suggestedValue });
+          && !touchedRef.current.has(name)
+          // Skip identical values: an unconditional set re-triggers the resolve effect and would
+          // loop suggestion -> resolve -> suggestion forever.
+          && valuesRef.current[name] !== state.suggestedValue) {
+        // Adopting a suggestion is a field change: push it to lastChanged so the reactive resolve
+        // reruns and any derivation depending on this field recomputes (Sol re-review round 8, P3).
+        // Otherwise the form would display the adopted value but derive dependent state from the old
+        // snapshot. Not marked touched — touched stays "user interacted" for UX (suggestions may still
+        // overwrite this field), and the identical-value guard above prevents an infinite loop.
+        lastChanged.current.push(name);
+        setValues(prev => ({ ...prev, [name]: state.suggestedValue }));
       }
     }
   }, [formDef]);
 
-  // Batched, debounced, stale-rejecting server resolution (docs/05).
+  // Batched, debounced, stale-rejecting server resolution (docs/05). Sends the SAME complete input
+  // submit sends (buildOperationInput), so resolve and submit derive requiredness/candidates/WasChanged
+  // from identical state. A cleared non-change field goes out as null naturally (buildOperationInput
+  // omits it, which deserializes to null server-side). The `changed` wire arg is advisory only now —
+  // WasChanged is derived server-side from Original != Value — so we pass the triggering batch as a
+  // hint, not authority. The resolve DECISION still gates on serverDependencies + debounce.
   const scheduleResolve = useCallback((changedFields: string[]) => {
     if (!changedFields.some(f => formDef.serverDependencies.includes(f))) return;
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const sent = ++seq.current;
-      const input = currentInput();
-      // A cleared NON-change-set field must reach the server as null; change-set fields are already
-      // shaped by currentInput (never overwrite them with a raw scalar).
-      for (const f of changedFields) {
-        if (formDef.fields.find(x => x.name === f)?.changeSet) continue;
-        input[f] = valuesRef.current[f] ?? null;
-      }
-      // The change-membership signal is the CUMULATIVE touched set (Sol re-review round 6, F3), not
-      // just this batch: a derivation reading DerivationContext.WasChanged needs every field the user
-      // has touched this session, the resolve-time analogue of submit's present-field set. The resolve
-      // DECISION still gates on the batch (the serverDependencies check + debounce above).
-      const touchedNonExt = [...touchedRef.current].filter(f => !f.startsWith('ext:'));
       try {
         const resolved = await client.resolve(
-          props.form, input, touchedNonExt, manifest.revision, { actAs: props.actAs });
+          props.form, buildOperationInput(), changedFields, manifest.revision, { actAs: props.actAs });
         if (sent === seq.current) applyResolved(resolved);
       } catch { /* resolve is advisory; submit re-validates authoritatively */ }
     }, 350);
-  }, [client, formDef, props.form, props.actAs, manifest.revision, currentInput, applyResolved]);
+  }, [client, formDef, props.form, props.actAs, manifest.revision, buildOperationInput, applyResolved]);
 
   // Reset edit state when the form or the RECORD (instanceKey) changes (Sol re-review round 4,
   // Finding 5) — NOT on initialValues object identity, which a parent re-render changes for the same
@@ -209,32 +189,43 @@ export function OperationForm(props: OperationFormProps) {
   }, [props.form, props.instanceKey]);
 
   // RE-RESOLVE the current edit state when the acting node or manifest revision changes (Sol re-review
-  // round 6, F1) — WITHOUT discarding edits. A single ref tracks the (form, instanceKey) IDENTITY last
-  // resolved so this effect can tell two cases apart (Sol re-review round 7, F2):
-  //   • IDENTITY changed (or mount) — the reset + baseline effects above own the resolve; this effect
-  //     only records the new identity and returns, so it never builds a mixed-record request from the
-  //     old values under a newly frozen baseline when record and context change in the same render.
-  //   • CONTEXT changed for the SAME identity — cancel any in-flight reactive resolve FIRST (a stale
-  //     old-context debounced timer would otherwise fire later, bump seq past this request, and its
-  //     response would win — restoring the previous tenant's candidates/requiredness/findings), then
-  //     re-resolve currentInput() so edits survive.
+  // round 6, F1) — WITHOUT discarding edits. Two refs disambiguate (Sol re-review round 7, F2 + round 8):
+  //   • IDENTITY change (or mount) — the reset + baseline effects own the resolve; this effect records
+  //     the new identity and returns, so it never builds a mixed-record request from the old values
+  //     under a newly frozen baseline when record and context change in the same render.
+  //   • CONTEXT change for the SAME identity — cancel any in-flight reactive resolve FIRST (a stale
+  //     old-context debounced timer would otherwise fire later, bump seq past this request, and win —
+  //     restoring the previous tenant's candidates/requiredness), then re-resolve buildOperationInput().
+  //   • A form that just GAINED its first derivation post-mount (hasServerDerivations flips false→true
+  //     via a manifest revision) — the baseline effect's deps ([form, instanceKey]) didn't change, so
+  //     it never resolved; resolve the current edit state here so derived UI appears (round 8, P3).
   const resolvedIdentity = useRef<{ form: string; instanceKey?: string | number } | null>(null);
+  const mountedRef = useRef(false);
+  const hadDerivations = useRef(false);
   useEffect(() => {
-    if (!formDef.hasServerDerivations) return;
+    const firstRun = !mountedRef.current;
+    mountedRef.current = true;
+    if (!formDef.hasServerDerivations) { hadDerivations.current = false; return; }
     const prev = resolvedIdentity.current;
+    const gainedDerivations = !hadDerivations.current;
+    hadDerivations.current = true;
     resolvedIdentity.current = { form: props.form, instanceKey: props.instanceKey };
-    if (prev === null || prev.form !== props.form || prev.instanceKey !== props.instanceKey) return;
+    const identityChanged = prev === null || prev.form !== props.form || prev.instanceKey !== props.instanceKey;
+    // Mount is owned by the baseline effect. An identity change is too — UNLESS this is also the moment
+    // the form gained derivations (then the baseline effect, keyed only on identity, may not have run).
+    if (firstRun) return;
+    if (identityChanged && !gainedDerivations) return;
     clearTimeout(timer.current);
     const sent = ++seq.current;
-    const input = currentInput();
+    const input = buildOperationInput();
     (async () => {
       try {
-        const resolved = await client.resolve(props.form, input, [...touchedRef.current], manifest.revision, { actAs: props.actAs });
+        const resolved = await client.resolve(props.form, input, null, manifest.revision, { actAs: props.actAs });
         if (sent === seq.current) applyResolved(resolved);
       } catch { /* advisory */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.form, props.instanceKey, props.actAs, manifest.revision]);
+  }, [props.form, props.instanceKey, props.actAs, manifest.revision, formDef.hasServerDerivations]);
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current.push(key);
@@ -276,31 +267,13 @@ export function OperationForm(props: OperationFormProps) {
   const submit = useCallback(async (overrides?: Record<string, FieldConflict>) => {
     setSubmitting(true);
     try {
-      const body: Record<string, unknown> = {};
-      const extensions: Record<string, unknown> = {};
-
-      // `original` is the FROZEN per-instance baseline (Finding 1), never the latest prop, so a
-      // background refresh can't rebase the concurrency baseline under an in-flight edit. A conflict
-      // override (the user resolving a detected conflict) still wins.
-      const base = baselineRef.current;
-      for (const { field, key } of fields) {
-        const value = values[key] ?? null;
-        if (field.extension) {
-          if (!touched.has(key) && base[key] === undefined) continue;
-          const original = overrides?.[`extensions.${field.name}`]?.currentValue
-            ?? base[key] ?? null;
-          if (touched.has(key)) extensions[field.name] = { original, value };
-          continue;
-        }
-        if (field.changeSet) {
-          if (!touched.has(key)) continue;
-          const original = overrides?.[field.name]?.currentValue ?? base[key] ?? null;
-          body[field.name] = { original, value };
-          continue;
-        }
-        if (value !== null && value !== undefined) body[field.name] = value;
-      }
-      if (Object.keys(extensions).length > 0) body.extensions = extensions;
+      // The SAME complete input builder resolve uses (docs/40, Sol re-review round 8): every
+      // initialized Change<T> (own and extension) is sent with its {original, value}, `original` from
+      // the FROZEN per-instance baseline (never the latest prop, so a background refresh can't rebase
+      // the concurrency baseline under an in-flight edit). Untouched fields arrive as original == value
+      // and TamMerge treats them as no-ops — partial persistence and field-level concurrency fall out
+      // of the merge, not out of a sparse payload. A conflict override supplies the fresh `original`.
+      const body = buildOperationInput(overrides);
 
       // Submit THROUGH this form binding (docs/40): the server applies the form's tightening on top
       // of the operation contract and folds it into idempotency identity. Omitting it would execute a
@@ -314,7 +287,7 @@ export function OperationForm(props: OperationFormProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [client, fields, formDef.operation, initial, props, touched, values]);
+  }, [client, formDef.operation, props, buildOperationInput]);
 
   const fieldError = (name: string): Finding | undefined => {
     const fromResolve = resolveState?.fields[name]?.findings
@@ -349,6 +322,14 @@ export function OperationForm(props: OperationFormProps) {
         // its hook list, so a renderer with state/effects composes with VisibleWhen — fields
         // mounting and unmounting can never corrupt the form's hook order.
         const Renderer = rendererFor(field) as React.ComponentType<FieldRendererProps>;
+        // An edit (change-set) field's suggestion is surfaced, not auto-written (round 7, F4): shown
+        // as an accept affordance when it differs from the current value. Accepting goes through
+        // setField, which marks the field touched, so display and submit agree (round 8, P3). Built-in
+        // renderers get it via the `suggestion` prop too; the generic affordance guarantees a generated
+        // edit form always shows it, even for renderers that ignore the prop.
+        const suggestion = field.changeSet ? resolveState?.fields[field.name]?.suggestedValue : undefined;
+        const showSuggestion = suggestion !== undefined && suggestion !== null
+          && String(suggestion) !== String(values[key] ?? '');
         return (
           <Box key={key}>
             <Renderer
@@ -360,15 +341,21 @@ export function OperationForm(props: OperationFormProps) {
               error={error ? findingMessage(manifest, culture, error) : undefined}
               warning={warning ? findingMessage(manifest, culture, warning) : undefined}
               options={resolveState?.fields[field.name]?.options}
-              // An edit (change-set) field's suggestion is surfaced, not auto-written (round 7, F4),
-              // so the renderer can offer it for explicit accept without a silent unsent value.
-              suggestion={field.changeSet ? resolveState?.fields[field.name]?.suggestedValue : undefined}
+              suggestion={suggestion}
               lookup={resolveState?.fields[field.name]?.lookup}
               actAs={props.actAs}
               tam={tam}
               form={values}
               setField={setField}
             />
+            {showSuggestion && (
+              <Group gap="xs" mt={4}>
+                <Text size="xs" c="dimmed">{t('forms.suggested-value')}: {String(suggestion)}</Text>
+                <Button size="compact-xs" variant="subtle" onClick={() => setField(key, suggestion)}>
+                  {t('forms.use-suggestion')}
+                </Button>
+              </Group>
+            )}
           </Box>
         );
       })}
