@@ -1200,6 +1200,36 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   gates pass, manifest additive-only (D4) and byte-unchanged, web typechecks, full wire matrix GREEN
   on fresh SQLite AND Postgres (94 checks each). docs/40 stays COMPLETE — these harden the edit-form
   projection of the same contract, they do not reopen it.
+- **docs/40 re-review round 7 — the generated edit-form state machine (4 findings + 1 doc, all
+  confirmed against code, then fixed)**: round 6 fixed the server; round 7's four gaps were all in the
+  React edit-form runtime, where displayed state and submitted/resolved state could diverge. (F1, HIGH)
+  a one-hop `ResetOn` clear pushed the dependent to `lastChanged` but not to `touched`, so submit
+  (sparse) omitted the cleared change-set field and the DB kept the stale value while the parent change
+  landed — a displayed-but-never-persisted clear; now the reset marks the field touched (ordinary and
+  `ext:` alike), so resolve sends `{value: null}` and submit includes the clear. (F2, HIGH) the
+  context-refresh effect did not cancel the pending 350 ms reactive resolve, so after an `actAs`/revision
+  switch a stale old-context timer fired later, bumped `seq` past the new request, and its response won —
+  restoring the previous tenant's candidates/requiredness/findings; now it `clearTimeout`s first and is
+  identity-aware (a single ref distinguishes identity change — baseline effect owns it — from a
+  same-identity context change), closing the simultaneous record+context mixed-request edge too. (F3,
+  MEDIUM/HIGH) `WasChanged` meant different things per path: submit's set was every body property
+  (non-change-set fields included), resolve's was the touched set — so `WasChanged(OrderId)` was true at
+  submit, false at resolve; now narrowed to change-set fields on both paths in ONE place
+  (`RunDerivationsAsync`), so a non-change field always reads false (read its value instead). (F4,
+  MEDIUM/HIGH) resolve suggestions were auto-written into `values` without marking touched, so an edit
+  change-set field showed the suggestion while submit omitted it; auto-adopt is now gated to create
+  (non-change-set) fields, and an edit suggestion is surfaced to the renderer (`suggestion` prop) for
+  explicit accept via the touch-marking set path. (F5, MEDIUM/doc) FORM001's message and docs/40 now
+  state that moving a rule into a derivation is not enough — an edit derivation depending on an untouched
+  field must load the aggregate by operation identity and overlay the sparse patch, since submit
+  deserializes the sparse body (the framework can't generically load every aggregate). Verified: suites
+  196 + 61 (a new probe proving a non-change field is never `WasChanged` at submit even though the body
+  carries it; the round-6 change-set WasChanged + FORM001 tests still green), structure + docs gates,
+  manifest additive-only (D4) and byte-unchanged, web typechecks + `vite build` (served `wwwroot`
+  rebuilt), full wire matrix GREEN on fresh SQLite AND Postgres (94 checks each). NOTE — honesty: F1/F2/F4
+  are React state-machine corrections; the repo has no JS component-test harness, so they are verified by
+  typecheck + reasoning + the wire matrix (which exercises the API, not the form), NOT by a component
+  test. docs/40's SERVER architecture is complete; the edit-form runtime now matches it.
 - **Sol re-review round — boundary + isolation hardening (all confirmed, then fixed)**: a static
   re-review of the fixes above surfaced remaining weaknesses. Two verification agents confirmed
   every claim against real code first. Shipped in three batches: (1) REQUEST-BOUNDARY FAIL-CLOSED —

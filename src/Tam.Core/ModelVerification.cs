@@ -711,7 +711,10 @@ public sealed partial class TamModelBuilder
                         $"FORM001: form '{form.Id}' field '{config.WireName}' has a RequiredWhen that "
                         + $"references change-set field '{offending}'. Submit omits untouched change "
                         + "fields, so requiredness read from one is unreliable — key RequiredWhen off "
-                        + "a field the wire always carries, or move the rule into a [ServerDerivation].");
+                        + "a field the wire always carries, or move the rule into a [ServerDerivation]. "
+                        + "A derivation that depends on an untouched field must load the current aggregate "
+                        + "and overlay the sparse patch (docs/40) — the deserialized submit input alone is "
+                        + "not complete effective state.");
             }
         }
     }

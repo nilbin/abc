@@ -214,8 +214,12 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   the untouched current value. A derivation must read the **effective value** (the `.Value`), not
   treat wrapper *presence* as "changed"; when change-membership actually matters, ask
   `DerivationContext.WasChanged(field)` (Sol re-review round 6, F3) — the reliable signal, backed at
-  submit by the body's present fields and at resolve by the client's touched set, never by wrapper
-  presence. **Portable form predicates** (`VisibleWhen`/`RequiredWhen`) read through the same one
+  submit by the change fields present in the sparse body and at resolve by the client's touched set,
+  never by wrapper presence. `WasChanged` is a **change-set concept** and is narrowed to change-set
+  fields on both paths (Sol re-review round 7, F3): a non-change field — always present in a submit
+  body, never marked touched at resolve — would otherwise read changed on one path and unchanged on the
+  other, so it always returns `false` (read its value instead). **Portable form predicates**
+  (`VisibleWhen`/`RequiredWhen`) read through the same one
   effective-value accessor, so an edit field's `{original, value}` is unwrapped to its value before a
   predicate compares it — resolve and submit evaluate the identical scalar, and an edit form's
   predicate behaves exactly as a create form's raw field does.
@@ -229,15 +233,36 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   baseline only on a new record identity (`instanceKey`). A change of acting node or manifest revision
   re-resolves the **current edit state** (`currentInput()`), not the baseline — so a background manifest
   refresh or an `actAs` switch mid-edit refreshes derived state *without discarding unsubmitted edits*
-  (Sol re-review round 6, F1). The corollary: new prefill values for the *same* `instanceKey` are
-  ignored until the identity changes — the frozen baseline and the user's edits win. Derived state
-  never bleeds across records, and a refresh never silently reverts an edit.
+  (Sol re-review round 6, F1). That context refresh first **cancels any in-flight reactive resolve**
+  and is **identity-aware** (Sol re-review round 7, F2): a stale, old-context debounced resolve can no
+  longer fire and win after a tenant switch (restoring the previous tenant's candidates/requiredness),
+  and when record identity *and* context change in the same render the baseline effect — not a
+  current-edit resolve over the old values — owns the request. The corollary: new prefill values for
+  the *same* `instanceKey` are ignored until the identity changes — the frozen baseline and the user's
+  edits win. Derived state never bleeds across records, and a refresh never silently reverts an edit.
+- **Mechanical clears are part of the patch.** A one-hop `ResetOn` that clears a dependent field marks
+  that field **touched**, not merely blanks its display (Sol re-review round 7, F1). Otherwise resolve
+  keeps sending the dependent's stale baseline and — worse — submit omits the untouched change field, so
+  the clear the user saw never persists while the parent change lands. Marking it touched makes resolve
+  send `{value: null}` and submit include the clear, for ordinary and `ext:` change-set fields alike.
+- **Edit suggestions are surfaced, not silently written.** A server `Suggest()` is auto-adopted into the
+  value only for a **create** (non-change-set) field, which is always in the submit body. For an **edit**
+  change-set field the suggestion is exposed to the renderer (as `suggestion`) beside the current value
+  (Sol re-review round 7, F4): auto-writing it *without* marking the field touched would show the
+  suggested value while submit — sparse — omits the field, so it would never persist. The user adopts it
+  through the ordinary set path, which marks it touched, so display and submit agree.
 
 **A form's `RequiredWhen` may not reference a change-set field** (build error `FORM001`, Sol re-review
 round 6, F2). Submit is sparse — an untouched change field is omitted from the body — so requiredness
 read from one would evaluate against `null` at submit even when the record holds a value. Requiredness
 must key off a field the wire always carries; conditional logic over a change field's *value* belongs in
-a `[ServerDerivation]`, which sees the complete effective state.
+a `[ServerDerivation]`. **A derivation is not automatically given complete state, either** (Sol
+re-review round 7, F5): submit deserializes the *sparse* body, so a derivation whose rule depends on an
+untouched field (e.g. "project orders require a project", keyed off an unchanged `OrderType`) must
+**load the current aggregate by the operation's identity and overlay the submitted patch**, then
+evaluate against that effective state — reading the sparse input alone would see the untouched field as
+absent. The framework cannot generically load every aggregate (it is operation-specific), so this is a
+documented convention, not an automatic guarantee.
 
 ## Non-goals
 

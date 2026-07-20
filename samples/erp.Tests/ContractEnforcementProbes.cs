@@ -24,10 +24,12 @@ public static class BlockingProbeDerivations
     public const string OverwriteOptionsSentinel = "__overwrite_options__";
     public const string EditSentinel = "__edit_probe__";
     public const string WasChangedSentinel = "__was_changed_probe__";
+    public const string NonChangeChangedSentinel = "__nonchange_changed_probe__";
     public const string AllowedAddress = "Tillåtnagatan 1";
 
     public static readonly FindingFactory Rejected = Finding.Error("test.probe-rejected");
     public static readonly FindingFactory ChangeSeen = Finding.Error("test.change-seen");
+    public static readonly FindingFactory NonChangeSeen = Finding.Error("test.nonchange-seen");
 
     [ServerDerivation("test.orders.create.block-probe")]
     public static DerivationResult BlockOnSentinel(CreateOrder.Input input, DerivationContext context) =>
@@ -52,6 +54,17 @@ public static class BlockingProbeDerivations
         input.Description?.Value?.Value == WasChangedSentinel
             && context.WasChanged(nameof(EditOrderDetails.Input.Description))
             ? DerivationResult.FieldError(nameof(EditOrderDetails.Input.Description), ChangeSeen)
+            : DerivationResult.Empty;
+
+    // WasChanged is a CHANGE-SET concept (Sol re-review round 7, F3): a non-change-set field is always
+    // present in a create body but is never "changed". This probe fires if WasChanged wrongly reports a
+    // non-change field as changed — proving submit's body-presence set is narrowed to change-set fields,
+    // so it can't disagree with resolve's touched set.
+    [ServerDerivation("test.orders.create.nonchange-changed-probe")]
+    public static DerivationResult NonChangeChangedProbe(CreateOrder.Input input, DerivationContext context) =>
+        input.Description.Value == NonChangeChangedSentinel
+            && context.WasChanged(nameof(CreateOrder.Input.WorkAddress))
+            ? DerivationResult.FieldError(nameof(CreateOrder.Input.WorkAddress), NonChangeSeen)
             : DerivationResult.Empty;
 
     // Binds ProjectId to a lookup whose base filter key is misspelled — only under the sentinel, so

@@ -302,6 +302,21 @@ public sealed class ContractEnforcementTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task WasChanged_is_never_true_for_a_non_change_set_field_at_submit()
+    {
+        // WorkAddress is present in the create body (non-change-set fields always are), but WasChanged
+        // must still report it as NOT changed — the submit set is narrowed to change-set fields so it
+        // matches resolve's touched set (Sol re-review round 7, F3). If it leaked, the probe would block.
+        (await actor.ExecuteAsync("orders.create", new
+        {
+            customerId,
+            orderType = "service",
+            workAddress = "Verkstadsgatan 20",
+            description = BlockingProbeDerivations.NonChangeChangedSentinel,
+        })).ShouldSucceed();
+    }
+
+    [Fact]
     public void A_form_requiredwhen_over_a_change_set_field_is_a_build_error()
     {
         // Submit is sparse for edit forms — an untouched change field is omitted — so a RequiredWhen

@@ -569,6 +569,19 @@ public sealed class OperationExecutor(
         // every exit path. The finally also discards any tracked-but-unsaved write and always restores
         // the flag — so a throw mid-run (a write rejection, DER008) can't leave the shared context
         // dirty or read-only.
+        // WasChanged means exactly ONE thing (Sol re-review round 7, F3): "this Change<T> field is in
+        // the caller's pending patch". Narrow the raw candidate set (submit passes the body's present
+        // fields; resolve passes the touched set) to the operation's change-set wire names, in the ONE
+        // place both paths meet — so a non-change-set field, which submit always sends but resolve never
+        // marks touched, can never read as changed on one path and unchanged on the other. A non-change
+        // field is never "changed" (partial-update is a change-set concept); WasChanged returns false.
+        var changeSetWire = operation.InputFields
+            .Where(f => f.IsChangeSet).Select(f => f.WireName)
+            .ToHashSet(StringComparer.Ordinal);
+        var patched = changedFields is null
+            ? NoChangedFields
+            : (IReadOnlySet<string>)changedFields.Where(changeSetWire.Contains).ToHashSet(StringComparer.Ordinal);
+
         var db = dbResolver(services);
         var scope = services.GetService<TenantScope>();
         var priorReadOnly = scope?.DerivationReadOnly ?? false;
@@ -578,7 +591,7 @@ public sealed class OperationExecutor(
             var merged = DerivationResult.Empty;
             foreach (var derivation in model.DerivationsForOperation(operation.Id))
             {
-                var args = BindParameters(derivation.Method, input, context, ct, changedFields);
+                var args = BindParameters(derivation.Method, input, context, ct, patched);
                 var invocation = derivation.Method.Invoke(null, args)!;
                 var result = invocation is Task<DerivationResult> task ? await task : (DerivationResult)invocation;
                 merged = merged.Merge(result);
@@ -725,9 +738,13 @@ public sealed class OperationExecutor(
 /// not wrapper presence, and key off <see cref="WasChanged"/> when change-membership matters.</summary>
 public sealed record DerivationContext(OperationContext Operation, IReadOnlySet<string> ChangedFields)
 {
-    /// <summary>Was this field part of the caller's change set (Sol re-review round 6, F3)? At
-    /// submit the set is the body's present fields; at resolve it is the fields the client has
-    /// touched. This is the RELIABLE change signal — wrapper presence is not, since resolve sends
-    /// every initialized Change&lt;T&gt;, touched or not. Matched by wire (camel) name.</summary>
+    /// <summary>Is this <c>Change&lt;T&gt;</c> field in the caller's pending patch (Sol re-review round
+    /// 6, F3; narrowed round 7, F3)? The set is restricted to the operation's CHANGE-SET fields before
+    /// it reaches here — at submit, the change fields present in the sparse body; at resolve, the change
+    /// fields the client has touched — so the answer means the same thing on both paths. A NON-change
+    /// field (which submit always sends but resolve never marks touched) is not a partial-update concept
+    /// and always returns false — read its value, not WasChanged. This is the RELIABLE change signal;
+    /// wrapper presence is not, since resolve sends every initialized <c>Change&lt;T&gt;</c>, touched or
+    /// not. Matched by wire (camel) name.</summary>
     public bool WasChanged(string field) => ChangedFields.Contains(Naming.Camel(field));
 }

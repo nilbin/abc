@@ -119,6 +119,14 @@ export function OperationForm(props: OperationFormProps) {
   const applyResolved = useCallback((resolved: ResolveResponse) => {
     setResolveState(resolved);
     for (const [name, state] of Object.entries(resolved.fields)) {
+      // Auto-adopt a suggestion into the actual value ONLY for a CREATE (non-change-set) field (Sol
+      // re-review round 7, F4). An edit change-set field's submit is sparse — writing a suggestion into
+      // `values` WITHOUT marking it touched would show the user the suggested value while submit omits
+      // the field, so the displayed value silently never persists. For edit fields the suggestion stays
+      // in resolveState (surfaced to the renderer as `suggestion`); adopting it goes through setField,
+      // which marks it touched, so display and submit agree. A create field is always in the body, so
+      // auto-adopt is safe and keeps prefill behaviour.
+      if (formDef.fields.find(f => f.name === name)?.changeSet) continue;
       if (state.suggestedValue !== undefined && state.suggestedValue !== null
           && !touchedRef.current.has(name)) {
         // Skip identical values: an unconditional set re-triggers the resolve effect and would
@@ -128,7 +136,7 @@ export function OperationForm(props: OperationFormProps) {
           : { ...prev, [name]: state.suggestedValue });
       }
     }
-  }, []);
+  }, [formDef]);
 
   // Batched, debounced, stale-rejecting server resolution (docs/05).
   const scheduleResolve = useCallback((changedFields: string[]) => {
@@ -201,14 +209,22 @@ export function OperationForm(props: OperationFormProps) {
   }, [props.form, props.instanceKey]);
 
   // RE-RESOLVE the current edit state when the acting node or manifest revision changes (Sol re-review
-  // round 6, F1) — WITHOUT discarding edits. The old single effect rebuilt from the frozen baseline on
-  // these deps too, so a background manifest refresh or an actAs switch mid-edit silently reverted every
-  // unsubmitted change. This effect skips the mount (the baseline effect already resolved) and sends
-  // currentInput() — the live {original,value} of every field — so edits survive the refresh.
-  const contextResolved = useRef(false);
+  // round 6, F1) — WITHOUT discarding edits. A single ref tracks the (form, instanceKey) IDENTITY last
+  // resolved so this effect can tell two cases apart (Sol re-review round 7, F2):
+  //   • IDENTITY changed (or mount) — the reset + baseline effects above own the resolve; this effect
+  //     only records the new identity and returns, so it never builds a mixed-record request from the
+  //     old values under a newly frozen baseline when record and context change in the same render.
+  //   • CONTEXT changed for the SAME identity — cancel any in-flight reactive resolve FIRST (a stale
+  //     old-context debounced timer would otherwise fire later, bump seq past this request, and its
+  //     response would win — restoring the previous tenant's candidates/requiredness/findings), then
+  //     re-resolve currentInput() so edits survive.
+  const resolvedIdentity = useRef<{ form: string; instanceKey?: string | number } | null>(null);
   useEffect(() => {
     if (!formDef.hasServerDerivations) return;
-    if (!contextResolved.current) { contextResolved.current = true; return; }
+    const prev = resolvedIdentity.current;
+    resolvedIdentity.current = { form: props.form, instanceKey: props.instanceKey };
+    if (prev === null || prev.form !== props.form || prev.instanceKey !== props.instanceKey) return;
+    clearTimeout(timer.current);
     const sent = ++seq.current;
     const input = currentInput();
     (async () => {
@@ -218,7 +234,7 @@ export function OperationForm(props: OperationFormProps) {
       } catch { /* advisory */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.actAs, manifest.revision]);
+  }, [props.form, props.instanceKey, props.actAs, manifest.revision]);
 
   const setField = useCallback((key: string, value: unknown) => {
     lastChanged.current.push(key);
@@ -234,7 +250,17 @@ export function OperationForm(props: OperationFormProps) {
       for (const reset of resets) next[reset] = null;
       return next;
     });
-    setTouched(prev => new Set(prev).add(key));
+    // A mechanical ResetOn clear is part of the pending patch, not a passive display change (Sol
+    // re-review round 7, F1): the reset fields must be TOUCHED too, or resolve keeps sending their
+    // stale baseline and — worse — submit omits the untouched change-set field entirely, so the
+    // cleared value the user saw never persists (the parent change lands while the dependent keeps its
+    // old value). Marking them touched makes currentInput send {value: null} and submit include the
+    // clear, for ordinary and `ext:` change-set fields alike.
+    setTouched(prev => {
+      const next = new Set(prev).add(key);
+      for (const reset of resets) next.add(reset);
+      return next;
+    });
     setResponse(null);
   }, [fields]);
 
@@ -334,6 +360,9 @@ export function OperationForm(props: OperationFormProps) {
               error={error ? findingMessage(manifest, culture, error) : undefined}
               warning={warning ? findingMessage(manifest, culture, warning) : undefined}
               options={resolveState?.fields[field.name]?.options}
+              // An edit (change-set) field's suggestion is surfaced, not auto-written (round 7, F4),
+              // so the renderer can offer it for explicit accept without a silent unsent value.
+              suggestion={field.changeSet ? resolveState?.fields[field.name]?.suggestedValue : undefined}
               lookup={resolveState?.fields[field.name]?.lookup}
               actAs={props.actAs}
               tam={tam}

@@ -16,6 +16,12 @@ export interface FieldRendererProps {
   error?: string;
   warning?: string;
   options?: { value: unknown; label: string }[];
+  /** A server-computed SUGGESTION the user has not adopted (Sol re-review round 7, F4). For a create
+   *  field the runtime auto-adopts it into `value`; for an EDIT (change-set) field it is surfaced here
+   *  instead — displaying the current value while offering the suggestion — so the renderer can let the
+   *  user accept it via `setField` (which marks it touched, so submit actually persists it). Undefined
+   *  when there is no suggestion or the field already carries it. */
+  suggestion?: unknown;
   /** The derivation's runtime lookup binding (docs/40): a picker scopes its view by these base
    *  filters, so it browses exactly the candidate universe submit validates against. */
   lookup?: { viewId: string; baseFilters: Record<string, string | null> };
