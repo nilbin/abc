@@ -1,0 +1,2946 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A model-driven framework for multi-tenant business applications (.NET + React)">
+      
+      
+      
+        <link rel="canonical" href="https://nilbin.github.io/abc/37-variability/">
+      
+      
+        <link rel="prev" href="../11-mcp-and-agents/">
+      
+      
+        <link rel="next" href="../26-tenancy-hierarchy-and-identity/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>37 — Variability: it's just plugins - Tam — Typed Application Model</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#37-variability-its-just-plugins" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Tam — Typed Application Model" class="md-header__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tam — Typed Application Model
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              37 — Variability: it's just plugins
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tam — Typed Application Model" class="md-nav__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tam — Typed Application Model
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: A Complete Feature, End to End
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-00/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 0 — A new host from nothing (BUILT — samples/erp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 1 — Domain state (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 2 — The create operation (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 3 — Derivations: reactive form behavior, written once (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 4 — Bindings: one per boundary that differs (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 5 — The list: a view and its grid (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 6 — Editing: partial, conflict-safe (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 7 — Completing: an intent, not an edit (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 8 — What the machine callers see (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 9 — The tenant adds a custom field. Nobody deploys anything. (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 10 — The integration is a mapping, not a sync engine (BUILT — samples/fortnox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-11/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 11 — Tests exercise the contract, not the plumbing (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-12/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 12 — Six months later: change impact (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-13/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 13 — A partner ships a plugin (implemented — 22-plugins.md, decision D8; running in samples/inspect)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-14/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 14 — Who is asking, and what have they paid for (implemented — 24-subscriptions.md)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-15/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 15 — Norrservice becomes a group (implemented — 26 + 27)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-16/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 16 — Approvals arrive as a plugin — and the domains never notice (BUILT — the seams and the package, samples/approvals)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-17/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 17 — Invoicing arrives as a plugin — and Orders still doesn't know (BUILT — 31-cross-domain-plugins.md, samples/invoicing)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-18/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 18 — The composed UI: nav, pages, slots, and the subtree grid (BUILT — 30-navigation.md, 32-pages.md, docs/26 D-H1)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/tally/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The tally
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Foundations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Foundations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Overview and Principles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-domain-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Domain State
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-derivations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Derivations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-partial-edits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Partial and Conflict-Safe Edits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — Validation Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-envelope-and-effects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Execution Envelope and Effects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-compiler-and-manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Compiler and Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-frontend-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Frontend Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-database-and-ef-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Database and EF Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-localization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Localization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensibility
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Extensibility
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-extensibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Tenant Extensibility and Custom Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Plugins: Packaged Extensibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../31-cross-domain-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 — Cross-domain plugins: extending a domain you don't own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-custom-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — Custom Objects (Plugin System P4)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-subscriptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 — Subscriptions, Seats &amp; Entitlements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — External Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-external-integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-mcp-and-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — MCP and Agent Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    37 — Variability: it's just plugins
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    37 — Variability: it's just plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-spine-one-compiled-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The spine: one compiled model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variability-is-plugins-at-capability-granularity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variability is plugins at capability granularity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packages-the-retroactive-onboarding-bundle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packages: the retroactive onboarding bundle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-plugin-relationship-model-the-one-new-piece" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The plugin relationship model (the one new piece)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profile-facts-onboarding-hints-nothing-more" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile facts: onboarding hints, nothing more
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#presentation-and-the-structured-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presentation and the structured address
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-lifecycle-the-retention-obligation-must-solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data lifecycle: the retention obligation (must-solve)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phasing-each-slice-independently-shippable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phasing (each slice independently shippable)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenancy & security
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tenancy & security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-tenancy-hierarchy-and-identity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 — Hierarchical Tenants, Cross-Tenant Users, and Who Owns the Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../27-authorization-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 — Authorization Model: Capability × Data Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../28-assignment-and-grouping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 — Assignment &amp; Grouping: domain by default, one closed scope set, plugins for the rest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../33-rls-backstop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    33 — The RLS backstop: PostgreSQL row-level security under the EF filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../35-reach/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    35 — Reach: who an object-side grant may name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../36-documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    36 — Documents: folders, files, and the first reach consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI composition
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    UI composition
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../30-navigation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    30 — Navigation: a declared tree, slotted levels, modes, and a tenant overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../32-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    32 — Framework-composed pages: the list-and-detail shape leaves app code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Process
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../29-code-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    29 — Code structure: the repo map and where things go
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../40-operation-input-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    40 — Operations own the input contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../38-tooling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    38 — Tooling: keeping the committed artifacts current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../34-field-service-domain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    34 — The field-service domain: stress-testing Tam as a consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-packages-and-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — Package Structure and Repository Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-implementation-phases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Initial Implementation Order
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-success-criteria/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Success Criteria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../review-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review Notes — Risks, Refinements, Open Questions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-spine-one-compiled-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The spine: one compiled model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variability-is-plugins-at-capability-granularity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variability is plugins at capability granularity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packages-the-retroactive-onboarding-bundle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packages: the retroactive onboarding bundle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-plugin-relationship-model-the-one-new-piece" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The plugin relationship model (the one new piece)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profile-facts-onboarding-hints-nothing-more" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile facts: onboarding hints, nothing more
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#presentation-and-the-structured-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presentation and the structured address
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-lifecycle-the-retention-obligation-must-solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data lifecycle: the retention obligation (must-solve)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phasing-each-slice-independently-shippable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phasing (each slice independently shippable)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="37-variability-its-just-plugins">37 — Variability: it's just plugins<a class="headerlink" href="#37-variability-its-just-plugins" title="Permanent link">&para;</a></h1>
+<p><strong>Status: design; the plugin relationship model's <code>DependsOn</code> edge (both levels) is BUILT</strong> —
+see docs/22 "Plugin-on-plugin" and D-V4 below; proven by <code>fortnox</code> depending on <code>invoicing</code>.
+<code>Provides</code>-one-of, <code>Conflicts</code>, and everything else here remain design. This doc answers the question the field-service domain forced:
+<em>how can the product differ by the company's country, by trade (electrician vs plumber), and by
+company size, without forking?</em> After three passes and a four-lens review round, the answer
+collapsed to something smaller than it started: <strong>variability is plugins at the right
+granularity, composed per tenant, with the tenant-package tier as the onboarding convenience —
+plus one genuinely new framework concept, the plugin relationship model.</strong> Country and trade
+are not framework concepts at all; they are emergent from which plugins are active.</p>
+<p>Revision history: rev 1 tried to carry country as presentation overlays; rev 2 (correctly) made
+a country a plugin but invented "axis packs" and "bridge packs" as new tiers and a form-overlay
+registry; the review round showed those tiers and registries were phantom scaffolding for one
+real consumer. Rev 3 (this doc) dissolves them into plugins + packages + relationships.</p>
+<h2 id="the-spine-one-compiled-model">The spine: one compiled model<a class="headerlink" href="#the-spine-one-compiled-model" title="Permanent link">&para;</a></h2>
+<p>There is exactly ONE compiled model per deployment. Variation is never conditional compilation,
+never <code>if (country == "NO")</code> in domain code, never a per-tenant build. It is composed at runtime
+from three things the framework already has — plugin <strong>activation</strong> (docs/22), plan
+<strong>entitlement</strong> (docs/24), and tenant <strong>data</strong> (extension fields docs/15, automation rules P5) —
+governed by one new thing: how plugins <strong>relate</strong> to each other.</p>
+<h2 id="variability-is-plugins-at-capability-granularity">Variability is plugins at capability granularity<a class="headerlink" href="#variability-is-plugins-at-capability-granularity" title="Permanent link">&para;</a></h2>
+<p>The reframe that made everything else fall away: don't build coarse country or trade packs;
+build <strong>one small plugin per capability</strong>, and compose. Each of these is its own plugin:</p>
+<ul>
+<li><strong>Fortnox</strong> — an accounting integration (already a plugin in the repo: <code>samples/fortnox</code>).</li>
+<li><strong>Skatteverket</strong> — a tax-authority integration (submissions, reimbursement claims).</li>
+<li><strong>ROT</strong>, <strong>RUT</strong> — the deduction domain features (packaged fields on order/invoice, labor
+  shares, eligibility, caps). Separable from Skatteverket: the deduction can exist with manual
+  filing; the integration serves more than deductions.</li>
+<li><strong>electrician</strong> — the trade domain (materials catalog, checklist templates, nav suggestions).</li>
+<li><strong>SäkerEl</strong> — an electrical-safety certification/inspection scheme gating <code>orders.complete</code>.</li>
+</ul>
+<p>"Sweden" is not a pack — it is <em>whichever of these a Swedish tenant runs</em>. "Electrician" is not
+a pack type — it is the electrician plugin plus whatever compliance plugins a given market
+attaches. There is no country×trade <strong>matrix</strong> to build because nobody assembles a grid; they
+compose from a library. The intersection cases that rev 2 called "bridge packs" are just more
+small plugins that happen to depend on two others (below) — no special tier, no auto-activation
+machinery. Usually the intersection isn't even code: ROT-vs-RUT-for-this-job is <em>which
+deduction plugin is active and configured</em>, i.e. data.</p>
+<p>This is the Odoo model precisely (hundreds of small modules; localization and industry bundles
+assembled from them), and it lands on the three tiers docs/22 <strong>already</strong> defines — framework
+packages, plugins, tenant packages — instead of inventing new ones.</p>
+<h2 id="packages-the-retroactive-onboarding-bundle">Packages: the retroactive onboarding bundle<a class="headerlink" href="#packages-the-retroactive-onboarding-bundle" title="Permanent link">&para;</a></h2>
+<p>Fine granularity has one real cost: a tenant admin should not face a hundred toggles. The answer
+is the <strong>tenant-package tier that already exists</strong> (P3 — <code>InstallPackage</code>/dry-run/uninstall,
+docs/22). A package is not code; it is a <strong>curated bundle</strong> — "activate ROT + RUT + Skatteverket
++ Fortnox + electrician + SäkerEl, with this preset configuration." One install, a configured
+Swedish-electrician tenant.</p>
+<p>The keyword is <strong>retroactive</strong>. You do not design the bundles up front — that is the matrix trap
+(and the prior-art review confirmed such bundles proliferate and erode under commercial pressure
+when planned ahead). You ship granular plugins, watch which combinations recur across real
+onboardings, and mint a "Swedish electrician starter" package <strong>once a real tenant-shape
+justified it</strong>. Packages are demand-driven curation — sparse by construction, because a package
+only exists after the need showed up. A package can also be tenant-authored or partner-authored,
+exactly as P3 already allows.</p>
+<h2 id="the-plugin-relationship-model-the-one-new-piece">The plugin relationship model (the one new piece)<a class="headerlink" href="#the-plugin-relationship-model-the-one-new-piece" title="Permanent link">&para;</a></h2>
+<p>At this granularity plugins genuinely relate to each other, so the framework must model the
+relationships — not as a feature, but as a <strong>guardrail</strong> in the spirit of PLG010: it keeps a
+composed set legal and refuses dangerous combinations before they silently misbehave. Three
+edge types, all <strong>declared</strong> and verified at activation/build time:</p>
+<ul>
+<li><strong>DependsOn</strong> — B requires A. Two levels, and only the first is needed early:</li>
+<li><em>Level 1 — activation dependency (no code coupling):</em> "ROT-submission requires Skatteverket
+    active"; "the Swedish-electrician package requires electrician + SäkerEl." A declared edge
+    checked at activation: refuse to activate a plugin whose dependency is absent; order
+    activation so parents come first. Cheap; this alone makes granular composition safe.</li>
+<li><em>Level 2 — contract coupling:</em> a plugin that subscribes to another's events, reads its
+    views, or gates its operations. This needs the <code>host-contract.json</code> machinery to emit
+    <strong>per-plugin</strong> (docs/31's exporter generalized to a second provider), PLG010 relaxed to
+    accept the declared edge, and the generated typed facades. Needed the moment the first real
+    cross-plugin hook lands (ROT gating Skatteverket's submit; a checklist plugin reading
+    electrician) — demand-triggered, not speculative.</li>
+<li><strong>Provides-one-of</strong> — the model for <strong>mutual exclusion</strong>, stated positively. The host (or a
+  plugin) declares a <strong>singleton capability slot</strong> — <code>accounting-sync</code>, <code>invoice.tax-treatment</code>,
+  <code>order-line-structure</code>. Plugins declare <code>Provides("accounting-sync")</code>; the framework refuses
+  to activate two providers of the same slot at one node. Fortnox and Visma both provide
+  <code>accounting-sync</code> → pick one. Two country plugins that each want to own the invoice's tax
+  treatment → pick one <em>per node</em> (a multinational group still spans countries, because
+  activation is per-node). This beats raw pairwise conflict because the host controls which
+  surfaces are genuinely singletons; everything additive and namespaced coexists untouched.</li>
+<li><strong>Conflicts</strong> — the escape hatch for the rare exclusion the slot model doesn't capture: a
+  declared pairwise "A and B cannot both be active."</li>
+</ul>
+<p><strong>Chains, not a depth cap.</strong> Rev 2 said "depth two by convention"; the review correctly dinged
+that — real ecosystems reach depth three (a country×feature glue plugin on top of a country
+plugin). The honest guardrail is <strong>acyclic + every edge declared</strong>, at any depth. The
+contract-export mechanism generalizes to any number of hops; cycles are the thing to forbid,
+not depth.</p>
+<p>What stays <strong>deferred</strong> until a real consumer needs it: the heavy lifecycle machinery —
+cascade/suspend on parent deactivation, entitlement coupling across the edge, auto-activation.
+Level-1 edges + provides-one-of + conflicts are the guardrail worth having from day one; the
+rest waits.</p>
+<h2 id="profile-facts-onboarding-hints-nothing-more">Profile facts: onboarding hints, nothing more<a class="headerlink" href="#profile-facts-onboarding-hints-nothing-more" title="Permanent link">&para;</a></h2>
+<p>Rev 1/2 made <code>country</code>/<code>trades</code>/<code>size</code> a first-class fact registry that drove overlays and
+selection. The review showed every consumer was either derivable from activation or deferrable.
+So facts shrink to their honest role: an <strong>onboarding hint</strong>. "The tenant said Sweden +
+electrician" → <em>suggest</em> the Swedish-electrician package and pre-check the likely plugins. A
+fact is read once, by host signup/onboarding code, to propose a package; it is <strong>never</strong>
+authorization, never a runtime branch, never re-read by an entitlement gate. <code>country</code> is not
+even needed as stored state once the country's plugins are active — it is implied by them.
+Whether facts are stored at all, or just transient onboarding answers, is a build-time call;
+either way they carry no load-bearing semantics.</p>
+<h2 id="presentation-and-the-structured-address">Presentation and the structured address<a class="headerlink" href="#presentation-and-the-structured-address" title="Permanent link">&para;</a></h2>
+<p>Most presentation variation belongs to the plugin that owns the capability: a plugin <strong>declares
+its own forms, ships its own locale catalogs, and validates in its own gate</strong> (docs/22). A
+country plugin's postal-code rule is a <code>RequiredWhen</code>/constraint in its own operation gate —
+server-enforced, and (via the portable AST, docs/05) echoed client-side — not a separate
+"validator set" abstraction. The EU e-invoicing CIUS pattern the review surfaced (a per-country
+tighten-only subset of EN 16931) is real, and it is exactly this: the country plugin tightens
+in its own gate over a host/feature superset invoice. No new registry.</p>
+<p>The one gap is presentation over a <strong>host</strong> field a plugin cannot redeclare. The reference case
+is the <strong>structured address</strong>: today one text field (<code>workAddress</code>); the real thing is a value
+object whose shape is the <strong>superset of every target country</strong> — street, number, postal code,
+city, region, country — declared ONCE in the host model (D4-additive: the text field retires,
+structured fields arrive). A country plugin then varies only <em>presentation</em> over host fields
+(hide <code>region</code> where meaningless, reorder postal-before-city, relabel). Tenant-authored form
+tweaks ride the <strong>existing</strong> compiled-field overlay (docs/15 already relabels/hides-optional/
+reorders/tightens compiled fields per tenant) — no new <code>tam.forms</code> registry. <strong>Pack-shipped</strong>
+presentation over host fields is the one genuinely missing mechanism, and it is deferred until a
+second consumer beyond the address names it; for the address alone, ship the country
+presentation as host-model defaults keyed off the active country plugin.</p>
+<p>The address is the acceptance test: it is the opening move of the parked order-location arc, so
+building it pays twice — and if it needs anything beyond a host superset + a country plugin, the
+model is wrong.</p>
+<h2 id="data-lifecycle-the-retention-obligation-must-solve">Data lifecycle: the retention obligation (must-solve)<a class="headerlink" href="#data-lifecycle-the-retention-obligation-must-solve" title="Permanent link">&para;</a></h2>
+<p>A blocker the review surfaced, independent of everything else: a plugin's <strong>packaged fields</strong>
+store their spec in compiled plugin code, so deactivating or uninstalling the plugin makes its
+data (e.g. ROT deduction amounts on years of invoices) unrenderable — and ROT is a
+Skatteverket-auditable record with multi-year retention duty. Deactivation already preserves the
+bytes ("hides, never deletes"), but not the <em>spec</em> needed to read/type/label/export them.</p>
+<p><strong>Requirement:</strong> packaged-field <strong>retirement</strong> — on deactivate/uninstall, persist a frozen
+read-only spec tombstone (label + type) so orphaned <code>ext.{plugin}.*</code> data stays queryable and
+exportable but immutable, mirroring tenant extension-field retirement (docs/15). Any plugin
+writing regulated data must solve this before it writes to production. This attaches to the
+individual plugin (ROT), not to any "country pack."</p>
+<h2 id="flows">Flows<a class="headerlink" href="#flows" title="Permanent link">&para;</a></h2>
+<p>"Flows differ by country" decomposes into pieces that all exist: approval rules (docs/24 wildcard
+gates + samples/approvals) shipped by a plugin as presets; automation rules (P5) that mutate and
+chain operations; entitlement/activation deciding which operations exist. No workflow engine. If
+a real case ever demands sequencing the rules cannot express, that is a new design conversation.</p>
+<h2 id="decisions">Decisions<a class="headerlink" href="#decisions" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>D-V1 — one compiled model; variation = activation + entitlement + data + relationships.</strong>
+  Never per-tenant builds, never country/trade branches in domain code.</li>
+<li><strong>D-V2 — variability is plugins at capability granularity.</strong> One plugin per capability
+  (Fortnox, Skatteverket, ROT, RUT, electrician, SäkerEl); country and trade are emergent from
+  the active set, not framework concepts and not pack tiers.</li>
+<li><strong>D-V3 — the tenant-package tier (P3) is the onboarding bundle</strong>, minted <strong>retroactively</strong>
+  when a tenant-shape recurs. No matrix of pre-built variants.</li>
+<li><strong>D-V4 — the plugin relationship model is the one new framework concept</strong>: <code>DependsOn</code>
+  (L1 activation dependency; L2 contract coupling), <code>Provides</code>-one-of singleton slots for mutual
+  exclusion, <code>Conflicts</code> as escape hatch. Acyclic at any depth (declared edges, no cycles) — not
+  a depth cap. Verified at activation/build. <strong><code>DependsOn</code> is BUILT at both levels</strong> (PLG011 +
+  the PLG010 relaxation over event/view/subscribe/outbound-trigger seams; L1 activation guards;
+  per-plugin contract slices + generator facade merge), proven by <code>fortnox</code> → <code>invoicing</code>;
+  <code>Provides</code>/<code>Conflicts</code> stay designed.</li>
+<li><strong>D-V5 — profile facts are onboarding hints only.</strong> Read once to suggest a package; never
+  authorization, never a runtime branch, never re-read by a gate.</li>
+<li><strong>D-V6 — a plugin owns its own presentation and validation</strong> (declares its forms, ships its
+  locale, tightens in its own gate — the CIUS pattern). Tenant form tweaks ride the existing
+  docs/15 overlay. Pack-shipped presentation over HOST fields is deferred to a named consumer.</li>
+<li><strong>D-V7 — supersets over forks</strong> (unchanged): a host entity that varies by country is declared
+  once as the superset; a plugin varies presentation + tightens validation over it. The
+  structured address is the reference case; order-line sections (German GAEB Titel/Positionen)
+  are the pending structural test — default lean host-superset.</li>
+<li><strong>D-V8 — packaged-field data must survive its plugin.</strong> Retirement tombstones (frozen spec,
+  data preserved, keys reserved) are a must-solve for any plugin writing regulated data.</li>
+<li><strong>D-V9 — heavy plugin-lifecycle machinery is deferred</strong>: cascade/suspend, entitlement
+  coupling, auto-activation wait for a real consumer; the guardrail edges do not.</li>
+</ul>
+<h2 id="phasing-each-slice-independently-shippable">Phasing (each slice independently shippable)<a class="headerlink" href="#phasing-each-slice-independently-shippable" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>The structured-address superset</strong> on Order (host model, D4-additive) + country presentation
+   as host-model defaults — the proving consumer and the order-location arc opener. Needs none
+   of the machinery below.</li>
+<li><strong>The plugin relationship model, level 1</strong>: <code>DependsOn</code> activation edges, <code>Provides</code>-one-of
+   singleton slots, <code>Conflicts</code>; activation-time verification + diagnostics; admin visibility of
+   why a plugin is present/blocked. The guardrail.</li>
+<li><strong>A real Swedish plugin set</strong>: ROT (deduction packaged fields + eligibility + gate) as its
+   own plugin, Skatteverket as its own integration plugin, related by a level-1 <code>DependsOn</code> —
+   proving granular composition. Includes the packaged-field retirement tombstone (D-V8).</li>
+<li><strong>Plugin-on-plugin level 2</strong> (contract coupling): per-plugin contract export, PLG010
+   declared-edge relaxation, generated facades — built when slice 3's first real cross-plugin
+   hook needs it (ROT gating Skatteverket's submit).</li>
+<li><strong>A retroactive package</strong>: bundle the slice-3 plugins into a "Swedish electrician starter"
+   via the existing P3 tier — proving the onboarding-convenience layer.</li>
+<li><strong>Pack-shipped presentation over host fields</strong> — only if a second consumer beyond the address
+   names it. Otherwise never built.</li>
+</ol>
+<h2 id="non-goals">Non-goals<a class="headerlink" href="#non-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li>No per-tenant compiled models, no country/trade as framework concepts, no pre-built variant
+  matrix — tenants compose plugins; packages are curated after the fact.</li>
+<li>No new form-overlay registry, no separate validator-set abstraction — a plugin owns its forms
+  and validation; tenant tweaks ride the existing docs/15 overlay.</li>
+<li>No profile-fact-driven runtime behavior; facts only ever suggest a package at onboarding.</li>
+<li>No heavy plugin-lifecycle machinery (cascade/suspend, auto-activation, entitlement coupling)
+  until a real consumer demands it.</li>
+<li>No workflow engine; flows stay rules + gates + activation.</li>
+<li>No dropping of regulated data on plugin removal — tombstone, never orphan.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

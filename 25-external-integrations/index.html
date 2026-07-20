@@ -1,0 +1,2825 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A model-driven framework for multi-tenant business applications (.NET + React)">
+      
+      
+      
+        <link rel="canonical" href="https://nilbin.github.io/abc/25-external-integrations/">
+      
+      
+        <link rel="prev" href="../10-integrations/">
+      
+      
+        <link rel="next" href="../11-mcp-and-agents/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault - Tam — Typed Application Model</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#25-external-integrations-outbound-scheduled-event-triggered-with-a-vault" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Tam — Typed Application Model" class="md-header__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tam — Typed Application Model
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tam — Typed Application Model" class="md-nav__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tam — Typed Application Model
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: A Complete Feature, End to End
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-00/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 0 — A new host from nothing (BUILT — samples/erp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 1 — Domain state (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 2 — The create operation (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 3 — Derivations: reactive form behavior, written once (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 4 — Bindings: one per boundary that differs (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 5 — The list: a view and its grid (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 6 — Editing: partial, conflict-safe (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 7 — Completing: an intent, not an edit (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 8 — What the machine callers see (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 9 — The tenant adds a custom field. Nobody deploys anything. (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 10 — The integration is a mapping, not a sync engine (BUILT — samples/fortnox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-11/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 11 — Tests exercise the contract, not the plumbing (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-12/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 12 — Six months later: change impact (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-13/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 13 — A partner ships a plugin (implemented — 22-plugins.md, decision D8; running in samples/inspect)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-14/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 14 — Who is asking, and what have they paid for (implemented — 24-subscriptions.md)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-15/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 15 — Norrservice becomes a group (implemented — 26 + 27)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-16/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 16 — Approvals arrive as a plugin — and the domains never notice (BUILT — the seams and the package, samples/approvals)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-17/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 17 — Invoicing arrives as a plugin — and Orders still doesn't know (BUILT — 31-cross-domain-plugins.md, samples/invoicing)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-18/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 18 — The composed UI: nav, pages, slots, and the subtree grid (BUILT — 30-navigation.md, 32-pages.md, docs/26 D-H1)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/tally/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The tally
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Foundations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Foundations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Overview and Principles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-domain-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Domain State
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-derivations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Derivations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-partial-edits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Partial and Conflict-Safe Edits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — Validation Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-envelope-and-effects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Execution Envelope and Effects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-compiler-and-manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Compiler and Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-frontend-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Frontend Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-database-and-ef-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Database and EF Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-localization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Localization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensibility
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Extensibility
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-extensibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Tenant Extensibility and Custom Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Plugins: Packaged Extensibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../31-cross-domain-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 — Cross-domain plugins: extending a domain you don't own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-custom-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — Custom Objects (Plugin System P4)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-subscriptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 — Subscriptions, Seats &amp; Entitlements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — External Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-gap-this-closes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gap this closes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-secrets-vault-roll-a-thin-layer-over-the-platform-not-a-new-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The secrets vault: roll a thin layer over the platform, not a new dependency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outbound-integrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outbound integrations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Outbound integrations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#triggers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run history
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-fortnox-demo-both-directions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Fortnox demo, both directions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#does-rolling-our-own-bite-review-round-2-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Does rolling our own bite? — review-round-2 hardening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#durable-messaging-review-round-3-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Durable messaging — review-round-3 hardening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ceilings-v1-honest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ceilings (v1, honest)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phasing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phasing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-mcp-and-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — MCP and Agent Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../37-variability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    37 — Variability: it's just plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenancy & security
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tenancy & security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-tenancy-hierarchy-and-identity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 — Hierarchical Tenants, Cross-Tenant Users, and Who Owns the Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../27-authorization-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 — Authorization Model: Capability × Data Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../28-assignment-and-grouping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 — Assignment &amp; Grouping: domain by default, one closed scope set, plugins for the rest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../33-rls-backstop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    33 — The RLS backstop: PostgreSQL row-level security under the EF filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../35-reach/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    35 — Reach: who an object-side grant may name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../36-documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    36 — Documents: folders, files, and the first reach consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI composition
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    UI composition
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../30-navigation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    30 — Navigation: a declared tree, slotted levels, modes, and a tenant overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../32-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    32 — Framework-composed pages: the list-and-detail shape leaves app code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Process
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../29-code-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    29 — Code structure: the repo map and where things go
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../40-operation-input-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    40 — Operations own the input contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../38-tooling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    38 — Tooling: keeping the committed artifacts current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../34-field-service-domain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    34 — The field-service domain: stress-testing Tam as a consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-packages-and-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — Package Structure and Repository Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-implementation-phases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Initial Implementation Order
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-success-criteria/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Success Criteria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../review-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review Notes — Risks, Refinements, Open Questions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-gap-this-closes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gap this closes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-secrets-vault-roll-a-thin-layer-over-the-platform-not-a-new-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The secrets vault: roll a thin layer over the platform, not a new dependency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outbound-integrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outbound integrations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Outbound integrations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#triggers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run history
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-fortnox-demo-both-directions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Fortnox demo, both directions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#does-rolling-our-own-bite-review-round-2-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Does rolling our own bite? — review-round-2 hardening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#durable-messaging-review-round-3-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Durable messaging — review-round-3 hardening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ceilings-v1-honest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ceilings (v1, honest)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phasing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phasing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="25-external-integrations-outbound-scheduled-event-triggered-with-a-vault">25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault<a class="headerlink" href="#25-external-integrations-outbound-scheduled-event-triggered-with-a-vault" title="Permanent link">&para;</a></h1>
+<p><strong>Status: implemented and verified</strong> (secrets vault, settings, outbound integrations triggered by event / schedule / manual, run history, the Fortnox demo — see STATUS.md). Builds on the inbound integration channel (docs/10) and the plugin system (docs/22).</p>
+<h2 id="the-gap-this-closes">The gap this closes<a class="headerlink" href="#the-gap-this-closes" title="Permanent link">&para;</a></h2>
+<p>Docs/10's integrations were <strong>inbound</strong>: an external system posts, the framework maps it to an operation. Real integrations also <strong>reach out</strong> — push an invoice when an order completes, poll a vendor for new records every 15 minutes, sync nightly. That needs three things the framework didn't have: a way to <em>trigger</em> outbound work (events, schedules, manual), a place to keep the <em>credentials and config</em> those calls need, and an <em>audit trail</em> of what was sent where.</p>
+<p>All three land on machinery that already exists. Outbound triggers are the outbox (events) plus one small scheduler. Config is per-tenant data like everything else; credentials are the same but encrypted. The audit trail is one more table. And the whole thing is a plugin contribution, so an integration is a removable, per-tenant-priced capability — not host code.</p>
+<h2 id="the-secrets-vault-roll-a-thin-layer-over-the-platform-not-a-new-dependency">The secrets vault: roll a thin layer over the platform, not a new dependency<a class="headerlink" href="#the-secrets-vault-roll-a-thin-layer-over-the-platform-not-a-new-dependency" title="Permanent link">&para;</a></h2>
+<p>The recommendation, and what's built: <strong>ASP.NET Core Data Protection</strong>. It is already in the framework (no NuGet, no cloud SDK), gives authenticated AES with automatic key rotation, and — the reason it's the right call rather than a hand-rolled <code>Aes</code> wrapper — its <em>key ring</em> is swappable in production for Azure Key Vault or AWS KMS via <code>ProtectKeysWith…</code>, so the same calling code goes from a dev key file to HSM-backed custody without a rewrite. Rolling our own crypto would mean owning key rotation, IV management, and authenticated-encryption correctness; a heavyweight secrets NuGet (or a cloud KMS call per read) would add a dependency and latency the vault doesn't need. Data Protection is the seam that is cheap now and scales later.</p>
+<p>Two stores, both per-tenant data:</p>
+<ul>
+<li><strong>Settings</strong> (<code>tenant_settings</code>) — non-secret config: base URLs, account ids, feature flags. Readable in the clear through <code>settings.set</code> / <code>settings.list</code>.</li>
+<li><strong>Secrets</strong> (<code>tenant_secrets</code>) — API keys, tokens, passwords. The column holds <em>only</em> Data-Protection ciphertext. <code>secrets.set</code> encrypts under the purpose string <code>Tam.Secrets.v1</code>; <strong>there is no read-back operation</strong> — <code>secrets.list</code> returns keys and a set/unset flag, never the value, not even masked. The plaintext is decrypted transiently, in-process, only when an integration runs, and is never logged or returned. Verified: the DB stores 155 bytes of ciphertext, not the plaintext; no view or manifest surface exposes it.</li>
+</ul>
+<p><code>secrets.manage</code> / <code>settings.manage</code> gate the operations; both are ordinary permissions a role grants.</p>
+<h2 id="outbound-integrations">Outbound integrations<a class="headerlink" href="#outbound-integrations" title="Permanent link">&para;</a></h2>
+<p>A plugin declares one with a <strong>trigger</strong> and a <strong>handler</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Fire when a host effect commits (via the outbox).</span>
+<span class="n">plugin</span><span class="p">.</span><span class="n">OutboundIntegration</span><span class="p">(</span><span class="s">&quot;push-completed-order&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="k">new</span><span class="w"> </span><span class="nf">EventTrigger</span><span class="p">(</span><span class="s">&quot;order-completed&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">PushCompletedOrderAsync</span><span class="p">);</span>
+
+<span class="c1">// Fire on a schedule the tenant configures.</span>
+<span class="n">plugin</span><span class="p">.</span><span class="n">OutboundIntegration</span><span class="p">(</span><span class="s">&quot;poll-orders&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="k">new</span><span class="w"> </span><span class="nf">ScheduleTrigger</span><span class="p">(),</span><span class="w"> </span><span class="n">PollOrdersAsync</span><span class="p">);</span>
+</code></pre></div>
+<p>The handler gets an <code>IIntegrationRunContext</code> — the wire-only seam, same discipline as gates and inbound maps:</p>
+<div class="highlight"><pre><span></span><code><span class="k">static</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="n">Task</span><span class="o">&lt;</span><span class="n">OutboundResult</span><span class="o">&gt;</span><span class="w"> </span><span class="n">PushCompletedOrderAsync</span><span class="p">(</span><span class="n">IIntegrationRunContext</span><span class="w"> </span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="n">CancellationToken</span><span class="w"> </span><span class="n">ct</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="kt">var</span><span class="w"> </span><span class="n">baseUrl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="n">run</span><span class="p">.</span><span class="n">Setting</span><span class="p">(</span><span class="s">&quot;fortnox.baseUrl&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ct</span><span class="p">);</span><span class="w">   </span><span class="c1">// non-secret config</span>
+<span class="w">    </span><span class="kt">var</span><span class="w"> </span><span class="n">apiKey</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="n">run</span><span class="p">.</span><span class="n">Secret</span><span class="p">(</span><span class="s">&quot;fortnox.apiKey&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ct</span><span class="p">);</span><span class="w">     </span><span class="c1">// decrypted transiently</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">baseUrl</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">null</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">apiKey</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">null</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">OutboundResult</span><span class="p">.</span><span class="n">Failure</span><span class="p">(</span><span class="s">&quot;not-configured&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="kt">var</span><span class="w"> </span><span class="n">number</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">run</span><span class="p">.</span><span class="n">EventPayload</span><span class="o">?.</span><span class="n">GetProperty</span><span class="p">(</span><span class="s">&quot;number&quot;</span><span class="p">).</span><span class="n">GetString</span><span class="p">();</span><span class="w">   </span><span class="c1">// the committed effect</span>
+<span class="w">    </span><span class="n">run</span><span class="p">.</span><span class="n">Http</span><span class="p">.</span><span class="n">DefaultRequestHeaders</span><span class="p">.</span><span class="n">TryAddWithoutValidation</span><span class="p">(</span><span class="s">&quot;Access-Token&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">apiKey</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="n">run</span><span class="p">.</span><span class="n">Http</span><span class="p">.</span><span class="n">PostAsync</span><span class="p">(</span><span class="s">$&quot;{baseUrl}/vouchers&quot;</span><span class="p">,</span><span class="w"> </span><span class="err">…</span><span class="p">,</span><span class="w"> </span><span class="n">ct</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">IsSuccessStatusCode</span>
+<span class="w">        </span><span class="o">?</span><span class="w"> </span><span class="n">OutboundResult</span><span class="p">.</span><span class="n">Success</span><span class="p">(</span><span class="s">$&quot;pushed {number}&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="p">:</span><span class="w"> </span><span class="n">OutboundResult</span><span class="p">.</span><span class="n">Failure</span><span class="p">(</span><span class="s">$&quot;http {(int)response.StatusCode}&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>Http</code> is a factory-managed <code>HttpClient</code> (pooled, timed out); <code>Setting</code>/<code>Secret</code> read the vault; <code>EventPayload</code> is the committed effect for event triggers; <code>Services</code> reaches the pipeline if a run needs to write results back through operations. No host CLR types leak in.</p>
+<h3 id="triggers">Triggers<a class="headerlink" href="#triggers" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Event.</strong> The outbox dispatcher (docs/09), which already delivers effects to plugin subscribers, additionally fires every event-triggered outbound integration whose plugin is active for the tenant — post-commit, so the external call happens if and only if the operation committed. A failed push is <em>recorded as a failed run</em>, never a crash: the external world being down can't take down dispatch.</li>
+<li><strong>Schedule.</strong> A tenant configures cadence with <code>integrations.schedule</code> (spec <code>every:15m</code> / <code>every:2h</code> / <code>daily:HH:MM</code>, UTC). One lightweight <code>IntegrationScheduler</code> hosted service ticks each minute, runs every due, enabled schedule of an <em>active</em> plugin, records the run, and rolls next-run forward. No Quartz/Hangfire — the needs are interval + daily, so an external scheduler would be dependency for its own sake. (Cron-grade specs are a later extension of <code>ScheduleSpec</code>, which is the single place the grammar lives.)</li>
+<li><strong>Manual.</strong> <code>integrations.run</code> fires one now — the admin's "test it" button and a way to re-drive after fixing config.</li>
+</ul>
+<h3 id="run-history">Run history<a class="headerlink" href="#run-history" title="Permanent link">&para;</a></h3>
+<p>Every run — event, schedule, or manual — writes an <code>integration_runs</code> row (integration, trigger, ok/failed, a short detail, timestamp). <code>integrations.runs</code> is the tenant's outbound audit trail, D7-filterable by integration and status. External calls are as auditable as internal operations.</p>
+<h2 id="the-fortnox-demo-both-directions">The Fortnox demo, both directions<a class="headerlink" href="#the-fortnox-demo-both-directions" title="Permanent link">&para;</a></h2>
+<p><code>samples/fortnox</code> now spans the whole integration surface on one plugin:</p>
+<ul>
+<li><strong>inbound</strong> <code>orders.import</code> — vendor orders → <code>orders.create</code> (docs/22, inbox recovery).</li>
+<li><strong>outbound event</strong> <code>push-completed-order</code> — on <code>order-completed</code>, POST the order to Fortnox's accounting API using the tenant's base-URL setting and API-key secret. Verified end to end: completing an order pushed <code>{"orderNumber":"2026-01416"}</code> to the (mock) external endpoint and recorded an <code>event/ok</code> run.</li>
+<li><strong>outbound schedule</strong> <code>poll-orders</code> — GET new vendor orders on the configured cadence; verified via manual run and a valid schedule (next-run computed; <code>nonsense</code> rejected; the event integration correctly refuses to be scheduled).</li>
+</ul>
+<p>That one plugin is now a complete two-way vendor connector — installable, per-tenant-priced, credential-isolated — and none of it is host code.</p>
+<h2 id="does-rolling-our-own-bite-review-round-2-hardening">Does rolling our own bite? — review-round-2 hardening<a class="headerlink" href="#does-rolling-our-own-bite-review-round-2-hardening" title="Permanent link">&para;</a></h2>
+<p>The vault, scheduler and outbound runner are hand-built rather than a <code>Quartz</code>/<code>Hangfire</code>/cloud-KMS dependency. A round of review agents on code, scalability and novelty found where that <em>would</em> bite, and each is now closed in code (with tests):</p>
+<ul>
+<li><strong>SSRF on the tenant-supplied base URL.</strong> An integration's destination is tenant data, and it runs under a privileged background actor — an un-guarded client is a straight shot at the cloud metadata endpoint (<code>169.254.169.254</code>) and internal services. The <code>tam-integrations</code> client now resolves the host itself and connects <strong>only to a validated public address</strong> (<code>IntegrationEgress</code>, blocking loopback/link-local/private/CGNAT, IPv4 and IPv6, closing the DNS-rebinding window), and <strong>never follows redirects</strong> (a 302 could bounce a secret-bearing request to an attacker host). Secure by default; a deployment whose real targets are internal opts in with <code>AllowPrivateNetwork</code>.</li>
+<li><strong>Wildcard was too wide.</strong> A <code>"*"</code> grant — a tenant admin, or a plugin running as the system actor — could call <code>subscriptions.set-plan</code> and entitle itself to any plugin. <code>Actor.Reserved</code> now names permissions that <code>"*"</code> deliberately does <strong>not</strong> confer (<code>subscriptions.manage</code>); they must be granted explicitly, so a plugin can never re-plan the tenant that installed it.</li>
+<li><strong>Multi-node scheduler double-fire.</strong> <code>NextRunIso</code> is now an optimistic-concurrency token: the tick <strong>claims</strong> a due schedule (rolls the next-run forward under the token) <em>before</em> running it, so two instances racing the same minute collide and only one wins — at-most-once per tick across the fleet, no lock table. A covering index on <code>(Enabled, NextRunIso)</code> turns the every-minute due-scan from a full table scan into an index range.</li>
+<li><strong>A hung handler must not wedge the tick.</strong> Each scheduled run gets a per-run deadline (<code>CancellationTokenSource</code>), so one slow external call fails that run instead of stalling the once-a-minute loop.</li>
+<li><strong>Fail closed, not 500.</strong> A malformed inbound payload is a <code>422</code>, not an unhandled 500; a well-formed-but-incomplete row maps to a validation finding; an absurd schedule spec (<code>every:2000000000d</code>) returns invalid instead of throwing <code>OverflowException</code> into the tick.</li>
+<li><strong>Per-tenant secret binding.</strong> The vault protector chains the tenant id into the Data-Protection purpose, so a ciphertext copied into another tenant's row cannot be unprotected there.</li>
+<li><strong>Activation reads collapsed.</strong> The plugin-activation set is read 3–4× per request (existence, gate, overlay, manifest); a request-scoped <code>ActivationCache</code> memoizes it to one query and removes the incoherency window between reads.</li>
+</ul>
+<h2 id="durable-messaging-review-round-3-hardening">Durable messaging — review-round-3 hardening<a class="headerlink" href="#durable-messaging-review-round-3-hardening" title="Permanent link">&para;</a></h2>
+<p>The second review pass found the outbound side had no retry at all and the <strong>outbox</strong> — the scheduler's structural twin — never got the claim token and dead-letter the scheduler and inbox already had. Both are the same primitive ("a durable queue with at-least-once delivery, backoff and a poison valve"), so they now share one:</p>
+<ul>
+<li><strong>One retry policy, both directions.</strong> <code>RetryPolicy</code> (exponential backoff, capped, dead-letter after N) drives the inbound inbox <em>and</em> a new outbound task queue. A failed event/schedule push is enqueued as an <code>outbound_tasks</code> row and re-driven by the <code>IntegrationRetryDriver</code> with backoff; after the cap it dead-letters. The inbox drains on the next inbound call (it must run under the caller's actor, so it has no background driver) but now honours the <strong>same backoff gate</strong> — a rapid re-POST can't hammer a failing row — and processes a <strong>bounded batch</strong> per call instead of the whole failed backlog inside one partner request.</li>
+<li><strong>Outbox claim + poison valve.</strong> The dispatcher now takes a time-boxed lease on each row under an optimistic-concurrency token (<code>ClaimedUntilIso</code>) before delivering, so N instances no longer each deliver every event (duplicate webhooks, duplicate emails). A row that keeps throwing bumps an attempt count and <strong>dead-letters</strong> after a cap instead of blocking every newer event behind it forever; a lapsed lease lets another instance re-deliver, preserving at-least-once. Composite index <code>(DispatchedAtIso, DeadAtIso, CreatedAtIso)</code> supports the poll.</li>
+<li><strong>Event pushes are time-boxed and isolated.</strong> Each event-triggered outbound run gets the same per-run deadline the scheduler uses, so a slow endpoint can't stall the dispatch loop; activation is looked up once per tenant per tick, not per record.</li>
+<li><strong>A unified dead-letter queue.</strong> <code>integrations.dead-letter</code> lists give-up rows from both directions; <code>integrations.requeue</code> resets one to retryable once its root cause is fixed (verified end to end: a broken API key drove event → retry → retry → dead-letter, then fix-secret + requeue → success).</li>
+<li><strong>Retention.</strong> A janitor trims dispatched outbox rows, processed inbox/task rows, old run history and expired idempotency records past a window (default 30 days) so the hot loops don't scan unbounded tables. Audit and dead-lettered rows are never auto-trimmed — those are records, not scratch.</li>
+<li><strong>Manifest is conditional.</strong> The manifest carries an <code>ETag</code> over its content revision + the actor's permissions and answers <code>304</code> to <code>If-None-Match</code>, skipping the reflection rebuild + serialization on every page load.</li>
+</ul>
+<h2 id="ceilings-v1-honest">Ceilings (v1, honest)<a class="headerlink" href="#ceilings-v1-honest" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>At-least-once, handler-idempotent.</strong> Event and schedule runs can repeat (a redelivery, a lapsed lease); handlers must tolerate it, as the docs/10 inbound side already requires. A per-run idempotency token is a natural extension.</li>
+<li><strong>Backoff is deterministic (no jitter).</strong> Fine at this scale; jitter to avoid a thundering herd at 100× tenants sharing a spec is a later addition.</li>
+<li><strong>SSE cross-instance (done).</strong> Live refresh now fans out through <code>IEffectBackplane</code>: in-process for single-node/SQLite, and a Postgres <code>LISTEN/NOTIFY</code> adapter (<code>AddTamPostgresBackplane</code>) for multi-node — a grid open on instance B refreshes from a commit on instance A, no new infrastructure. Verified: a second <code>LISTEN</code>er received the app's <code>NOTIFY</code> on commit. Payloads over ~8 KB fall back to local-only delivery (NOTIFY's cap); a Redis backplane is the same seam if ever needed.</li>
+<li><strong>Secrets rotation</strong> relies on the Data-Protection key ring; a rotated-away key makes a secret undecryptable (treated as "not configured") rather than silently wrong — re-set the secret. The ring is DB-persisted so it survives restarts and is shared across instances.</li>
+<li><strong>No secret versioning / audit of secret <em>access</em></strong> — only of integration runs.</li>
+</ul>
+<h2 id="phasing">Phasing<a class="headerlink" href="#phasing" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>S1 (implemented)</strong>: vault (Data Protection, DB-persisted key ring, per-tenant purpose) + settings/secrets operations, outbound integrations with event/schedule/manual triggers, SSRF-guarded egress, scheduler with a claim-first multi-node lease + per-run timeout, run history, reserved-permission gate, the Fortnox two-way demo.</li>
+<li><strong>S2 (implemented)</strong>: outbound retry/backoff unified with the inbox (shared <code>RetryPolicy</code>), outbound task queue + retry driver, outbox claim-lease + poison dead-letter, unified <code>integrations.dead-letter</code> + <code>integrations.requeue</code>, retention janitor, manifest ETag/304.</li>
+<li><strong>S3</strong>: per-run idempotency tokens; cross-instance SSE backplane; cron-grade schedule specs; secret-access audit; a secrets admin UI page (today: API/MCP, plus settings/secrets grids are trivial to bind).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

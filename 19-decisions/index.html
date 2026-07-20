@@ -1,0 +1,2802 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A model-driven framework for multi-tenant business applications (.NET + React)">
+      
+      
+      
+        <link rel="canonical" href="https://nilbin.github.io/abc/19-decisions/">
+      
+      
+        <link rel="prev" href="../32-pages/">
+      
+      
+        <link rel="next" href="../29-code-structure/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>19 — Architecture Decisions - Tam — Typed Application Model</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#19-architecture-decisions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Tam — Typed Application Model" class="md-header__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tam — Typed Application Model
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              19 — Architecture Decisions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tam — Typed Application Model" class="md-nav__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tam — Typed Application Model
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: A Complete Feature, End to End
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-00/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 0 — A new host from nothing (BUILT — samples/erp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 1 — Domain state (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 2 — The create operation (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 3 — Derivations: reactive form behavior, written once (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 4 — Bindings: one per boundary that differs (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 5 — The list: a view and its grid (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 6 — Editing: partial, conflict-safe (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 7 — Completing: an intent, not an edit (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 8 — What the machine callers see (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 9 — The tenant adds a custom field. Nobody deploys anything. (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 10 — The integration is a mapping, not a sync engine (BUILT — samples/fortnox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-11/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 11 — Tests exercise the contract, not the plumbing (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-12/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 12 — Six months later: change impact (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-13/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 13 — A partner ships a plugin (implemented — 22-plugins.md, decision D8; running in samples/inspect)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-14/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 14 — Who is asking, and what have they paid for (implemented — 24-subscriptions.md)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-15/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 15 — Norrservice becomes a group (implemented — 26 + 27)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-16/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 16 — Approvals arrive as a plugin — and the domains never notice (BUILT — the seams and the package, samples/approvals)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-17/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 17 — Invoicing arrives as a plugin — and Orders still doesn't know (BUILT — 31-cross-domain-plugins.md, samples/invoicing)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-18/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 18 — The composed UI: nav, pages, slots, and the subtree grid (BUILT — 30-navigation.md, 32-pages.md, docs/26 D-H1)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/tally/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The tally
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Foundations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Foundations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Overview and Principles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-domain-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Domain State
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-derivations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Derivations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-partial-edits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Partial and Conflict-Safe Edits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — Validation Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-envelope-and-effects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Execution Envelope and Effects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-compiler-and-manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Compiler and Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-frontend-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Frontend Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-database-and-ef-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Database and EF Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-localization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Localization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensibility
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Extensibility
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-extensibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Tenant Extensibility and Custom Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Plugins: Packaged Extensibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../31-cross-domain-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 — Cross-domain plugins: extending a domain you don't own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-custom-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — Custom Objects (Plugin System P4)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-subscriptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 — Subscriptions, Seats &amp; Entitlements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — External Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-external-integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-mcp-and-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — MCP and Agent Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../37-variability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    37 — Variability: it's just plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenancy & security
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tenancy & security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-tenancy-hierarchy-and-identity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 — Hierarchical Tenants, Cross-Tenant Users, and Who Owns the Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../27-authorization-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 — Authorization Model: Capability × Data Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../28-assignment-and-grouping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 — Assignment &amp; Grouping: domain by default, one closed scope set, plugins for the rest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../33-rls-backstop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    33 — The RLS backstop: PostgreSQL row-level security under the EF filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../35-reach/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    35 — Reach: who an object-side grant may name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../36-documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    36 — Documents: folders, files, and the first reach consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI composition
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    UI composition
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../30-navigation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    30 — Navigation: a declared tree, slotted levels, modes, and a tenant overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../32-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    32 — Framework-composed pages: the list-and-detail shape leaves app code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Process
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#d1-authorization-compiled-permission-catalogue-tenant-defined-roles-scoped-grants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D1 — Authorization: compiled permission catalogue + tenant-defined roles + scoped grants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d2-multi-tenancy-single-database-shared-schema-tenantid-discriminator-rls-as-backstop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D2 — Multi-tenancy: single database, shared schema, TenantId discriminator, RLS as backstop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d3-audit-append-only-tables-in-the-same-database-written-in-the-operation-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D3 — Audit: append-only tables in the same database, written in the operation transaction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d4-operation-evolution-additive-only-enforced-by-a-manifest-baseline-check-in-ci-new-intent-instead-of-versioned-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D4 — Operation evolution: additive-only, enforced by a manifest baseline check in CI; new intent instead of versioned endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d5-real-time-collaboration-out-of-scope-ship-change-notification-stale-form-signaling-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D5 — Real-time collaboration: out of scope; ship change-notification + stale-form signaling instead
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d6-localization-no-display-text-in-code-ever" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D6 — Localization: no display text in code, ever
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d7-filtering-is-declared-not-implemented-per-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D7 — Filtering is declared, not implemented per view
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d8-packaged-extensibility-compiled-plugins-declarative-tenant-channel-never-tenant-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D8 — Packaged extensibility: compiled plugins + declarative tenant channel, never tenant code
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d9-cross-domain-plugins-contribution-seams-into-surfaces-you-dont-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D9 — Cross-domain plugins: contribution seams into surfaces you don't own
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../29-code-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    29 — Code structure: the repo map and where things go
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../40-operation-input-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    40 — Operations own the input contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../38-tooling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    38 — Tooling: keeping the committed artifacts current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../34-field-service-domain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    34 — The field-service domain: stress-testing Tam as a consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-packages-and-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — Package Structure and Repository Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-implementation-phases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Initial Implementation Order
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-success-criteria/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Success Criteria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../review-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review Notes — Risks, Refinements, Open Questions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#d1-authorization-compiled-permission-catalogue-tenant-defined-roles-scoped-grants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D1 — Authorization: compiled permission catalogue + tenant-defined roles + scoped grants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d2-multi-tenancy-single-database-shared-schema-tenantid-discriminator-rls-as-backstop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D2 — Multi-tenancy: single database, shared schema, TenantId discriminator, RLS as backstop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d3-audit-append-only-tables-in-the-same-database-written-in-the-operation-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D3 — Audit: append-only tables in the same database, written in the operation transaction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d4-operation-evolution-additive-only-enforced-by-a-manifest-baseline-check-in-ci-new-intent-instead-of-versioned-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D4 — Operation evolution: additive-only, enforced by a manifest baseline check in CI; new intent instead of versioned endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d5-real-time-collaboration-out-of-scope-ship-change-notification-stale-form-signaling-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D5 — Real-time collaboration: out of scope; ship change-notification + stale-form signaling instead
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d6-localization-no-display-text-in-code-ever" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D6 — Localization: no display text in code, ever
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d7-filtering-is-declared-not-implemented-per-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D7 — Filtering is declared, not implemented per view
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d8-packaged-extensibility-compiled-plugins-declarative-tenant-channel-never-tenant-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D8 — Packaged extensibility: compiled plugins + declarative tenant channel, never tenant code
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#d9-cross-domain-plugins-contribution-seams-into-surfaces-you-dont-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D9 — Cross-domain plugins: contribution seams into surfaces you don't own
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="19-architecture-decisions">19 — Architecture Decisions<a class="headerlink" href="#19-architecture-decisions" title="Permanent link">&para;</a></h1>
+<p>Answers to the open questions raised in <a href="../review-notes/">review-notes.md</a>. Each records the decision, the reasoning, what it commits us to, and the signal that would justify revisiting it.</p>
+<p><strong>Operating assumptions</strong> (implied by the plan's examples — orders, technicians, Fortnox/Business Central): a multi-tenant B2B SaaS with many small-to-mid tenants, back-office web/admin users plus mobile field users, and accounting/ERP integrations. Several decisions below lean on this profile; if it's wrong, revisit them first.</p>
+<hr />
+<h2 id="d1-authorization-compiled-permission-catalogue-tenant-defined-roles-scoped-grants">D1 — Authorization: compiled permission catalogue + tenant-defined roles + scoped grants<a class="headerlink" href="#d1-authorization-compiled-permission-catalogue-tenant-defined-roles-scoped-grants" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Extended by <a href="../27-authorization-model/">27-authorization-model.md</a> and settled by
+<a href="../28-assignment-and-grouping/">28-assignment-and-grouping.md</a></strong> (built): roles are authored as
+access levels over the same atoms, fields can be masked, and D1's ":own" scope qualifier was
+RETIRED for the paired-atom pattern (base atom own-scoped, "-all" atom widens; TAM006-enforced).
+D1's substrate — the compiled catalogue and flat grant set — is unchanged underneath.</p>
+</blockquote>
+<p><strong>Decision.</strong> Three layers, matching the framework's static/dynamic split:</p>
+<ol>
+<li><strong>Permissions are compiled facts.</strong> Every operation, view, and binding declares the permission it requires (<code>[Authorize("orders.create")]</code>). The compiler emits the full permission catalogue into the manifest and fails the build on an operation without one or a reference to a nonexistent permission.</li>
+<li><strong>Roles are tenant runtime data.</strong> A role is a named set of permission grants, managed through normal framework operations (like the field registry — dogfooded, audited, revisioned). The framework ships default roles; tenant admins customize them. Assignment of roles to users is likewise tenant data.</li>
+<li><strong>Record scope is a grant qualifier, not a rule language.</strong> A grant optionally carries a scope from a small closed set — <code>All</code> / <code>Team</code> / <code>Own</code> — and an entity declares <em>in code</em> what "own" and "team" mean via a scope provider (e.g. <code>Order.AssignedTechnicianId</code>, <code>Order.DepartmentId</code>). Views enforce scope by injected query filter; operations enforce it as a precondition before the handler runs. A grid and the operation behind its row action therefore agree by construction.</li>
+</ol>
+<p>Field-level read/write permissions (already designed for extension fields in <a href="../15-extensibility/">15-extensibility.md</a>) apply to compiled fields through the same overlay mechanism, enforced server-side.</p>
+<p><strong>Why.</strong> Full ReBAC/ABAC (policy engines, relationship graphs) is unwarranted for this product profile and would poison the manifest's static analyzability — you can't compile-time-verify arbitrary policy. Pure static roles are too rigid for tenant variety. This split keeps <em>what can be protected</em> compiled and verifiable, and <em>who gets it</em> runtime and self-service — the same two-channel philosophy as extensibility.</p>
+<p><strong>Consequences.</strong> Scope providers must be declared per entity in Phase 1–2 (grids need them for row actions). MCP agents inherit the actor's grants automatically — no separate agent permission model. Diagnostic: a binding exposing an operation whose permission no role in the default set grants ("unreachable operation") is a warning.</p>
+<p><strong>Revisit when.</strong> A tenant needs delegation chains, record sharing, or cross-tenant collaboration — that's the ReBAC threshold, and it should arrive as a new scope kind, not a policy engine.</p>
+<hr />
+<h2 id="d2-multi-tenancy-single-database-shared-schema-tenantid-discriminator-rls-as-backstop">D2 — Multi-tenancy: single database, shared schema, TenantId discriminator, RLS as backstop<a class="headerlink" href="#d2-multi-tenancy-single-database-shared-schema-tenantid-discriminator-rls-as-backstop" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Extended by <a href="../26-tenancy-hierarchy-and-identity/">26-tenancy-hierarchy-and-identity.md</a></strong>
+(built): tenants now form trees (materialized paths in the tenants registry; rows still carry
+exactly one <code>TenantId</code>), accounts are platform-global with per-tenant memberships, and the
+active node is chosen at login / act-as. D2's storage shape is unchanged underneath.</p>
+<p><strong>The RLS backstop is BUILT</strong> (<a href="../33-rls-backstop/">33-rls-backstop.md</a>): <code>TamRls</code> in
+Tam.AspNetCore.Postgres provisions ENABLE+FORCE policies over every ITenantScoped table and
+keeps <code>app.tenant_id</code>/<code>app.tenant_read_set</code> true to the ambient scope; sanctioned
+cross-tenant reads carry a query tag (<code>AcrossTenants()</code>), the auth branch escalates
+explicitly, and the tenants registry is exempt (D-R6..R8).</p>
+</blockquote>
+<p><strong>Decision.</strong> One PostgreSQL database, one schema. Every tenant-owned aggregate carries <code>TenantId</code>; EF Core global query filters bind it from the execution envelope; writes stamp it in the pipeline, never in handlers. Tables are either tenant-scoped or explicitly marked <code>[GlobalData]</code> — anything unmarked and missing <code>TenantId</code> is a compiler error (<code>DB0xx</code>).</p>
+<p>As defense-in-depth, enable <strong>PostgreSQL row-level security</strong>: the pipeline sets <code>app.tenant_id</code> on the connection per unit of work and RLS policies filter every tenant-scoped table. Application filters remain the primary mechanism; RLS exists so a single forgotten filter or raw-SQL escape hatch cannot become a cross-tenant leak.</p>
+<p>Do <strong>not</strong> build database-per-tenant routing in v1 — but don't preclude it: all tenant data access already flows through the envelope's <code>TenantId</code>, connection acquisition goes through one factory, no cross-tenant queries outside <code>[GlobalData]</code>, no business meaning in global sequence values. Moving one oversized tenant to a dedicated database later is then an infrastructure exercise, not an application rewrite.</p>
+<p><strong>Why.</strong> The plan commits to one modular monolith and one PostgreSQL database; the JSONB extensibility design assumes shared schema; and for many small/mid tenants, per-tenant databases multiply migrations, connection pools, backup policies, and the field-registry story for no benefit at that scale. RLS costs little and converts the worst bug class (tenant data leak) from "possible" to "requires two independent failures."</p>
+<p><strong>Consequences.</strong> Migrations run once per deploy. The effective-manifest cache keys on <code>(tenant, registry revision)</code>. Backup/restore of a <em>single</em> tenant needs tooling (logical export by TenantId) — accept as an operational task, not a schema driver.</p>
+<p><strong>Revisit when.</strong> A contract requires physical data isolation or data residency, or one tenant's volume degrades neighbors. The escape valve above is the plan for that day.</p>
+<hr />
+<h2 id="d3-audit-append-only-tables-in-the-same-database-written-in-the-operation-transaction">D3 — Audit: append-only tables in the same database, written in the operation transaction<a class="headerlink" href="#d3-audit-append-only-tables-in-the-same-database-written-in-the-operation-transaction" title="Permanent link">&para;</a></h2>
+<p><strong>Decision.</strong> Two tables: <code>audit_entries</code> (one row per executed operation: operation id, actor, tenant, invocation source, correlation id, idempotency key, field-registry revision, result status, timestamp) and <code>audit_changes</code> (field-level old/new values in canonical wire form — compiled and extension fields uniformly, keyed the same way the manifest keys them). Written by the pipeline <strong>inside the operation's transaction</strong>; <code>OperationResult.AuditReference</code> points at the entry.</p>
+<p>Immutability is enforced by the database, not by convention: the application role has no <code>UPDATE</code>/<code>DELETE</code> grant on audit tables, plus a guard trigger. Partition by month; retention is a per-tenant policy applied by dropping partitions after logical export.</p>
+<p>If a future compliance requirement demands tamper-<em>evidence</em> (not just tamper-resistance), add hash-chaining per tenant or ship entries to external WORM storage <strong>via the existing outbox</strong> — as an export, never as the source of truth.</p>
+<p><strong>Why.</strong> Transactional atomicity is the property that matters most: an audit entry that can exist without its change (or vice versa) is worse than useless in a dispute. Same-DB append-only delivers that for free and keeps "show history for this order" a plain indexed query — which the UI will want anyway. An event store adds operational surface and pushes toward event sourcing, an explicit non-goal. Effects describe what happened; they feed audit, they are not the audit.</p>
+<p><strong>Consequences.</strong> Audit rows are read-model-queryable (entity history views become ordinary views). Old/new capture rides the change-tracking + change-set machinery from Phase 4, so audit lands with it, not after it.</p>
+<p><strong>Revisit when.</strong> Regulated-industry certification demands independent storage — the WORM export path is the answer, additive not disruptive.</p>
+<hr />
+<h2 id="d4-operation-evolution-additive-only-enforced-by-a-manifest-baseline-check-in-ci-new-intent-instead-of-versioned-endpoints">D4 — Operation evolution: additive-only, enforced by a manifest baseline check in CI; new intent instead of versioned endpoints<a class="headerlink" href="#d4-operation-evolution-additive-only-enforced-by-a-manifest-baseline-check-in-ci-new-intent-instead-of-versioned-endpoints" title="Permanent link">&para;</a></h2>
+<p><strong>Decision.</strong> No version numbers on operations in v1. Instead:</p>
+<ul>
+<li><strong>Wire names are permanent.</strong> Renaming a C# member requires <code>[WireName("...")]</code> preserving the original; the manifest records wire names, so refactors never break callers silently.</li>
+<li><strong>Additive changes are free</strong>: new optional inputs, new outputs, new operations, widened option sets.</li>
+<li><strong>Adding a required input</strong> compiles only if a server-side default exists <strong>or</strong> every registered integration mapping and binding has been updated — the existing <code>INT001</code>-class diagnostics plus the impact report make this a build break, not a production incident.</li>
+<li><strong>Removal/repurposing is prohibited</strong> on published operations. A genuinely incompatible change means a <strong>new operation with a new intent name</strong> (<code>orders.create-with-contract</code>, not <code>orders.create-v2</code>), with the old one marked <code>[Deprecated(sunset: ...)]</code> — deprecation flows into OpenAPI, TS clients, MCP schemas, and integration diagnostics automatically.</li>
+<li><strong>Enforcement is mechanical</strong>: CI diffs the emitted manifest against the last released baseline (same pattern as .NET API-baseline checks). Any non-additive delta fails the build unless the baseline is explicitly re-approved in review.</li>
+</ul>
+<p><strong>Why.</strong> Versioned endpoints double every derived artifact (schemas, clients, MCP tools, forms) and rot into "v1 forever." Operations are cheap by design — a new intent name is the framework-native escape hatch, and it reads better than v2: it says <em>why</em> it's different. The manifest already exists; making it the compatibility contract costs one CI step and gives integrations the guarantee they actually need: what worked yesterday works tomorrow.</p>
+<p><strong>Consequences.</strong> The manifest baseline file lives in the repo and is updated deliberately (reviewed like a public API change). External partners can be pointed at the manifest/OpenAPI diff as a changelog.</p>
+<p><strong>Revisit when.</strong> A paid external API with contractual SLAs needs long-lived parallel majors — then introduce explicit versioning <em>at the HTTP binding layer only</em>, never in the operation model.</p>
+<hr />
+<h2 id="d5-real-time-collaboration-out-of-scope-ship-change-notification-stale-form-signaling-instead">D5 — Real-time collaboration: out of scope; ship change-notification + stale-form signaling instead<a class="headerlink" href="#d5-real-time-collaboration-out-of-scope-ship-change-notification-stale-form-signaling-instead" title="Permanent link">&para;</a></h2>
+<p><strong>Decision.</strong> Presence, live co-editing, field locking, and CRDT-style sync are <strong>non-goals</strong> (added to <a href="../01-overview/">01-overview.md</a>). What v1 ships instead, cheaply, on machinery that already exists:</p>
+<ol>
+<li><strong>Entity-change notifications</strong>: the effects pipeline (<a href="../09-envelope-and-effects/">09-envelope-and-effects.md</a>) already knows what changed; publish per-entity change events over one SSE/SignalR channel, tenant- and permission-filtered.</li>
+<li><strong>Stale-form signaling</strong>: an open form subscribed to its record shows "this order was changed by Anna (orders.edit-details) — review changes" with a refresh affordance that rebases untouched fields automatically (the three-way merge logic, run client-side against the fresh snapshot).</li>
+<li><strong>Grid/cache invalidation</strong> from the same channel — no polling.</li>
+</ol>
+<p><strong>Why.</strong> The conflict model already makes concurrent editing <em>safe</em>; the collision rate in back-office field-service work makes live cursors a luxury. Real-time co-editing is a product in itself (operational transforms/CRDTs, presence infrastructure) and would violate the minimalism the non-goals defend. Notification-plus-merge delivers ~90% of the perceived value — "I'm not editing blind" — at ~5% of the cost, and every piece of it (effects, findings, merge) is already on the roadmap.</p>
+<p><strong>Consequences.</strong> One realtime transport enters the stack (SSE preferred over WebSockets for simplicity; SignalR acceptable if mobile needs it). Effects gain a <code>Notify</code> fan-out consumer in Phase 4–5. Nothing in the form runtime assumes liveness — offline/mobile still works.</p>
+<p><strong>Revisit when.</strong> A concrete workflow shows sustained same-record contention (e.g. dispatcher teams hammering one planning board). Even then, the answer is likely per-feature (a purpose-built board view) rather than generic co-editing.</p>
+<hr />
+<h2 id="d6-localization-no-display-text-in-code-ever">D6 — Localization: no display text in code, ever<a class="headerlink" href="#d6-localization-no-display-text-in-code-ever" title="Permanent link">&para;</a></h2>
+<p><strong>Decision.</strong> All human-readable text — labels, finding messages, descriptions, enum display names — is authored in per-culture resource files and referenced from code by key; an analyzer (<code>L10N000</code>) makes a hardcoded display string a build error. Keys are derived by convention (author-once: entity members and semantic types own their label keys; inputs, columns, and forms inherit them). Finding factories carry a stable code plus structured args; the code is the message key. Catalogs compile into the manifest per culture: the server resolves messages in the request culture for headless callers (agents, integrations), and clients re-render locally from code + args — required for offline and client-side portable derivations. Default-culture coverage is a build gate (<code>L10N001</code>); other cultures produce CI completeness reports (<code>L10N002</code>). English is not special — the default culture is configuration. Full design: <a href="../21-localization/">21-localization.md</a>.</p>
+<p><strong>Why.</strong> Retrofitting localization is the classic framework regret: it changes the shape of <code>Finding</code>, the label model, and every generated schema. Deciding it before Phase 1 costs a design doc; deciding it after Phase 3 costs a rewrite. The multi-culture requirement is real from day one for a Nordic-market product.</p>
+<p><strong>Consequences.</strong> <code>Finding</code> carries <code>Args</code> and a boundary-resolved <code>Message</code>. <code>Tam.Compiler</code> gains catalog merging and the <code>L10N###</code> rules; the registry gains <code>EXT006</code>. Locale files are reviewable product surface in every application repository.</p>
+<p><strong>Revisit when.</strong> Never, realistically — the rule only gets more valuable as surfaces multiply.</p>
+<hr />
+<h2 id="d7-filtering-is-declared-not-implemented-per-view">D7 — Filtering is declared, not implemented per view<a class="headerlink" href="#d7-filtering-is-declared-not-implemented-per-view" title="Permanent link">&para;</a></h2>
+<p><strong>Decision.</strong> <code>Capabilities.Filterable(field)</code> is the <em>single</em> authored fact for standard filtering: the framework composes typed equality predicates over the view's result projection (EF pushes them into SQL through the projection), grids render filter controls from the same declaration, and tenant extension fields filter mechanically via <code>ext.{key}</code> parameters. Query records carry only authored query logic the framework cannot derive — free-text search, cross-entity predicates — and shrink accordingly.</p>
+<p><strong>Why.</strong> The previous shape authored one decision twice: the capability declaration <em>and</em> a Query-record member plus hand-written <code>Where</code>. Worse, it structurally excluded tenant custom fields from filtering, since runtime-defined fields cannot appear in a compiled record. Mechanical read-side filtering over an authored projection, bounded by declared capabilities, is not the "generic CRUD" the non-goals forbid — the projection and the capability list are still the developer's authored decisions.</p>
+<p><strong>Consequences.</strong> Standard filters cost one declaration, and the declaration now yields every operator the field's type supports: equality everywhere, inclusive <code>from</code>/<code>to</code> ranges for dates, numbers and ordinal strings, <code>contains</code> for strings (see the operator table in <a href="../04-views/">04-views.md</a>). Grid controls derive from the same wire kinds the server derives operators from. Anything richer extends the portable Px AST — never a string-parsed expression DSL; user input must only ever become constants, not expression structure. Extension-field filtering currently matches string-typed fields via canonical-JSON containment; promoted expression indexes remain the performance path, and numeric extension filters await real JSON translation.</p>
+<p><strong>Revisit when.</strong> A view needs a filter the mechanism can't express — which is precisely what the Query record remains for.</p>
+<hr />
+<h2 id="d8-packaged-extensibility-compiled-plugins-declarative-tenant-channel-never-tenant-code">D8 — Packaged extensibility: compiled plugins + declarative tenant channel, never tenant code<a class="headerlink" href="#d8-packaged-extensibility-compiled-plugins-declarative-tenant-channel-never-tenant-code" title="Permanent link">&para;</a></h2>
+<p><strong>Decision.</strong> Extensibility beyond single custom fields comes in two packaged forms with an explicit trust boundary between them (<a href="../22-plugins/">22-plugins.md</a>):</p>
+<ol>
+<li><strong>Plugins are compiled, namespaced modules</strong> (<code>[TamPlugin("inspect")]</code>) built by the product team or vetted partners, bound at host build time, and <strong>activated per tenant as runtime data</strong>. They contribute entities, operations, views, bindings, packaged extension fields on host entities, gates (typed preconditions) on host operations, effect subscribers, locales, and permissions — all through the same public seams the host uses, all namespace-prefixed (<code>PLG###</code> diagnostics), all D4-baseline-checked. The effective manifest omits inactive plugins' contributions entirely.</li>
+<li><strong>Everything a tenant authors is data, never code</strong>: tenant packages (bundled fields/roles/rules installed atomically with registry validation and dry-run), later custom objects (registry-defined entities with generated standard operations flowing through the real pipeline), and automation rules (Px-AST conditions + a closed action catalog). No tenant-uploaded scripts, no sandbox, no per-tenant compilation.</li>
+</ol>
+<p><strong>Why.</strong> The Salesforce comparison decomposes into pillars, and each pillar has a cheap seat on machinery Tam already has: managed packages → assemblies + the source generator + manifest overlay; custom fields at scale → the registry serialized; custom objects → the JSONB channel generalized to a document; validation rules/flows → the Px AST plus effects. The one pillar that does not transfer cheaply is Apex, and cloning it would cost the properties the framework exists for — static analyzability, the L10N/D4 gates, a manifest you can trust. The graduation path already answers "the tenant outgrew declarative."</p>
+<p><strong>Consequences.</strong> The extension overlay gains origins (compiled / plugin / tenant) with key prefixes; the pipeline gains a gate stage and per-tenant activation checks; the registry compiler grows package/object/rule validation (<code>RUL###</code>). Custom objects wait on typed JSON predicates, index promotion, and D2's RLS.</p>
+<p><strong>Revisit when.</strong> A partner ecosystem genuinely needs to ship logic without a host redeploy — the first answer is external apps over the integration channel (scoped actors + API + outbox webhooks, the marketplace's third tier); the researched escalation for hot-path in-process logic is a capability-based WebAssembly sandbox (fuel-metered, data-in/data-out, host functions only — see the trust-boundary section of <a href="../22-plugins/">22-plugins.md</a>). Never raw tenant assemblies in-process: modern .NET has no isolation for them.</p>
+<hr />
+<h2 id="d9-cross-domain-plugins-contribution-seams-into-surfaces-you-dont-own">D9 — Cross-domain plugins: contribution seams into surfaces you don't own<a class="headerlink" href="#d9-cross-domain-plugins-contribution-seams-into-surfaces-you-dont-own" title="Permanent link">&para;</a></h2>
+<p><strong>Decision.</strong> A plugin extends ANOTHER domain (the invoicing-over-orders case) through declared, build-validated, wire-key contributions — never host CLR types, never host edits beyond the storage opt-in (<a href="../31-cross-domain-plugins/">31-cross-domain-plugins.md</a>): grid ACTION contributions with declared input↔column binds (D-X1, PLG006), a plugin-scoped packaged-field WRITER with structural prefix/declaration enforcement and plugin-attributed audit (D-X2), and declared read dependencies on host VIEWS (<code>RequiresView</code>, D-X3, PLG008) backed by a two-mode reader (actor mode in requests; service mode in effect handlers, restricted to the declared list). Detail-page slots and event contracts are phase 2 (D-X4/D-X5).</p>
+<p><strong>Why.</strong> The existing seams (entities, gates, subscribers, packaged fields, nav) cover the back half of a cross-domain story; the front half — appearing INSIDE the host's surfaces and writing the fields you declared — had no sanctioned path, so real plugins would either fork host grids or reach around the trust model (fortnox already casts ViewExecutor out of DI, unblessed). Making the three seams declared model facts keeps the capability manifest derived, not claimed.</p>
+<p><strong>Consequences.</strong> PLG006/PLG008 join the Build() gates; the manifest gains <code>contributedActions</code> per grid and per-plugin <code>requiresViews</code>; audit gains plugin-attributed field changes; <code>samples/invoicing</code> becomes the fourth exemplar and tutorial Step 17.</p>
+<p><strong>Revisit when.</strong> Slots land (with framework-composed pages), or a plugin needs to contribute to another PLUGIN's surface — currently out of scope on purpose.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

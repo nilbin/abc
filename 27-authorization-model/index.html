@@ -1,0 +1,3131 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A model-driven framework for multi-tenant business applications (.NET + React)">
+      
+      
+      
+        <link rel="canonical" href="https://nilbin.github.io/abc/27-authorization-model/">
+      
+      
+        <link rel="prev" href="../26-tenancy-hierarchy-and-identity/">
+      
+      
+        <link rel="next" href="../28-assignment-and-grouping/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>27 — Authorization Model: Capability × Data Scope - Tam — Typed Application Model</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#27-authorization-model-capability-data-scope" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Tam — Typed Application Model" class="md-header__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tam — Typed Application Model
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              27 — Authorization Model: Capability × Data Scope
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tam — Typed Application Model" class="md-nav__button md-logo" aria-label="Tam — Typed Application Model" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tam — Typed Application Model
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/nilbin/abc" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: A Complete Feature, End to End
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-00/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 0 — A new host from nothing (BUILT — samples/erp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 1 — Domain state (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 2 — The create operation (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 3 — Derivations: reactive form behavior, written once (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 4 — Bindings: one per boundary that differs (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 5 — The list: a view and its grid (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 6 — Editing: partial, conflict-safe (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 7 — Completing: an intent, not an edit (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 8 — What the machine callers see (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 9 — The tenant adds a custom field. Nobody deploys anything. (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 10 — The integration is a mapping, not a sync engine (BUILT — samples/fortnox)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-11/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 11 — Tests exercise the contract, not the plumbing (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-12/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 12 — Six months later: change impact (BUILT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-13/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 13 — A partner ships a plugin (implemented — 22-plugins.md, decision D8; running in samples/inspect)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-14/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 14 — Who is asking, and what have they paid for (implemented — 24-subscriptions.md)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-15/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 15 — Norrservice becomes a group (implemented — 26 + 27)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-16/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 16 — Approvals arrive as a plugin — and the domains never notice (BUILT — the seams and the package, samples/approvals)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-17/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 17 — Invoicing arrives as a plugin — and Orders still doesn't know (BUILT — 31-cross-domain-plugins.md, samples/invoicing)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/step-18/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step 18 — The composed UI: nav, pages, slots, and the subtree grid (BUILT — 30-navigation.md, 32-pages.md, docs/26 D-H1)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/tally/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The tally
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Foundations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Foundations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — Overview and Principles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-domain-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Domain State
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Views
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-derivations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — Derivations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-partial-edits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    07 — Partial and Conflict-Safe Edits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    08 — Validation Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-envelope-and-effects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    09 — Execution Envelope and Effects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-compiler-and-manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12 — Compiler and Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-frontend-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 — Frontend Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-database-and-ef-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 — Database and EF Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-localization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 — Localization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensibility
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Extensibility
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-extensibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 — Tenant Extensibility and Custom Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 — Plugins: Packaged Extensibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../31-cross-domain-plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    31 — Cross-domain plugins: extending a domain you don't own
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-custom-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 — Custom Objects (Plugin System P4)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-subscriptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 — Subscriptions, Seats &amp; Entitlements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10 — External Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-external-integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 — External Integrations: Outbound, Scheduled, Event-Triggered, with a Vault
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-mcp-and-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 — MCP and Agent Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../37-variability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    37 — Variability: it's just plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenancy & security
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tenancy & security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-tenancy-hierarchy-and-identity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 — Hierarchical Tenants, Cross-Tenant Users, and Who Owns the Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 — Authorization Model: Capability × Data Scope
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 — Authorization Model: Capability × Data Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this fixes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The layers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#axis-1-capability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Axis 1 — Capability
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Axis 1 — Capability">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resources-declare-actions-access-levels-bundle-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resources declare actions; access levels bundle them
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#field-visibility-opt-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field visibility (opt-in)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#axis-2-data-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Axis 2 — Data scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Axis 2 — Data scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retired-access-policies-as-a-second-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RETIRED: access policies as a second registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enforcement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-hierarchy-write-model-settled-grants-fan-out-writes-fan-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The hierarchy write model (settled): grants fan out, writes fan in
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The hierarchy write model (settled): grants fan out, writes fan in">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implementation-notes-settled-at-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation notes (settled at review)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-binds-to-identity-docs26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it binds to identity (docs/26)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backward-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backward compatibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-settled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions (settled)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sequencing-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sequencing note
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../28-assignment-and-grouping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    28 — Assignment &amp; Grouping: domain by default, one closed scope set, plugins for the rest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../33-rls-backstop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    33 — The RLS backstop: PostgreSQL row-level security under the EF filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../35-reach/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    35 — Reach: who an object-side grant may name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../36-documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    36 — Documents: folders, files, and the first reach consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI composition
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    UI composition
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../30-navigation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    30 — Navigation: a declared tree, slotted levels, modes, and a tenant overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../32-pages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    32 — Framework-composed pages: the list-and-detail shape leaves app code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Process
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Process
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 — Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../29-code-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    29 — Code structure: the repo map and where things go
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../40-operation-input-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    40 — Operations own the input contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../38-tooling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    38 — Tooling: keeping the committed artifacts current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../34-field-service-domain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    34 — The field-service domain: stress-testing Tam as a consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-packages-and-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 — Package Structure and Repository Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-implementation-phases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 — Initial Implementation Order
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-success-criteria/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 — Success Criteria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../review-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review Notes — Risks, Refinements, Open Questions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this fixes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The layers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#axis-1-capability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Axis 1 — Capability
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Axis 1 — Capability">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resources-declare-actions-access-levels-bundle-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resources declare actions; access levels bundle them
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#field-visibility-opt-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field visibility (opt-in)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#axis-2-data-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Axis 2 — Data scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Axis 2 — Data scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retired-access-policies-as-a-second-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RETIRED: access policies as a second registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enforcement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-hierarchy-write-model-settled-grants-fan-out-writes-fan-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The hierarchy write model (settled): grants fan out, writes fan in
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The hierarchy write model (settled): grants fan out, writes fan in">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implementation-notes-settled-at-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation notes (settled at review)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-binds-to-identity-docs26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it binds to identity (docs/26)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backward-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backward compatibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-settled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions (settled)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sequencing-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sequencing note
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="27-authorization-model-capability-data-scope">27 — Authorization Model: Capability × Data Scope<a class="headerlink" href="#27-authorization-model-capability-data-scope" title="Permanent link">&para;</a></h1>
+<h2 id="what-this-fixes">What this fixes<a class="headerlink" href="#what-this-fixes" title="Permanent link">&para;</a></h2>
+<p>Today authorization is <strong>one axis</strong>: a role is a flat list of permission strings (<code>orders.read</code>,
+<code>customers.create</code>), with a <code>:own</code> suffix bolted on for record ownership and <code>*</code> for "everything".
+That conflates two questions a real access model must answer separately:</p>
+<ol>
+<li><strong>Capability</strong> — <em>what can you do, on which resource type?</em> ("full access to Orders, read-only on
+   Customers, nothing on Billing")</li>
+<li><strong>Data scope</strong> — <em>which rows of that resource can you do it to?</em> ("all customers" vs "only my
+   own" vs "only my region's subtree" vs "only records shared with me")</li>
+</ol>
+<p>These are orthogonal. A dispatcher may <strong>manage</strong> Orders but only their <strong>own</strong>; a regional manager
+may <strong>view</strong> Customers across a whole <strong>subtree</strong>. Collapsing them into one permission list can't
+express that without a combinatorial explosion of strings, and it has no home for row rules beyond
+<code>:own</code>. So Tam gets two independent grouping axes, layered.</p>
+<h2 id="the-layers">The layers<a class="headerlink" href="#the-layers" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>Tenant isolation   → which tenant&#39;s data exists for you at all      (global query filter, done)
+Capability         → which actions on which resource types          (roles / permission sets)   AXIS 1
+Data scope         → which ROWS of a resource each capability hits   (tree scopes + paired atoms) AXIS 2
+Field visibility   → which FIELDS of a row you may read/write        (capability field masks)     (opt-in)
+</code></pre></div>
+<p>A grant is only effective where <strong>all</strong> layers allow it: in-tenant AND capability-granted AND the
+row in scope AND (if masked) the field visible.</p>
+<h2 id="axis-1-capability">Axis 1 — Capability<a class="headerlink" href="#axis-1-capability" title="Permanent link">&para;</a></h2>
+<h3 id="resources-declare-actions-access-levels-bundle-them">Resources declare actions; access levels bundle them<a class="headerlink" href="#resources-declare-actions-access-levels-bundle-them" title="Permanent link">&para;</a></h3>
+<p>Each resource (Order, Customer, …) declares its <strong>actions</strong> — the atoms. CRUD-ish ones (<code>view</code>,
+<code>create</code>, <code>edit</code>, <code>delete</code>) plus domain intents that aren't CRUD (<code>orders.complete</code>, <code>orders.assign</code>).
+The permission strings we have today ARE these atoms; nothing is thrown away.</p>
+<p>On top of the atoms sit <strong>access levels</strong> — ordered presets, so a role is authored ergonomically
+instead of enumerating strings:</p>
+<div class="highlight"><pre><span></span><code>None  &lt;  View  &lt;  Edit  &lt;  Manage
+View   → view, list
+Edit   → View + create, update
+Manage → Edit + delete + the resource&#39;s admin/intent actions (complete, assign, configure fields…)
+</code></pre></div>
+<p>A <strong>role</strong> is then a map <code>resource → level</code> (with the escape hatch of naming individual actions when a
+level is too coarse). "Full Orders, read Customers" is one role: <code>{ Order: Manage, Customer: View }</code>.
+Levels expand to atoms at load time, so enforcement, the manifest, and the analyzer keep working on
+the atom set exactly as today — levels are authoring sugar over a stable substrate.</p>
+<p>Concretely, TODAY's expansion for a <code>{"area": "view"}</code> level entry against paired atoms
+(docs/28 D-AG2): <code>view</code> grants <code>area.read</code> AND <code>area.read-all</code> — a viewer role sees the whole
+board, not just own rows; grant BASE atoms individually when own-scoping is the intent (the
+technician role does exactly that). <code>edit</code> adds <code>area.create/edit/edit-all</code>; <code>manage</code> adds the
+area's intent atoms. When predicting what a role sees, read the level as "the widened tier",
+never the base tier.</p>
+<h3 id="field-visibility-opt-in">Field visibility (opt-in)<a class="headerlink" href="#field-visibility-opt-in" title="Permanent link">&para;</a></h3>
+<p>A resource may mark fields <strong>sensitive</strong> (e.g. <code>Customer.creditInfo</code>). A capability grant then carries
+an optional field mask; a role can grant <code>Customer: View</code> while excluding sensitive fields. Read
+masking drops the field from views/manifest; write masking rejects a <code>Change</code> to it. Off unless a
+resource opts a field in — most resources never need it, and it's pure overhead until they do.</p>
+<p><strong>Implementation shape (built):</strong> the mask is an <strong>atom</strong>, not a per-grant exclusion list —
+<code>[Sensitive("customers.sensitive")]</code> on a field gates it behind that permission, which joins the
+compiled catalogue (so roles grant it; <code>Manage</code> includes it, <code>View</code>/<code>Edit</code> exclude it — exactly
+"View without sensitive fields" from the design, expressed in the existing flat-set substrate).
+Read masking removes the field from the actor's manifest AND from view rows; write masking rejects
+any input carrying the field (<code>pipeline.field-not-authorized</code>), checked on the raw body before
+binding. Equivalent power to per-grant masks with zero new grant machinery.</p>
+<h3 id="composition">Composition<a class="headerlink" href="#composition" title="Permanent link">&para;</a></h3>
+<p>Capability is the <strong>union</strong> across a membership's roles (more roles ⇒ more capability). No deny rules
+(see Decisions) — deny is a footgun that turns "what can this user do" into a constraint-solve.</p>
+<h2 id="axis-2-data-scope">Axis 2 — Data scope<a class="headerlink" href="#axis-2-data-scope" title="Permanent link">&para;</a></h2>
+<p>A <strong>scope</strong> is a declarative row rule attached to a (resource, capability). Kinds, cheapest to richest:</p>
+<ul>
+<li><strong>all</strong> — every row of the <strong>active node</strong> (node-local; today's default). "All" never means the
+  whole tree — tree breadth is what <code>subtree</code>/<code>inherited</code> add explicitly.</li>
+<li><strong>own</strong> — rows the actor owns, expressed as the <strong>paired-atom pattern</strong> (docs/28 D-AG2, TAM006):
+  the base atom (<code>orders.read</code>) is own-scoped by default and the declared <code>-all</code> atom widens.
+  The resource declares what "own" means (<code>ScopedUnless(context, "orders.read-all", selector)</code>)
+  and the write side re-checks with <code>CheckOwnershipUnless</code>. Row reach is thereby CAPABILITY —
+  granted through roles like any atom — not a separate registry.</li>
+<li><strong>subtree</strong> — rows owned at or <strong>below</strong> the active node in the hierarchy — the <em>downward</em> roll-up
+  (a region manager over all its companies). Implemented as a semi-join against the (tiny) tenants
+  table: <code>row.TenantId IN (SELECT Id FROM tenants WHERE Path LIKE active.Path || '%')</code> — rows carry
+  only <code>TenantId</code>; <strong>no per-row path denormalization</strong> (see "Implementation notes" below).</li>
+<li><strong>inherited</strong> — rows owned at or <strong>above</strong> the active node — the <em>upward</em> read of shared/reference
+  data that is owned high and used by every leaf below it (a group-level price list or master catalog
+  every company reads). Cheaper still: the active node's ancestor ids are enumerable from its own
+  path, so this is a <strong>bounded <code>row.TenantId IN (ancestor ids)</code> list</strong> — no LIKE at all. Only ever
+  exposes the active node's <em>own</em> ancestors' rows, never a sibling subtree, so isolation holds.</li>
+<li>~~<strong>where(attribute)</strong>~~ / ~~<strong>shared</strong>~~ — SETTLED OUT (<a href="../28-assignment-and-grouping/">docs/28</a>
+  D-AG1/D-AG2): attribute predicates and per-record grants require subject-side facts the framework
+  does not own (regions, teams, share edges are domain data), so they are <strong>domain patterns</strong> —
+  assignment tables keyed by <code>actor.Id</code> with one predicate enforced on both read and write — never
+  policy scope kinds. The set above is closed.</li>
+</ul>
+<p>Scope is <strong>per (resource, capability)</strong>, so "view all Orders but manage only your own" is two grants
+on the same resource — the base atoms plus, or minus, the widening atoms.</p>
+<h3 id="retired-access-policies-as-a-second-registry">RETIRED: access policies as a second registry<a class="headerlink" href="#retired-access-policies-as-a-second-registry" title="Permanent link">&para;</a></h3>
+<p>An earlier revision grouped scopes into named <strong>access policies</strong> assigned per membership (a v1 for
+<code>all</code>|<code>own</code> was built and wire-verified). It was retired (<a href="../28-assignment-and-grouping/">docs/28</a>):
+policy-authored <code>own</code> structurally could not be made fail-closed — whether a grant carried the scope
+was runtime data no analyzer could tie to per-view discipline, so a policy toggled over an
+undisciplined resource silently showed every row. The paired-atom pattern gives the tenant admin the
+same runtime power (grant a role with or without the widening atom) while TAM006 verifies at compile
+time that every view over a widened resource applies its scope. One axis fewer; fail-closed by
+construction.</p>
+<h3 id="enforcement">Enforcement<a class="headerlink" href="#enforcement" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Reads</strong>: <code>ScopedUnless(context, wideningAtom, owner)</code> — one line per view; <code>subtree</code>/<code>inherited</code>
+  are the per-view tree declarations; domain assignment predicates (docs/28) join through domain
+  tables the same way.</li>
+<li><strong>Writes</strong>: <code>CheckOwnershipUnless(wideningAtom, ownerId)</code> re-checks authoritatively on the target
+  row — a stale/forged id can't escape scope.</li>
+<li><strong>Compile time</strong>: TAM006 requires the widening atom to be declared (<code>[Widens]</code> → catalogue) and
+  every view on the base atom to apply the scope.</li>
+</ul>
+<h2 id="the-hierarchy-write-model-settled-grants-fan-out-writes-fan-in">The hierarchy write model (settled): grants fan out, writes fan in<a class="headerlink" href="#the-hierarchy-write-model-settled-grants-fan-out-writes-fan-in" title="Permanent link">&para;</a></h2>
+<p>This is the model chosen after a design review (prior-art + formal + implementation + UX). It is the
+answer to "how do capability and create-target behave across the tenant tree."</p>
+<p><strong>Reads and grants fan <em>out</em> over the tree; every write fans <em>in</em> to one node.</strong> Formally: a read or
+update targets an <em>existing</em> row, so its owning tenant is read off the row — always total and
+unambiguous. A create targets a row that does not exist yet, so its tenant is a free variable that
+must be <em>bound</em>; data-scope (a predicate over existing rows) cannot bind it. Therefore:</p>
+<ul>
+<li><strong>Create-target invariant.</strong> Every create fans in to exactly <strong>one explicit target node</strong>, and the
+  row is stamped with it; the target is <strong>never inferred from a rolled-up read view</strong>. Eligibility is a
+  <strong>capability</strong> question, not a data-scope one: data-scope is a predicate over <em>existing</em> rows and is
+  vacuous at create time, so the eligible-target set is <code>{ t : create ∈ Cap_eff(t) }</code> — the nodes where
+  the actor's (cascaded) capability grants create. The target is an explicit input that <strong>defaults to
+  the active node</strong>:</li>
+<li>Single-node actor (create capability only at the active node): the target <em>is</em> the active node,
+    no prompt — a leaf worker never sees a chooser.</li>
+<li>Subtree actor (an admin holding a cascading <code>X.create</code> at/above the active node): the create form
+    surfaces a <strong>target-node field</strong> — a lookup over the eligible targets within the active subtree —
+    so they create an order <strong>in a sub-company without switching active company</strong> (the Azure "pick the
+    resource group" / GitHub "pick the owner" pattern). The server validates the chosen target against
+    the capability cascade and rejects a forged/out-of-scope target.</li>
+</ul>
+<p><strong>The target is the operation's execution tenant, not just a column value.</strong> An operation produces
+  more than the row: audit entries, outbox events/effect broadcasts, idempotency records, and in-form
+  lookups (picking the sub-company's customer) all carry a tenant. If only the row were stamped with
+  target <em>C</em> while the request ran ambient at parent <em>P</em>, the audit would land in <em>P</em>'s trail, the SSE
+  effect would fire on <em>P</em>'s channel (so <em>C</em>'s grids never refresh), the idempotency key would scope to
+  <em>P</em>, and lookups would show <em>P</em>'s data. So: after validating the target, the server <strong>rebinds the
+  ambient tenant scope to the target for the duration of the request</strong> (submit AND the form's
+  resolve/lookup calls carry it). Then the stamp interceptor, audit, outbox, effects, idempotency and
+  lookups all land coherently in <em>C</em> — and no handler hand-writes <code>TenantId</code>, preserving the DRY
+  guarantee the interceptor exists for.</p>
+<p>Capability stays <strong>flat</strong>: <code>X.create</code> is one bit in the manifest ("can create X"), gated once;
+  <em>which</em> nodes are eligible comes from a lookup over the capability cascade — not per-node capability
+  in the manifest. So this does NOT touch the <code>actorPermissions</code> → typed-client → UI-gating chain.
+  What is rejected is per-node create <em>buttons</em> (one gated control per node), which would pluralize
+  that flat set for no gain; the target-as-field keeps it singular. Switching the active node remains
+  available but is never required to create in a node within your cascaded reach.</p>
+<p>Two deliberate asymmetries, stated so they aren't filed as bugs:
+  - <strong>Admin-down ≠ consultant-up.</strong> The no-switch target field appears only when the cascading grant
+    is held <strong>at or above</strong> the active node (capability flows down). The mirror persona — read-only at
+    the parent, full access granted <strong>at a child</strong> — must still switch context to create there,
+    because grants never flow up: standing at the parent, their flat set has no <code>create</code> and no button
+    renders. Consistent, intentional, and the tenant picker offers both contexts at login.
+  - <strong>The target lookup is active-subtree only.</strong> Holding create via an unrelated membership in a
+    sibling tree does not surface that node in the form's picker — creating there is a context switch.
+    A deliberate simplification: one subtree per standpoint.</p>
+<ul>
+<li><strong>Capability across the tree</strong> is the union up the active node's <strong>cascading</strong> ancestor memberships,
+  collapsed to <strong>one flat set</strong> at the active node — so <code>Actor.Can</code>, the manifest, and the UI gating
+  are unchanged (a bigger flat set, nothing more). Grants never flow up; downward flow is opt-in
+  <strong>per role assignment</strong> — a membership carries <code>roles: [{name, cascade}]</code> (D-H5), so one membership
+  can cascade <code>orders-manager</code> to descendants while keeping <code>users-admin</code> node-local. The ancestor
+  walk unions only the cascading assignments (the write-side mirror of <code>subtree</code>).</li>
+</ul>
+<p><strong>Role names resolve in their own tenant.</strong> A membership's role names bind to the role definitions
+  of <strong>that membership's node</strong>, not the active node's. A region membership naming <code>dispatcher</code> means
+  the region's <code>dispatcher</code>; resolving it through the active node's role table (which the global
+  filter would do naively) silently finds nothing and the cascaded grants evaporate. The resolver
+  therefore loads each ancestor membership's roles <strong>tenant-qualified</strong> (bypassing the ambient filter),
+  and role names are <strong>never merged across levels</strong> — a leaf defining its own <code>dispatcher</code> is a
+  different role from the region's; each membership's names bind only to its own node's definitions.</p>
+<ul>
+<li>
+<p><strong>Ownership is at any level, domain-decided — there is no framework "leaf".</strong> Transactional rows
+  (orders) get <code>create</code> capability only at operating nodes; shared reference rows (catalogs) get it
+  only at the group node. A row lives wherever it was created; descendants read shared rows via the
+  <code>inherited</code> scope. "Leaf" (if a domain wants the concept) is <em>a node with no children</em> — computed,
+  never a level number, and it changes as the tree grows.</p>
+</li>
+<li>
+<p><strong>Editing a shared (ancestor-owned) row</strong> happens at its <strong>owner node</strong> — you switch up to manage
+  the group catalog (same fan-in invariant, upward). A manager editing a rolled-up <em>descendant</em> row is
+  the separate opt-in <code>subtree</code>-write case (the write-side scope re-check, net-new alongside <code>own</code>).</p>
+</li>
+<li>
+<p><strong>Dynamic, per-tenant depth</strong> is native to the materialized <code>Path</code> (arbitrary N levels). "Leaf" is
+  never a level number — it is <em>a node with no children</em>, computed, and it changes as the tree grows.
+  Re-parenting a subtree rewrites <code>Path</code> values <strong>in the tenants table only</strong> (see below) — rows are
+  untouched, so a re-org is a small transaction, not a data sweep.</p>
+</li>
+</ul>
+<h3 id="implementation-notes-settled-at-review">Implementation notes (settled at review)<a class="headerlink" href="#implementation-notes-settled-at-review" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>No per-row path denormalization.</strong> Rows carry only <code>TenantId</code>; tree filters go through the
+  (tiny, effectively cached) tenants table. <code>subtree</code> = semi-join on <code>Path LIKE active.Path || '%'</code>;
+  <code>inherited</code> = a bounded <code>TenantId IN (ancestor ids)</code> list computed from the active node's own path.
+  This keeps every row single-tenant-keyed on existing indexes and makes <strong>re-parenting nearly free</strong>:
+  moving a subtree rewrites the moved nodes' <code>Path</code> values in <code>tenants</code> and nothing else.</li>
+<li><strong>The composition rule (found on the wire).</strong> EF's <code>IgnoreQueryFilters</code> is <strong>query-wide</strong>, not
+  per-source: composing one widened source into a query (a join, a subquery over another scoped set)
+  strips the global strict filter from EVERY source in that query — silently returning other tenants'
+  rows. Therefore any query touching a widened source must scope every other <code>ITenantScoped</code> source
+  explicitly (<code>InNode</code> for strict, or its own <code>InSubtree</code>/<code>WithInherited</code>). Single-source widened
+  views are unaffected. <strong>Enforced at compile time as TAM005</strong>: a method-syntax composition
+  (Join/GroupJoin/Concat/Union/Except/Intersect) containing a widened source errors on any
+  ITenantScoped side without an explicit scope call — local variables resolve to their declaration
+  initializer, so a chain scoped at assignment is recognized at the join. (Query-syntax joins are
+  outside the rule; the codebase's are over unscoped registry tables.)</li>
+<li><strong>Cross-node create = ambient rebind.</strong> The validated target node becomes the request's execution
+  tenant (see the create-target invariant above): one mechanism, and audit/outbox/effects/idempotency/
+  lookups stay coherent with the row. No per-handler <code>TenantId</code> assignments.</li>
+<li><strong>Cross-level role resolution is tenant-qualified</strong> (see "Capability across the tree"): each
+  membership's role names load from that membership's node, bypassing the ambient filter; no
+  cross-level name merging.</li>
+<li><strong>Seats vs cascade</strong> (docs/24): a cascading membership consumes <strong>one seat at its attachment node</strong>
+  while reaching its whole subtree — one region membership over 50 companies is one seat. Acknowledged
+  and accepted for now; if pricing should track reach rather than attachment, that is a docs/24 change
+  (e.g. counting cascaded reach), not an authorization change.</li>
+<li><strong>Access policies were BUILT for <code>all</code>|<code>own</code> (v1), then RETIRED</strong> — see "RETIRED: access
+  policies as a second registry" above and docs/28. The paired-atom pattern replaced them:
+  <code>[Widens]</code> atoms in the catalogue, <code>ScopedUnless</code>/<code>CheckOwnershipUnless</code> at the seams, level
+  expansion carrying <code>X-all</code> on X's tier, and TAM006 making the whole pattern fail-closed at
+  compile time. The lesson that survives from the policy round: a runtime-authorable control whose
+  enforcement depends on undetectable per-view discipline is structurally fail-open — prefer
+  encodings an analyzer can verify.</li>
+</ul>
+<h2 id="how-it-binds-to-identity-docs26">How it binds to identity (docs/26)<a class="headerlink" href="#how-it-binds-to-identity-docs26" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>Account ──&lt; TenantMembership(account, tenant) ──── roles   (capability, incl. widening atoms)
+</code></pre></div>
+<p>A membership is the join of an account to a tenant, carrying roles. Different tenants → different
+roles for the same person. The hierarchy (docs/26): a membership attached at a parent node with a
+cascading role is exactly the roll-up a regional manager needs; a membership at a leaf whose role
+carries only base atoms is a line worker (own-scoped by construction). Seats (docs/24) count
+memberships per tenant. The membership is also the documented extension seam: actor resolution
+unions grants across sources, so groups/profiles (docs/28), if ever, add a source — never an axis.</p>
+<h2 id="backward-compatibility">Backward compatibility<a class="headerlink" href="#backward-compatibility" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Today's permission strings remain the atoms; existing roles (flat permission lists) are valid as
+  "explicit action" grants with implicit <code>all</code> scope.</li>
+<li><code>:own</code> becomes the <code>own</code> scope kind; <code>*</code> becomes <code>Manage</code> on every resource with <code>all</code> scope.</li>
+<li>The manifest keeps shipping the actor's effective capability (and now scope) so the UI and typed
+  client keep hiding/showing on it. TAM004-style analyzer rules can later assert every resource
+  declares its actions/levels.</li>
+</ul>
+<h2 id="decisions-settled">Decisions (settled)<a class="headerlink" href="#decisions-settled" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>D-A1 — access levels: YES.</strong> <code>None/View/Edit/Manage</code> presets are the authoring model over the
+  existing permission atoms (sugar; nothing downstream changes).</li>
+<li><strong>D-A2 — row-scope kinds: <code>all</code>, <code>own</code> (as the paired-atom capability pattern), <code>subtree</code>,
+  <code>inherited</code> — CLOSED</strong> (<a href="../28-assignment-and-grouping/">docs/28</a>): the tree scopes are the only
+  ones the framework owns end to end; ownership rides the capability axis (base atom own-scoped,
+  <code>-all</code> atom widens, TAM006-enforced); <code>where</code>/<code>shared</code> are domain patterns; rich
+  grouping/approval systems are plugin territory (tutorial Step 16). The access-policy registry
+  was built for <code>all</code>|<code>own</code> and RETIRED (see implementation notes).</li>
+<li><strong>D-A3 — field-level: FULL now (read + write masking).</strong> Resources opt a field in as sensitive; a
+  grant can hide it from views/manifest (read) AND reject a <code>Change</code> to it (write).</li>
+<li><strong>D-A4 — deny rules: NO.</strong> Union-grant only.</li>
+<li><strong>D-A5 — combination: UNION</strong> across roles and memberships — with row reach as atoms, this is
+  simply capability union (holding any grant of the widening atom widens).</li>
+</ul>
+<h2 id="sequencing-note">Sequencing note<a class="headerlink" href="#sequencing-note" title="Permanent link">&para;</a></h2>
+<p>This rides the identity work (D-H2 = platform-global accounts + memberships), since memberships carry
+both axes. So the build order is: Account + TenantMembership + hierarchy path → this capability/scope
+model on the membership → PKCE issuing account-subject tokens that name the active tenant + resolved
+grants.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
