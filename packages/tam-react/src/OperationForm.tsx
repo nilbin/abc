@@ -55,10 +55,12 @@ export function OperationForm(props: OperationFormProps) {
   const [resolveState, setResolveState] = useState<ResolveResponse | null>(null);
   const [response, setResponse] = useState<OperationResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // Per-field concurrency resolution (Sol re-review round 10, F1). Each conflict is decided on its OWN
-  // row: "use mine" records an override here; "keep current" adopts the server value and records none.
-  // The decisions apply together in ONE retry when the last conflict is resolved — never a global "use
-  // mine" (or a global dismiss) fired from a button visually attached to a single field.
+  // Per-field concurrency resolution (Sol re-review round 10, F1; round 11, F1). Each conflict is decided
+  // on its OWN row, and BOTH choices record an override here rebasing the field's `original` to the
+  // server's current value: "use mine" keeps the user's value (a genuine apply against reality), "keep
+  // current" also adopts the current value so the retry is a true no-op (Original == Value). The
+  // decisions apply together in ONE retry when the last conflict is resolved — never a global "use mine"
+  // (or a global dismiss) fired from a button visually attached to a single field.
   const [pendingConflicts, setPendingConflicts] = useState<FieldConflict[]>([]);
   const conflictOverrides = useRef<Record<string, FieldConflict>>({});
   const resubmitAfterResolve = useRef(false);
@@ -180,6 +182,31 @@ export function OperationForm(props: OperationFormProps) {
     setSubmitting(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.form, props.instanceKey]);
+
+  // Submit + conflict state is EXECUTION-CONTEXT specific too (Sol re-review round 12, F1). An `actAs`
+  // switch deliberately PRESERVES the edit values and frozen baseline (the context-refresh effect below
+  // re-resolves them against the new acting node) — but a pending conflict round and an in-flight submit
+  // were computed against the OLD node. A conflict override carries that node's persisted current values
+  // as fresh merge bases, and an in-flight submit executed against it; neither may resolve or land
+  // against the new node. So on a same-record `actAs` change, invalidate ONLY request/result state —
+  // never the values, touched set or baseline. An identity change is owned by the reset effect above
+  // (which already clears this), so skip it here to avoid a redundant double-invalidation.
+  const submitContext = useRef<{ form: string; instanceKey?: string | number; actAs?: string } | null>(null);
+  useEffect(() => {
+    const prev = submitContext.current;
+    const recordChanged = prev === null
+      || prev.form !== props.form || prev.instanceKey !== props.instanceKey;
+    const actAsChanged = prev !== null && prev.actAs !== props.actAs;
+    submitContext.current = { form: props.form, instanceKey: props.instanceKey, actAs: props.actAs };
+    if (recordChanged || !actAsChanged) return;   // reset effect owns record changes; nothing to do on mount
+    submitSeq.current++;
+    conflictOverrides.current = {};
+    resubmitAfterResolve.current = false;
+    setPendingConflicts([]);
+    setResponse(null);
+    setSubmitting(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.form, props.instanceKey, props.actAs]);
 
   // FULL baseline resolve on mount / form / record switch (Sol re-review, Findings 4 + 2 + 5): a
   // prefilled form must show operation-derived requiredness, lookup descriptors and findings BEFORE

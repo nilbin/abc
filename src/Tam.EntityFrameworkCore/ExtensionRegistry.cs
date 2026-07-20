@@ -78,12 +78,15 @@ public static class ExtensionApplier
             var current = entity.Extensions.Raw(key);
             var semantic = spec.Semantic;
 
-            // No effective change (docs/40): the form submits every INITIALIZED extension change, so an
-            // untouched one arrives with Original == Value — same as a main-entity change field. It
-            // contributes no patch and takes no concurrency check, so extension and main fields share
-            // one concurrency model. FIRST branch, before validation: an untouched persisted value is
-            // already valid and need not be re-checked.
-            if (TamMerge.SemanticallyEqual(semantic, original, submitted)) continue;
+            // No effective change on an EDIT (docs/40): the form submits every INITIALIZED extension
+            // change, so an untouched one arrives with Original == Value — same as a main-entity change
+            // field. It contributes no patch and takes no concurrency check, so extension and main fields
+            // share one concurrency model. FIRST branch, before validation: an untouched persisted value
+            // is already valid and need not be re-checked. This no-op skip is EDIT-ONLY (Sol re-review
+            // round 12, F2): on a CREATE there is no persisted merge base — a prefilled field arrives as
+            // {original: X, value: X} where the submitted X IS the initial state, not an unchanged edit —
+            // so a new entity falls through and applies it below rather than dropping it as a no-op.
+            if (!entityIsNew && TamMerge.SemanticallyEqual(semantic, original, submitted)) continue;
 
             if (submitted is not null)
             {
@@ -155,4 +158,42 @@ public static class ExtensionApplier
 
     private static object? FromElement(JsonElement? element) =>
         element is { } e ? ExtensionData.FromElement(e) : null;
+
+    /// <summary>The chosen extension write plan over the tracked extensible instances (Sol re-review
+    /// round 12, F3). <see cref="Run"/> is false when there is nothing to do. <see cref="Ambiguous"/>
+    /// means fail closed with <c>pipeline.ambiguous-extension-target</c>. Otherwise
+    /// <see cref="TargetIndex"/> (into the caller's candidate list) receives the patch, applied with
+    /// <see cref="IsNewTarget"/> semantics.</summary>
+    public readonly record struct ExtensionWritePlan(bool Run, bool Ambiguous, int TargetIndex, bool IsNewTarget);
+
+    /// <summary>Decide which tracked extensible instance receives the submitted extension patch, and
+    /// whether the run must fail closed — pure over EF <see cref="EntityState"/>s so it is unit-testable
+    /// (Sol re-review round 12, F3). Target: the sole tracked instance, else the sole Added/Modified one,
+    /// else none. Required-create validation must NOT hinge on selecting that single target: when several
+    /// NEW extensible rows are tracked (or one new plus a modified sibling) we can neither attribute the
+    /// patch nor guarantee each row's required fields, so we fail CLOSED rather than let required
+    /// validation silently disappear. The write "work" is the COMPLETE submitted set for a new target
+    /// (its Value is initial state — round 12, F2) or the effective patch for an existing one.</summary>
+    public static ExtensionWritePlan PlanWrite(
+        IReadOnlyList<EntityState> states, bool hasRequiredActive, int changeCount, int effectiveCount)
+    {
+        var addedCount = 0;
+        var writtenCount = 0;
+        var writtenIndex = -1;
+        for (var i = 0; i < states.Count; i++)
+        {
+            if (states[i] == EntityState.Added) addedCount++;
+            if (states[i] is EntityState.Added or EntityState.Modified) { writtenCount++; writtenIndex = i; }
+        }
+        var targetIndex = states.Count == 1 ? 0 : writtenCount == 1 ? writtenIndex : -1;
+        var isNewTarget = targetIndex >= 0 && states[targetIndex] == EntityState.Added;
+
+        var requiredCreateNeedsCheck = hasRequiredActive && addedCount > 0;
+        var work = isNewTarget ? changeCount : effectiveCount;
+        if (work <= 0 && !requiredCreateNeedsCheck) return new(false, false, -1, isNewTarget);
+
+        var ambiguous = (requiredCreateNeedsCheck && addedCount > 1)
+            || (targetIndex < 0 && states.Count > 1);
+        return new(true, ambiguous, ambiguous ? -1 : targetIndex, isNewTarget);
+    }
 }

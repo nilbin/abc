@@ -1,5 +1,7 @@
 using Erp;
 using Erp.Features;
+using Microsoft.EntityFrameworkCore;
+using Tam;
 using Tam.Testing;
 
 namespace Erp.Tests;
@@ -35,7 +37,18 @@ public sealed class RequiredExtensionTests : IAsyncLifetime
             labels = new Dictionary<string, string> { ["sv"] = "Garantiref", ["en"] = "Warranty ref" },
             required = true,
         })).ShouldSucceed();
+        (await admin.ExecuteAsync("extensions.define-field", new
+        {
+            entity = "order",
+            key = "note",
+            type = "text",
+            labels = new Dictionary<string, string> { ["sv"] = "Notering", ["en"] = "Note" },
+        })).ShouldSucceed();
     }
+
+    private Task<ExtensionData> ExtensionsOf(Guid id) =>
+        host.QueryDbAsync("demo", db => db.Orders
+            .Where(o => o.Id == new OrderId(id)).Select(o => o.Extensions).SingleAsync());
 
     public async Task DisposeAsync() => await host.DisposeAsync();
 
@@ -70,6 +83,34 @@ public sealed class RequiredExtensionTests : IAsyncLifetime
         var actor = host.Actor("demo", "orders.create");
         var body = CreateBody(new { warrantyRef = new { original = (string?)null, value = "W-123" } });
         (await actor.ExecuteAsync("orders.create", body)).ShouldSucceed();
+    }
+
+    [Fact]
+    public async Task Create_persists_a_prefilled_required_field_sent_as_original_equals_value()
+    {
+        // A prefilled create form freezes the same value as baseline AND current, so a required field can
+        // arrive as {original: W-9, value: W-9} (Sol re-review round 12, F2). The edit-style effective
+        // patch would drop it as a no-op, failing required or losing the value; a CREATE must apply it.
+        var actor = host.Actor("demo", "orders.create");
+        var created = await actor.ExecuteAsync("orders.create",
+            CreateBody(new { warrantyRef = new { original = "W-9", value = "W-9" } }));
+        created.ShouldSucceed();
+        Assert.Equal("W-9", (await ExtensionsOf(created.Output<CreateOrder.Output>().OrderId.Value)).Get<string>("warrantyRef"));
+    }
+
+    [Fact]
+    public async Task Create_persists_a_prefilled_optional_field_sent_as_original_equals_value()
+    {
+        // The optional twin: {original: N-1, value: N-1} on an OPTIONAL field has no required-active spec
+        // to force processing, so before the fix the prefilled value was silently discarded.
+        var actor = host.Actor("demo", "orders.create");
+        var created = await actor.ExecuteAsync("orders.create", CreateBody(new
+        {
+            warrantyRef = new { original = (string?)null, value = "W-1" },
+            note = new { original = "N-1", value = "N-1" },
+        }));
+        created.ShouldSucceed();
+        Assert.Equal("N-1", (await ExtensionsOf(created.Output<CreateOrder.Output>().OrderId.Value)).Get<string>("note"));
     }
 
     [Fact]

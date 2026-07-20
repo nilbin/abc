@@ -338,43 +338,33 @@ public sealed class OperationExecutor(
                 ?? new EfExtensionRegistry(db);
             var specs = await registry.For(context.TenantId, TamModel.EntityKey(extensibleType), ct);
 
-            // Complete-state submission sends every initialized extension field, so an edit carries
-            // unchanged ones. Reduce to the real patch first (Sol re-review round 10, F2): with no
-            // effective extension change there is normally NO target lookup and NO ambiguity check — an
-            // unrelated edit isn't blocked by ambiguous-extension-target just because complete state
-            // carried unchanged extension values.
-            var effective = ExtensionApplier.EffectivePatch(changes, specs);
-
             // Deterministic target, never a guess: with ONE tracked instance of the extensible type it is
             // the target; with several (a handler that also loaded sibling rows) the single Added/Modified
             // one is; anything else fails CLOSED — silently writing onto whichever row happened to be
-            // tracked first would be cross-record corruption.
+            // tracked first would be cross-record corruption. Create and edit have DIFFERENT extension
+            // semantics (Sol re-review round 12, F2): for a CREATE the submitted Value IS the initial
+            // state, so a new target applies the COMPLETE submitted dictionary — the edit-style
+            // EffectivePatch would wrongly drop a prefilled {original: X, value: X} as a no-op. Required
+            // validation on a new row must not hinge on selecting the single write target (round 12, F3);
+            // PlanWrite folds all of this into one pure, unit-tested decision.
             var candidates = db.ChangeTracker.Entries()
                 .Where(e => extensibleType.IsInstanceOfType(e.Entity))
                 .ToList();
-            var written = candidates
-                .Where(e => e.State is EntityState.Added or EntityState.Modified)
-                .ToList();
-            var tracked = candidates.Count == 1 ? candidates[0]
-                : written.Count == 1 ? written[0]
-                : null;
+            var effective = ExtensionApplier.EffectivePatch(changes, specs);
+            var hasRequiredActive = specs.Any(s => s is { Required: true, State: ExtensionFieldState.Active });
+            var plan = ExtensionApplier.PlanWrite(
+                candidates.Select(e => e.State).ToList(), hasRequiredActive, changes.Count, effective.Count);
 
-            // A newly created extensible row must satisfy its required extension fields even when the
-            // client sent no effective patch — an omitted extensions channel, or {original:null,
-            // value:null} for the required field, both reduce to an empty effective patch (round 11, F2).
-            // Apply's entityIsNew branch is the single place that enforcement lives; run it for a create
-            // with any required active spec so the check can't be skipped by simply omitting the field.
-            var mustValidateNew = tracked is { State: EntityState.Added }
-                && specs.Any(s => s is { Required: true, State: ExtensionFieldState.Active });
-
-            if (effective.Count > 0 || mustValidateNew)
+            if (plan.Run)
             {
-                if (tracked is null && candidates.Count > 1)
-                    findings.Add(PipelineFindings.AmbiguousExtensionTarget.Create());
-                if (tracked?.Entity is IExtensible extensible)
+                if (plan.Ambiguous)
                 {
-                    var applied = ExtensionApplier.Apply(
-                        extensible, tracked.State == EntityState.Added, effective, specs);
+                    findings.Add(PipelineFindings.AmbiguousExtensionTarget.Create());
+                }
+                else if (plan.TargetIndex >= 0 && candidates[plan.TargetIndex].Entity is IExtensible extensible)
+                {
+                    var toApply = plan.IsNewTarget ? changes : effective;
+                    var applied = ExtensionApplier.Apply(extensible, plan.IsNewTarget, toApply, specs);
                     findings.AddRange(applied.Findings);
                     conflicts.AddRange(applied.Conflicts);
                 }

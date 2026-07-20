@@ -276,4 +276,68 @@ describe('OperationForm resolve lifecycle', () => {
     // Its onSuccess must NOT fire for the record the user has moved on from.
     expect(onSuccess).not.toHaveBeenCalled();
   });
+
+  it('a submit that succeeds after an actAs switch does not fire onSuccess for the old node (round 12, F1)', async () => {
+    const client = makeClient();
+    let resolveFirst: (v: unknown) => void = () => {};
+    client.operation.mockImplementationOnce(() => new Promise(res => { resolveFirst = res; }));
+    const onSuccess = vi.fn();
+
+    const view = renderForm(client, {
+      form: 'form.twofield', instanceKey: 'x', actAs: 'tenant-A',
+      initialValues: { description: 'A', budget: 'b' }, onSuccess,
+    });
+    const inputs = () => Array.from(document.querySelectorAll('input')) as HTMLInputElement[];
+    await waitFor(() => expect(inputs()).toHaveLength(2));
+    fireEvent.change(inputs()[0], { target: { value: 'A2' } });
+    fireEvent.click(document.querySelector('button')!);
+    await waitFor(() => expect(client.operation).toHaveBeenCalledTimes(1));
+
+    // Switch the ACTING NODE (same record) while the submit is in flight — edits are preserved, but the
+    // submit executed against tenant-A and must not land on tenant-B.
+    view.rerender(
+      <MantineProvider>
+        <TamContext.Provider value={ctxFor(client)}>
+          <OperationForm form="form.twofield" instanceKey="x" actAs="tenant-B" initialValues={{ description: 'A', budget: 'b' }} onSuccess={onSuccess} />
+        </TamContext.Provider>
+      </MantineProvider>,
+    );
+    resolveFirst({ findings: [], effects: [], conflicts: [] });
+    await Promise.resolve();
+    await waitFor(() => expect(inputs()).toHaveLength(2));
+    expect(onSuccess).not.toHaveBeenCalled();
+    // Edits survive the acting-node switch (the context-refresh contract).
+    expect(inputs()[0].value).toBe('A2');
+  });
+
+  it('an open conflict round is cleared when actAs changes, edits preserved (round 12, F1)', async () => {
+    const client = makeClient();
+    client.operation.mockResolvedValueOnce({
+      findings: [], effects: [], conflicts: [
+        { field: 'description', originalValue: 'A', currentValue: 'srvA', submittedValue: 'A2' },
+      ],
+    });
+    const view = renderForm(client, {
+      form: 'form.twofield', instanceKey: 'x', actAs: 'tenant-A', initialValues: { description: 'A', budget: 'b' },
+    });
+    const inputs = () => Array.from(document.querySelectorAll('input')) as HTMLInputElement[];
+    await waitFor(() => expect(inputs()).toHaveLength(2));
+    fireEvent.change(inputs()[0], { target: { value: 'A2' } });
+    const conflictButtons = () => Array.from(document.querySelectorAll('button'))
+      .filter(b => b.textContent === 'concurrency.use-mine' || b.textContent === 'concurrency.keep-current');
+    fireEvent.click(document.querySelector('button')!);
+    await waitFor(() => expect(conflictButtons()).toHaveLength(2));
+
+    // A conflict override rebases against tenant-A's persisted values; it cannot cross an acting-node
+    // boundary, so switching actAs clears the conflict round while keeping the user's edits.
+    view.rerender(
+      <MantineProvider>
+        <TamContext.Provider value={ctxFor(client)}>
+          <OperationForm form="form.twofield" instanceKey="x" actAs="tenant-B" initialValues={{ description: 'A', budget: 'b' }} />
+        </TamContext.Provider>
+      </MantineProvider>,
+    );
+    await waitFor(() => expect(conflictButtons()).toHaveLength(0));
+    expect(inputs()[0].value).toBe('A2');
+  });
 });

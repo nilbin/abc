@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Tam;
 using Tam.EntityFrameworkCore;
 
@@ -208,5 +209,107 @@ public class ExtensionApplierTests
         var result = ExtensionApplier.Apply(thing, true,
             new Dictionary<string, ExtensionChange>(), [Spec(required: true)]);
         Assert.Contains(result.Findings, f => f.Code == "validation.required");
+    }
+
+    [Fact]
+    public void A_new_entity_applies_a_prefilled_value_that_looks_like_an_edit_no_op()
+    {
+        // On a CREATE the submitted Value IS the initial state, even when it arrives as {original: X,
+        // value: X} — a prefilled create form freezes the same value as baseline and current (Sol
+        // re-review round 12, F2). Apply's Original == Value skip is edit-only, so the value persists
+        // rather than silently vanishing.
+        var thing = new Thing();
+        var result = ExtensionApplier.Apply(thing, true,
+            Changes("machineSerialNumber", "MX-9", "MX-9"), [Spec()]);
+        Assert.Empty(result.Findings);
+        Assert.Equal("MX-9", thing.Extensions.Get<string>("machineSerialNumber"));
+    }
+
+    [Fact]
+    public void An_edit_no_op_still_writes_nothing()
+    {
+        // The twin of the case above: on an EDIT the same {original: X, value: X} is a genuine no-op.
+        var thing = new Thing();
+        ExtensionApplier.Apply(thing, true, Changes("machineSerialNumber", null, "SEED"), [Spec()]);
+        var result = ExtensionApplier.Apply(thing, false,
+            Changes("machineSerialNumber", "SEED", "SEED"), [Spec()]);
+        Assert.Empty(result.Findings);
+        Assert.Empty(result.AppliedKeys);
+        Assert.Equal("SEED", thing.Extensions.Get<string>("machineSerialNumber"));
+    }
+}
+
+public class ExtensionWritePlanTests
+{
+    private static ExtensionFieldSpec RequiredSpec => new(
+        "warrantyRef", "order", "text", true, null,
+        new Dictionary<string, string> { ["sv"] = "Garanti" }, null, null, ExtensionFieldState.Active);
+
+    // PlanWrite is pure over EF states (Sol re-review round 12, F3) — no DbContext needed to prove the
+    // targeting + fail-closed policy that the pipeline delegates to.
+
+    [Fact]
+    public void Single_new_target_with_a_required_field_and_no_patch_still_validates()
+    {
+        var plan = ExtensionApplier.PlanWrite([EntityState.Added], hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
+        Assert.True(plan.Run);
+        Assert.False(plan.Ambiguous);
+        Assert.Equal(0, plan.TargetIndex);
+        Assert.True(plan.IsNewTarget);
+    }
+
+    [Fact]
+    public void Two_new_targets_with_a_required_field_fail_closed_rather_than_skip_validation()
+    {
+        // The round-12 F3 hole: two Added extensible rows + required field + no patch previously produced
+        // no target, no ambiguity and NO required validation — a silent bypass. Now it fails closed.
+        var plan = ExtensionApplier.PlanWrite(
+            [EntityState.Added, EntityState.Added], hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
+        Assert.True(plan.Run);
+        Assert.True(plan.Ambiguous);
+    }
+
+    [Fact]
+    public void One_new_plus_a_modified_sibling_with_a_required_field_fails_closed()
+    {
+        var plan = ExtensionApplier.PlanWrite(
+            [EntityState.Added, EntityState.Modified], hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
+        Assert.True(plan.Run);
+        Assert.True(plan.Ambiguous);
+    }
+
+    [Fact]
+    public void An_edit_with_no_effective_patch_does_no_target_lookup()
+    {
+        // A lone Modified row carrying only unchanged extensions (effective empty), no required-create
+        // concern — the pipeline must skip entirely (round 10, F2 preserved).
+        var plan = ExtensionApplier.PlanWrite([EntityState.Modified], hasRequiredActive: false, changeCount: 3, effectiveCount: 0);
+        Assert.False(plan.Run);
+    }
+
+    [Fact]
+    public void A_new_target_runs_on_a_prefilled_no_op_patch()
+    {
+        // effectiveCount 0 (all {X,X}) but changeCount 1: a create must still run so the prefilled value
+        // is applied (round 12, F2). Work for a new target is the COMPLETE submitted count.
+        var plan = ExtensionApplier.PlanWrite([EntityState.Added], hasRequiredActive: false, changeCount: 1, effectiveCount: 0);
+        Assert.True(plan.Run);
+        Assert.False(plan.Ambiguous);
+        Assert.True(plan.IsNewTarget);
+        Assert.Equal(0, plan.TargetIndex);
+    }
+
+    [Fact]
+    public void A_new_target_among_loaded_unchanged_siblings_is_still_selected()
+    {
+        // A create that also loaded sibling rows (Unchanged) — the single written (Added) one is the
+        // target; loaded-unchanged rows do not make it ambiguous.
+        var plan = ExtensionApplier.PlanWrite(
+            [EntityState.Unchanged, EntityState.Added, EntityState.Unchanged],
+            hasRequiredActive: true, changeCount: 0, effectiveCount: 0);
+        Assert.True(plan.Run);
+        Assert.False(plan.Ambiguous);
+        Assert.Equal(1, plan.TargetIndex);
+        Assert.True(plan.IsNewTarget);
     }
 }

@@ -1282,6 +1282,32 @@ Manifest: `GET /api/manifest` · MCP endpoint: `POST /api/mcp` (initialize / too
   byte-unchanged, web typecheck + `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres (94
   each). The complete-state contract is now consistent across compiled + extension fields, the null
   cases are correct, and the React state machine is covered by mounted-component tests.
+- **docs/40 re-review round 12 — edit-workflow contract holes (2 HIGH + 1 MEDIUM/HIGH + 1 LOW, all
+  confirmed then fixed)**: round 11 was affirmed correct; three holes remained, each verified against real
+  code first. (F1, HIGH) submit + conflict state was scoped to `form`/`instanceKey` but NOT to `actAs`. An
+  `actAs` switch preserves the edit values and baseline (the intended context refresh) but a conflict
+  override carries the OLD node's persisted current values as fresh merge bases, and an in-flight submit
+  executed against the old node — both could resolve/land against the new one (old findings/conflicts
+  shown, stale `onSuccess`, an auto-retry rebased on the wrong node's reality). A dedicated
+  execution-context effect now invalidates ONLY request/result state (submit sequence, overrides,
+  conflicts, response, spinner) on a same-record `actAs` change, leaving values/touched/baseline intact.
+  (F2, HIGH) create and edit had the same extension semantics, so a PREFILLED create field — which the
+  frozen baseline makes arrive as `{original: X, value: X}` — was dropped as an edit no-op: an optional
+  prefill silently vanished, a required one was falsely rejected. The server now owns the distinction: a
+  NEW extension target applies the COMPLETE submitted dictionary (Value = initial state), and
+  `ExtensionApplier.Apply`'s `Original == Value` skip is edit-only — direct HTTP/MCP/integration callers
+  get the same fix, not just the form. (F3, MEDIUM/HIGH) required-create validation hinged on selecting a
+  single write target, so two newly-added extensible rows (or one added + one modified sibling) with an
+  omitted/empty patch skipped the whole branch — no target, no ambiguity, no required check, a silent
+  commit of rows missing required fields. Target selection and required validation are now separated in a
+  pure, unit-tested `ExtensionApplier.PlanWrite`: multiple new targets fail closed with
+  `pipeline.ambiguous-extension-target` rather than let validation disappear. (F4, LOW) the stale
+  conflict-state source comment (describing the round-10 pre-fix "keep current records none" behaviour)
+  was corrected to match the round-11 both-choices-rebase implementation. Verified: suites **207 + 68** C#
+  (6 pure `PlanWrite`/create-apply unit tests + 2 prefill-create pipeline tests), **16 Vitest** (2 new
+  `actAs` submit-isolation mounts), structure + docs gates, manifest additive-only (D4) & byte-unchanged,
+  `vite build`, full wire matrix GREEN on fresh SQLite AND Postgres (94 each). The edit workflow now
+  isolates by execution context and treats creation as creation, not an edit merge, for extension values.
 - **docs/40 re-review round 11 — edit-workflow closure (3 HIGH + 2 MEDIUM + 1 test-quality, all
   confirmed then fixed)**: the round-10 surfaces were re-examined against real code before any change.
   (F1, HIGH) "keep current" was NOT a true no-op — it adopted the server value but left `original` at the

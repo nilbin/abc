@@ -246,12 +246,31 @@ path) is resolved too. Three consistency rules keep resolve and submit under the
   `form`/`instanceKey`; the reset effect clears them and a monotonic submit sequence drops any in-flight
   submit whose record switched under it — so a stale response can neither paint a conflict banner nor fire
   `onSuccess` on the *next* record, and the new record never inherits the previous one's spinner or banner.
+  The submit/conflict identity also includes the acting node (`actAs`, Sol re-review round 12, F1): an
+  `actAs` switch deliberately PRESERVES the edit values and frozen baseline (it re-resolves them against
+  the new node), but a pending conflict round and an in-flight submit were computed against the OLD node —
+  a conflict override carries that node's persisted current values as fresh merge bases, and an in-flight
+  submit executed there. A same-record `actAs` change therefore invalidates request/result state (submit
+  sequence, overrides, conflicts, response, spinner) WITHOUT touching the values, touched set or baseline.
 - **A create satisfies required extension fields even with no effective extension patch** (Sol re-review
   round 11, F2). Complete-state submission carries unchanged extension fields (and a caller may omit the
   channel entirely), so a required custom field can reduce to an empty effective patch on a create. The
   pipeline enforces requiredness on a newly created extensible row whenever any required-active spec
   exists — the omitted-field path cannot bypass the check — while an unrelated *edit* that merely carries
   unchanged extensions still skips target selection (round-10 F2 preserved).
+- **Create and edit have distinct extension semantics** (Sol re-review round 12, F2). On an EDIT an
+  extension field's `Original == Value` is a no-op (the persisted merge base is authoritative). On a
+  CREATE there is no persisted merge base: the submitted `Value` IS the initial state, so a prefilled
+  create form's field — which the frozen baseline makes arrive as `{original: X, value: X}` — must be
+  applied, not dropped as an edit no-op. The server owns this: a NEW extension target applies the
+  COMPLETE submitted dictionary (not the edit-only effective patch), and the applier's no-op skip is
+  edit-only. Forcing `original: null` in the form would not fix direct HTTP / MCP / integration callers.
+- **Extension write target + required validation fail closed together** (Sol re-review round 12, F3). The
+  single extension write target is the sole tracked extensible instance, else the sole Added/Modified one.
+  Required-create validation must NOT hinge on that selection succeeding: when several NEW extensible rows
+  are tracked (or one new plus a modified sibling) the operation cannot attribute the patch or guarantee
+  each row's required fields, so it raises `pipeline.ambiguous-extension-target` rather than let required
+  validation silently disappear. The decision is a pure, unit-tested function over the tracked EF states.
 - **Frozen concurrency baseline.** A `Change<T>`'s `original` is the value frozen when the form's
   `instanceKey` (its record identity) last changed, never the latest `initialValues` prop — a
   background refresh handing the same record a newer server value cannot silently rebase the
