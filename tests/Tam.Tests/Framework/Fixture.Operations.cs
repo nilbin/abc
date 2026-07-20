@@ -25,7 +25,7 @@ public static class CreateWidget
         WidgetLocation Location = default,
         WidgetCategory Category = WidgetCategory.Standard,
         Guid GroupId = default,
-        Guid? BinId = null);
+        BinId? BinId = null);
 
     public sealed record Output(Guid WidgetId);
 
@@ -137,7 +137,7 @@ public static class CloseBin
     public static async Task<Result<Output>> Execute(
         Input input, OperationContext context, WidgetDbContext db, CancellationToken ct)
     {
-        var bin = await db.Bins.SingleOrDefaultAsync(x => x.Id == input.BinId.Value, ct);
+        var bin = await db.Bins.SingleOrDefaultAsync(x => x.Id == input.BinId, ct);
         if (bin is null) return WidgetFindings.NotFound.Create();
         bin.Status = BinStatus.Closed;
         return new Output(input.BinId);
@@ -168,7 +168,7 @@ public static class BinLookup
             bins = bins.Where(x => x.Name.Contains(query.Search!));
         return bins.Select(x => new Result
         {
-            Id = new BinId(x.Id), Name = x.Name, GroupId = x.GroupId, Status = x.Status, Budget = x.Budget,
+            Id = x.Id, Name = x.Name, GroupId = x.GroupId, Status = x.Status, Budget = x.Budget,
         });
     }
 

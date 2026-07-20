@@ -42,7 +42,7 @@ public sealed class Widget : IExtensible, ITenantScoped
     public string Location { get; set; } = "";
     public WidgetCategory Category { get; set; }
     public WidgetPriority Priority { get; set; }
-    public Guid? BinId { get; set; }
+    public BinId? BinId { get; set; }
     public ExtensionData Extensions { get; set; } = new();
 }
 
@@ -51,7 +51,7 @@ public sealed class Widget : IExtensible, ITenantScoped
 /// (which rules.schema must NOT offer).</summary>
 public sealed class Bin : IExtensible, ITenantScoped
 {
-    public Guid Id { get; set; }
+    public BinId Id { get; set; }
     public string TenantId { get; set; } = "";
     public Guid GroupId { get; set; }
     public string Name { get; set; } = "";

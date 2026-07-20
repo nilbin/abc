@@ -115,7 +115,7 @@ public static class WidgetProbes
     public static DerivationResult Mutate(CreateWidget.Input input, DerivationContext context, WidgetDbContext db)
     {
         if (input.Description == MutateSentinel)
-            db.Bins.Add(new Bin { Id = Guid.NewGuid(), TenantId = "demo", Name = "Smuggel" });
+            db.Bins.Add(new Bin { Id = new BinId(Guid.NewGuid()), TenantId = "demo", Name = "Smuggel" });
         return DerivationResult.Empty;
     }
 
@@ -125,7 +125,7 @@ public static class WidgetProbes
     {
         if (input.Description == MutateSaveSentinel)
         {
-            db.Bins.Add(new Bin { Id = Guid.NewGuid(), TenantId = "demo", Name = "Sparsmuggel" });
+            db.Bins.Add(new Bin { Id = new BinId(Guid.NewGuid()), TenantId = "demo", Name = "Sparsmuggel" });
             await db.SaveChangesAsync(ct);
         }
         return DerivationResult.Empty;
